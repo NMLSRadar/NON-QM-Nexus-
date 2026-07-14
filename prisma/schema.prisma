@@ -1,0 +1,346 @@
+// NON-QM Navigator — production database schema (PostgreSQL / Supabase).
+//
+// ORM decision: Prisma was selected over Drizzle for its mature migration
+// tooling, typed client, and first-class PostgreSQL support; see
+// docs/architecture.md for the full rationale. The demo app runs on an
+// in-memory repository; swapping in a PrismaRepository implements the same
+// Repository interface (src/lib/store.ts) without touching UI code.
+//
+// Multi-tenancy: every tenant-owned row carries organization_id, and
+// supabase/rls-policies.sql enables row-level security on all of these
+// tables. The Prisma service role connects via a restricted role in
+// production; end-user access goes through Supabase with JWT-scoped RLS.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  settings      OrganizationSetting[]
+  memberships   Membership[]
+  lenders       Lender[]
+  programs      Program[]
+  scenarios     Scenario[]
+  auditLogs     AuditLog[]
+  aiRequests    AiRequest[]
+  featureFlags  FeatureFlag[]
+
+  @@map("organizations")
+}
+
+model OrganizationSetting {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  key            String
+  value          Json
+  updatedBy      String? @map("updated_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, key])
+  @@map("organization_settings")
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid // mirrors Supabase auth.users id
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  profile     UserProfile?
+  memberships Membership[]
+
+  @@map("users")
+}
+
+model UserProfile {
+  userId      String  @id @map("user_id") @db.Uuid
+  displayName String? @map("display_name")
+  phone       String?
+  nmlsId      String? @map("nmls_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("user_profiles")
+}
+
+model Membership {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  role           String // broker | account_executive | processor | underwriter | org_admin | platform_admin
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([organizationId, userId])
+  @@map("memberships")
+}
+
+model Lender {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  name           String
+  isSampleData   Boolean @default(false) @map("is_sample_data")
+  active         Boolean @default(true)
+  contactEmail   String? @map("contact_email")
+  notes          String?
+  createdBy      String? @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  programs     Program[]
+
+  @@map("lenders")
+}
+
+model Program {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  lenderId       String  @map("lender_id") @db.Uuid
+  name           String
+  isSampleData   Boolean @default(false) @map("is_sample_data")
+  active         Boolean @default(true)
+  // Program constraint configuration (see src/domain/types/program.ts)
+  config         Json
+  createdBy      String? @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  version        Int      @default(1) // optimistic concurrency
+
+  organization      Organization       @relation(fields: [organizationId], references: [id])
+  lender            Lender             @relation(fields: [lenderId], references: [id])
+  guidelineVersions GuidelineVersion[]
+  rules             Rule[]
+
+  @@map("programs")
+}
+
+model GuidelineVersion {
+  id                 String    @id @default(uuid()) @db.Uuid
+  organizationId     String    @map("organization_id") @db.Uuid
+  programId          String    @map("program_id") @db.Uuid
+  label              String
+  effectiveDate      DateTime  @map("effective_date") @db.Date
+  expirationDate     DateTime? @map("expiration_date") @db.Date
+  lastVerifiedDate   DateTime? @map("last_verified_date") @db.Date
+  verificationStatus String    @map("verification_status") // human_verified | imported_pending_review | ai_extracted_pending_review | draft | archived | superseded
+  publishedAt        DateTime? @map("published_at")
+  reviewedBy         String?   @map("reviewed_by") @db.Uuid
+  sourceDocumentId   String?   @map("source_document_id") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  program Program @relation(fields: [programId], references: [id])
+  rules   Rule[]
+
+  @@map("guideline_versions")
+}
+
+model Rule {
+  id                 String    @id @default(uuid()) @db.Uuid
+  organizationId     String    @map("organization_id") @db.Uuid
+  programId          String    @map("program_id") @db.Uuid
+  guidelineVersionId String    @map("guideline_version_id") @db.Uuid
+  category           String
+  name               String
+  // Nested AND/OR condition tree + outcomes (see src/domain/types/program.ts)
+  definition         Json
+  severity           String // hard | soft | info
+  userExplanation    String    @map("user_explanation")
+  internalExplanation String?  @map("internal_explanation")
+  sourceSection      String?   @map("source_section")
+  sourcePage         Int?      @map("source_page")
+  effectiveDate      DateTime? @map("effective_date") @db.Date
+  expirationDate     DateTime? @map("expiration_date") @db.Date
+  verificationStatus String    @map("verification_status")
+  createdBy          String?   @map("created_by") @db.Uuid
+  reviewedBy         String?   @map("reviewed_by") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+
+  program          Program          @relation(fields: [programId], references: [id])
+  guidelineVersion GuidelineVersion @relation(fields: [guidelineVersionId], references: [id])
+
+  @@map("rules")
+}
+
+model Scenario {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String
+  createdBy      String   @map("created_by") @db.Uuid
+  // Full normalized scenario payload (see src/domain/types/scenario.ts).
+  // Individually queried fields are also projected into columns as needed.
+  data           Json
+  status         String   @default("draft") // draft | analyzed | archived
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  version        Int      @default(1)
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  documents    Document[]
+  evaluations  ProgramEvaluationRecord[]
+  reports      Report[]
+  sharedLinks  SharedLink[]
+
+  @@index([organizationId, updatedAt])
+  @@map("scenarios")
+}
+
+model Document {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  scenarioId     String?  @map("scenario_id") @db.Uuid
+  storagePath    String   @map("storage_path") // Supabase Storage object path
+  fileName       String   @map("file_name")
+  mimeType       String   @map("mime_type")
+  sizeBytes      Int      @map("size_bytes")
+  classification String? // bank_statement | pnl | appraisal | ...
+  uploadedBy     String   @map("uploaded_by") @db.Uuid
+  virusScanned   Boolean  @default(false) @map("virus_scanned")
+  createdAt      DateTime @default(now()) @map("created_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  scenario    Scenario?           @relation(fields: [scenarioId], references: [id])
+  extractions DocumentExtraction[]
+
+  @@map("documents")
+}
+
+model DocumentExtraction {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  documentId     String   @map("document_id") @db.Uuid
+  extractor      String // manual | ai:anthropic | ai:openai | ocr:...
+  // Extracted fields with provenance (page, confidence); kept separate from
+  // source files. Values require user confirmation before affecting eligibility.
+  fields         Json
+  confirmedBy    String?  @map("confirmed_by") @db.Uuid
+  confirmedAt    DateTime? @map("confirmed_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  document Document @relation(fields: [documentId], references: [id])
+
+  @@map("document_extractions")
+}
+
+model ProgramEvaluationRecord {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  scenarioId     String   @map("scenario_id") @db.Uuid
+  programId      String   @map("program_id") @db.Uuid
+  // Full evaluation snapshot: status, score, rule results, guideline version.
+  result         Json
+  evaluatedAt    DateTime @default(now()) @map("evaluated_at")
+
+  scenario Scenario @relation(fields: [scenarioId], references: [id])
+
+  @@index([organizationId, scenarioId])
+  @@map("program_evaluations")
+}
+
+model Report {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  scenarioId     String   @map("scenario_id") @db.Uuid
+  kind           String // pdf | html | csv | json
+  storagePath    String?  @map("storage_path")
+  generatedBy    String   @map("generated_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  scenario Scenario @relation(fields: [scenarioId], references: [id])
+
+  @@map("reports")
+}
+
+model SharedLink {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  scenarioId     String   @map("scenario_id") @db.Uuid
+  tokenHash      String   @unique @map("token_hash") // never store the raw token
+  expiresAt      DateTime @map("expires_at")
+  createdBy      String   @map("created_by") @db.Uuid
+  revokedAt      DateTime? @map("revoked_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  scenario Scenario @relation(fields: [scenarioId], references: [id])
+
+  @@map("shared_links")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  actorUserId    String?  @map("actor_user_id") @db.Uuid
+  action         String // e.g. scenario.create, rule.publish, program.deactivate
+  entityType     String   @map("entity_type")
+  entityId       String?  @map("entity_id") @db.Uuid
+  // Metadata only — no borrower PII in audit payloads.
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@map("audit_logs")
+}
+
+model AiRequest {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  scenarioId     String?  @map("scenario_id") @db.Uuid
+  provider       String
+  model          String
+  promptVersion  String   @map("prompt_version")
+  // Deterministic facts supplied to the model (for audit), response, and
+  // whether the user accepted/edited the output. No secrets, minimal PII.
+  factsSupplied  Json?    @map("facts_supplied")
+  response       String?
+  accepted       Boolean? // null = pending user decision
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@map("ai_requests")
+}
+
+model FeatureFlag {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String? @map("organization_id") @db.Uuid // null = platform-wide
+  key            String
+  enabled        Boolean @default(false)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, key])
+  @@map("feature_flags")
+}

@@ -1,0 +1,167 @@
+import type {
+  Citizenship,
+  IncomeDocType,
+  LoanPurpose,
+  Occupancy,
+  PropertyType,
+  Vesting,
+} from "./enums";
+
+/**
+ * Structured, normalized scenario used by the calculation and rules engines.
+ * This is the deterministic input surface. The UI questionnaire collects a
+ * superset; the intake mapper produces this shape. Every field is optional
+ * except identity because scenarios can be saved as drafts.
+ */
+
+export interface BankStatementDetails {
+  personalOrBusiness: "personal" | "business";
+  months: 12 | 24;
+  businessType?: string;
+  ownershipPercent?: number; // 0-100
+  businessStartDate?: string; // ISO date
+  averageMonthlyEligibleDeposits?: number;
+  expenseFactorPercent?: number; // 0-100; e.g. 30 means 30% expense factor
+  expenseFactorSource?: "cpa" | "ea" | "tax_professional" | "fixed" | "unknown";
+  hasCashDeposits?: boolean;
+  hasAtmDeposits?: boolean;
+  hasTransfers?: boolean;
+  hasRefundsOrReversals?: boolean;
+  depositsDeclining?: boolean;
+  hasLargeUnusualDeposits?: boolean;
+  combiningMultipleAccounts?: boolean;
+  hasComingling?: boolean;
+}
+
+export interface PnlDetails {
+  periodMonths: number; // e.g. 12 or 24
+  grossRevenue?: number;
+  expenseAmount?: number;
+  netIncome?: number;
+  ownershipPercent?: number; // 0-100
+  preparer?: "cpa" | "ea" | "tax_professional" | "borrower";
+  supportingBankStatements?: boolean;
+  bankDepositVariancePercent?: number; // variance between P&L revenue and deposits
+  businessNarrative?: string;
+  obviousExpensesMissing?: boolean;
+}
+
+export interface DscrDetails {
+  monthlyLease?: number;
+  marketRent?: number;
+  annualTaxes?: number;
+  annualHazardInsurance?: number;
+  annualFloodInsurance?: number;
+  monthlyHoa?: number;
+  interestOnlyPayment?: number;
+  principalAndInterest?: number; // full PITIA P&I component
+  shortTermRental?: boolean;
+  firstTimeInvestor?: boolean;
+  financedProperties?: number;
+}
+
+export interface AssetDepletionDetails {
+  checkingSavings?: number;
+  brokerage?: number;
+  stocksBonds?: number;
+  retirement?: number;
+  borrowerAge?: number;
+  retirementVestedPercent?: number; // 0-100
+  realEstateEquity?: number;
+  eligibleAssetPercent?: number; // 0-100 haircut applied to non-retirement
+  requiredDownPayment?: number;
+  closingCosts?: number;
+  requiredReserves?: number;
+  assetDivisorMonths?: number; // e.g. 60, 84, 120, 240
+  assetsAlsoUsedToClose?: boolean;
+}
+
+export interface ForeignNationalDetails {
+  countryOfCitizenship?: string;
+  usCreditAvailable?: boolean;
+  foreignCreditAvailable?: boolean;
+  visaType?: string;
+  hasItin?: boolean;
+  hasValidPassport?: boolean;
+  hasUsBankAccount?: boolean;
+  hasForeignBankAccounts?: boolean;
+  usPropertyOwnership?: boolean;
+  sourceOfFunds?: string;
+  translationRequired?: boolean;
+  ofacScreeningStatus?: "not_started" | "clear" | "flagged";
+}
+
+export interface CreditEvents {
+  bankruptcyMonthsSinceDischarge?: number | null;
+  foreclosureMonthsSince?: number | null;
+  shortSaleMonthsSince?: number | null;
+  // Mortgage lates over the last 12 / 24 months, e.g. "0x30x12" style counts.
+  mortgageLates30x12?: number;
+  mortgageLates60x12?: number;
+  mortgageLates90x12?: number;
+  housingHistoryMonths?: number; // documented months of housing history
+}
+
+export interface Scenario {
+  id: string;
+  organizationId: string;
+  name: string;
+  createdByUserId: string;
+  brokerId?: string;
+  borrowerReference?: string; // anonymized identifier — never store full SSN here
+
+  // Loan
+  loanPurpose?: LoanPurpose;
+  occupancy?: Occupancy;
+  propertyType?: PropertyType;
+  units?: number;
+  state?: string; // 2-letter
+  county?: string;
+  purchasePrice?: number;
+  estimatedValue?: number;
+  requestedLoanAmount?: number;
+  requestedCashOut?: number;
+  existingLienBalance?: number;
+
+  // Borrower
+  fico?: number;
+  citizenship?: Citizenship;
+  vesting?: Vesting;
+  firstTimeHomebuyer?: boolean;
+  firstTimeInvestor?: boolean;
+  employmentStatus?: "self_employed" | "wage_earner" | "retired" | "other";
+  selfEmploymentMonths?: number;
+  businessOwnershipPercent?: number;
+  incomeDocType?: IncomeDocType;
+  /** Documented monthly income for full-doc / 1099 / WVOE methods. */
+  documentedMonthlyIncome?: number;
+
+  // Ratios / obligations
+  monthlyHousingPayment?: number; // subject-property proposed PITIA
+  monthlyLiabilities?: number; // non-housing monthly debts
+
+  // Assets
+  liquidAssets?: number;
+  retirementAssets?: number;
+  otherEligibleAssets?: number;
+  reserveAmountMonthsRequested?: number;
+
+  // Options
+  interestOnlyRequested?: boolean;
+  prepaymentPenaltyAccepted?: boolean;
+  desiredClosingDate?: string;
+  notes?: string;
+
+  // Credit history
+  creditEvents?: CreditEvents;
+
+  // Income-method specific detail (only the relevant one is populated)
+  bankStatement?: BankStatementDetails;
+  pnl?: PnlDetails;
+  dscr?: DscrDetails;
+  assetDepletion?: AssetDepletionDetails;
+  foreignNational?: ForeignNationalDetails;
+
+  createdAt: string;
+  updatedAt: string;
+}
