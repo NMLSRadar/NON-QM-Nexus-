@@ -18,7 +18,9 @@ export async function AuthStatus() {
 
   return (
     <div className="flex items-center gap-3 text-sm">
-      <span className="text-brand-100">{user.email}</span>
+      <Link href="/account" className="text-brand-100 hover:text-white rounded px-1 focus:outline-none focus:ring-2 focus:ring-white">
+        {user.email}
+      </Link>
       <form action={signOut}>
         <button type="submit" className="text-brand-100 hover:text-white underline focus:outline-none focus:ring-2 focus:ring-white rounded px-1">
           Sign out
