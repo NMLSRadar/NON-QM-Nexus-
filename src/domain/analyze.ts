@@ -44,12 +44,24 @@ export function analyzeScenario(
   );
 
   const restructuring = generateRestructuringOptions(scenario, activePairs, catalog.rules, asOf);
+
+  // Display upgrade (product spec section 8): a program that is ineligible as
+  // requested, but which a legitimate restructuring option would unlock, is
+  // surfaced as eligible_with_restructuring rather than plain ineligible.
+  const unlockedIds = new Set(restructuring.flatMap((o) => o.programsPotentiallyUnlockedIds));
+  const displayEvaluations = rankEvaluations(
+    evaluations.map((e) =>
+      e.status === "ineligible" && unlockedIds.has(e.programId)
+        ? { ...e, status: "eligible_with_restructuring" as const }
+        : e,
+    ),
+  );
   const needsList = generateNeedsList(scenario);
 
   return {
     scenarioId: scenario.id,
     calculation,
-    evaluations,
+    evaluations: displayEvaluations,
     restructuring,
     needsList,
     generatedAt: new Date().toISOString(),

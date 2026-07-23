@@ -2,7 +2,7 @@
   "name": "non-qm-navigator",
   "version": "0.1.0",
   "private": true,
-  "description": "NON-QM Navigator — an original, configurable, AI-assisted NON-QM scenario analysis and lender-matching decision-support platform.",
+  "description": "NON-QM Navigator \u2014 an original, configurable, AI-assisted NON-QM scenario analysis and lender-matching decision-support platform.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,9 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "seed:check": "tsx scripts/seed-check.ts",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "seed:check": "tsx scripts/seed-check.ts"
   },
   "dependencies": {
     "decimal.js": "^10.4.3",

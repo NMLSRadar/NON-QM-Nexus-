@@ -20,9 +20,14 @@ export default async function ScenariosPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Scenarios</h1>
-        <Link href="/scenarios/new" className="rounded-md bg-brand-600 text-white text-sm font-medium px-4 py-2 hover:bg-brand-700">
-          + New Scenario
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/scenarios/voice" className="rounded-md border border-brand-600 text-brand-700 text-sm font-medium px-4 py-2 hover:bg-brand-50">
+            🎤 Voice Scenario
+          </Link>
+          <Link href="/scenarios/new" className="rounded-md bg-brand-600 text-white text-sm font-medium px-4 py-2 hover:bg-brand-700">
+            + New Scenario
+          </Link>
+        </div>
       </div>
       <Card>
         <div className="overflow-x-auto">

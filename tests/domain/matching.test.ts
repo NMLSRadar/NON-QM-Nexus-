@@ -99,11 +99,13 @@ describe("sample scenario regression: rural property (scn_rural)", () => {
 });
 
 describe("sample scenario regression: recent bankruptcy (scn_recent_bk)", () => {
-  it("is ineligible at Summit (48-mo seasoning) and at Fresh Start at 80% LTV (70% cap)", () => {
+  it("is ineligible at Summit (48-mo seasoning); Fresh Start upgrades to eligible_with_restructuring at the 70% cap", () => {
     const summit = evalFor("scn_recent_bk", "prog_summit_bs12");
     expect(summit.status).toBe("ineligible");
     const fresh = evalFor("scn_recent_bk", "prog_harbor_recent_credit");
-    expect(fresh.status).toBe("ineligible");
+    // The lower-LTV restructuring option unlocks this program, so analyze.ts
+    // upgrades its display status from ineligible (spec §8).
+    expect(fresh.status).toBe("eligible_with_restructuring");
     expect(fresh.failedRules.map((f) => f.ruleId)).toContain("r_harbor_fresh_bk_ltv");
   });
 
@@ -116,11 +118,11 @@ describe("sample scenario regression: recent bankruptcy (scn_recent_bk)", () => 
 });
 
 describe("sample scenario regression: high DTI (scn_high_dti)", () => {
-  it("is ineligible on DTI now", () => {
+  it("fails DTI as requested, and debt payoff upgrades it to eligible_with_restructuring", () => {
     const result = analyzeScenario(byId("scn_high_dti"), catalog, ASOF);
     expect(result.calculation.dti?.value).toBeGreaterThan(50);
     const e = evalFor("scn_high_dti", "prog_evergreen_fulldoc");
-    expect(e.status).toBe("ineligible");
+    expect(e.status).toBe("eligible_with_restructuring");
   });
 
   it("restructuring via debt payoff unlocks at least one program", () => {

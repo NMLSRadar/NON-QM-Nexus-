@@ -16,6 +16,7 @@ Enter a borrower/property scenario once and receive, per configured program:
 - **Restructuring options** ("how to make this work") that re-run the real engine on honest structural changes
 - A rule-generated **document needs list**
 - Guideline citations, version labels, effective dates, and verification status on every result
+- **Voice scenario intake** — dictate the full scenario; deterministic extraction + slot-filling captures 8 vitals, asks for exactly what's missing, and auto-runs ranked lender matching (best option first)
 - JSON export per scenario (`/api/scenarios/:id/analysis`)
 
 Every result carries the disclaimer: *Preliminary scenario analysis only — not a loan approval, commitment to lend, or guarantee of eligibility.*
@@ -94,7 +95,8 @@ npm run lint       # ESLint
 
 ## Known MVP limitations
 
-- Authentication, organizations, and roles are modeled (schema + RLS shipped) but the demo runs as a single demo organization without login.
+- Authentication, organizations, and roles are modeled (Prisma schema + RLS SQL as design documents) but the demo runs as a single demo organization without login; Prisma tooling itself is not wired (no prisma dependency or migrations), so persistence is in-memory.
+- Voice intake's speech capture uses the browser Web Speech API (Chrome/Edge/Safari; other browsers type instead); extraction heuristics target US-English mortgage phrasing. The optional AI-assisted extractor (`src/lib/ai/extractScenario.ts`) is off until a provider is configured, and its output always requires user confirmation.
 - Document upload/extraction, PDF report rendering, shared links, and the admin program builder are designed (schema, interfaces, docs) but not yet wired into the UI.
 - The AI explanation layer is implemented behind adapters but disabled until API keys and org authorization are configured.
 - No pricing integration — ranking never implies pricing.

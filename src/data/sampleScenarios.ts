@@ -14,7 +14,7 @@ const base = {
 } as const;
 
 export const sampleScenarios: Scenario[] = [
-  // 1. Primary-residence bank-statement borrower — expected ELIGIBLE/CONDITIONAL
+  // 1. Primary-residence bank-statement borrower — expected best: ELIGIBLE_WITH_RESTRUCTURING (unlocked programs rank above the manual-review bank-statement matches under the sample ranking bands)
   {
     ...base,
     id: "scn_bs_primary",
@@ -119,7 +119,7 @@ export const sampleScenarios: Scenario[] = [
     },
   },
 
-  // 4. First-time investor — expected CONDITIONAL (DSCR must be ≥1.20)
+  // 4. First-time investor — expected ELIGIBLE (meets the 1.20x FTI DSCR floor at the FTI-friendly program)
   {
     ...base,
     id: "scn_dscr_fti",
@@ -191,7 +191,7 @@ export const sampleScenarios: Scenario[] = [
     },
   },
 
-  // 6. ITIN primary residence — expected CONDITIONAL/ELIGIBLE
+  // 6. ITIN primary residence — expected CONDITIONAL (housing history under 12 months triggers the soft housing-history warning)
   {
     ...base,
     id: "scn_itin",
@@ -213,7 +213,7 @@ export const sampleScenarios: Scenario[] = [
     monthlyHousingPayment: 2_800,
     monthlyLiabilities: 600,
     liquidAssets: 45_000,
-    creditEvents: { housingHistoryMonths: 24 },
+    creditEvents: { housingHistoryMonths: 8 },
     bankStatement: {
       personalOrBusiness: "personal",
       months: 12,
@@ -287,7 +287,7 @@ export const sampleScenarios: Scenario[] = [
     },
   },
 
-  // 9. Recent bankruptcy — expected INELIGIBLE at most; conditional at Fresh Start
+  // 9. Recent bankruptcy — expected INELIGIBLE as requested; Fresh Start shows eligible_with_restructuring at 70% LTV
   {
     ...base,
     id: "scn_recent_bk",
@@ -344,7 +344,7 @@ export const sampleScenarios: Scenario[] = [
     },
   },
 
-  // 11. Non-warrantable condo — expected CONDITIONAL (LTV cap 70 at Horizon)
+  // 11. Non-warrantable condo — expected INELIGIBLE as requested; reducing LTV unlocks Horizon (eligible_with_restructuring)
   {
     ...base,
     id: "scn_non_warrantable",
@@ -376,7 +376,7 @@ export const sampleScenarios: Scenario[] = [
     },
   },
 
-  // 12. High-DTI borrower who could qualify after paying off debt — expected
+  // 12. High-DTI borrower who could qualify after paying off debt — expected INELIGIBLE as requested; debt payoff unlocks programs (eligible_with_restructuring)
   //     INELIGIBLE now, with a restructuring option that unlocks programs.
   {
     ...base,

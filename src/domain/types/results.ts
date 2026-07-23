@@ -68,6 +68,8 @@ export interface RestructuringOption {
   currentValue: string;
   suggestedValue: string;
   programsPotentiallyUnlocked: string[];
+  /** Program IDs behind programsPotentiallyUnlocked — used by analyze.ts to apply the eligible_with_restructuring display upgrade. */
+  programsPotentiallyUnlockedIds: string[];
   remainingConcerns: string[];
   requiredVerification: string[];
   rationale: string;

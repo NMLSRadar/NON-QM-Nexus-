@@ -54,12 +54,14 @@ export function generateRestructuringOptions(
     const calc = runCalculations(modified);
 
     const unlocked: string[] = [];
+    const unlockedIds: string[] = [];
     const remaining: string[] = [];
 
     for (const { program, lender } of programs) {
       const evaluation = evaluateProgram(modified, calc, program, lender, rules, asOf);
       if (ELIGIBLE_STATUSES.includes(evaluation.status) && !baselineEligible.has(program.id)) {
         unlocked.push(`${lender.name} — ${program.name}`);
+        unlockedIds.push(program.id);
         for (const w of evaluation.warnings) remaining.push(`${program.name}: ${w.userExplanation}`);
         for (const m of evaluation.manualReviewItems) remaining.push(`${program.name}: ${m.userExplanation}`);
       }
@@ -71,6 +73,7 @@ export function generateRestructuringOptions(
         currentValue: variant.currentValue,
         suggestedValue: variant.suggestedValue,
         programsPotentiallyUnlocked: unlocked,
+        programsPotentiallyUnlockedIds: unlockedIds,
         remainingConcerns: dedupe(remaining).slice(0, 6),
         requiredVerification: variant.requiredVerification,
         rationale: variant.rationale,
