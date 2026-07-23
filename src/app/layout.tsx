@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import { DISCLAIMER } from "@/domain/types/enums";
+import { AuthStatus } from "@/components/auth-status";
 
 export const metadata: Metadata = {
   title: "NON-QM Navigator",
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <span className="ml-auto text-xs bg-amber-400 text-amber-950 font-medium rounded px-2 py-1">
               Demo environment — sample data only
             </span>
+            <AuthStatus />
           </div>
         </header>
         <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6">{children}</main>
