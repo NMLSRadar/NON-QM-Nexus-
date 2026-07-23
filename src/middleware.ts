@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Protected app routes — everything else (marketing pages, /login, /signup,
 // static assets, API routes that handle their own auth) passes through.
-const PROTECTED_PREFIXES = ["/scenarios", "/lenders", "/programs"];
+const PROTECTED_PREFIXES = ["/scenarios", "/lenders", "/programs", "/admin"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });

@@ -3,6 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 import { DISCLAIMER } from "@/domain/types/enums";
 import { AuthStatus } from "@/components/auth-status";
+import { AdminNavLink } from "@/components/admin-nav-link";
 
 export const metadata: Metadata = {
   title: "NON-QM Navigator",
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <span className="ml-auto text-xs bg-amber-400 text-amber-950 font-medium rounded px-2 py-1">
               Demo environment — sample data only
             </span>
+            <AdminNavLink />
             <AuthStatus />
           </div>
         </header>

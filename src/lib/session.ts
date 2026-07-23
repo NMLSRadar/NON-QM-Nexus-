@@ -9,7 +9,10 @@ import { SupabaseRepository } from "@/lib/repository/supabaseRepository";
 
 export async function getRepository(): Promise<Repository> {
   const supabase = await createClient();
-  return new SupabaseRepository(supabase);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return new SupabaseRepository(supabase, user?.id);
 }
 
 /**

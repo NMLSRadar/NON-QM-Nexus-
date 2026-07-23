@@ -11,11 +11,11 @@ import type { Lender, Program } from "@/domain/types/program";
 const ORG = "org_demo";
 
 export const sampleLenders: Lender[] = [
-  { id: "lender_summit", organizationId: ORG, name: "Summit Non-QM (Sample)", isSampleData: true, active: true },
-  { id: "lender_horizon", organizationId: ORG, name: "Horizon Alternative Lending (Sample)", isSampleData: true, active: true },
-  { id: "lender_atlas", organizationId: ORG, name: "Atlas Investor Finance (Sample)", isSampleData: true, active: true },
-  { id: "lender_evergreen", organizationId: ORG, name: "Evergreen Mortgage Partners (Sample)", isSampleData: true, active: true },
-  { id: "lender_harbor", organizationId: ORG, name: "Harbor Residential Capital (Sample)", isSampleData: true, active: true },
+  { id: "lender_summit", organizationId: ORG, name: "Summit Non-QM (Sample)", isSampleData: true, active: true, tierLevel: 1 },
+  { id: "lender_horizon", organizationId: ORG, name: "Horizon Alternative Lending (Sample)", isSampleData: true, active: true, tierLevel: 1 },
+  { id: "lender_atlas", organizationId: ORG, name: "Atlas Investor Finance (Sample)", isSampleData: true, active: true, tierLevel: 2 },
+  { id: "lender_evergreen", organizationId: ORG, name: "Evergreen Mortgage Partners (Sample)", isSampleData: true, active: true, tierLevel: 2 },
+  { id: "lender_harbor", organizationId: ORG, name: "Harbor Residential Capital (Sample)", isSampleData: true, active: true, tierLevel: 3 },
 ];
 
 const common = {

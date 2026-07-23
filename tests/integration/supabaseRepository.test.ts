@@ -95,7 +95,11 @@ describe.skipIf(!hasCredentials)("SupabaseRepository (live database)", () => {
   });
 
   it("self-seeds the demo catalog on first getCatalog() call", async () => {
-    const repo = new SupabaseRepository(userClient);
+    // Assign Enterprise (tier 3) so every seeded lender (tiers 1-3) is visible.
+    const { data: enterprise } = await admin.from("membership_plans").select("id").eq("key", "enterprise").single();
+    await admin.from("user_subscriptions").upsert({ user_id: userId, plan_id: enterprise!.id }, { onConflict: "user_id" });
+
+    const repo = new SupabaseRepository(userClient, userId);
     const catalog = await repo.getCatalog(organizationId);
     expect(catalog.lenders.length).toBeGreaterThan(0);
     expect(catalog.programs.length).toBeGreaterThan(0);
@@ -108,7 +112,7 @@ describe.skipIf(!hasCredentials)("SupabaseRepository (live database)", () => {
   }, 20_000);
 
   it("does not double-seed the catalog on a second getCatalog() call", async () => {
-    const repo = new SupabaseRepository(userClient);
+    const repo = new SupabaseRepository(userClient, userId);
     const first = await repo.getCatalog(organizationId);
     const second = await repo.getCatalog(organizationId);
     expect(second.lenders.length).toBe(first.lenders.length);
@@ -116,7 +120,7 @@ describe.skipIf(!hasCredentials)("SupabaseRepository (live database)", () => {
   }, 20_000);
 
   it("saves a scenario and reads it back scoped to this organization", async () => {
-    const repo = new SupabaseRepository(userClient);
+    const repo = new SupabaseRepository(userClient, userId);
     const now = new Date().toISOString();
     const scenario: Scenario = {
       id: randomUUID(),

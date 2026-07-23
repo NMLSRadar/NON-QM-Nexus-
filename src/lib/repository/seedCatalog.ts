@@ -23,6 +23,7 @@ export async function seedCatalogForOrganization(supabase: SupabaseClient, organ
     active: l.active,
     contact_email: l.contactEmail ?? null,
     notes: l.notes ?? null,
+    tier_level: l.tierLevel,
   }));
   const { data: insertedLenders, error: lendersError } = await supabase
     .from("lenders")

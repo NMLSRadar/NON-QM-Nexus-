@@ -57,12 +57,14 @@ model OrganizationSetting {
 model User {
   id        String   @id @default(uuid()) @db.Uuid // mirrors Supabase auth.users id
   email     String   @unique
+  platformAdmin Boolean @default(false) @map("platform_admin")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  profile     UserProfile?
-  memberships Membership[]
+  profile      UserProfile?
+  memberships  Membership[]
+  subscription UserSubscription?
 
   @@map("users")
 }
@@ -104,6 +106,12 @@ model Lender {
   active         Boolean @default(true)
   contactEmail   String? @map("contact_email")
   notes          String?
+  // Minimum subscription tier (1, 2, or 3) required to see this lender in
+  // comparisons. 1 = Essential (Top 12), 2 = Professional (Top 25),
+  // 3 = Enterprise (unlimited). New lenders default to 3 so they only
+  // surface for Enterprise until an admin explicitly curates them into the
+  // Top 12 / Top 25 lists (see docs/membership.md).
+  tierLevel      Int     @default(3) @map("tier_level")
   createdBy      String? @map("created_by") @db.Uuid
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
@@ -113,6 +121,62 @@ model Lender {
   programs     Program[]
 
   @@map("lenders")
+}
+
+/// A subscription tier. Fully admin-managed — name, price, and the lender
+/// tier level it unlocks can all change without a code deploy. New tiers
+/// can be added by inserting another row (see src/app/admin/plans).
+model MembershipPlan {
+  id                String   @id @default(uuid()) @db.Uuid
+  key               String   @unique // stable code reference, e.g. "essential"
+  name              String
+  monthlyPriceCents Int      @map("monthly_price_cents")
+  // The lender tier level this plan unlocks (see Lender.tierLevel): a user
+  // on a plan with tierLevel N can see any lender with tierLevel <= N.
+  tierLevel         Int      @map("tier_level")
+  description       String?
+  isActive          Boolean  @default(true) @map("is_active")
+  sortOrder         Int      @default(0) @map("sort_order")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  subscriptions UserSubscription[]
+
+  @@map("membership_plans")
+}
+
+/// A reusable discount definition (e.g. "50% Off", "100% Off"). Admins can
+/// add more percentages later without a migration — this is just data.
+model Discount {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  percentOff Int      @map("percent_off") // 0-100
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  subscriptions UserSubscription[]
+
+  @@map("discounts")
+}
+
+/// One row per user: their current plan and an optional active discount.
+/// Admin-assigned for now (no self-serve checkout / billing yet — see
+/// FINALIZE.md Phase 7 for the future Stripe integration). A discount stays
+/// in effect until an admin removes it (sets discountId back to null).
+model UserSubscription {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @unique @map("user_id") @db.Uuid
+  planId       String?   @map("plan_id") @db.Uuid
+  discountId   String?   @map("discount_id") @db.Uuid
+  assignedBy   String?   @map("assigned_by") @db.Uuid // platform admin who set this
+  startedAt    DateTime  @default(now()) @map("started_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user     User            @relation(fields: [userId], references: [id])
+  plan     MembershipPlan? @relation(fields: [planId], references: [id])
+  discount Discount?       @relation(fields: [discountId], references: [id])
+
+  @@map("user_subscriptions")
 }
 
 model Program {

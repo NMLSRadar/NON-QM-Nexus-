@@ -4,6 +4,7 @@ import type { Lender, Program, Rule } from "@/domain/types/program";
 import type { Scenario } from "@/domain/types/scenario";
 import type { ProgramCatalog } from "@/domain/analyze";
 import { seedCatalogForOrganization } from "./seedCatalog";
+import { getEffectivePlan } from "./membership";
 
 // ---------------------------------------------------------------------------
 // Row <-> domain object mapping.
@@ -24,6 +25,7 @@ interface LenderRow {
   active: boolean;
   contact_email: string | null;
   notes: string | null;
+  tier_level: number;
 }
 
 function rowToLender(row: LenderRow): Lender {
@@ -35,6 +37,7 @@ function rowToLender(row: LenderRow): Lender {
     active: row.active,
     contactEmail: row.contact_email ?? undefined,
     notes: row.notes ?? undefined,
+    tierLevel: row.tier_level,
   };
 }
 
@@ -140,7 +143,21 @@ function scenarioToRow(scenario: Scenario) {
 }
 
 export class SupabaseRepository implements Repository {
-  constructor(private readonly supabase: SupabaseClient) {}
+  private effectiveTierPromise: Promise<number> | null = null;
+
+  constructor(
+    private readonly supabase: SupabaseClient,
+    private readonly userId?: string
+  ) {}
+
+  /** The current user's subscription tier level (0 = no active plan → sees no lenders). */
+  private async getEffectiveTier(): Promise<number> {
+    if (!this.userId) return 0;
+    if (!this.effectiveTierPromise) {
+      this.effectiveTierPromise = getEffectivePlan(this.supabase, this.userId).then((p) => p.tierLevel);
+    }
+    return this.effectiveTierPromise;
+  }
 
   async getCatalog(organizationId: string): Promise<ProgramCatalog> {
     await this.ensureCatalogSeeded(organizationId);
@@ -198,32 +215,38 @@ export class SupabaseRepository implements Repository {
   }
 
   async listLenders(organizationId: string): Promise<Lender[]> {
+    const tier = await this.getEffectiveTier();
     const { data, error } = await this.supabase
       .from("lenders")
-      .select("id, organization_id, name, is_sample_data, active, contact_email, notes")
+      .select("id, organization_id, name, is_sample_data, active, contact_email, notes, tier_level")
       .eq("organization_id", organizationId)
+      .lte("tier_level", tier)
       .is("deleted_at", null);
     if (error) throw new Error(`Failed to list lenders: ${error.message}`);
     return (data as LenderRow[]).map(rowToLender);
   }
 
   async listPrograms(organizationId: string): Promise<Program[]> {
+    const tier = await this.getEffectiveTier();
     const { data, error } = await this.supabase
       .from("programs")
-      .select("id, organization_id, lender_id, name, is_sample_data, active, config")
+      .select("id, organization_id, lender_id, name, is_sample_data, active, config, lenders!inner(tier_level)")
       .eq("organization_id", organizationId)
+      .lte("lenders.tier_level", tier)
       .is("deleted_at", null);
     if (error) throw new Error(`Failed to list programs: ${error.message}`);
-    return (data as ProgramRow[]).map(rowToProgram);
+    return (data as unknown as ProgramRow[]).map(rowToProgram);
   }
 
   async listRules(organizationId: string): Promise<Rule[]> {
+    const tier = await this.getEffectiveTier();
     const { data, error } = await this.supabase
       .from("rules")
       .select(
-        "id, organization_id, program_id, guideline_version_id, category, name, definition, severity, user_explanation, internal_explanation, source_section, source_page, effective_date, expiration_date, verification_status, programs(lender_id)"
+        "id, organization_id, program_id, guideline_version_id, category, name, definition, severity, user_explanation, internal_explanation, source_section, source_page, effective_date, expiration_date, verification_status, programs!inner(lender_id, lenders!inner(tier_level))"
       )
       .eq("organization_id", organizationId)
+      .lte("programs.lenders.tier_level", tier)
       .is("deleted_at", null);
     if (error) throw new Error(`Failed to list rules: ${error.message}`);
     return (data as unknown as RuleRow[]).map(rowToRule);

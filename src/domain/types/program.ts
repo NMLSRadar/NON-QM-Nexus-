@@ -122,6 +122,8 @@ export interface Lender {
   active: boolean;
   contactEmail?: string;
   notes?: string;
+  /** Minimum subscription tier (1 Essential, 2 Professional, 3 Enterprise) required to see this lender. */
+  tierLevel: number;
 }
 
 export interface GuidelineVersion {
