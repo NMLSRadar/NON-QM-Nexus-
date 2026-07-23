@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run tests/integration",
     "seed:check": "tsx scripts/seed-check.ts",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",

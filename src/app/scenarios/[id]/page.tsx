@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { analyzeScenario } from "@/domain/analyze";
-import { getCurrentOrganizationId, getRepository } from "@/lib/store";
+import { getCurrentOrganizationId, getRepository } from "@/lib/session";
 import { Card, Stat, fmtNum, fmtPct, fmtUsd } from "@/components/ui";
 import type { CalcResult } from "@/domain/types/results";
 import { CompareSection } from "./compare";
@@ -45,8 +45,8 @@ function fmtCalc(calc: CalcResult): string {
 
 export default async function ScenarioResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const repo = getRepository();
-  const org = getCurrentOrganizationId();
+  const repo = await getRepository();
+  const org = await getCurrentOrganizationId();
   const scenario = await repo.getScenario(org, id);
   if (!scenario) notFound();
   const catalog = await repo.getCatalog(org);

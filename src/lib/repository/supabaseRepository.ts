@@ -1,0 +1,231 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Repository } from "@/lib/store";
+import type { Lender, Program, Rule } from "@/domain/types/program";
+import type { Scenario } from "@/domain/types/scenario";
+import type { ProgramCatalog } from "@/domain/analyze";
+import { seedCatalogForOrganization } from "./seedCatalog";
+
+// ---------------------------------------------------------------------------
+// Row <-> domain object mapping.
+//
+// Lenders map column-for-column. Programs and Rules carry their full
+// structured shape (loan criteria / condition tree) in a jsonb column
+// (config / definition) — see prisma/schema.prisma comments — with a few
+// canonical columns (organization_id, lender_id, name, active, ...)
+// mirrored for querying and RLS. The jsonb payload is the source of truth
+// for every other field; canonical columns always win on conflict.
+// ---------------------------------------------------------------------------
+
+interface LenderRow {
+  id: string;
+  organization_id: string;
+  name: string;
+  is_sample_data: boolean;
+  active: boolean;
+  contact_email: string | null;
+  notes: string | null;
+}
+
+function rowToLender(row: LenderRow): Lender {
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    name: row.name,
+    isSampleData: row.is_sample_data,
+    active: row.active,
+    contactEmail: row.contact_email ?? undefined,
+    notes: row.notes ?? undefined,
+  };
+}
+
+interface ProgramRow {
+  id: string;
+  organization_id: string;
+  lender_id: string;
+  name: string;
+  is_sample_data: boolean;
+  active: boolean;
+  config: Omit<Program, "id" | "organizationId" | "lenderId" | "name" | "isSampleData" | "active">;
+}
+
+function rowToProgram(row: ProgramRow): Program {
+  return {
+    ...row.config,
+    id: row.id,
+    organizationId: row.organization_id,
+    lenderId: row.lender_id,
+    name: row.name,
+    isSampleData: row.is_sample_data,
+    active: row.active,
+  };
+}
+
+interface RuleRow {
+  id: string;
+  organization_id: string;
+  program_id: string;
+  guideline_version_id: string;
+  category: string;
+  name: string;
+  definition: Pick<Rule, "conditions" | "outcomeWhenTrue" | "outcomeWhenFalse" | "setsField">;
+  severity: Rule["severity"];
+  user_explanation: string;
+  internal_explanation: string | null;
+  source_section: string | null;
+  source_page: number | null;
+  effective_date: string | null;
+  expiration_date: string | null;
+  verification_status: Rule["verificationStatus"];
+  // joined in via `programs(lender_id)`
+  programs: { lender_id: string } | { lender_id: string }[] | null;
+}
+
+function rowToRule(row: RuleRow): Rule {
+  const joinedProgram = Array.isArray(row.programs) ? row.programs[0] : row.programs;
+  return {
+    id: row.id,
+    lenderId: joinedProgram?.lender_id ?? "",
+    programId: row.program_id,
+    guidelineVersionId: row.guideline_version_id,
+    category: row.category,
+    name: row.name,
+    conditions: row.definition.conditions,
+    outcomeWhenTrue: row.definition.outcomeWhenTrue,
+    outcomeWhenFalse: row.definition.outcomeWhenFalse,
+    setsField: row.definition.setsField ?? undefined,
+    severity: row.severity,
+    userExplanation: row.user_explanation,
+    internalExplanation: row.internal_explanation ?? undefined,
+    sourceSection: row.source_section ?? undefined,
+    sourcePage: row.source_page ?? undefined,
+    effectiveDate: row.effective_date ?? undefined,
+    expirationDate: row.expiration_date ?? undefined,
+    verificationStatus: row.verification_status,
+  };
+}
+
+interface ScenarioRow {
+  id: string;
+  organization_id: string;
+  name: string;
+  created_by: string;
+  data: Omit<Scenario, "id" | "organizationId" | "name" | "createdByUserId" | "createdAt" | "updatedAt">;
+  created_at: string;
+  updated_at: string;
+}
+
+function rowToScenario(row: ScenarioRow): Scenario {
+  return {
+    ...row.data,
+    id: row.id,
+    organizationId: row.organization_id,
+    name: row.name,
+    createdByUserId: row.created_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function scenarioToRow(scenario: Scenario) {
+  const { id, organizationId, name, createdByUserId, createdAt, updatedAt, ...data } = scenario;
+  void id;
+  void createdAt;
+  void updatedAt;
+  return {
+    organization_id: organizationId,
+    name,
+    created_by: createdByUserId,
+    data,
+  };
+}
+
+export class SupabaseRepository implements Repository {
+  constructor(private readonly supabase: SupabaseClient) {}
+
+  async getCatalog(organizationId: string): Promise<ProgramCatalog> {
+    await this.ensureCatalogSeeded(organizationId);
+    const [lenders, programs, rules] = await Promise.all([
+      this.listLenders(organizationId),
+      this.listPrograms(organizationId),
+      this.listRules(organizationId),
+    ]);
+    return { lenders, programs, rules };
+  }
+
+  private async ensureCatalogSeeded(organizationId: string): Promise<void> {
+    const { count, error } = await this.supabase
+      .from("lenders")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId);
+    if (error) throw new Error(`Failed to check catalog: ${error.message}`);
+    if (!count) {
+      await seedCatalogForOrganization(this.supabase, organizationId);
+    }
+  }
+
+  async listScenarios(organizationId: string): Promise<Scenario[]> {
+    const { data, error } = await this.supabase
+      .from("scenarios")
+      .select("id, organization_id, name, created_by, data, created_at, updated_at")
+      .eq("organization_id", organizationId)
+      .is("deleted_at", null)
+      .order("updated_at", { ascending: false });
+    if (error) throw new Error(`Failed to list scenarios: ${error.message}`);
+    return (data as ScenarioRow[]).map(rowToScenario);
+  }
+
+  async getScenario(organizationId: string, id: string): Promise<Scenario | null> {
+    const { data, error } = await this.supabase
+      .from("scenarios")
+      .select("id, organization_id, name, created_by, data, created_at, updated_at")
+      .eq("organization_id", organizationId)
+      .eq("id", id)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (error) throw new Error(`Failed to load scenario: ${error.message}`);
+    return data ? rowToScenario(data as ScenarioRow) : null;
+  }
+
+  async saveScenario(scenario: Scenario): Promise<Scenario> {
+    const row = scenarioToRow(scenario);
+    const { data, error } = await this.supabase
+      .from("scenarios")
+      .upsert({ id: scenario.id, ...row }, { onConflict: "id" })
+      .select("id, organization_id, name, created_by, data, created_at, updated_at")
+      .single();
+    if (error) throw new Error(`Failed to save scenario: ${error.message}`);
+    return rowToScenario(data as ScenarioRow);
+  }
+
+  async listLenders(organizationId: string): Promise<Lender[]> {
+    const { data, error } = await this.supabase
+      .from("lenders")
+      .select("id, organization_id, name, is_sample_data, active, contact_email, notes")
+      .eq("organization_id", organizationId)
+      .is("deleted_at", null);
+    if (error) throw new Error(`Failed to list lenders: ${error.message}`);
+    return (data as LenderRow[]).map(rowToLender);
+  }
+
+  async listPrograms(organizationId: string): Promise<Program[]> {
+    const { data, error } = await this.supabase
+      .from("programs")
+      .select("id, organization_id, lender_id, name, is_sample_data, active, config")
+      .eq("organization_id", organizationId)
+      .is("deleted_at", null);
+    if (error) throw new Error(`Failed to list programs: ${error.message}`);
+    return (data as ProgramRow[]).map(rowToProgram);
+  }
+
+  async listRules(organizationId: string): Promise<Rule[]> {
+    const { data, error } = await this.supabase
+      .from("rules")
+      .select(
+        "id, organization_id, program_id, guideline_version_id, category, name, definition, severity, user_explanation, internal_explanation, source_section, source_page, effective_date, expiration_date, verification_status, programs(lender_id)"
+      )
+      .eq("organization_id", organizationId)
+      .is("deleted_at", null);
+    if (error) throw new Error(`Failed to list rules: ${error.message}`);
+    return (data as unknown as RuleRow[]).map(rowToRule);
+  }
+}

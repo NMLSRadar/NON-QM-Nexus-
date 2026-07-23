@@ -1,11 +1,11 @@
-import { getCurrentOrganizationId, getRepository } from "@/lib/store";
+import { getCurrentOrganizationId, getRepository } from "@/lib/session";
 import { Card, SampleDataBadge, fmtPct, fmtUsd } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProgramsPage() {
-  const repo = getRepository();
-  const org = getCurrentOrganizationId();
+  const repo = await getRepository();
+  const org = await getCurrentOrganizationId();
   const [lenders, programs, rules] = await Promise.all([
     repo.listLenders(org),
     repo.listPrograms(org),

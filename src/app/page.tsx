@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { analyzeScenario } from "@/domain/analyze";
-import { getCurrentOrganizationId, getRepository } from "@/lib/store";
+import { getCurrentOrganizationId, getRepository } from "@/lib/session";
 import { Card, StatusBadge } from "@/components/ui";
 import type { MatchStatus } from "@/domain/types/enums";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const repo = getRepository();
-  const org = getCurrentOrganizationId();
+  const repo = await getRepository();
+  const org = await getCurrentOrganizationId();
   const [scenarios, catalog] = await Promise.all([repo.listScenarios(org), repo.getCatalog(org)]);
 
   // Summarize each scenario's best status for the dashboard cards.
