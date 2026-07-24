@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getCurrentOrganizationId, getRepository } from "@/lib/session";
-import { PageHeader, Card, Pill, SampleDataBadge, MetricTile, fmtUsd, fmtPct } from "@/components/ui";
+import { getCurrentOrganizationId, getRepository, getLenderAccessInfo } from "@/lib/session";
+import { PageHeader, Card, Pill, SampleDataBadge, MetricTile, LinkButton, fmtUsd, fmtPct } from "@/components/ui";
 import { getWordmarkStyle } from "@/domain/lenderBrandStyle";
 
 export const dynamic = "force-dynamic";
@@ -12,12 +12,17 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const repo = await getRepository();
   const org = await getCurrentOrganizationId();
-  const [lenders, programs] = await Promise.all([repo.listLenders(org), repo.listPrograms(org)]);
+  const [allLenders, access] = await Promise.all([repo.listAllLenders(org), getLenderAccessInfo()]);
 
-  const lender = lenders.find((l) => l.id === id);
+  const lender = allLenders.find((l) => l.id === id);
   if (!lender) notFound();
 
-  const lenderPrograms = programs.filter((p) => p.lenderId === lender.id);
+  const unlocked = access.tierLevel >= lender.tierLevel;
+  // Guideline/program data is only ever fetched when the caller's tier
+  // actually covers this lender — a locked lender's real program details
+  // never reach this request at all, matching the same server-side
+  // enforcement as the Lenders directory page.
+  const lenderPrograms = unlocked ? (await repo.listPrograms(org)).filter((p) => p.lenderId === lender.id) : [];
   const style = getWordmarkStyle(lender.name);
 
   return (
@@ -51,56 +56,75 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
         }
       />
 
-      {lender.notes && (
-        <Card title="Notes">
-          <p className="text-sm text-ink-secondary whitespace-pre-line">{lender.notes}</p>
-        </Card>
-      )}
-
-      <Card title={`Programs (${lenderPrograms.length})`}>
-        {lenderPrograms.length === 0 ? (
-          <p className="text-sm text-ink-secondary">No active programs on file for this lender yet.</p>
-        ) : (
-          <div className="space-y-4">
-            {lenderPrograms.map((p) => (
-              <div key={p.id} className="rounded-control border border-surface-border p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="font-semibold text-ink-primary">{p.name}</h3>
-                  <span className="text-xs text-ink-secondary">
-                    {p.guidelineVersionLabel} · eff. {p.effectiveDate}
-                    {p.lastVerifiedDate ? ` · verified ${p.lastVerifiedDate}` : ""}
-                  </span>
-                </div>
-                <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  <MetricTile label="Max LTV" value={fmtPct(p.baseMaxLtv, 1)} />
-                  <MetricTile label="Min FICO" value={p.minFico} />
-                  <MetricTile label="Loan amount" value={`${fmtUsd(p.minLoanAmount)}–${fmtUsd(p.maxLoanAmount)}`} />
-                  <MetricTile label="Reserves" value={`${p.minReservesMonths} mo`} />
-                  {p.minDscr !== undefined && <MetricTile label="Min DSCR" value={p.minDscr} />}
-                  {p.maxDti !== undefined && <MetricTile label="Max DTI" value={fmtPct(p.maxDti, 0)} />}
-                  <MetricTile label="Interest-only" value={p.interestOnlyAvailable ? "Available" : "Not offered"} />
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {p.incomeDocTypes.map((d) => (
-                    <Pill key={d} tone="sky">
-                      {d.replace(/_/g, " ")}
-                    </Pill>
-                  ))}
-                  {p.occupancies.map((o) => (
-                    <Pill key={o} tone="neutral">
-                      {o.replace(/_/g, " ")}
-                    </Pill>
-                  ))}
-                </div>
-                {p.notes && <p className="mt-3 text-xs text-ink-secondary whitespace-pre-line">{p.notes}</p>}
-                <p className="mt-2 text-xs text-ink-secondary">
-                  Source: <span className="italic">{p.sourceCitation}</span>
-                </p>
-              </div>
-            ))}
+      {!unlocked ? (
+        <Card>
+          <div className="flex flex-col items-center gap-3 py-10 text-center">
+            <span aria-hidden className="text-4xl">
+              🔒
+            </span>
+            <Pill tone="neutral">Tier {lender.tierLevel} Access Required</Pill>
+            <p className="max-w-md text-sm text-ink-secondary">
+              Upgrade your membership to access this lender’s complete guidelines and program details.
+            </p>
+            <LinkButton href="/pricing" variant="primary">
+              Upgrade to Unlock
+            </LinkButton>
           </div>
-        )}
-      </Card>
+        </Card>
+      ) : (
+        <>
+          {lender.notes && (
+            <Card title="Notes">
+              <p className="text-sm text-ink-secondary whitespace-pre-line">{lender.notes}</p>
+            </Card>
+          )}
+
+          <Card title={`Programs (${lenderPrograms.length})`}>
+            {lenderPrograms.length === 0 ? (
+              <p className="text-sm text-ink-secondary">No active programs on file for this lender yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {lenderPrograms.map((p) => (
+                  <div key={p.id} className="rounded-control border border-surface-border p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="font-semibold text-ink-primary">{p.name}</h3>
+                      <span className="text-xs text-ink-secondary">
+                        {p.guidelineVersionLabel} · eff. {p.effectiveDate}
+                        {p.lastVerifiedDate ? ` · verified ${p.lastVerifiedDate}` : ""}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      <MetricTile label="Max LTV" value={fmtPct(p.baseMaxLtv, 1)} />
+                      <MetricTile label="Min FICO" value={p.minFico} />
+                      <MetricTile label="Loan amount" value={`${fmtUsd(p.minLoanAmount)}–${fmtUsd(p.maxLoanAmount)}`} />
+                      <MetricTile label="Reserves" value={`${p.minReservesMonths} mo`} />
+                      {p.minDscr !== undefined && <MetricTile label="Min DSCR" value={p.minDscr} />}
+                      {p.maxDti !== undefined && <MetricTile label="Max DTI" value={fmtPct(p.maxDti, 0)} />}
+                      <MetricTile label="Interest-only" value={p.interestOnlyAvailable ? "Available" : "Not offered"} />
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {p.incomeDocTypes.map((d) => (
+                        <Pill key={d} tone="sky">
+                          {d.replace(/_/g, " ")}
+                        </Pill>
+                      ))}
+                      {p.occupancies.map((o) => (
+                        <Pill key={o} tone="neutral">
+                          {o.replace(/_/g, " ")}
+                        </Pill>
+                      ))}
+                    </div>
+                    {p.notes && <p className="mt-3 text-xs text-ink-secondary whitespace-pre-line">{p.notes}</p>}
+                    <p className="mt-2 text-xs text-ink-secondary">
+                      Source: <span className="italic">{p.sourceCitation}</span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </>
+      )}
     </div>
   );
 }

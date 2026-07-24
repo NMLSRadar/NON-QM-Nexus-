@@ -15,6 +15,12 @@ interface Props {
   tier1: DirectoryLender[];
   tier2: DirectoryLender[];
   tier3: DirectoryLender[];
+  /** The signed-in user's current guideline-access tier (0 = no active
+   * plan). Controls ONLY whether a lender's card is unlocked or shown in
+   * its locked "Upgrade to Unlock" state — every lender is always
+   * rendered regardless of this value; see docs on
+   * Repository.listAllLenders. */
+  userTierLevel: number;
 }
 
 type ChipKey =
@@ -26,8 +32,7 @@ type ChipKey =
   | "bank_statement"
   | "pnl_only"
   | "foreign_national"
-  | "asset_depletion"
-  | "investor";
+  | "asset_depletion";
 
 const CHIPS: Array<{ key: ChipKey; label: string }> = [
   { key: "all", label: "All" },
@@ -39,7 +44,6 @@ const CHIPS: Array<{ key: ChipKey; label: string }> = [
   { key: "pnl_only", label: "P&L Only" },
   { key: "foreign_national", label: "Foreign National" },
   { key: "asset_depletion", label: "Asset Depletion" },
-  { key: "investor", label: "Investor" },
 ];
 
 function matchesChip(d: DirectoryLender, chip: ChipKey): boolean {
@@ -62,8 +66,6 @@ function matchesChip(d: DirectoryLender, chip: ChipKey): boolean {
       return d.programs.some((p) => p.incomeDocTypes.includes("asset_depletion"));
     case "foreign_national":
       return d.programs.some((p) => p.citizenshipEligible.includes("foreign_national"));
-    case "investor":
-      return d.programs.some((p) => p.occupancies.includes("investment"));
     default:
       return true;
   }
@@ -89,16 +91,46 @@ function LenderName({ name }: { name: string }) {
   );
 }
 
-function LenderCard({ d, rank }: { d: DirectoryLender; rank: number }) {
+function LenderCard({ d, rank, unlocked }: { d: DirectoryLender; rank: number; unlocked: boolean }) {
+  const rankBadge = (
+    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-500 text-[11px] font-bold text-white">
+      {rank}
+    </span>
+  );
+
+  if (!unlocked) {
+    return (
+      <div
+        className="relative flex flex-col gap-2 rounded-card border border-surface-border bg-slate-50 p-4"
+        aria-label={`${d.lender.name} — Tier ${d.lender.tierLevel} access required`}
+      >
+        <div className="flex items-start gap-3">
+          {rankBadge}
+          <span className="min-w-0 opacity-60">
+            <LenderName name={d.lender.name} />
+          </span>
+          <span aria-hidden className="ml-auto text-lg">
+            🔒
+          </span>
+        </div>
+        <Pill tone="neutral" className="w-fit">
+          Tier {d.lender.tierLevel} Access Required
+        </Pill>
+        <p className="text-xs text-ink-secondary">Upgrade your membership to access this lender’s complete guidelines and program details.</p>
+        <LinkButton href="/pricing" variant="secondary" size="sm" className="w-fit">
+          Upgrade to Unlock
+        </LinkButton>
+      </div>
+    );
+  }
+
   return (
     <Link
       href={`/lenders/${d.lender.id}`}
       className="group relative flex items-start gap-3 rounded-card border border-surface-border bg-white p-4 shadow-soft transition-all duration-200 hover:-translate-y-1 hover:shadow-soft-hover hover:border-brand-400 cursor-pointer"
       aria-label={`View ${d.lender.name} programs and guidelines`}
     >
-      <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-500 text-[11px] font-bold text-white">
-        {rank}
-      </span>
+      {rankBadge}
       <span className="min-w-0">
         <LenderName name={d.lender.name} />
         {d.lender.isSampleData && (
@@ -119,6 +151,7 @@ function TierSection({
   description,
   lenders,
   rankOffset,
+  userTierLevel,
   initialCount = 12,
 }: {
   icon: string;
@@ -128,6 +161,7 @@ function TierSection({
   description: string;
   lenders: DirectoryLender[];
   rankOffset: number;
+  userTierLevel: number;
   initialCount?: number;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -165,14 +199,14 @@ function TierSection({
 
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {shown.map((d, i) => (
-          <LenderCard key={d.lender.id} d={d} rank={rankOffset + i + 1} />
+          <LenderCard key={d.lender.id} d={d} rank={rankOffset + i + 1} unlocked={userTierLevel >= d.lender.tierLevel} />
         ))}
       </div>
     </section>
   );
 }
 
-export function LenderDirectory({ tier1, tier2, tier3 }: Props) {
+export function LenderDirectory({ tier1, tier2, tier3, userTierLevel }: Props) {
   const [query, setQuery] = useState("");
   const [chip, setChip] = useState<ChipKey>("all");
 
@@ -238,6 +272,7 @@ export function LenderDirectory({ tier1, tier2, tier3 }: Props) {
         description="Our most popular lenders with the broadest program offerings and highest broker usage."
         lenders={t1}
         rankOffset={0}
+        userTierLevel={userTierLevel}
       />
       <TierSection
         icon="🥈"
@@ -247,6 +282,7 @@ export function LenderDirectory({ tier1, tier2, tier3 }: Props) {
         description="Strong national lenders with specialized products and competitive guidelines."
         lenders={t2}
         rankOffset={t1.length}
+        userTierLevel={userTierLevel}
       />
       <TierSection
         icon="🥉"
@@ -256,16 +292,10 @@ export function LenderDirectory({ tier1, tier2, tier3 }: Props) {
         description="The full catalog, unlocked on the Enterprise plan."
         lenders={t3}
         rankOffset={t1.length + t2.length}
+        userTierLevel={userTierLevel}
       />
 
-      {all.length === 0 && (
-        <div className="text-center py-12 text-sm text-ink-secondary">
-          No lenders are visible on your current plan.{" "}
-          <LinkButton href="/pricing" variant="secondary" size="sm">
-            View plans
-          </LinkButton>
-        </div>
-      )}
+      {all.length === 0 && <p className="text-center py-12 text-sm text-ink-secondary">No lenders are configured for this organization yet.</p>}
     </div>
   );
 }

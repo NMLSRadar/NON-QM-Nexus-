@@ -237,6 +237,20 @@ export class SupabaseRepository implements Repository {
     return (data as LenderRow[]).map(rowToLender);
   }
 
+  /** Every lender in the org regardless of tier — see the Repository
+   * interface doc comment. Deliberately has NO `.lte("tier_level", tier)`
+   * filter; guideline/program data (listPrograms) stays tier-gated, so
+   * this alone never leaks anything beyond a lender's name/tier. */
+  async listAllLenders(organizationId: string): Promise<Lender[]> {
+    const { data, error } = await this.supabase
+      .from("lenders")
+      .select("id, organization_id, name, is_sample_data, active, contact_email, notes, tier_level")
+      .eq("organization_id", organizationId)
+      .is("deleted_at", null);
+    if (error) throw new Error(`Failed to list all lenders: ${error.message}`);
+    return (data as LenderRow[]).map(rowToLender);
+  }
+
   async listPrograms(organizationId: string): Promise<Program[]> {
     const tier = await this.getEffectiveTier();
     const { data, error } = await this.supabase
