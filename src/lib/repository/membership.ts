@@ -10,6 +10,15 @@ export interface EffectivePlan {
   effectivePriceCents: number | null;
   /** Set if the user canceled (self-serve or admin) — the plan/price above still reflect what they had, for display. */
   canceledAt: string | null;
+  /** "stripe" for a real paid subscription, "comped" for an admin-granted
+   * free/discounted subscription with no Stripe object behind it, or null
+   * if there's no subscription row at all. */
+  source: "stripe" | "comped" | null;
+  /** Set only for source === "stripe" — used to route cancel/reactivate
+   * through the Stripe API instead of the local-only RPCs. */
+  stripeSubscriptionId: string | null;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
 }
 
 const NO_PLAN: EffectivePlan = {
@@ -19,6 +28,10 @@ const NO_PLAN: EffectivePlan = {
   discountPercentOff: null,
   effectivePriceCents: null,
   canceledAt: null,
+  source: null,
+  stripeSubscriptionId: null,
+  cancelAtPeriodEnd: false,
+  currentPeriodEnd: null,
 };
 
 /**
@@ -37,7 +50,7 @@ export async function getEffectivePlan(supabase: SupabaseClient, userId: string)
   const { data, error } = await supabase
     .from("user_subscriptions")
     .select(
-      "canceled_at, plan:membership_plans(name, monthly_price_cents, tier_level), discount:discounts(percent_off)"
+      "canceled_at, source, stripe_subscription_id, cancel_at_period_end, current_period_end, plan:membership_plans(name, monthly_price_cents, tier_level), discount:discounts(percent_off)"
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -60,5 +73,9 @@ export async function getEffectivePlan(supabase: SupabaseClient, userId: string)
     discountPercentOff: discount ? percentOff : null,
     effectivePriceCents,
     canceledAt,
+    source: (data.source as "stripe" | "comped" | null) ?? "comped",
+    stripeSubscriptionId: (data.stripe_subscription_id as string | null) ?? null,
+    cancelAtPeriodEnd: (data.cancel_at_period_end as boolean | null) ?? false,
+    currentPeriodEnd: (data.current_period_end as string | null) ?? null,
   };
 }

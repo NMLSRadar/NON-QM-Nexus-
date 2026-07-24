@@ -5,7 +5,7 @@ import { reactivateSubscription, type ReactivateSubscriptionState } from "./subs
 
 const initialState: ReactivateSubscriptionState = {};
 
-export function ReactivateSubscriptionForm() {
+export function ReactivateSubscriptionForm({ label = "Reactivate subscription" }: { label?: string }) {
   const [state, formAction, pending] = useActionState(reactivateSubscription, initialState);
 
   if (state.success) {
@@ -24,7 +24,7 @@ export function ReactivateSubscriptionForm() {
         disabled={pending}
         className="rounded-md bg-brand-600 text-white text-sm font-medium px-4 py-1.5 hover:bg-brand-700 disabled:opacity-60"
       >
-        {pending ? "Reactivating…" : "Reactivate subscription"}
+        {pending ? "Reactivating…" : label}
       </button>
     </form>
   );

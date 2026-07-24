@@ -5,15 +5,16 @@ import { cancelSubscription, type CancelSubscriptionState } from "./subscription
 
 const initialState: CancelSubscriptionState = {};
 
-export function CancelSubscriptionForm() {
+export function CancelSubscriptionForm({ isStripe = false }: { isStripe?: boolean }) {
   const [confirming, setConfirming] = useState(false);
   const [state, formAction, pending] = useActionState(cancelSubscription, initialState);
 
   if (state.success) {
     return (
       <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-3">
-        Your subscription has been canceled. You&apos;ve lost lender-comparison access immediately — contact us if
-        you&apos;d like to reactivate.
+        {isStripe
+          ? "Your subscription is set to cancel at the end of the current billing period — you keep access until then."
+          : "Your subscription has been canceled. You've lost lender-comparison access immediately — contact us if you'd like to reactivate."}
       </p>
     );
   }
@@ -33,8 +34,9 @@ export function CancelSubscriptionForm() {
   return (
     <form action={formAction} className="space-y-3">
       <p className="text-sm text-slate-700">
-        Are you sure? You&apos;ll immediately lose access to lender comparisons beyond the Free tier. This can&apos;t
-        be undone yourself — you&apos;d need to contact us to reactivate.
+        {isStripe
+          ? "Are you sure? You'll keep access until the end of your current billing period, then it cancels — no further charges. You can resume any time before then."
+          : "Are you sure? You'll immediately lose access to lender comparisons beyond the Free tier. This can't be undone yourself — you'd need to contact us to reactivate."}
       </p>
       {state.error ? <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">{state.error}</p> : null}
       <div className="flex gap-3">

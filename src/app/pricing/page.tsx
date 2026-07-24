@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
+import { startCheckout } from "./checkout-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ interface PlanRow {
   monthly_price_cents: number;
   tier_level: number;
   description: string | null;
+  stripe_price_id: string | null;
 }
 
 // Feature bullets keyed by tier_level — the admin portal (/admin/plans)
@@ -41,9 +43,12 @@ const TIER_FEATURES: Record<number, string[]> = {
 
 export default async function PricingPage() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from("membership_plans")
-    .select("id, key, name, monthly_price_cents, tier_level, description")
+    .select("id, key, name, monthly_price_cents, tier_level, description, stripe_price_id")
     .eq("is_active", true)
     .order("sort_order");
 
@@ -93,25 +98,46 @@ export default async function PricingPage() {
                 ))}
               </ul>
 
-              <Link
-                href="/signup"
-                className={`mt-6 block text-center rounded-md text-sm font-medium px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 ${
-                  highlighted
-                    ? "bg-brand-600 text-white hover:bg-brand-700"
-                    : "bg-slate-100 text-slate-900 hover:bg-slate-200"
-                }`}
-              >
-                Get started
-              </Link>
+              {user ? (
+                plan.stripe_price_id ? (
+                  <form action={startCheckout}>
+                    <input type="hidden" name="planId" value={plan.id} />
+                    <button
+                      type="submit"
+                      className={`mt-6 w-full rounded-md text-sm font-medium px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 ${
+                        highlighted
+                          ? "bg-brand-600 text-white hover:bg-brand-700"
+                          : "bg-slate-100 text-slate-900 hover:bg-slate-200"
+                      }`}
+                    >
+                      Subscribe
+                    </button>
+                  </form>
+                ) : (
+                  <p className="mt-6 text-center text-xs text-slate-400">Billing not yet configured for this plan</p>
+                )
+              ) : (
+                <Link
+                  href={`/signup?next=/pricing`}
+                  className={`mt-6 block text-center rounded-md text-sm font-medium px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 ${
+                    highlighted
+                      ? "bg-brand-600 text-white hover:bg-brand-700"
+                      : "bg-slate-100 text-slate-900 hover:bg-slate-200"
+                  }`}
+                >
+                  Sign up to subscribe
+                </Link>
+              )}
             </Card>
           );
         })}
       </div>
 
       <p className="text-center text-xs text-slate-500 max-w-2xl mx-auto">
-        Sign up, then contact us to activate your membership — plans are currently activated by our team while we
-        finish rolling out self-serve billing. All lenders and programs shown elsewhere in this demonstration build
-        are fictional sample data — see the disclaimer in the footer.
+        Billing is processed securely by Stripe — your card details never touch our servers. Cancel anytime from your
+        account page; you keep access through the end of the period you&apos;ve already paid for. All lenders and
+        programs shown elsewhere in this demonstration build are fictional sample data — see the disclaimer in the
+        footer.
       </p>
     </div>
   );
