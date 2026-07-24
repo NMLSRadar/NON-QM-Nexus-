@@ -1,66 +1,76 @@
-import Link from "next/link";
+import { Mic, Sparkles, ClipboardList } from "lucide-react";
 import { analyzeScenario } from "@/domain/analyze";
 import { getCurrentOrganizationId, getRepository } from "@/lib/session";
-import { Card, StatusBadge, fmtUsd } from "@/components/ui";
-import type { MatchStatus } from "@/domain/types/enums";
+import { Card, IconBadge, LinkButton, PageHeader } from "@/components/ui";
+import type { ScenarioRowData } from "@/components/scenario-table";
+import { ScenarioBrowser } from "./scenario-browser";
 
 export const dynamic = "force-dynamic";
+
+const ABOUT_FEATURES = [
+  {
+    icon: <Mic className="h-5 w-5" />,
+    title: "Voice Input",
+    description: "Describe a borrower out loud — no forms to fill in.",
+  },
+  {
+    icon: <Sparkles className="h-5 w-5" />,
+    title: "AI Analysis",
+    description: "Every scenario is scored against every eligible lender program automatically.",
+  },
+  {
+    icon: <ClipboardList className="h-5 w-5" />,
+    title: "Scenario Tracking",
+    description: "Every scenario is saved so you can revisit, duplicate, or re-run it later.",
+  },
+];
 
 export default async function ScenariosPage() {
   const repo = await getRepository();
   const org = await getCurrentOrganizationId();
   const [scenarios, catalog] = await Promise.all([repo.listScenarios(org), repo.getCatalog(org)]);
 
-  const rows = scenarios.map((s) => {
+  const rows: ScenarioRowData[] = scenarios.map((s) => {
     const analysis = analyzeScenario(s, catalog);
-    return { s, best: analysis.evaluations[0] };
+    return { scenario: s, best: analysis.evaluations[0] };
   });
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Scenarios</h1>
-        <div className="flex items-center gap-2">
-          <Link href="/scenarios/voice" className="rounded-md border border-brand-600 text-brand-700 text-sm font-medium px-4 py-2 hover:bg-brand-50">
-            🎤 Voice Scenario
-          </Link>
-          <Link href="/scenarios/new" className="rounded-md bg-brand-600 text-white text-sm font-medium px-4 py-2 hover:bg-brand-700">
-            + New Scenario
-          </Link>
-        </div>
-      </div>
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs text-slate-500 border-b border-slate-200">
-                <th className="py-2 pr-4">Scenario</th>
-                <th className="py-2 pr-4">Borrower</th>
-                <th className="py-2 pr-4">Purpose</th>
-                <th className="py-2 pr-4">Doc type</th>
-                <th className="py-2 pr-4">Loan amount</th>
-                <th className="py-2 pr-4">State</th>
-                <th className="py-2">Best result</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.map(({ s, best }) => (
-                <tr key={s.id}>
-                  <td className="py-2 pr-4">
-                    <Link href={`/scenarios/${s.id}`} className="font-medium text-brand-700 hover:underline">
-                      {s.name}
-                    </Link>
-                  </td>
-                  <td className="py-2 pr-4">{s.borrowerReference ?? "—"}</td>
-                  <td className="py-2 pr-4">{s.loanPurpose?.replace(/_/g, " ") ?? "—"}</td>
-                  <td className="py-2 pr-4">{s.incomeDocType ?? "—"}</td>
-                  <td className="py-2 pr-4 tabular-nums">{fmtUsd(s.requestedLoanAmount)}</td>
-                  <td className="py-2 pr-4">{s.state ?? "—"}</td>
-                  <td className="py-2">{best ? <StatusBadge status={best.status as MatchStatus} /> : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="space-y-6">
+      <PageHeader
+        title="Scenarios"
+        subtitle="Manage and organize your borrower scenarios."
+        actions={
+          <>
+            <LinkButton href="/scenarios/voice" variant="secondary">
+              <Mic className="h-4 w-4" /> Voice Scenario
+            </LinkButton>
+            <LinkButton href="/scenarios/new">+ New Scenario</LinkButton>
+          </>
+        }
+      />
+
+      <Card className="p-6">
+        <ScenarioBrowser rows={rows} />
+      </Card>
+
+      <Card className="p-6">
+        <h2 className="text-lg font-bold text-ink-primary">About Scenarios</h2>
+        <p className="mt-1 text-sm text-ink-secondary">
+          Scenarios help you organize and track different borrower situations — create them with voice or manually,
+          then let AI do the guideline comparison.
+        </p>
+        <div className="mt-5 grid sm:grid-cols-3 gap-4">
+          {ABOUT_FEATURES.map((f) => (
+            <div
+              key={f.title}
+              className="rounded-control bg-gradient-to-br from-brand-50 to-white border border-surface-border p-4 transition-all duration-200 hover:shadow-soft-hover hover:-translate-y-0.5"
+            >
+              <IconBadge size="sm">{f.icon}</IconBadge>
+              <p className="mt-3 font-semibold text-ink-primary">{f.title}</p>
+              <p className="mt-1 text-xs text-ink-secondary">{f.description}</p>
+            </div>
+          ))}
         </div>
       </Card>
     </div>

@@ -43,7 +43,7 @@ const NAV = [
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen flex flex-col bg-white">
+      <body className="min-h-screen flex flex-col bg-surface-bg text-ink-primary">
         <PwaRegister />
         <header className="bg-white text-slate-900 border-b-2 border-black">
           <div className="mx-auto max-w-7xl px-4 py-3 flex flex-wrap items-center gap-x-8 gap-y-2">
