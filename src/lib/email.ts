@@ -6,9 +6,11 @@
 import "server-only";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
-// Resend's shared test domain — works immediately with no DNS setup.
-// Swap to a verified custom domain address once one is configured.
-const FROM_ADDRESS = "NON-QM Nexus <onboarding@resend.dev>";
+// Verified sending domain (nonqmnexus.com) — SPF/DKIM confirmed and a
+// real test send succeeded. Can now reach any real inbox, not just the
+// Resend account's own address like the onboarding@resend.dev test
+// domain could.
+const FROM_ADDRESS = "NON-QM Nexus <noreply@nonqmnexus.com>";
 
 export interface SendEmailResult {
   ok: boolean;
