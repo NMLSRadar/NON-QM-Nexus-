@@ -1,7 +1,6 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { redirect } from "next/navigation";
 import { scenarioInputSchema, type ScenarioInput } from "@/domain/validation/scenarioSchema";
 import { getCurrentOrganizationId, getRepository } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
@@ -10,6 +9,15 @@ import type { Scenario } from "@/domain/types/scenario";
 export interface CreateScenarioState {
   errors?: Record<string, string[]>;
   message?: string;
+  /** Set on success — the client navigates here itself via useRouter().
+   * Deliberately NOT calling next/navigation's redirect() here: this action
+   * is invoked as a plain awaited function call from a client component
+   * (not bound to a <form action={...}> prop), and in that calling shape
+   * the special NEXT_REDIRECT exception reaches the caller as a normal
+   * thrown error instead of being auto-handled into a navigation by the
+   * framework. Returning the path and navigating explicitly on the client
+   * is the reliable, version-independent fix for that gap. */
+  redirectTo?: string;
 }
 
 /**
@@ -44,5 +52,5 @@ export async function createScenario(payload: ScenarioInput): Promise<CreateScen
 
   const repo = await getRepository();
   await repo.saveScenario(scenario);
-  redirect(`/scenarios/${scenario.id}`);
+  return { redirectTo: `/scenarios/${scenario.id}` };
 }

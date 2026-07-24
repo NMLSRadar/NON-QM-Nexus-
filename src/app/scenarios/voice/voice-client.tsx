@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui";
 import { extractFromTranscript } from "@/domain/voice/extract";
 import { assess } from "@/domain/voice/dialog";
@@ -103,6 +104,7 @@ const DOC_TYPES: Array<[IncomeDocType, string]> = [
 ];
 
 export default function VoiceClient() {
+  const router = useRouter();
   const [supported, setSupported] = useState<boolean | null>(null);
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -175,7 +177,11 @@ export default function VoiceClient() {
     stopListening();
     startTransition(async () => {
       const result = await createScenarioFromVoice(effective);
-      // On success createScenario redirects; reaching here means it declined.
+      if (result?.redirectTo) {
+        router.push(result.redirectTo);
+        return;
+      }
+      // Reaching here (no redirectTo) means it declined — show why.
       if (result?.message) {
         setServerMessage(result.message);
         submittedRef.current = false;

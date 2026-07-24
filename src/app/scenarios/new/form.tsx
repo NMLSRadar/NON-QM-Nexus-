@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { createScenario } from "./actions";
 import type { ScenarioInput } from "@/domain/validation/scenarioSchema";
 
@@ -38,6 +39,7 @@ function bool(v: FormDataEntryValue | null): boolean {
 }
 
 export function ScenarioForm() {
+  const router = useRouter();
   const [incomeDocType, setIncomeDocType] = useState<string>("bank_statement");
   const [citizenship, setCitizenship] = useState<string>("us_citizen");
   const [errors, setErrors] = useState<Record<string, string[]>>({});
@@ -144,8 +146,14 @@ export function ScenarioForm() {
 
     startTransition(async () => {
       const result = await createScenario(payload);
+      if (result?.redirectTo) {
+        router.push(result.redirectTo);
+        return;
+      }
       if (result?.errors) {
         setErrors(result.errors);
+        setMessage(result.message);
+      } else if (result?.message) {
         setMessage(result.message);
       }
     });
