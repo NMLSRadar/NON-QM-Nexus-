@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui";
 import { extractFromTranscript } from "@/domain/voice/extract";
 import { assess } from "@/domain/voice/dialog";
-import { VITAL_KEYS, VITAL_LABELS, type Captured, type VitalKey, type VoiceExtraction } from "@/domain/voice/slots";
-import type { IncomeDocType, LoanPurpose, Occupancy, PropertyType } from "@/domain/types/enums";
+import { VITAL_KEYS, VITAL_LABELS, EXTRA_VITAL_KEYS, EXTRA_VITAL_LABELS, type Captured, type VitalKey, type ExtraVitalKey, type VoiceExtraction } from "@/domain/voice/slots";
+import type { IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
 import { createScenarioFromVoice } from "./actions";
 
 /* ------------------------------------------------------------------------ *
@@ -46,6 +46,9 @@ interface Overrides {
   fico?: number;
   bankStatementMonths?: 12 | 24;
   bankStatementKind?: "personal" | "business";
+  firstTimeHomebuyer?: boolean;
+  investorExperience?: InvestorExperience;
+  vesting?: Vesting;
 }
 
 function manual<T>(value: T): Captured<T> {
@@ -67,6 +70,12 @@ function applyOverrides(base: VoiceExtraction, o: Overrides): VoiceExtraction {
   if (o.fico !== undefined) x.fico = manual(o.fico);
   if (o.bankStatementMonths !== undefined) x.bankStatementMonths = o.bankStatementMonths;
   if (o.bankStatementKind !== undefined) x.bankStatementKind = o.bankStatementKind;
+  if (o.firstTimeHomebuyer !== undefined) x.firstTimeHomebuyer = manual(o.firstTimeHomebuyer);
+  if (o.investorExperience !== undefined) {
+    x.investorExperience = manual(o.investorExperience);
+    x.firstTimeInvestor = o.investorExperience === "first_time_investor";
+  }
+  if (o.vesting !== undefined) x.vesting = manual(o.vesting);
   return x;
 }
 
@@ -101,6 +110,18 @@ const DOC_TYPES: Array<[IncomeDocType, string]> = [
   ["1099", "1099"],
   ["asset_depletion", "Asset depletion"],
   ["wvoe_only", "WVOE only"],
+];
+const INVESTOR_EXPERIENCE_OPTIONS: Array<[InvestorExperience, string]> = [
+  ["first_time_investor", "First-time investor"],
+  ["experienced_investor", "Experienced investor"],
+  ["not_applicable", "N/A"],
+];
+const VESTING_OPTIONS: Array<[Vesting, string]> = [
+  ["individual", "Individual"],
+  ["joint_tenants", "Joint tenants"],
+  ["llc", "LLC"],
+  ["corporation", "Corporation"],
+  ["trust", "Trust"],
 ];
 
 export default function VoiceClient() {
@@ -195,8 +216,11 @@ export default function VoiceClient() {
     setOverrides((o) => ({ ...o, [key]: value }));
   }
 
-  const vitalDisplay: Record<VitalKey, { text: string; source?: string; inferred?: boolean; filled: boolean }> = {
-    loanPurpose: cell(effective.loanPurpose && !effective.refinancePendingSubtype ? { ...effective.loanPurpose, value: label(PURPOSES, effective.loanPurpose.value) } : undefined),
+  const vitalDisplay: Record<VitalKey, { text: string; source?: string; inferred?: boolean; filled: boolean; pending?: boolean }> = {
+    loanPurpose:
+      effective.loanPurpose && effective.refinancePendingSubtype
+        ? { text: "Refinance — subtype needed", source: effective.loanPurpose.source, inferred: true, filled: true, pending: true }
+        : cell(effective.loanPurpose ? { ...effective.loanPurpose, value: label(PURPOSES, effective.loanPurpose.value) } : undefined),
     occupancy: cell(effective.occupancy && { ...effective.occupancy, value: label(OCCUPANCIES, effective.occupancy.value) }),
     propertyType: cell(effective.propertyType && { ...effective.propertyType, value: label(PROPERTY_TYPES, effective.propertyType.value) }),
     propertyValue: cell(
@@ -224,6 +248,18 @@ export default function VoiceClient() {
             : label(DOC_TYPES, effective.incomeDocType.value),
       },
     ),
+  };
+
+  const extraVitalDisplay: Record<ExtraVitalKey, { text: string; source?: string; inferred?: boolean; filled: boolean }> = {
+    firstTimeHomebuyer: cell(
+      effective.firstTimeHomebuyer ? { ...effective.firstTimeHomebuyer, value: effective.firstTimeHomebuyer.value ? "Yes" : "No" } : undefined
+    ),
+    investorExperience: cell(
+      effective.investorExperience
+        ? { ...effective.investorExperience, value: label(INVESTOR_EXPERIENCE_OPTIONS, effective.investorExperience.value) }
+        : undefined
+    ),
+    vesting: cell(effective.vesting ? { ...effective.vesting, value: label(VESTING_OPTIONS, effective.vesting.value) } : undefined),
   };
 
   return (
@@ -274,16 +310,45 @@ export default function VoiceClient() {
           {VITAL_KEYS.map((k) => {
             const d = vitalDisplay[k];
             return (
-              <div key={k} className={`rounded-lg border p-2 ${d.filled ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50"}`}>
+              <div
+                key={k}
+                className={`rounded-lg border p-2 ${
+                  d.pending
+                    ? "border-brand-400 bg-brand-50"
+                    : d.filled
+                      ? "border-emerald-200 bg-emerald-50"
+                      : "border-amber-300 bg-amber-50"
+                }`}
+              >
                 <p className="text-[10px] uppercase tracking-wide text-slate-500">{VITAL_LABELS[k]}</p>
-                <p className={`text-sm font-semibold ${d.filled ? "text-slate-900" : "text-amber-800"}`}>
-                  {d.filled ? `✓ ${d.text}` : "Needed"}
+                <p className={`text-sm font-semibold ${d.pending ? "text-brand-800" : d.filled ? "text-slate-900" : "text-amber-800"}`}>
+                  {d.pending ? `◐ ${d.text}` : d.filled ? `✓ ${d.text}` : "Needed"}
                 </p>
                 {d.filled && d.source && (
                   <p className="text-[10px] text-slate-500 truncate" title={d.source}>
                     {d.inferred ? "≈ " : "“"}
                     {d.source}
                     {d.inferred ? " (confirm)" : "”"}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="text-[10px] uppercase tracking-wide text-slate-400 mt-4 mb-1">Borrower profile (captured when mentioned)</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {EXTRA_VITAL_KEYS.map((k) => {
+            const d = extraVitalDisplay[k];
+            return (
+              <div key={k} className={`rounded-lg border p-2 ${d.filled ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50"}`}>
+                <p className="text-[10px] uppercase tracking-wide text-slate-500">{EXTRA_VITAL_LABELS[k]}</p>
+                <p className={`text-sm font-semibold ${d.filled ? "text-slate-900" : "text-slate-400"}`}>
+                  {d.filled ? `✓ ${d.text}` : "Not mentioned"}
+                </p>
+                {d.filled && d.source && (
+                  <p className="text-[10px] text-slate-500 truncate" title={d.source}>
+                    “{d.source}”
                   </p>
                 )}
               </div>
@@ -308,6 +373,19 @@ export default function VoiceClient() {
                 <Select label="Statement type" value={effective.bankStatementKind ?? "business"} options={[["business", "Business"], ["personal", "Personal"]]} onChange={(v) => setOv("bankStatementKind", v as "personal" | "business")} />
               </>
             )}
+            <Select
+              label="First-time homebuyer"
+              value={effective.firstTimeHomebuyer?.value === undefined ? "" : String(effective.firstTimeHomebuyer.value)}
+              options={[["true", "Yes"], ["false", "No"]]}
+              onChange={(v) => setOv("firstTimeHomebuyer", v === "true")}
+            />
+            <Select
+              label="Investor experience"
+              value={effective.investorExperience?.value ?? ""}
+              options={INVESTOR_EXPERIENCE_OPTIONS}
+              onChange={(v) => setOv("investorExperience", v as InvestorExperience)}
+            />
+            <Select label="Title vesting" value={effective.vesting?.value ?? ""} options={VESTING_OPTIONS} onChange={(v) => setOv("vesting", v as Vesting)} />
           </div>
         </details>
       </Card>

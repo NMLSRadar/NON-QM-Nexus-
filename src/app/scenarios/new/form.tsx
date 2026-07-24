@@ -67,6 +67,7 @@ export function ScenarioForm() {
       vesting: str(f.get("vesting")) as ScenarioInput["vesting"],
       firstTimeHomebuyer: bool(f.get("firstTimeHomebuyer")),
       firstTimeInvestor: bool(f.get("firstTimeInvestor")),
+      investorExperience: str(f.get("investorExperience")) as ScenarioInput["investorExperience"],
       employmentStatus: str(f.get("employmentStatus")) as ScenarioInput["employmentStatus"],
       selfEmploymentMonths: num(f.get("selfEmploymentMonths")),
       incomeDocType: incomeDocType as ScenarioInput["incomeDocType"],
@@ -252,6 +253,14 @@ export function ScenarioForm() {
             <option value="llc">LLC</option>
             <option value="corporation">Corporation</option>
             <option value="trust">Trust</option>
+          </select>
+        </Field>
+        <Field name="investorExperience" title="Investor experience">
+          <select id="investorExperience" name="investorExperience" className={field} defaultValue="">
+            <option value="">Unknown</option>
+            <option value="first_time_investor">First-time investor</option>
+            <option value="experienced_investor">Experienced investor</option>
+            <option value="not_applicable">Not applicable</option>
           </select>
         </Field>
         <Field name="employmentStatus" title="Employment status">

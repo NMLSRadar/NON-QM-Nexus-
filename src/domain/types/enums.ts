@@ -60,6 +60,16 @@ export const Vesting = {
 } as const;
 export type Vesting = (typeof Vesting)[keyof typeof Vesting];
 
+/** Distinguishes first-time vs. experienced investors — separate from
+ * firstTimeHomebuyer, which tracks primary-residence ownership history.
+ * A borrower can be any combination of the two (see docs/voice-vitals.md). */
+export const InvestorExperience = {
+  FirstTimeInvestor: "first_time_investor",
+  ExperiencedInvestor: "experienced_investor",
+  NotApplicable: "not_applicable",
+} as const;
+export type InvestorExperience = (typeof InvestorExperience)[keyof typeof InvestorExperience];
+
 /** Result of an individual rule evaluation. */
 export const RuleOutcome = {
   Pass: "pass",

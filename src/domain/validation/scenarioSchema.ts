@@ -119,6 +119,7 @@ export const scenarioInputSchema = z.object({
   vesting: z.enum(["individual", "joint_tenants", "llc", "corporation", "trust"]).optional(),
   firstTimeHomebuyer: z.boolean().optional(),
   firstTimeInvestor: z.boolean().optional(),
+  investorExperience: z.enum(["first_time_investor", "experienced_investor", "not_applicable"]).optional(),
   employmentStatus: z.enum(["self_employed", "wage_earner", "retired", "other"]).optional(),
   selfEmploymentMonths: z.number().int().min(0).max(720).optional(),
   businessOwnershipPercent: optionalPercent,

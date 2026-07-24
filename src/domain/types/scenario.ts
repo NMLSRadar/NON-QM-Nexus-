@@ -1,6 +1,7 @@
 import type {
   Citizenship,
   IncomeDocType,
+  InvestorExperience,
   LoanPurpose,
   Occupancy,
   PropertyType,
@@ -129,6 +130,11 @@ export interface Scenario {
   vesting?: Vesting;
   firstTimeHomebuyer?: boolean;
   firstTimeInvestor?: boolean;
+  /** Richer investor-experience signal than firstTimeInvestor — captures
+   * "experienced investor" explicitly too, not just the first-time case.
+   * Voice/manual intake populate both fields for backward compatibility;
+   * matching prefers this one when present (src/domain/matching/baseChecks.ts). */
+  investorExperience?: InvestorExperience;
   employmentStatus?: "self_employed" | "wage_earner" | "retired" | "other";
   selfEmploymentMonths?: number;
   businessOwnershipPercent?: number;

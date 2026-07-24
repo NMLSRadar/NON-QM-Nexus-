@@ -106,6 +106,14 @@ export interface Program {
   interestOnlyAvailable: boolean;
   prepaymentPenaltyOptions: string[];
   ltvMatrix?: LtvMatrixEntry[];
+  // Borrower-experience eligibility flags. All optional/undefined = no
+  // restriction on that dimension (matches every existing Program record
+  // without any migration — see docs/voice-vitals.md).
+  firstTimeHomebuyerAllowed?: boolean;
+  firstTimeInvestorAllowed?: boolean;
+  /** true = this program requires an experienced investor (first-time
+   * investors are ineligible); undefined/false = no such requirement. */
+  experiencedInvestorRequired?: boolean;
   guidelineVersionId: string;
   guidelineVersionLabel: string;
   effectiveDate: string;

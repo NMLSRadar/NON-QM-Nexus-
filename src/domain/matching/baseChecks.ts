@@ -86,6 +86,33 @@ export function baseProgramChecks(
       ok ? `${scenario.citizenship} borrowers are eligible.` : `${scenario.citizenship} borrowers are not eligible for this program.`));
   }
 
+  // Title vesting
+  if (scenario.vesting) {
+    const ok = program.vestingEligible.includes(scenario.vesting);
+    out.push(result(`${p}:vest`, "Title vesting", "borrower", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+      ok ? `${scenario.vesting} vesting is eligible.` : `${scenario.vesting} vesting is not eligible for this program.`));
+  }
+
+  // First-time homebuyer
+  if (scenario.firstTimeHomebuyer === true && program.firstTimeHomebuyerAllowed === false) {
+    out.push(result(`${p}:ftb`, "First-time homebuyer", "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
+      "First-time homebuyers are not eligible for this program."));
+  }
+
+  // Investor experience — prefer the richer investorExperience field, fall
+  // back to the legacy firstTimeInvestor boolean when that's all that was
+  // captured (e.g. an older scenario or a caller that hasn't adopted the
+  // richer field yet).
+  const investorExperience = scenario.investorExperience ?? (scenario.firstTimeInvestor === true ? "first_time_investor" : undefined);
+  if (investorExperience === "first_time_investor" && program.firstTimeInvestorAllowed === false) {
+    out.push(result(`${p}:ftinv`, "First-time investor", "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
+      "First-time investors are not eligible for this program."));
+  }
+  if (program.experiencedInvestorRequired === true && investorExperience && investorExperience !== "experienced_investor") {
+    out.push(result(`${p}:expinv`, "Experienced investor required", "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
+      "This program requires an experienced investor (prior investment-property ownership)."));
+  }
+
   // Loan amount
   if (scenario.requestedLoanAmount != null) {
     const amt = scenario.requestedLoanAmount;

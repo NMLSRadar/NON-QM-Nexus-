@@ -102,6 +102,20 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
               <MetricTile label="Other liabilities" value={fmtUsd(scenario.monthlyLiabilities)} />
               <MetricTile label="Liquid assets" value={fmtUsd(scenario.liquidAssets)} />
               <MetricTile label="Vesting" value={scenario.vesting ?? "—"} />
+              <MetricTile
+                label="First-time homebuyer"
+                value={scenario.firstTimeHomebuyer === undefined ? "—" : scenario.firstTimeHomebuyer ? "Yes" : "No"}
+              />
+              <MetricTile
+                label="Investor experience"
+                value={
+                  scenario.investorExperience
+                    ? scenario.investorExperience.replace(/_/g, " ")
+                    : scenario.firstTimeInvestor
+                      ? "first time investor"
+                      : "—"
+                }
+              />
               <MetricTile label="Cash out" value={fmtUsd(scenario.requestedCashOut)} />
               <MetricTile label="Interest-only" value={scenario.interestOnlyRequested ? "Requested" : "No"} />
             </div>

@@ -1,12 +1,19 @@
-import type { Citizenship, IncomeDocType, LoanPurpose, Occupancy, PropertyType } from "@/domain/types/enums";
+import type { Citizenship, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
 
 /**
  * Voice-intake vital slots.
  *
- * A spoken scenario must resolve all eight vitals before analysis runs
+ * A spoken scenario must resolve all eight CORE vitals before analysis runs
  * (the user speaks 6–8 details; LTV counts as resolved when it is either
  * stated or derivable from property value + loan amount, and any one of
  * {value, loan amount, LTV} may be derived from the other two).
+ *
+ * Three EXTRA vitals (first-time homebuyer, investor experience, title
+ * vesting) are captured, highlighted, and fed into lender matching whenever
+ * they're mentioned, but do not block `readyToAnalyze` — forcing three more
+ * mandatory questions on every scenario (including ones where they're
+ * immaterial, e.g. a primary-residence full-doc purchase) would be a much
+ * larger behavior change than requested. See EXTRA_VITAL_KEYS below.
  */
 
 export const VITAL_KEYS = [
@@ -43,6 +50,23 @@ export const VITAL_QUESTIONS: Record<VitalKey, string> = {
   incomeDocType: "How is income documented — bank statements, DSCR, full doc, P&L, 1099, or asset depletion?",
 };
 
+/** Additional, non-blocking vitals — surfaced in the UI and used in
+ * matching when captured, but never gate `readyToAnalyze`. */
+export const EXTRA_VITAL_KEYS = ["firstTimeHomebuyer", "investorExperience", "vesting"] as const;
+export type ExtraVitalKey = (typeof EXTRA_VITAL_KEYS)[number];
+
+export const EXTRA_VITAL_LABELS: Record<ExtraVitalKey, string> = {
+  firstTimeHomebuyer: "First-time homebuyer",
+  investorExperience: "Investor experience",
+  vesting: "Title vesting",
+};
+
+export const EXTRA_VITAL_QUESTIONS: Record<ExtraVitalKey, string> = {
+  firstTimeHomebuyer: "Has the borrower owned a primary residence before?",
+  investorExperience: "Has the borrower previously owned an investment property?",
+  vesting: "Will title be held individually, in an LLC, corporation, or trust?",
+};
+
 /** A value heard in (or derived from) the transcript, with provenance. */
 export interface Captured<T> {
   value: T;
@@ -69,7 +93,11 @@ export interface VoiceExtraction {
   bankStatementKind?: "personal" | "business";
   requestedCashOut?: Captured<number>;
   citizenship?: Captured<Citizenship>;
+  /** Legacy simple flag — still populated for backward compatibility; prefer investorExperience. */
   firstTimeInvestor?: boolean;
+  firstTimeHomebuyer?: Captured<boolean>;
+  investorExperience?: Captured<InvestorExperience>;
+  vesting?: Captured<Vesting>;
   shortTermRental?: boolean;
   /** Assumptions and notes accumulated during extraction, surfaced to the user. */
   notesFragments: string[];

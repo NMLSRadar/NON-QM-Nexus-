@@ -94,6 +94,11 @@ export function assess(x: VoiceExtraction): Assessment {
         ? `${x.bankStatementMonths ?? 12}-mo ${x.bankStatementKind ?? "business"} bank statements`
         : x.incomeDocType.source
     );
+  // Extra (non-blocking) vitals — included in the summary whenever captured
+  // so the assistant's spoken response and the Vitals tiles never disagree.
+  if (x.firstTimeHomebuyer) filledSummary.push(x.firstTimeHomebuyer.value ? "first-time homebuyer" : "not a first-time homebuyer");
+  if (x.investorExperience) filledSummary.push(investorExperienceLabel(x.investorExperience.value));
+  if (x.vesting) filledSummary.push(`vesting: ${vestingLabel(x.vesting.value)}`);
 
   const vitalsFilled = VITAL_KEYS.filter((k) => has[k]).length;
   const complete = missing.length === 0;
@@ -115,6 +120,14 @@ export function assess(x: VoiceExtraction): Assessment {
 
 function purposeLabel(p: LoanPurpose): string {
   return p === "purchase" ? "purchase" : p === "cash_out_refinance" ? "cash-out refinance" : "rate-and-term refinance";
+}
+
+function investorExperienceLabel(v: "first_time_investor" | "experienced_investor" | "not_applicable"): string {
+  return v === "first_time_investor" ? "first-time investor" : v === "experienced_investor" ? "experienced investor" : "not an investor scenario";
+}
+
+function vestingLabel(v: "individual" | "joint_tenants" | "llc" | "corporation" | "trust"): string {
+  return v === "joint_tenants" ? "joint tenants" : v;
 }
 
 function listNaturally(items: string[]): string {
@@ -152,7 +165,6 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
           ...(x.firstTimeInvestor !== undefined ? { firstTimeInvestor: x.firstTimeInvestor } : {}),
         }
       : undefined;
-
   const provenance = [
     x.loanPurpose && `purpose ← "${x.loanPurpose.source}"`,
     x.occupancy && `occupancy ← "${x.occupancy.source}"`,
@@ -179,6 +191,9 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
     incomeDocType: doc,
     ...(x.citizenship ? { citizenship: x.citizenship.value } : {}),
     ...(x.firstTimeInvestor !== undefined ? { firstTimeInvestor: x.firstTimeInvestor } : {}),
+    ...(x.investorExperience ? { investorExperience: x.investorExperience.value } : {}),
+    ...(x.firstTimeHomebuyer ? { firstTimeHomebuyer: x.firstTimeHomebuyer.value } : {}),
+    ...(x.vesting ? { vesting: x.vesting.value } : {}),
     ...(bankStatement ? { bankStatement } : {}),
     ...(pnl ? { pnl } : {}),
     ...(dscr ? { dscr } : {}),
