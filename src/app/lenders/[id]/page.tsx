@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCurrentOrganizationId, getRepository, getLenderAccessInfo } from "@/lib/session";
-import { PageHeader, Card, Pill, SampleDataBadge, MetricTile, LinkButton, fmtUsd, fmtPct } from "@/components/ui";
+import { PageHeader, Card, Pill, SampleDataBadge, MetricTile, fmtUsd, fmtPct } from "@/components/ui";
 import { getWordmarkStyle } from "@/domain/lenderBrandStyle";
 
 export const dynamic = "force-dynamic";
@@ -59,16 +59,22 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
       {!unlocked ? (
         <Card>
           <div className="flex flex-col items-center gap-3 py-10 text-center">
-            <span aria-hidden className="text-4xl">
+            <span
+              aria-hidden
+              className="flex h-16 w-16 items-center justify-center rounded-full text-3xl bg-gradient-to-br from-amber-300 via-amber-400 to-yellow-600 ring-4 ring-white shadow-lg"
+            >
               🔒
             </span>
             <Pill tone="neutral">Tier {lender.tierLevel} Access Required</Pill>
             <p className="max-w-md text-sm text-ink-secondary">
               Upgrade your membership to access this lender’s complete guidelines and program details.
             </p>
-            <LinkButton href="/pricing" variant="primary">
-              Upgrade to Unlock
-            </LinkButton>
+            <Link
+              href="/pricing"
+              className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-yellow-600 shadow-md hover:shadow-lg transition-shadow"
+            >
+              👑 Upgrade to Unlock
+            </Link>
           </div>
         </Card>
       ) : (

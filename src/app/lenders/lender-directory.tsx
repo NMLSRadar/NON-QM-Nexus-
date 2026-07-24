@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { IconBadge, Pill } from "@/components/ui";
 import { getWordmarkStyle } from "@/domain/lenderBrandStyle";
 import type { Lender, Program } from "@/domain/types/program";
 
@@ -73,10 +72,13 @@ function matchesChip(d: DirectoryLender, chip: ChipKey): boolean {
 
 /** The two-tone brand "wordmark" treatment for a lender's plain name text —
  * never a logo image, just colored typography (see lenderBrandStyle.ts).
- * Falls back to plain dark-ink text for lenders without a defined style. */
-function LenderName({ name, muted }: { name: string; muted?: boolean }) {
+ * Falls back to plain ink text for lenders without a defined style. */
+function LenderName({ name, muted, dark }: { name: string; muted?: boolean; dark?: boolean }) {
   const style = getWordmarkStyle(name);
-  if (!style || muted) return <span className={`font-semibold leading-snug ${muted ? "text-ink-secondary" : "text-ink-primary"}`}>{name}</span>;
+  if (!style || muted) {
+    const color = dark ? "text-slate-100" : "text-ink-primary";
+    return <span className={`font-semibold leading-snug ${muted ? (dark ? "text-slate-400" : "text-ink-secondary") : color}`}>{name}</span>;
+  }
   return (
     <span className="font-semibold leading-snug">
       <span style={{ color: style.firstColor }}>{style.first}</span>
@@ -90,36 +92,122 @@ function LenderName({ name, muted }: { name: string; muted?: boolean }) {
   );
 }
 
-/** Numbered rank chip that overlaps the card's top-left corner, matching
- * the reference design's floating circular badge. */
+/** Per-tier visual language: a light gold/cream Tier 1, a dark navy/gold
+ * Tier 2, and a deeper near-black/gold Tier 3 — escalating richness as
+ * the tier goes up, gold + a crown/gem motif throughout. */
+interface TierTheme {
+  icon: string;
+  sectionClass: string;
+  headingClass: string;
+  descriptionClass: string;
+  iconCircleClass: string;
+  pillClass: string;
+  buttonClass: string;
+  cardClass: string;
+  cardBorderHover: string;
+  tierPillClass: string;
+  lockedPillClass: string;
+  upgradeButtonClass: string;
+  lockIconClass: string;
+  dark: boolean;
+}
+
+const TIER_THEMES: Record<1 | 2 | 3, TierTheme> = {
+  1: {
+    icon: "🏆",
+    sectionClass: "bg-gradient-to-b from-amber-50 to-white border border-amber-200",
+    headingClass: "text-slate-900",
+    descriptionClass: "text-slate-600",
+    iconCircleClass: "bg-gradient-to-br from-amber-300 via-amber-400 to-yellow-600 ring-4 ring-white shadow-lg",
+    pillClass: "bg-amber-50 border border-amber-300 text-amber-800",
+    buttonClass: "bg-gradient-to-r from-amber-400 to-yellow-600 text-white shadow-md hover:shadow-lg",
+    cardClass: "bg-white border border-slate-200 shadow-md",
+    cardBorderHover: "hover:border-amber-400 hover:shadow-lg",
+    tierPillClass: "bg-white border border-slate-300 text-slate-600",
+    lockedPillClass: "bg-amber-100 border border-amber-200 text-amber-800",
+    upgradeButtonClass: "bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-300 text-amber-800 hover:from-amber-100 hover:to-amber-200",
+    lockIconClass: "text-slate-400",
+    dark: false,
+  },
+  2: {
+    icon: "💎",
+    sectionClass: "bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800",
+    headingClass: "text-white",
+    descriptionClass: "text-slate-300",
+    iconCircleClass: "bg-slate-800 ring-4 ring-amber-400/70 shadow-lg",
+    pillClass: "bg-slate-800 border border-amber-400/60 text-amber-300",
+    buttonClass: "bg-gradient-to-r from-amber-400 to-yellow-600 text-slate-900 shadow-md hover:shadow-lg",
+    cardClass: "bg-slate-800/90 border border-amber-500/30 shadow-lg",
+    cardBorderHover: "hover:border-amber-400/70 hover:shadow-xl",
+    tierPillClass: "bg-slate-700 border border-slate-600 text-slate-300",
+    lockedPillClass: "bg-amber-500/20 border border-amber-500/30 text-amber-300",
+    upgradeButtonClass: "bg-gradient-to-r from-amber-400 to-yellow-600 text-slate-900 border border-amber-300 hover:from-amber-300 hover:to-yellow-500",
+    lockIconClass: "text-amber-400",
+    dark: true,
+  },
+  3: {
+    icon: "👑",
+    sectionClass: "bg-gradient-to-b from-black to-slate-950 border border-amber-900/40",
+    headingClass: "text-white",
+    descriptionClass: "text-slate-300",
+    iconCircleClass: "bg-black ring-4 ring-amber-300/80 shadow-lg",
+    pillClass: "bg-black border border-amber-300/60 text-amber-200",
+    buttonClass: "bg-gradient-to-r from-amber-300 to-yellow-500 text-slate-900 shadow-md hover:shadow-lg",
+    cardClass: "bg-slate-900/90 border border-amber-400/30 shadow-lg",
+    cardBorderHover: "hover:border-amber-300/70 hover:shadow-xl",
+    tierPillClass: "bg-slate-800 border border-slate-600 text-slate-300",
+    lockedPillClass: "bg-amber-400/20 border border-amber-400/30 text-amber-200",
+    upgradeButtonClass: "bg-gradient-to-r from-amber-300 to-yellow-500 text-slate-900 border border-amber-200 hover:from-amber-200 hover:to-yellow-400",
+    lockIconClass: "text-amber-300",
+    dark: true,
+  },
+};
+
+/** Numbered ribbon/pennant badge — flat top, notched bottom point,
+ * overlapping the card's top-left corner — matching the reference design. */
 function RankBadge({ rank }: { rank: number }) {
   return (
-    <span className="absolute -top-2.5 -left-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-brand-500 text-[12px] font-bold text-white shadow-sm ring-2 ring-white">
+    <span
+      className="absolute -top-2 -left-2 z-10 flex h-7 w-7 items-start justify-center pt-1 text-[11px] font-bold text-white"
+      style={{
+        background: "linear-gradient(180deg, #FBBF24 0%, #B8860B 100%)",
+        clipPath: "polygon(0% 0%, 100% 0%, 100% 72%, 50% 100%, 0% 72%)",
+        filter: "drop-shadow(0 2px 2px rgb(0 0 0 / 0.25))",
+      }}
+    >
       {rank}
     </span>
   );
 }
 
-function LenderCard({ d, rank, unlocked }: { d: DirectoryLender; rank: number; unlocked: boolean }) {
+function LenderCard({ d, rank, unlocked, theme }: { d: DirectoryLender; rank: number; unlocked: boolean; theme: TierTheme }) {
   if (!unlocked) {
     return (
       <div
-        className="relative flex min-h-[92px] flex-col justify-between gap-2 rounded-xl border border-surface-border bg-white p-4"
+        className={`relative flex min-h-[150px] flex-col justify-between gap-2.5 rounded-xl p-4 pt-5 ${theme.cardClass}`}
         aria-label={`${d.lender.name} — Tier ${d.lender.tierLevel} access required`}
       >
         <RankBadge rank={rank} />
         <div className="flex items-start justify-between gap-2 pl-1">
-          <LenderName name={d.lender.name} muted />
-          <span aria-hidden className="shrink-0 text-base leading-none">
+          <LenderName name={d.lender.name} muted dark={theme.dark} />
+          <span aria-hidden className={`shrink-0 text-base leading-none ${theme.lockIconClass}`}>
             🔒
           </span>
         </div>
-        <div className="flex items-center justify-between gap-2 pl-1">
-          <Pill tone="neutral">Tier {d.lender.tierLevel} locked</Pill>
-          <Link href="/pricing" className="text-xs font-semibold text-brand-700 hover:text-brand-800 hover:underline whitespace-nowrap">
-            Upgrade to Unlock
-          </Link>
+        <div className="flex items-center gap-1.5 pl-1">
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${theme.tierPillClass}`}>
+            Tier {d.lender.tierLevel}
+          </span>
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${theme.lockedPillClass}`}>
+            🔒 Locked
+          </span>
         </div>
+        <Link
+          href="/pricing"
+          className={`flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${theme.upgradeButtonClass}`}
+        >
+          👑 Upgrade to Unlock
+        </Link>
       </div>
     );
   }
@@ -127,63 +215,61 @@ function LenderCard({ d, rank, unlocked }: { d: DirectoryLender; rank: number; u
   return (
     <Link
       href={`/lenders/${d.lender.id}`}
-      className="group relative flex min-h-[92px] items-center rounded-xl border border-surface-border bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-soft-hover hover:border-brand-400"
+      className={`group relative flex min-h-[92px] items-center rounded-xl p-4 pt-5 transition-all duration-200 hover:-translate-y-0.5 ${theme.cardClass} ${theme.cardBorderHover}`}
       aria-label={`View ${d.lender.name} programs and guidelines`}
     >
       <RankBadge rank={rank} />
       <span className="pl-1">
-        <LenderName name={d.lender.name} />
+        <LenderName name={d.lender.name} dark={theme.dark} />
       </span>
     </Link>
   );
 }
 
 function TierSection({
-  icon,
   title,
   badge,
-  badgeTone,
   description,
   lenders,
   rankOffset,
   userTierLevel,
+  theme,
 }: {
-  icon: string;
   title: string;
   badge: string;
-  badgeTone: "gold" | "neutral";
   description: string;
   lenders: DirectoryLender[];
   rankOffset: number;
   userTierLevel: number;
+  theme: TierTheme;
 }) {
   if (lenders.length === 0) return null;
 
   return (
-    <section
-      className={`rounded-2xl border p-5 ${badgeTone === "gold" ? "border-brand-300 bg-brand-50/20" : "border-surface-border bg-white"}`}
-    >
+    <section className={`rounded-2xl p-5 ${theme.sectionClass}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <IconBadge size="lg" className={badgeTone === "gold" ? "bg-brand-500 text-white text-2xl" : "bg-slate-300 text-white text-2xl"}>
-            {icon}
-          </IconBadge>
+          <span className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-2xl ${theme.iconCircleClass}`} aria-hidden>
+            {theme.icon}
+          </span>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-bold uppercase tracking-wide text-ink-primary">{title}</h2>
-              <Pill tone={badgeTone === "gold" ? "gold" : "neutral"}>{badge}</Pill>
+              <h2 className={`text-lg font-bold uppercase tracking-wide ${theme.headingClass}`}>{title}</h2>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${theme.pillClass}`}>
+                👑 {badge}
+              </span>
             </div>
-            <p className="mt-1 text-sm text-ink-secondary max-w-xl">{description}</p>
+            <p className={`mt-1 text-sm max-w-xl ${theme.descriptionClass}`}>{description}</p>
           </div>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-control border border-brand-300 bg-white px-4 py-2 text-sm font-medium text-brand-700">
-          View All {lenders.length} Lenders →
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold ${theme.buttonClass}`}>
+          {theme.icon} View All {lenders.length} Lenders →
         </span>
       </div>
 
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {lenders.map((d, i) => (
-          <LenderCard key={d.lender.id} d={d} rank={rankOffset + i + 1} unlocked={userTierLevel >= d.lender.tierLevel} />
+          <LenderCard key={d.lender.id} d={d} rank={rankOffset + i + 1} unlocked={userTierLevel >= d.lender.tierLevel} theme={theme} />
         ))}
       </div>
     </section>
@@ -237,7 +323,7 @@ export function LenderDirectory({ tier1, tier2, tier3, userTierLevel }: Props) {
               aria-pressed={chip === c.key}
               className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                 chip === c.key
-                  ? "bg-brand-600 text-white border-brand-600"
+                  ? "bg-gradient-to-r from-amber-400 to-yellow-600 text-white border-amber-500 shadow-sm"
                   : "bg-white text-ink-secondary border-surface-border hover:border-brand-400 hover:text-brand-700"
               }`}
             >
@@ -252,34 +338,31 @@ export function LenderDirectory({ tier1, tier2, tier3, userTierLevel }: Props) {
       )}
 
       <TierSection
-        icon="🏆"
         title={`Tier 1 — Top ${t1.length} Lenders`}
         badge="Premium Access"
-        badgeTone="gold"
         description="Our most popular lenders with the broadest program offerings and highest broker usage."
         lenders={t1}
         rankOffset={0}
         userTierLevel={userTierLevel}
+        theme={TIER_THEMES[1]}
       />
       <TierSection
-        icon="🥈"
         title={`Tier 2 — Next ${t2.length} Lenders`}
         badge="Expanded Access"
-        badgeTone="neutral"
         description="Strong national lenders with specialized products and competitive guidelines."
         lenders={t2}
         rankOffset={t1.length}
         userTierLevel={userTierLevel}
+        theme={TIER_THEMES[2]}
       />
       <TierSection
-        icon="🥉"
         title={`Tier 3 — Remaining ${t3.length} Lenders`}
         badge="Unlimited Access"
-        badgeTone="neutral"
         description="The full catalog, unlocked on the Enterprise plan."
         lenders={t3}
         rankOffset={t1.length + t2.length}
         userTierLevel={userTierLevel}
+        theme={TIER_THEMES[3]}
       />
 
       {all.length === 0 && <p className="text-center py-12 text-sm text-ink-secondary">No lenders are configured for this organization yet.</p>}

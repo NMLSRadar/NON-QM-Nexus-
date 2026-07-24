@@ -65,7 +65,7 @@ describe("LenderDirectory: every tier is always visible; access is locked, not h
     expect(screen.getByText("Gamma Capital")).toBeInTheDocument();
     // Never the old generic empty/plan-gated message.
     expect(screen.queryByText("No lenders are visible on your current plan.")).not.toBeInTheDocument();
-    expect(screen.getAllByText("Upgrade to Unlock")).toHaveLength(3);
+    expect(screen.getAllByText(/Upgrade to Unlock/)).toHaveLength(3);
   });
 
   it("a Tier 1 subscriber sees Tier 2 and Tier 3 lenders too, but only Tier 1 is unlocked (clickable link)", () => {
@@ -75,7 +75,7 @@ describe("LenderDirectory: every tier is always visible; access is locked, not h
     expect(screen.queryByRole("link", { name: /View Gamma Capital/ })).not.toBeInTheDocument();
     expect(screen.getByText("Beta Mortgage")).toBeInTheDocument();
     expect(screen.getByText("Gamma Capital")).toBeInTheDocument();
-    expect(screen.getAllByText("Upgrade to Unlock")).toHaveLength(2);
+    expect(screen.getAllByText(/Upgrade to Unlock/)).toHaveLength(2);
   });
 
   it("a Tier 2 subscriber unlocks Tier 1 and Tier 2, but Tier 3 stays locked", () => {
@@ -83,7 +83,7 @@ describe("LenderDirectory: every tier is always visible; access is locked, not h
     expect(screen.getByRole("link", { name: /View Alpha Lending/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /View Beta Mortgage/ })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /View Gamma Capital/ })).not.toBeInTheDocument();
-    expect(screen.getAllByText("Upgrade to Unlock")).toHaveLength(1);
+    expect(screen.getAllByText(/Upgrade to Unlock/)).toHaveLength(1);
   });
 
   it("a Tier 3 (Enterprise) subscriber unlocks everything", () => {
@@ -91,12 +91,12 @@ describe("LenderDirectory: every tier is always visible; access is locked, not h
     expect(screen.getByRole("link", { name: /View Alpha Lending/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /View Beta Mortgage/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /View Gamma Capital/ })).toBeInTheDocument();
-    expect(screen.queryByText("Upgrade to Unlock")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Upgrade to Unlock/)).not.toBeInTheDocument();
   });
 
   it("the locked card's Upgrade button links to /pricing", () => {
     render(<LenderDirectory tier1={tier1} tier2={tier2} tier3={tier3} userTierLevel={0} />);
-    const upgradeLinks = screen.getAllByRole("link", { name: "Upgrade to Unlock" });
+    const upgradeLinks = screen.getAllByRole("link", { name: /Upgrade to Unlock/ });
     for (const link of upgradeLinks) expect(link).toHaveAttribute("href", "/pricing");
   });
 
