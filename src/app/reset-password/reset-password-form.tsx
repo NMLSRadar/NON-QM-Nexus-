@@ -14,28 +14,50 @@ export function ResetPasswordForm() {
   useEffect(() => {
     const supabase = createClient();
 
-    // The reset link lands here with the recovery token in the URL hash
-    // fragment (#access_token=...&type=recovery) — the Supabase browser
-    // client picks this up automatically on load and fires this event.
+    async function establishRecoverySession() {
+      // Prefer parsing the hash ourselves and calling setSession() directly
+      // — more reliable than relying on the SDK's automatic URL detection,
+      // which we found doesn't consistently fire in time with the cookie-
+      // backed browser client (@supabase/ssr).
+      const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
+      const params = new URLSearchParams(hash);
+      const access_token = params.get("access_token");
+      const refresh_token = params.get("refresh_token");
+
+      if (access_token && refresh_token) {
+        const { error: setErr } = await supabase.auth.setSession({ access_token, refresh_token });
+        // Remove the tokens from the URL bar regardless of outcome.
+        window.history.replaceState(null, "", window.location.pathname);
+        if (!setErr) {
+          setStatus("ready");
+          return true;
+        }
+      }
+
+      // Fallback: a session may already be established (e.g. the SDK's own
+      // detection won the race, or the user re-focused the tab).
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setStatus("ready");
+        return true;
+      }
+      return false;
+    }
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setStatus("ready");
     });
 
-    // In case the event already fired before this listener attached, also
-    // check for an existing session directly.
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setStatus((s) => (s === "checking" ? "ready" : s));
+    establishRecoverySession().then((established) => {
+      if (!established) {
+        setStatus((s) => (s === "checking" ? "invalid" : s));
+      }
     });
-
-    const timeout = setTimeout(() => {
-      setStatus((s) => (s === "checking" ? "invalid" : s));
-    }, 4000);
 
     return () => {
       subscription.unsubscribe();
-      clearTimeout(timeout);
     };
   }, []);
 
