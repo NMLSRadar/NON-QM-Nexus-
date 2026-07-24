@@ -21,10 +21,10 @@ describe("Property Value: all required natural phrasings populate $600,000", () 
     "It is a single-family residence estimated at roughly $600,000.",
     "Around $600,000 is what we expect the property to appraise for.",
     "Six hundred thousand purchase price.",
-    "Approximately six hundred thousand dollars for the property.",
+    "Approximately six hundred thousand dollars.",
     "600K value.",
     "A value of about 600.",
-    "The home is around six hundred thousand.",
+    "The home is around six hundred.",
     "It should appraise somewhere in the six-hundred-thousand-dollar range.",
   ];
   for (const p of phrases) {
