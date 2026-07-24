@@ -67,6 +67,11 @@ export function normalizeTranscript(raw: string): string {
   s = s.replace(/(\d),(?=\d{3}\b)/g, "$1"); // 850,000 -> 850000 (before any comma splitting)
   s = s.replace(/,/g, " , "); // remaining commas become separators
   s = s.replace(/([a-z0-9])([.!?;])/g, "$1 $2"); // detach sentence punctuation
+  // A trailing hyphenated non-number word ("six-hundred-thousand-dollar
+  // range") otherwise invalidates the ENTIRE hyphen-joined token for
+  // wordsToDigits below, since it splits on "-" and requires every part to
+  // be numeric — detach it so the numeric chain still converts.
+  s = s.replace(/-(dollars?|range|purchase|value|price|mark)\b/g, " $1");
   // "one point two million" / "1 point 2 thousand" -> integer, BEFORE the word-number pass
   s = s.replace(
     new RegExp(`\\b(${UNIT_WORD}|\\d+)\\s+point\\s+(${UNIT_WORD}|\\d)\\s+(million|thousand)\\b`, "g"),
@@ -229,9 +234,229 @@ function firstMatch(
   return undefined;
 }
 
-const VALUE_LABELS =
-  "property value|appraised value|appraised at|appraisal of|home value|purchase price|sales? price|valued at|value of|value is|worth|price of|price is|value\\b|price\\b";
-const LOAN_LABELS = "loan amount|loan size|loan of|loan is|borrowing|borrow|mortgage amount|mortgage of|note amount|financing of";
+// ---------------------------------------------------------------------------
+// Mortgage dollar-amount classification — semantic, not proximity-based.
+//
+// The prior implementation required a fixed alias phrase to sit immediately
+// before (or immediately after, with no words in between) the number — so
+// "estimated at around $600,000 in value" was missed entirely, since "value"
+// trails the number by a whole phrase. This layer instead: (1) separates
+// candidates by magnitude band (percent 1-100 for LTV/down-payment vs. dollar
+// >= 1,000 for value/loan/cash-out — FICO's distinct 300-850 band is handled
+// separately, so bands never collide), (2) for each dollar candidate, finds
+// the mortgage-field alias term NEAREST to it anywhere in its sentence
+// (rather than requiring a specific word order or adjacency), and (3) skips
+// any number whose own clause carries credit-score, income, rent, DSCR,
+// reserve, unit-count, or seasoning language, so those numbers are never
+// misread as a property value or loan amount.
+// ---------------------------------------------------------------------------
+
+const PROPERTY_VALUE_TERMS =
+  /\brequested loan amount\b|\bproperty value\b|\bestimated value\b|\bmarket value\b|\bappraised value\b|\bappraisal value\b|\bexpected appraisal\b|\bappraises? for\b|\bsubject value\b|\bvalue of the property\b|\bpurchase price\b|\bsales? price\b|\bacquisition price\b|\bcontract price\b|\bhome price\b|\bproperty price\b|\bvalued at\b|\bworth\b|\bappraisal\b|\bappraise\b|\bvalue\b|\bprice\b/;
+// Generic single words ("purchase", "property", "home") are real signals
+// ("a $600,000 purchase", "looking at a $600,000 property") but far too
+// common to search sentence-wide without false hits — scoped to the
+// number's own clause only (see classifyMortgageAmounts).
+const PROPERTY_VALUE_WEAK_TERMS = /\bpurchase\b|\bproperty\b|\bhome\b/;
+
+const LOAN_AMOUNT_TERMS =
+  /\brequested loan amount\b|\bloan amount\b|\bmortgage amount\b|\bfinancing amount\b|\bamount financed\b|\bnew loan\b|\bproposed loan\b|\bloan request\b|\bborrower needs?\b|\blooking to borrow\b|\bwants? to borrow\b|\bunpaid principal balance\b|\bpayoff amount\b|\bcurrent balance\b|\bexisting mortgage balance\b|\bfinancing\b|\bborrow\b|\bloan\b|\bmortgage\b/;
+
+const CASH_OUT_AMOUNT_TERMS = /\bcash[\s-]?out\b|\bcash back\b|\bproceeds\b/;
+
+const CREDIT_SCORE_CONTEXT = /\bfico\b|credit score|\bscore\b|\bcredit\b/;
+const INCOME_CONTEXT = /\bincome\b|\bannually\b|\bearns?\b|\bsalary\b|per year|per month|\bearning\b/;
+const RENT_CONTEXT = /\brent\b|rental income\b/;
+const DISQUALIFYING_CONTEXT = new RegExp(
+  `${CREDIT_SCORE_CONTEXT.source}|${INCOME_CONTEXT.source}|${RENT_CONTEXT.source}|\\bdscr\\b|\\breserves?\\b|\\binterest rate\\b|\\brate of\\b|\\bunits?\\b|\\byears? in business\\b|\\bmonths? of seasoning\\b|\\bzip\\b`
+);
+
+const DOWN_PAYMENT_TERMS = /\bdown payment\b|\bputting down\b|\bpercent(?:age)? financed\b|\bfinancing percentage\b|\bequity position\b|\bdown\b/;
+const LTV_DIRECT_TERMS = /\bltv\b|loan[\s-]*to[\s-]*value|\bleverage\b/;
+
+interface BoundaryHit {
+  index: number;
+  end: number;
+}
+
+function findBoundaries(t: string, re: RegExp): BoundaryHit[] {
+  const hits: BoundaryHit[] = [];
+  const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : `${re.flags}g`);
+  let m: RegExpExecArray | null;
+  while ((m = g.exec(t)) !== null) hits.push({ index: m.index, end: m.index + m[0].length });
+  return hits;
+}
+
+function rangeAround(index: number, len: number, boundaries: BoundaryHit[], textLength: number): { start: number; end: number } {
+  const priorEnds = boundaries.filter((b) => b.end <= index).map((b) => b.end);
+  const start = priorEnds.length > 0 ? Math.max(...priorEnds) : 0;
+  const nextStart = boundaries.find((b) => b.index >= index + len);
+  const end = nextStart ? nextStart.index : textLength;
+  return { start, end };
+}
+
+/** Smallest distance from `numIndex` to any occurrence of `re` whose match
+ * falls within [from, to) of the full text — Infinity if none is found, so
+ * "nearest relevant alias term in this sentence" can be compared across
+ * candidate fields regardless of word order. */
+function nearestTermDistance(t: string, from: number, to: number, numIndex: number, re: RegExp): number {
+  const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : `${re.flags}g`);
+  let best = Infinity;
+  let m: RegExpExecArray | null;
+  while ((m = g.exec(t)) !== null) {
+    if (m.index < from || m.index >= to) continue;
+    const d = Math.abs(m.index - numIndex);
+    if (d < best) best = d;
+  }
+  return best;
+}
+
+const round2ForLtv = (n: number) => Math.round(n * 100) / 100;
+
+export interface AmountClassification {
+  propertyValue?: { value: number; source: string; inferred?: boolean };
+  loanAmount?: { value: number; source: string; inferred?: boolean };
+  requestedCashOut?: { value: number; source: string };
+  ltv?: { value: number; source: string };
+  /** Set when the fallback path assigned BOTH value and loan from two
+   * unlabeled dollar figures (larger → value, smaller → loan) — callers use
+   * this to add a single explanatory note rather than guessing why. */
+  assumedBothFromUnlabeledPair?: boolean;
+}
+
+/** Classifies every dollar amount and LTV/down-payment percentage in an
+ * already-normalized transcript by MEANING, not proximity — see the header
+ * comment above for the approach. Exported and independently testable. */
+export function classifyMortgageAmounts(t: string): AmountClassification {
+  // Clause boundaries include comma/"and" AND sentence-enders, so a clause
+  // never crosses a full sentence — a clause is always the tightest scope,
+  // sentence the fallback-widened one (clause ⊆ sentence).
+  const clauseBoundaries = findBoundaries(t, /,|;|\band\b|\.|\?|!/);
+  const sentenceBoundaries = findBoundaries(t, /\.|\?|!/);
+
+  // ---- percent-band: LTV stated directly, or down payment / equity -------
+  let ltv: { value: number; source: string } | undefined;
+  const percentRe = /\$?(\d{1,3}(?:\.\d+)?)\s*(?:%|percent)?\b/g;
+  let pm: RegExpExecArray | null;
+  while ((pm = percentRe.exec(t)) !== null) {
+    const n = parseFloat(pm[1] ?? "");
+    if (!Number.isFinite(n) || n < 1 || n > 100) continue;
+    const clauseRange = rangeAround(pm.index, pm[0].length, clauseBoundaries, t.length);
+    const sentRange = rangeAround(pm.index, pm[0].length, sentenceBoundaries, t.length);
+    const clause = t.slice(clauseRange.start, clauseRange.end);
+    const sentence = t.slice(sentRange.start, sentRange.end);
+    if (LTV_DIRECT_TERMS.test(clause) || LTV_DIRECT_TERMS.test(sentence)) {
+      ltv = { value: n, source: clause.trim() || sentence.trim() };
+      break;
+    }
+    if (DOWN_PAYMENT_TERMS.test(clause) || DOWN_PAYMENT_TERMS.test(sentence)) {
+      ltv = { value: round2ForLtv(100 - n), source: `${clause.trim() || sentence.trim()} (down payment converted to LTV)` };
+      break;
+    }
+  }
+
+  // ---- dollar-band: property value / loan amount / cash-out --------------
+  let propertyValue: { value: number; source: string; inferred?: boolean } | undefined;
+  let loanAmount: { value: number; source: string; inferred?: boolean } | undefined;
+  let requestedCashOut: { value: number; source: string } | undefined;
+  const unclassified: Array<{ num: number; index: number; source: string }> = [];
+  const dollarRe = /\$?(\d{4,9})\b/g;
+  let dm: RegExpExecArray | null;
+  while ((dm = dollarRe.exec(t)) !== null) {
+    const n = parseInt(dm[1] ?? "", 10);
+    if (!Number.isFinite(n) || n < 1_000) continue;
+    const clauseRange = rangeAround(dm.index, dm[0].length, clauseBoundaries, t.length);
+    const clause = t.slice(clauseRange.start, clauseRange.end);
+    if (DISQUALIFYING_CONTEXT.test(clause)) continue; // rent / income / credit-score / DSCR / reserves clause — never a value or loan
+
+    const sentRange = rangeAround(dm.index, dm[0].length, sentenceBoundaries, t.length);
+    // Clause-scoped distance first — this is what stops a term that
+    // actually belongs to the OTHER number in the same sentence (e.g. "the
+    // purchase price is $600,000 and the loan request is $450,000") from
+    // winning just because it happens to sit fewer characters away. Only
+    // widen to the full sentence when the number's own clause has no
+    // relevant term at all (e.g. "...worth approximately $600,000" with no
+    // comma/"and" to bound a narrower clause).
+    let dCashOut = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, CASH_OUT_AMOUNT_TERMS);
+    let dLoan = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, LOAN_AMOUNT_TERMS);
+    let dValue = Math.min(
+      nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, PROPERTY_VALUE_TERMS),
+      nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, PROPERTY_VALUE_WEAK_TERMS)
+    );
+    if (dCashOut === Infinity && dLoan === Infinity && dValue === Infinity) {
+      dCashOut = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, CASH_OUT_AMOUNT_TERMS);
+      dLoan = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, LOAN_AMOUNT_TERMS);
+      dValue = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, PROPERTY_VALUE_TERMS);
+    }
+    const min = Math.min(dCashOut, dLoan, dValue);
+    const source = clause.trim();
+
+    if (min === Infinity) {
+      unclassified.push({ num: n, index: dm.index, source: `$${n}` });
+    } else if (min === dCashOut && !requestedCashOut) {
+      requestedCashOut = { value: n, source };
+    } else if (min === dLoan && !loanAmount) {
+      loanAmount = { value: n, source };
+    } else if (min === dValue && !propertyValue) {
+      propertyValue = { value: n, source };
+    } else {
+      // The nearest term's field is already filled (e.g. two numbers both
+      // read as closest to "value") — fall through to the unlabeled pass,
+      // which fills whichever slot is still open.
+      unclassified.push({ num: n, index: dm.index, source: `$${n}` });
+    }
+  }
+
+  // Bare small numbers ("a value of about 600") are common mortgage-broker
+  // shorthand for the thousands figure. Only expand a 2-3 digit number
+  // (100-999) into thousands when a strong property-value or loan-amount
+  // term sits genuinely close by in its own clause — never just because a
+  // number happens to be small, which would risk misreading unit counts,
+  // seasoning months, or other unrelated figures.
+  const NEAR_CHARS = 20;
+  const smallRe = /\$?(\d{2,3})\b/g;
+  let sm: RegExpExecArray | null;
+  while ((sm = smallRe.exec(t)) !== null) {
+    const n = parseInt(sm[1] ?? "", 10);
+    if (!Number.isFinite(n) || n < 100 || n > 999) continue;
+    const clauseRange = rangeAround(sm.index, sm[0].length, clauseBoundaries, t.length);
+    const clause = t.slice(clauseRange.start, clauseRange.end);
+    if (DISQUALIFYING_CONTEXT.test(clause)) continue;
+    const dValue = Math.min(
+      nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, PROPERTY_VALUE_TERMS),
+      nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, PROPERTY_VALUE_WEAK_TERMS)
+    );
+    const dLoan = nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, LOAN_AMOUNT_TERMS);
+    if (!propertyValue && dValue <= NEAR_CHARS && dValue <= dLoan) {
+      propertyValue = { value: n * 1_000, source: clause.trim() };
+    } else if (!loanAmount && dLoan <= NEAR_CHARS && dLoan < dValue) {
+      loanAmount = { value: n * 1_000, source: clause.trim() };
+    }
+  }
+
+  // Unlabeled fallback — mirrors the prior behavior: with a leftover dollar
+  // figure and a still-open slot, fill property value first (asked first),
+  // then loan amount if it's smaller than the value already captured.
+  let assumedBothFromUnlabeledPair = false;
+  if (!propertyValue && !loanAmount && unclassified.length >= 2) {
+    const sorted = [...unclassified].sort((a, b) => b.num - a.num);
+    const larger = sorted[0]!;
+    const smaller = sorted[1]!;
+    propertyValue = { value: larger.num, source: `assumed larger figure $${larger.num} is the value`, inferred: true };
+    loanAmount = { value: smaller.num, source: `assumed smaller figure $${smaller.num} is the loan`, inferred: true };
+    assumedBothFromUnlabeledPair = true;
+  } else {
+    for (const u of unclassified) {
+      if (!propertyValue) {
+        propertyValue = { value: u.num, source: `assumed $${u.num} is the property value`, inferred: true };
+      } else if (!loanAmount && u.num < propertyValue.value) {
+        loanAmount = { value: u.num, source: `assumed $${u.num} is the loan amount`, inferred: true };
+      }
+    }
+  }
+
+  return { propertyValue, loanAmount, requestedCashOut, ltv, assumedBothFromUnlabeledPair };
+}
 
 export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   const x = emptyExtraction();
@@ -249,65 +474,19 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   );
   if (fico) x.fico = cap(Math.round(fico.num), fico.source);
 
-  // ---- Stated LTV ---------------------------------------------------------
-  const ltv = firstMatch(
-    t,
-    [
-      /(?:\bltv\b|loan[\s-]*to[\s-]*value)[^\d]{0,12}(\d{1,3}(?:\.\d+)?)/,
-      /(\d{1,3}(?:\.\d+)?)\s*(?:%|percent)?\s*(?:\bltv\b|loan[\s-]*to[\s-]*value)/,
-    ],
-    (n) => n >= 5 && n <= 100
-  );
-  if (ltv) x.statedLtv = cap(ltv.num, ltv.source);
-
-  // ---- Labeled money: property value & loan amount ------------------------
-  const value = firstMatch(
-    t,
-    [
-      new RegExp(`(?:${VALUE_LABELS})[^\\d,]{0,14}\\$?(\\d{4,9})\\b`),
-      new RegExp(
-        "\\$?(\\d{4,9})\\s*(?:dollars?\\s*)?(?:property value|home value|purchase price|sales? price|value\\b|worth\\b|price\\b|apprais)"
-      ),
-    ],
-    (n) => n >= 25_000
-  );
-  if (value) x.propertyValue = cap(Math.round(value.num), value.source);
-
-  const loan = firstMatch(
-    t,
-    [
-      new RegExp(`(?:${LOAN_LABELS})[^\\d,]{0,14}\\$?(\\d{4,9})\\b`),
-      new RegExp(`\\$?(\\d{4,9})\\s*(?:dollar\\s*)?loan\\b`),
-    ],
-    (n) => n >= 10_000
-  );
-  if (loan) x.loanAmount = cap(Math.round(loan.num), loan.source);
-
-  const cashOut = firstMatch(t, [/cash[\s-]?out(?:\s+of)?[^\d]{0,10}\$?(\d{4,9})\b/], (n) => n >= 1_000);
-  if (cashOut) x.requestedCashOut = cap(Math.round(cashOut.num), cashOut.source);
-
-  // ---- Unlabeled money fallback ------------------------------------------
-  if (!x.propertyValue || !x.loanAmount) {
-    const used = new Set<number>([x.propertyValue?.value ?? -1, x.loanAmount?.value ?? -1, x.requestedCashOut?.value ?? -1]);
-    const candidates: number[] = [];
-    for (const m of t.matchAll(/\$?(\d{5,9})\b/g)) {
-      const n = parseInt(m[1] ?? "", 10);
-      if (n >= 25_000 && !used.has(n) && n !== x.fico?.value) candidates.push(n);
-    }
-    const uniq = [...new Set(candidates)].sort((a, b) => b - a);
-    if (!x.propertyValue && !x.loanAmount && uniq.length >= 2) {
-      const larger = uniq[0] as number;
-      const smaller = uniq[1] as number;
-      x.propertyValue = cap(larger, `assumed larger figure $${larger} is the value`, true);
-      x.loanAmount = cap(smaller, `assumed smaller figure $${smaller} is the loan`, true);
-      x.notesFragments.push("Two dollar figures were given without labels; assumed the larger is the property value.");
-    } else if (!x.propertyValue && x.loanAmount && uniq.length >= 1 && (uniq[0] as number) > x.loanAmount.value) {
-      const larger = uniq[0] as number;
-      x.propertyValue = cap(larger, `assumed $${larger} is the property value`, true);
-    } else if (!x.loanAmount && x.propertyValue && uniq.length >= 1) {
-      const below = uniq.find((n) => n < (x.propertyValue as Captured<number>).value);
-      if (below) x.loanAmount = cap(below, `assumed $${below} is the loan amount`, true);
-    }
+  // ---- Property value, loan amount, LTV, cash-out (semantic, not proximity)
+  // See classifyMortgageAmounts() above — replaces the old fixed-order,
+  // fixed-window regex matching that missed phrasing like "estimated at
+  // around $600,000 in value" (the label trailing the number by a whole
+  // phrase) and confused rent/income/credit-score figures for the value or
+  // loan amount when they appeared in the same sentence.
+  const amounts = classifyMortgageAmounts(t);
+  if (amounts.ltv) x.statedLtv = cap(amounts.ltv.value, amounts.ltv.source);
+  if (amounts.propertyValue) x.propertyValue = cap(Math.round(amounts.propertyValue.value), amounts.propertyValue.source, amounts.propertyValue.inferred);
+  if (amounts.loanAmount) x.loanAmount = cap(Math.round(amounts.loanAmount.value), amounts.loanAmount.source, amounts.loanAmount.inferred);
+  if (amounts.requestedCashOut) x.requestedCashOut = cap(Math.round(amounts.requestedCashOut.value), amounts.requestedCashOut.source);
+  if (amounts.assumedBothFromUnlabeledPair) {
+    x.notesFragments.push("Two dollar figures were given without labels; assumed the larger is the property value.");
   }
 
   // ---- Loan purpose ---------------------------------------------------------
