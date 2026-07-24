@@ -73,13 +73,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6">{children}</main>
         <footer className="border-t-2 border-black bg-white">
-          <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-slate-500 space-y-1">
+          <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-slate-500 space-y-2">
             <p>{DISCLAIMER}</p>
             <p>
               All lenders and programs shown in this demonstration build are fictional sample data — not real lender
               guidelines. This platform is an underwriting-assistance and research tool; it does not issue loan
               approvals, credit decisions, or commitments to lend.
             </p>
+            <nav aria-label="Legal" className="flex gap-4 pt-1">
+              <Link href="/terms" className="hover:text-slate-900 hover:underline">
+                Terms of Service
+              </Link>
+              <Link href="/privacy" className="hover:text-slate-900 hover:underline">
+                Privacy Policy
+              </Link>
+            </nav>
           </div>
         </footer>
       </body>
