@@ -163,6 +163,10 @@ model Discount {
 /// Admin-assigned for now (no self-serve checkout / billing yet — see
 /// FINALIZE.md Phase 7 for the future Stripe integration). A discount stays
 /// in effect until an admin removes it (sets discountId back to null).
+/// canceledAt: set when the user self-cancels (or an admin cancels on their
+/// behalf) — the plan/discount are kept for history, but a canceled
+/// subscription grants no lender-tier access (see getEffectivePlan()).
+/// Reactivating (by an admin) just clears canceledAt back to null.
 model UserSubscription {
   id           String    @id @default(uuid()) @db.Uuid
   userId       String    @unique @map("user_id") @db.Uuid
@@ -170,6 +174,7 @@ model UserSubscription {
   discountId   String?   @map("discount_id") @db.Uuid
   assignedBy   String?   @map("assigned_by") @db.Uuid // platform admin who set this
   startedAt    DateTime  @default(now()) @map("started_at")
+  canceledAt   DateTime? @map("canceled_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   user     User            @relation(fields: [userId], references: [id])

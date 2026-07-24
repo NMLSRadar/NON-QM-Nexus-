@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { assignSubscription } from "./actions";
+import { assignSubscription, reactivateSubscription } from "./actions";
 
 interface Plan {
   id: string;
@@ -16,12 +16,14 @@ export function SubscriptionRow({
   userId,
   currentPlanId,
   currentDiscountId,
+  canceledAt,
   plans,
   discounts,
 }: {
   userId: string;
   currentPlanId: string | null;
   currentDiscountId: string | null;
+  canceledAt: string | null;
   plans: Plan[];
   discounts: Discount[];
 }) {
@@ -57,6 +59,23 @@ export function SubscriptionRow({
           </option>
         ))}
       </select>
+      {canceledAt ? (
+        <span className="flex items-center gap-2 text-xs">
+          <span className="rounded-full bg-slate-200 text-slate-700 px-2 py-0.5">
+            Canceled {new Date(canceledAt).toLocaleDateString()}
+          </span>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => startTransition(() => reactivateSubscription(userId))}
+            className="text-brand-700 hover:underline disabled:opacity-60"
+          >
+            Reactivate
+          </button>
+        </span>
+      ) : currentPlanId ? (
+        <span className="text-xs rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5">Active</span>
+      ) : null}
     </div>
   );
 }
