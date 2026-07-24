@@ -1,15 +1,33 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
 import { DISCLAIMER } from "@/domain/types/enums";
 import { AuthStatus } from "@/components/auth-status";
 import { AdminNavLink } from "@/components/admin-nav-link";
+import { PwaRegister } from "@/components/pwa-register";
 
 export const metadata: Metadata = {
   title: "NON-QM Nexus",
   description:
     "AI-assisted NON-QM scenario analysis and lender-matching decision-support platform (demonstration build).",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "NON-QM Nexus",
+  },
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
 };
 
 const NAV = [
@@ -26,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col bg-white">
+        <PwaRegister />
         <header className="bg-white text-slate-900 border-b-2 border-black">
           <div className="mx-auto max-w-7xl px-4 py-3 flex flex-wrap items-center gap-x-8 gap-y-2">
             <Link href="/" className="flex items-center gap-2.5 text-lg font-semibold tracking-tight">
