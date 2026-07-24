@@ -135,9 +135,7 @@ export default async function PricingPage() {
 
       <p className="text-center text-xs text-slate-500 max-w-2xl mx-auto">
         Billing is processed securely by Stripe — your card details never touch our servers. Cancel anytime from your
-        account page; you keep access through the end of the period you&apos;ve already paid for. All lenders and
-        programs shown elsewhere in this demonstration build are fictional sample data — see the disclaimer in the
-        footer.
+        account page; you keep access through the end of the period you&apos;ve already paid for.
       </p>
     </div>
   );

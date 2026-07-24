@@ -9,8 +9,7 @@ import { PwaRegister } from "@/components/pwa-register";
 
 export const metadata: Metadata = {
   title: "NON-QM Nexus",
-  description:
-    "AI-assisted NON-QM scenario analysis and lender-matching decision-support platform (demonstration build).",
+  description: "AI-assisted NON-QM scenario analysis and lender-matching decision-support platform.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -64,11 +63,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </Link>
               ))}
             </nav>
-            <span className="ml-auto text-xs bg-brand-500 text-black font-medium rounded px-2 py-1 border border-black">
-              Demo environment — sample data only
-            </span>
-            <AdminNavLink />
-            <AuthStatus />
+            <div className="ml-auto flex items-center gap-3">
+              <AdminNavLink />
+              <AuthStatus />
+            </div>
           </div>
         </header>
         <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6">{children}</main>
@@ -76,9 +74,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-slate-500 space-y-2">
             <p>{DISCLAIMER}</p>
             <p>
-              All lenders and programs shown in this demonstration build are fictional sample data — not real lender
-              guidelines. This platform is an underwriting-assistance and research tool; it does not issue loan
-              approvals, credit decisions, or commitments to lend.
+              This platform is an underwriting-assistance and research tool; it does not issue loan approvals,
+              credit decisions, or commitments to lend. Lender program data is maintained by NON-QM Nexus
+              administrators and is subject to change without notice — always confirm current guidelines directly
+              with the lender before advising a client.
             </p>
             <nav aria-label="Legal" className="flex gap-4 pt-1">
               <Link href="/terms" className="hover:text-slate-900 hover:underline">
