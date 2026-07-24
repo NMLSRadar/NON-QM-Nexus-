@@ -72,6 +72,11 @@ export async function startCheckout(formData: FormData): Promise<void> {
     customer: stripeCustomerId,
     line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
     allow_promotion_codes: true,
+    // Stripe's newer "Managed Payments" (merchant-of-record) mode is
+    // enabled by default on new accounts and requires a product tax_code
+    // we haven't set up — this app is not using Stripe as merchant of
+    // record, so explicitly opt out rather than configure tax codes.
+    managed_payments: { enabled: false },
     success_url: `${appUrl}/account?checkout=success`,
     cancel_url: `${appUrl}/pricing?checkout=canceled`,
     metadata: { supabase_user_id: user.id, membership_plan_id: plan.id },
