@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { IconBadge, Pill, LinkButton } from "@/components/ui";
+import { IconBadge, Pill } from "@/components/ui";
 import { getWordmarkStyle } from "@/domain/lenderBrandStyle";
 import type { Lender, Program } from "@/domain/types/program";
 
@@ -73,11 +73,10 @@ function matchesChip(d: DirectoryLender, chip: ChipKey): boolean {
 
 /** The two-tone brand "wordmark" treatment for a lender's plain name text —
  * never a logo image, just colored typography (see lenderBrandStyle.ts).
- * Falls back to plain dark-ink text for lenders without a defined style
- * (e.g. sample/demo data). */
-function LenderName({ name }: { name: string }) {
+ * Falls back to plain dark-ink text for lenders without a defined style. */
+function LenderName({ name, muted }: { name: string; muted?: boolean }) {
   const style = getWordmarkStyle(name);
-  if (!style) return <span className="font-semibold text-ink-primary">{name}</span>;
+  if (!style || muted) return <span className={`font-semibold leading-snug ${muted ? "text-ink-secondary" : "text-ink-primary"}`}>{name}</span>;
   return (
     <span className="font-semibold leading-snug">
       <span style={{ color: style.firstColor }}>{style.first}</span>
@@ -91,35 +90,36 @@ function LenderName({ name }: { name: string }) {
   );
 }
 
-function LenderCard({ d, rank, unlocked }: { d: DirectoryLender; rank: number; unlocked: boolean }) {
-  const rankBadge = (
-    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-500 text-[11px] font-bold text-white">
+/** Numbered rank chip that overlaps the card's top-left corner, matching
+ * the reference design's floating circular badge. */
+function RankBadge({ rank }: { rank: number }) {
+  return (
+    <span className="absolute -top-2.5 -left-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-brand-500 text-[12px] font-bold text-white shadow-sm ring-2 ring-white">
       {rank}
     </span>
   );
+}
 
+function LenderCard({ d, rank, unlocked }: { d: DirectoryLender; rank: number; unlocked: boolean }) {
   if (!unlocked) {
     return (
       <div
-        className="relative flex flex-col gap-2 rounded-card border border-surface-border bg-slate-50 p-4"
+        className="relative flex min-h-[92px] flex-col justify-between gap-2 rounded-xl border border-surface-border bg-white p-4"
         aria-label={`${d.lender.name} — Tier ${d.lender.tierLevel} access required`}
       >
-        <div className="flex items-start gap-3">
-          {rankBadge}
-          <span className="min-w-0 opacity-60">
-            <LenderName name={d.lender.name} />
-          </span>
-          <span aria-hidden className="ml-auto text-lg">
+        <RankBadge rank={rank} />
+        <div className="flex items-start justify-between gap-2 pl-1">
+          <LenderName name={d.lender.name} muted />
+          <span aria-hidden className="shrink-0 text-base leading-none">
             🔒
           </span>
         </div>
-        <Pill tone="neutral" className="w-fit">
-          Tier {d.lender.tierLevel} Access Required
-        </Pill>
-        <p className="text-xs text-ink-secondary">Upgrade your membership to access this lender’s complete guidelines and program details.</p>
-        <LinkButton href="/pricing" variant="secondary" size="sm" className="w-fit">
-          Upgrade to Unlock
-        </LinkButton>
+        <div className="flex items-center justify-between gap-2 pl-1">
+          <Pill tone="neutral">Tier {d.lender.tierLevel} locked</Pill>
+          <Link href="/pricing" className="text-xs font-semibold text-brand-700 hover:text-brand-800 hover:underline whitespace-nowrap">
+            Upgrade to Unlock
+          </Link>
+        </div>
       </div>
     );
   }
@@ -127,17 +127,12 @@ function LenderCard({ d, rank, unlocked }: { d: DirectoryLender; rank: number; u
   return (
     <Link
       href={`/lenders/${d.lender.id}`}
-      className="group relative flex items-start gap-3 rounded-card border border-surface-border bg-white p-4 shadow-soft transition-all duration-200 hover:-translate-y-1 hover:shadow-soft-hover hover:border-brand-400 cursor-pointer"
+      className="group relative flex min-h-[92px] items-center rounded-xl border border-surface-border bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-soft-hover hover:border-brand-400"
       aria-label={`View ${d.lender.name} programs and guidelines`}
     >
-      {rankBadge}
-      <span className="min-w-0">
+      <RankBadge rank={rank} />
+      <span className="pl-1">
         <LenderName name={d.lender.name} />
-        {d.lender.isSampleData && (
-          <span className="mt-1 block w-fit rounded bg-amber-50 border border-amber-300 text-amber-800 text-[10px] px-1.5 py-0.5">
-            Sample data
-          </span>
-        )}
       </span>
     </Link>
   );
@@ -152,7 +147,6 @@ function TierSection({
   lenders,
   rankOffset,
   userTierLevel,
-  initialCount = 12,
 }: {
   icon: string;
   title: string;
@@ -162,16 +156,12 @@ function TierSection({
   lenders: DirectoryLender[];
   rankOffset: number;
   userTierLevel: number;
-  initialCount?: number;
 }) {
-  const [expanded, setExpanded] = useState(false);
   if (lenders.length === 0) return null;
-  const shown = expanded ? lenders : lenders.slice(0, initialCount);
-  const hasMore = lenders.length > initialCount;
 
   return (
     <section
-      className={`rounded-card border p-5 ${badgeTone === "gold" ? "border-brand-300 bg-brand-50/30" : "border-surface-border bg-white"}`}
+      className={`rounded-2xl border p-5 ${badgeTone === "gold" ? "border-brand-300 bg-brand-50/20" : "border-surface-border bg-white"}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
@@ -186,19 +176,13 @@ function TierSection({
             <p className="mt-1 text-sm text-ink-secondary max-w-xl">{description}</p>
           </div>
         </div>
-        {hasMore && !expanded && (
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className="inline-flex items-center gap-1.5 rounded-control border border-brand-300 bg-white px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 transition-colors"
-          >
-            View All {lenders.length} Lenders →
-          </button>
-        )}
+        <span className="inline-flex items-center gap-1.5 rounded-control border border-brand-300 bg-white px-4 py-2 text-sm font-medium text-brand-700">
+          View All {lenders.length} Lenders →
+        </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {shown.map((d, i) => (
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {lenders.map((d, i) => (
           <LenderCard key={d.lender.id} d={d} rank={rankOffset + i + 1} unlocked={userTierLevel >= d.lender.tierLevel} />
         ))}
       </div>
@@ -222,6 +206,9 @@ export function LenderDirectory({ tier1, tier2, tier3, userTierLevel }: Props) {
   }, [all, query, chip]);
 
   const filteredIds = useMemo(() => new Set(filtered.map((d) => d.lender.id)), [filtered]);
+  // Full lists always render — no truncation/expansion. Every matching
+  // lender in a tier is shown; the page simply scrolls if the list is
+  // long, per the required layout behavior.
   const t1 = tier1.filter((d) => filteredIds.has(d.lender.id));
   const t2 = tier2.filter((d) => filteredIds.has(d.lender.id));
   const t3 = tier3.filter((d) => filteredIds.has(d.lender.id));
@@ -266,7 +253,7 @@ export function LenderDirectory({ tier1, tier2, tier3, userTierLevel }: Props) {
 
       <TierSection
         icon="🏆"
-        title="Tier 1 — Top Lenders"
+        title={`Tier 1 — Top ${t1.length} Lenders`}
         badge="Premium Access"
         badgeTone="gold"
         description="Our most popular lenders with the broadest program offerings and highest broker usage."
@@ -276,7 +263,7 @@ export function LenderDirectory({ tier1, tier2, tier3, userTierLevel }: Props) {
       />
       <TierSection
         icon="🥈"
-        title="Tier 2 — Expanded Lenders"
+        title={`Tier 2 — Next ${t2.length} Lenders`}
         badge="Expanded Access"
         badgeTone="neutral"
         description="Strong national lenders with specialized products and competitive guidelines."
@@ -286,7 +273,7 @@ export function LenderDirectory({ tier1, tier2, tier3, userTierLevel }: Props) {
       />
       <TierSection
         icon="🥉"
-        title="Tier 3 — Enterprise Lenders"
+        title={`Tier 3 — Remaining ${t3.length} Lenders`}
         badge="Unlimited Access"
         badgeTone="neutral"
         description="The full catalog, unlocked on the Enterprise plan."

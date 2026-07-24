@@ -14,7 +14,7 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
   const org = await getCurrentOrganizationId();
   const [allLenders, access] = await Promise.all([repo.listAllLenders(org), getLenderAccessInfo()]);
 
-  const lender = allLenders.find((l) => l.id === id);
+  const lender = allLenders.find((l) => l.id === id && !l.isSampleData);
   if (!lender) notFound();
 
   const unlocked = access.tierLevel >= lender.tierLevel;
