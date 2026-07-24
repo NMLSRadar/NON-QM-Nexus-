@@ -5,6 +5,7 @@ import type { Scenario } from "@/domain/types/scenario";
 import type { ProgramCatalog } from "@/domain/analyze";
 import { seedCatalogForOrganization } from "./seedCatalog";
 import { getEffectivePlan } from "./membership";
+import { createServiceRoleClient } from "./serviceRoleClient";
 
 // ---------------------------------------------------------------------------
 // Row <-> domain object mapping.
@@ -176,7 +177,17 @@ export class SupabaseRepository implements Repository {
       .eq("organization_id", organizationId);
     if (error) throw new Error(`Failed to check catalog: ${error.message}`);
     if (!count) {
-      await seedCatalogForOrganization(this.supabase, organizationId);
+      // Seeding writes to lenders/programs/guideline_versions/rules, which
+      // are now platform-admin-only under RLS (see
+      // supabase/lender-catalog-write-lockdown.sql) — a regular user's own
+      // client can no longer insert into them directly. This first-run
+      // demo-catalog seed is a system operation, not an admin action, so
+      // it goes through the service-role client instead. organizationId
+      // here always comes from the caller's own resolved membership
+      // (never client-supplied — see src/lib/session.ts), so this stays
+      // safely scoped despite bypassing RLS.
+      const admin = createServiceRoleClient();
+      await seedCatalogForOrganization(admin, organizationId);
     }
   }
 

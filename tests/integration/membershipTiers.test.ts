@@ -59,8 +59,11 @@ describe.skipIf(!hasCredentials)("Membership tiers (live database)", () => {
     organizationId = membership!.organization_id as string;
 
     // Seed 3 lenders at each tier level directly (skip the full sample
-    // catalog seed — we only need tier filtering behavior here).
-    await userClient.from("lenders").insert([
+    // catalog seed — we only need tier filtering behavior here). Uses the
+    // admin (service-role) client since lenders/programs writes are now
+    // platform-admin-only under RLS — this is test fixture setup, not
+    // something a regular test user should be able to do.
+    await admin.from("lenders").insert([
       { organization_id: organizationId, name: "Essential-only Lender", tier_level: 1 },
       { organization_id: organizationId, name: "Professional Lender", tier_level: 2 },
       { organization_id: organizationId, name: "Enterprise Lender", tier_level: 3 },
