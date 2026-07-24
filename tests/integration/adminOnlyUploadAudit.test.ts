@@ -140,15 +140,21 @@ describe.skipIf(!hasCredentials)("Admin-only upload audit (live database)", () =
     expect(error).not.toBeNull();
   }, 15_000);
 
-  it("self-seeding a brand-new organization's demo catalog still works (via service role, not the blocked user path)", async () => {
+  it("getCatalog() reads the shared platform catalog directly — no per-organization self-seeding step anymore", async () => {
+    // Superseded test: self-seeding a demo catalog into each new org was
+    // removed once lenders/programs/rules became a single shared platform
+    // catalog (see src/lib/platformCatalog.ts) — reads always target the
+    // one canonical catalog organization regardless of the caller's own
+    // org, so there is nothing left to seed into a brand-new org's own
+    // (permanently empty) lenders table.
     const { SupabaseRepository } = await import("@/lib/repository/supabaseRepository");
     const repo = new SupabaseRepository(regularClient, regularUserId);
     const catalog = await repo.getCatalog(organizationId);
-    // Tier-filtered to 0 (no plan), so the repository call itself returns
-    // no lenders — but the seed must have actually run underneath.
+    // Tier-filtered to 0 (no plan), so the repository call returns no
+    // lenders — this organization's OWN lenders table stays empty forever.
     expect(catalog.lenders).toHaveLength(0);
 
     const { data: actualLenders } = await admin.from("lenders").select("id").eq("organization_id", organizationId);
-    expect((actualLenders ?? []).length).toBeGreaterThan(0);
+    expect((actualLenders ?? []).length).toBe(0);
   }, 20_000);
 });

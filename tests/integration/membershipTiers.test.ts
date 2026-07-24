@@ -1,11 +1,20 @@
 // Integration tests for the membership/tier system against the REAL
 // Supabase project. Gated on real credentials — skips in CI without
 // secrets, same convention as tests/integration/supabaseRepository.test.ts.
+//
+// IMPORTANT: lenders/programs/guideline_versions/rules are a SHARED
+// platform catalog (see src/lib/platformCatalog.ts) — every fixture
+// lender here is inserted into PLATFORM_CATALOG_ORGANIZATION_ID (the one
+// real organization that holds the catalog), given a unique per-run name,
+// and deleted by that exact name in afterAll — NEVER by a blanket
+// organization_id delete, since that organization also holds the real
+// production lender catalog.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SupabaseRepository } from "@/lib/repository/supabaseRepository";
 import { getEffectivePlan } from "@/lib/repository/membership";
+import { PLATFORM_CATALOG_ORGANIZATION_ID } from "@/lib/platformCatalog";
 
 try {
   (process as unknown as { loadEnvFile?: (path?: string) => void }).loadEnvFile?.(".env.local");
@@ -27,6 +36,12 @@ describe.skipIf(!hasCredentials)("Membership tiers (live database)", () => {
   let fiftyOffDiscountId: string;
   const testEmail = `nqn-tier-integration-${Date.now()}@gmail.com`;
   const testPassword = "Tier-Integration-Pw-123";
+  const suffix = Date.now();
+  const tier1Name = `Essential-only Lender ${suffix}`;
+  const tier2Name = `Professional Lender ${suffix}`;
+  const tier3Name = `Enterprise Lender ${suffix}`;
+  const brandNewName = `Brand New Lender ${suffix}`;
+  const allTestNames = [tier1Name, tier2Name, tier3Name, brandNewName];
 
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, {
@@ -58,24 +73,20 @@ describe.skipIf(!hasCredentials)("Membership tiers (live database)", () => {
       .maybeSingle();
     organizationId = membership!.organization_id as string;
 
-    // Seed 3 lenders at each tier level directly (skip the full sample
-    // catalog seed — we only need tier filtering behavior here). Uses the
-    // admin (service-role) client since lenders/programs writes are now
-    // platform-admin-only under RLS — this is test fixture setup, not
-    // something a regular test user should be able to do.
+    // Seed 3 test lenders at each tier level into the SHARED PLATFORM
+    // CATALOG organization (uniquely named per test run) — writes go
+    // through the service-role client since lenders/programs writes are
+    // platform-admin-only under RLS.
     await admin.from("lenders").insert([
-      { organization_id: organizationId, name: "Essential-only Lender", tier_level: 1 },
-      { organization_id: organizationId, name: "Professional Lender", tier_level: 2 },
-      { organization_id: organizationId, name: "Enterprise Lender", tier_level: 3 },
+      { organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: tier1Name, tier_level: 1 },
+      { organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: tier2Name, tier_level: 2 },
+      { organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: tier3Name, tier_level: 3 },
     ]);
   }, 30_000);
 
   afterAll(async () => {
+    await admin.from("lenders").delete().eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID).in("name", allTestNames);
     if (organizationId) {
-      await admin.from("rules").delete().eq("organization_id", organizationId);
-      await admin.from("guideline_versions").delete().eq("organization_id", organizationId);
-      await admin.from("programs").delete().eq("organization_id", organizationId);
-      await admin.from("lenders").delete().eq("organization_id", organizationId);
       await admin.from("memberships").delete().eq("organization_id", organizationId);
       await admin.from("organizations").delete().eq("id", organizationId);
     }
@@ -86,20 +97,25 @@ describe.skipIf(!hasCredentials)("Membership tiers (live database)", () => {
     }
   }, 30_000);
 
-  it("a user with no subscription sees zero lenders", async () => {
+  it("a user with no subscription sees zero lenders (tier 0)", async () => {
     const repo = new SupabaseRepository(userClient, userId);
     const lenders = await repo.listLenders(organizationId);
     expect(lenders).toHaveLength(0);
   }, 15_000);
 
-  it("assigning the Essential plan reveals only tier-1 lenders", async () => {
+  it("assigning the Essential plan reveals only tier-1 lenders, including our tier-1 fixture", async () => {
     await admin.from("user_subscriptions").upsert(
       { user_id: userId, plan_id: essentialPlanId, assigned_by: userId },
       { onConflict: "user_id" }
     );
     const repo = new SupabaseRepository(userClient, userId);
     const lenders = await repo.listLenders(organizationId);
-    expect(lenders.map((l) => l.name)).toEqual(["Essential-only Lender"]);
+    // The shared catalog also contains real production Tier-1 lenders, so
+    // this asserts containment + the tier invariant, not exact equality.
+    expect(lenders.map((l) => l.name)).toContain(tier1Name);
+    expect(lenders.every((l) => l.tierLevel <= 1)).toBe(true);
+    expect(lenders.map((l) => l.name)).not.toContain(tier2Name);
+    expect(lenders.map((l) => l.name)).not.toContain(tier3Name);
   }, 15_000);
 
   it("a 50% discount halves the effective price without changing tier access", async () => {
@@ -116,7 +132,8 @@ describe.skipIf(!hasCredentials)("Membership tiers (live database)", () => {
     // Tier access must be unaffected by the discount.
     const repo = new SupabaseRepository(userClient, userId);
     const lenders = await repo.listLenders(organizationId);
-    expect(lenders.map((l) => l.name)).toEqual(["Essential-only Lender"]);
+    expect(lenders.map((l) => l.name)).toContain(tier1Name);
+    expect(lenders.every((l) => l.tierLevel <= 1)).toBe(true);
   }, 15_000);
 
   it("upgrading to Enterprise reveals every lender, including future ones", async () => {
@@ -126,16 +143,20 @@ describe.skipIf(!hasCredentials)("Membership tiers (live database)", () => {
     // Simulate a brand-new lender added after the user upgraded.
     await admin
       .from("lenders")
-      .insert({ organization_id: organizationId, name: "Brand New Lender", tier_level: 3, id: randomUUID() });
+      .insert({ organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: brandNewName, tier_level: 3, id: randomUUID() });
 
     const repo = new SupabaseRepository(userClient, userId);
     const lenders = await repo.listLenders(organizationId);
-    expect(lenders.map((l) => l.name).sort()).toEqual(
-      ["Brand New Lender", "Enterprise Lender", "Essential-only Lender", "Professional Lender"].sort()
-    );
+    const names = lenders.map((l) => l.name);
+    for (const expected of [tier1Name, tier2Name, tier3Name, brandNewName]) {
+      expect(names).toContain(expected);
+    }
   }, 15_000);
 
-  it("RLS still denies a second, unrelated user access to this organization's lenders regardless of their own tier", async () => {
+  it("a second, unrelated user in a DIFFERENT organization sees the SAME shared platform catalog at the same tier", async () => {
+    // This is the behavior the platform-catalog fix intentionally
+    // guarantees: lender/program visibility is governed by subscription
+    // tier only, never by which organization a signup happens to create.
     const otherEmail = `nqn-tier-integration-other-${Date.now()}@gmail.com`;
     const { data: otherCreated, error: otherErr } = await admin.auth.admin.createUser({
       email: otherEmail,
@@ -155,22 +176,26 @@ describe.skipIf(!hasCredentials)("Membership tiers (live database)", () => {
       });
       await otherClient.auth.signInWithPassword({ email: otherEmail, password: "Other-Test-Pw-123" });
 
-      const repo = new SupabaseRepository(otherClient, otherCreated.user.id);
-      // Even on Enterprise (tier 3, unrestricted), this user cannot see the
-      // first user's organization at all — RLS org-scoping still applies.
-      const lenders = await repo.listLenders(organizationId);
-      expect(lenders).toHaveLength(0);
-
-      await admin.from("user_subscriptions").delete().eq("user_id", otherCreated.user.id);
       const { data: otherMembership } = await otherClient
         .from("memberships")
         .select("organization_id")
         .eq("user_id", otherCreated.user.id)
         .maybeSingle();
-      if (otherMembership) {
-        await admin.from("memberships").delete().eq("user_id", otherCreated.user.id);
-        await admin.from("organizations").delete().eq("id", otherMembership.organization_id);
+      const otherOrgId = otherMembership!.organization_id as string;
+      expect(otherOrgId).not.toBe(organizationId); // genuinely a different organization
+
+      const repo = new SupabaseRepository(otherClient, otherCreated.user.id);
+      const lenders = await repo.listLenders(otherOrgId);
+      const names = lenders.map((l) => l.name);
+      // Same Enterprise tier as the first user post-upgrade -> same fixture
+      // lenders visible, despite belonging to a completely different org.
+      for (const expected of [tier1Name, tier2Name, tier3Name]) {
+        expect(names).toContain(expected);
       }
+
+      await admin.from("user_subscriptions").delete().eq("user_id", otherCreated.user.id);
+      await admin.from("memberships").delete().eq("user_id", otherCreated.user.id);
+      await admin.from("organizations").delete().eq("id", otherOrgId);
       await admin.from("users").delete().eq("id", otherCreated.user.id);
     } finally {
       await admin.auth.admin.deleteUser(otherCreated.user.id);

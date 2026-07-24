@@ -94,24 +94,29 @@ describe.skipIf(!hasCredentials)("SupabaseRepository (live database)", () => {
     expect(organizationId).toBeTruthy();
   });
 
-  it("self-seeds the demo catalog on first getCatalog() call", async () => {
-    // Assign Enterprise (tier 3) so every seeded lender (tiers 1-3) is visible.
+  it("getCatalog() returns the shared platform catalog immediately — no per-organization seeding step", async () => {
+    // Assign Enterprise (tier 3) so every real lender (tiers 1-3) is visible.
     const { data: enterprise } = await admin.from("membership_plans").select("id").eq("key", "enterprise").single();
     await admin.from("user_subscriptions").upsert({ user_id: userId, plan_id: enterprise!.id }, { onConflict: "user_id" });
 
     const repo = new SupabaseRepository(userClient, userId);
     const catalog = await repo.getCatalog(organizationId);
+    // This is a brand-new organization with nothing in its own lenders
+    // table — the non-empty result IS the platform-catalog fix: catalog
+    // visibility depends on subscription tier only, never on which
+    // organization a signup happens to create.
     expect(catalog.lenders.length).toBeGreaterThan(0);
     expect(catalog.programs.length).toBeGreaterThan(0);
     expect(catalog.rules.length).toBeGreaterThan(0);
-    // Every seeded program must resolve to a lender that exists in this org.
+    // Every returned program must resolve to a lender ALSO present in this
+    // same catalog result (internal consistency, not org-membership).
     const lenderIds = new Set(catalog.lenders.map((l) => l.id));
     for (const program of catalog.programs) {
       expect(lenderIds.has(program.lenderId)).toBe(true);
     }
   }, 20_000);
 
-  it("does not double-seed the catalog on a second getCatalog() call", async () => {
+  it("getCatalog() is stable across repeated calls", async () => {
     const repo = new SupabaseRepository(userClient, userId);
     const first = await repo.getCatalog(organizationId);
     const second = await repo.getCatalog(organizationId);

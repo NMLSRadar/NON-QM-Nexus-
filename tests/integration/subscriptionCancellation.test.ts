@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getEffectivePlan } from "@/lib/repository/membership";
 import { SupabaseRepository } from "@/lib/repository/supabaseRepository";
+import { PLATFORM_CATALOG_ORGANIZATION_ID } from "@/lib/platformCatalog";
 
 try {
   (process as unknown as { loadEnvFile?: (path?: string) => void }).loadEnvFile?.(".env.local");
@@ -25,6 +26,7 @@ describe.skipIf(!hasCredentials)("Subscription cancellation (live database)", ()
   let essentialPlanId: string;
   const testEmail = `nqn-cancel-integration-${Date.now()}@gmail.com`;
   const testPassword = "Cancel-Integration-Pw-123";
+  const testLenderName = `Cancel-test Lender ${Date.now()}`;
 
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, {
@@ -54,7 +56,7 @@ describe.skipIf(!hasCredentials)("Subscription cancellation (live database)", ()
       .maybeSingle();
     organizationId = membership!.organization_id as string;
 
-    await admin.from("lenders").insert({ organization_id: organizationId, name: "Cancel-test Lender", tier_level: 1 });
+    await admin.from("lenders").insert({ organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: testLenderName, tier_level: 1 });
 
     // Assign the Essential plan directly (mirrors what an admin does).
     await admin
@@ -63,8 +65,8 @@ describe.skipIf(!hasCredentials)("Subscription cancellation (live database)", ()
   }, 30_000);
 
   afterAll(async () => {
+    await admin.from("lenders").delete().eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID).eq("name", testLenderName);
     if (organizationId) {
-      await admin.from("lenders").delete().eq("organization_id", organizationId);
       await admin.from("memberships").delete().eq("organization_id", organizationId);
       await admin.from("organizations").delete().eq("id", organizationId);
     }
@@ -82,7 +84,7 @@ describe.skipIf(!hasCredentials)("Subscription cancellation (live database)", ()
 
     const repo = new SupabaseRepository(userClient, userId);
     const lenders = await repo.listLenders(organizationId);
-    expect(lenders.map((l) => l.name)).toEqual(["Cancel-test Lender"]);
+    expect(lenders.map((l) => l.name)).toContain(testLenderName);
   }, 15_000);
 
   it("self-serve cancel_own_subscription() revokes access but keeps plan history", async () => {
@@ -118,7 +120,7 @@ describe.skipIf(!hasCredentials)("Subscription cancellation (live database)", ()
 
     const repo = new SupabaseRepository(userClient, userId);
     const lenders = await repo.listLenders(organizationId);
-    expect(lenders.map((l) => l.name)).toEqual(["Cancel-test Lender"]);
+    expect(lenders.map((l) => l.name)).toContain(testLenderName);
   }, 15_000);
 
   it("self-serve reactivate_own_subscription() restores tier access after a self-serve cancel", async () => {
@@ -137,7 +139,7 @@ describe.skipIf(!hasCredentials)("Subscription cancellation (live database)", ()
 
     const repo = new SupabaseRepository(userClient, userId);
     const lenders = await repo.listLenders(organizationId);
-    expect(lenders.map((l) => l.name)).toEqual(["Cancel-test Lender"]);
+    expect(lenders.map((l) => l.name)).toContain(testLenderName);
   }, 15_000);
 
   it("reactivate_own_subscription() on an already-active subscription is a safe no-op", async () => {

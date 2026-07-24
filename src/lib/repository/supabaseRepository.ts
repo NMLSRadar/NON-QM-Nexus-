@@ -3,9 +3,8 @@ import type { Repository } from "@/lib/store";
 import type { Lender, Program, Rule } from "@/domain/types/program";
 import type { Scenario } from "@/domain/types/scenario";
 import type { ProgramCatalog } from "@/domain/analyze";
-import { seedCatalogForOrganization } from "./seedCatalog";
 import { getEffectivePlan } from "./membership";
-import { createServiceRoleClient } from "./serviceRoleClient";
+import { PLATFORM_CATALOG_ORGANIZATION_ID } from "@/lib/platformCatalog";
 
 // ---------------------------------------------------------------------------
 // Row <-> domain object mapping.
@@ -161,34 +160,17 @@ export class SupabaseRepository implements Repository {
   }
 
   async getCatalog(organizationId: string): Promise<ProgramCatalog> {
-    await this.ensureCatalogSeeded(organizationId);
+    // No self-seeding step here anymore — lenders/programs/rules are the
+    // shared platform catalog (PLATFORM_CATALOG_ORGANIZATION_ID), so a
+    // brand-new organization already sees real data on its very first
+    // call; there is nothing to seed into an org whose own lenders table
+    // is never read by these three methods.
     const [lenders, programs, rules] = await Promise.all([
       this.listLenders(organizationId),
       this.listPrograms(organizationId),
       this.listRules(organizationId),
     ]);
     return { lenders, programs, rules };
-  }
-
-  private async ensureCatalogSeeded(organizationId: string): Promise<void> {
-    const { count, error } = await this.supabase
-      .from("lenders")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", organizationId);
-    if (error) throw new Error(`Failed to check catalog: ${error.message}`);
-    if (!count) {
-      // Seeding writes to lenders/programs/guideline_versions/rules, which
-      // are now platform-admin-only under RLS (see
-      // supabase/lender-catalog-write-lockdown.sql) — a regular user's own
-      // client can no longer insert into them directly. This first-run
-      // demo-catalog seed is a system operation, not an admin action, so
-      // it goes through the service-role client instead. organizationId
-      // here always comes from the caller's own resolved membership
-      // (never client-supplied — see src/lib/session.ts), so this stays
-      // safely scoped despite bypassing RLS.
-      const admin = createServiceRoleClient();
-      await seedCatalogForOrganization(admin, organizationId);
-    }
   }
 
   async listScenarios(organizationId: string): Promise<Scenario[]> {
@@ -226,37 +208,45 @@ export class SupabaseRepository implements Repository {
   }
 
   async listLenders(organizationId: string): Promise<Lender[]> {
+    // Catalog data is shared platform-wide, not scoped to the caller's own
+    // organization — see docs on PLATFORM_CATALOG_ORGANIZATION_ID. The
+    // `organizationId` parameter is kept for interface stability (and is
+    // still what InMemoryRepository uses) but intentionally unused here.
+    void organizationId;
     const tier = await this.getEffectiveTier();
     const { data, error } = await this.supabase
       .from("lenders")
       .select("id, organization_id, name, is_sample_data, active, contact_email, notes, tier_level")
-      .eq("organization_id", organizationId)
+      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
       .lte("tier_level", tier)
       .is("deleted_at", null);
     if (error) throw new Error(`Failed to list lenders: ${error.message}`);
     return (data as LenderRow[]).map(rowToLender);
   }
 
-  /** Every lender in the org regardless of tier — see the Repository
-   * interface doc comment. Deliberately has NO `.lte("tier_level", tier)`
-   * filter; guideline/program data (listPrograms) stays tier-gated, so
-   * this alone never leaks anything beyond a lender's name/tier. */
+  /** Every lender in the platform catalog regardless of tier — see the
+   * Repository interface doc comment. Deliberately has NO
+   * `.lte("tier_level", tier)` filter; guideline/program data
+   * (listPrograms) stays tier-gated, so this alone never leaks anything
+   * beyond a lender's name/tier. */
   async listAllLenders(organizationId: string): Promise<Lender[]> {
+    void organizationId;
     const { data, error } = await this.supabase
       .from("lenders")
       .select("id, organization_id, name, is_sample_data, active, contact_email, notes, tier_level")
-      .eq("organization_id", organizationId)
+      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
       .is("deleted_at", null);
     if (error) throw new Error(`Failed to list all lenders: ${error.message}`);
     return (data as LenderRow[]).map(rowToLender);
   }
 
   async listPrograms(organizationId: string): Promise<Program[]> {
+    void organizationId;
     const tier = await this.getEffectiveTier();
     const { data, error } = await this.supabase
       .from("programs")
       .select("id, organization_id, lender_id, name, is_sample_data, active, config, lenders!inner(tier_level)")
-      .eq("organization_id", organizationId)
+      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
       .lte("lenders.tier_level", tier)
       .is("deleted_at", null);
     if (error) throw new Error(`Failed to list programs: ${error.message}`);
@@ -264,13 +254,14 @@ export class SupabaseRepository implements Repository {
   }
 
   async listRules(organizationId: string): Promise<Rule[]> {
+    void organizationId;
     const tier = await this.getEffectiveTier();
     const { data, error } = await this.supabase
       .from("rules")
       .select(
         "id, organization_id, program_id, guideline_version_id, category, name, definition, severity, user_explanation, internal_explanation, source_section, source_page, effective_date, expiration_date, verification_status, programs!inner(lender_id, lenders!inner(tier_level))"
       )
-      .eq("organization_id", organizationId)
+      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
       .lte("programs.lenders.tier_level", tier)
       .is("deleted_at", null);
     if (error) throw new Error(`Failed to list rules: ${error.message}`);

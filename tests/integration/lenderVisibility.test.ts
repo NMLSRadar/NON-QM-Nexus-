@@ -12,6 +12,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SupabaseRepository } from "@/lib/repository/supabaseRepository";
+import { PLATFORM_CATALOG_ORGANIZATION_ID } from "@/lib/platformCatalog";
 
 try {
   (process as unknown as { loadEnvFile?: (path?: string) => void }).loadEnvFile?.(".env.local");
@@ -34,6 +35,9 @@ describe.skipIf(!hasCredentials)("Lender visibility vs. guideline access (live d
   const lenderIds: Record<1 | 2 | 3, string> = { 1: "", 2: "", 3: "" };
   const testEmail = `nqn-lender-visibility-${Date.now()}@gmail.com`;
   const testPassword = "Lender-Visibility-Pw-123";
+  const suffix = Date.now();
+  const testLenderNamesByTier = { 1: `Visibility-test Lender T1 ${suffix}`, 2: `Visibility-test Lender T2 ${suffix}`, 3: `Visibility-test Lender T3 ${suffix}` } as const;
+  const testProgramNamesByTier = { 1: `Visibility-test Program T1 ${suffix}`, 2: `Visibility-test Program T2 ${suffix}`, 3: `Visibility-test Program T3 ${suffix}` } as const;
 
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } });
@@ -56,14 +60,14 @@ describe.skipIf(!hasCredentials)("Lender visibility vs. guideline access (live d
     for (const tier of [1, 2, 3] as const) {
       const { data: lender } = await admin
         .from("lenders")
-        .insert({ organization_id: organizationId, name: `Visibility-test Lender T${tier}`, tier_level: tier })
+        .insert({ organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: testLenderNamesByTier[tier], tier_level: tier })
         .select("id")
         .single();
       lenderIds[tier] = lender!.id;
       await admin.from("programs").insert({
-        organization_id: organizationId,
+        organization_id: PLATFORM_CATALOG_ORGANIZATION_ID,
         lender_id: lenderIds[tier],
-        name: `Visibility-test Program T${tier}`,
+        name: testProgramNamesByTier[tier],
         config: {
           incomeDocTypes: ["dscr"],
           loanPurposes: ["purchase"],
@@ -88,8 +92,8 @@ describe.skipIf(!hasCredentials)("Lender visibility vs. guideline access (live d
   }, 30_000);
 
   afterAll(async () => {
-    await admin.from("programs").delete().eq("organization_id", organizationId).like("name", "Visibility-test%");
-    await admin.from("lenders").delete().eq("organization_id", organizationId).like("name", "Visibility-test%");
+    await admin.from("programs").delete().eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID).in("name", Object.values(testProgramNamesByTier));
+    await admin.from("lenders").delete().eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID).in("name", Object.values(testLenderNamesByTier));
     if (userId) {
       await admin.from("user_subscriptions").delete().eq("user_id", userId);
       await admin.auth.admin.deleteUser(userId);
@@ -99,18 +103,20 @@ describe.skipIf(!hasCredentials)("Lender visibility vs. guideline access (live d
   it("a user with NO subscription sees ALL 3 tiers of lenders via listAllLenders, but zero programs via listPrograms", async () => {
     const repo = new SupabaseRepository(userClient, userId);
     const allLenders = await repo.listAllLenders(organizationId);
-    const testLenderNames = allLenders.map((l) => l.name).filter((n) => n.startsWith("Visibility-test"));
-    expect(testLenderNames.sort()).toEqual(["Visibility-test Lender T1", "Visibility-test Lender T2", "Visibility-test Lender T3"]);
+    const names = allLenders.map((l) => l.name);
+    for (const expected of Object.values(testLenderNamesByTier)) expect(names).toContain(expected);
 
     // listLenders (the tier-gated method, still used elsewhere e.g. scenario
-    // matching) correctly returns NONE of them with no active plan.
+    // matching) correctly returns NONE of our fixtures with no active plan.
     const gatedLenders = await repo.listLenders(organizationId);
-    expect(gatedLenders.map((l) => l.name).filter((n) => n.startsWith("Visibility-test"))).toHaveLength(0);
+    const gatedNames = gatedLenders.map((l) => l.name);
+    for (const notExpected of Object.values(testLenderNamesByTier)) expect(gatedNames).not.toContain(notExpected);
 
     // Guideline/program data must be completely absent — not merely hidden
     // by the UI — for a user with no active plan.
     const programs = await repo.listPrograms(organizationId);
-    expect(programs.map((p) => p.name).filter((n) => n.startsWith("Visibility-test"))).toHaveLength(0);
+    const programNames = programs.map((p) => p.name);
+    for (const notExpected of Object.values(testProgramNamesByTier)) expect(programNames).not.toContain(notExpected);
   }, 15_000);
 
   it("a Tier 1 subscriber still sees all 3 tiers of lenders, but only Tier 1 programs", async () => {
@@ -118,11 +124,14 @@ describe.skipIf(!hasCredentials)("Lender visibility vs. guideline access (live d
 
     const repo = new SupabaseRepository(userClient, userId);
     const allLenders = await repo.listAllLenders(organizationId);
-    expect(allLenders.map((l) => l.name).filter((n) => n.startsWith("Visibility-test"))).toHaveLength(3);
+    const names = allLenders.map((l) => l.name);
+    for (const expected of Object.values(testLenderNamesByTier)) expect(names).toContain(expected);
 
     const programs = await repo.listPrograms(organizationId);
-    const testPrograms = programs.filter((p) => p.name.startsWith("Visibility-test"));
-    expect(testPrograms.map((p) => p.name)).toEqual(["Visibility-test Program T1"]);
+    const testProgramNames = programs.map((p) => p.name);
+    expect(testProgramNames).toContain(testProgramNamesByTier[1]);
+    expect(testProgramNames).not.toContain(testProgramNamesByTier[2]);
+    expect(testProgramNames).not.toContain(testProgramNamesByTier[3]);
   }, 15_000);
 
   it("a Tier 2 subscriber still sees all 3 tiers of lenders, but only Tier 1+2 programs (not Tier 3)", async () => {
@@ -130,11 +139,13 @@ describe.skipIf(!hasCredentials)("Lender visibility vs. guideline access (live d
 
     const repo = new SupabaseRepository(userClient, userId);
     const allLenders = await repo.listAllLenders(organizationId);
-    expect(allLenders.map((l) => l.name).filter((n) => n.startsWith("Visibility-test"))).toHaveLength(3);
+    const names = allLenders.map((l) => l.name);
+    for (const expected of Object.values(testLenderNamesByTier)) expect(names).toContain(expected);
 
     const programs = await repo.listPrograms(organizationId);
-    const testPrograms = programs.filter((p) => p.name.startsWith("Visibility-test")).map((p) => p.name);
-    expect(testPrograms.sort()).toEqual(["Visibility-test Program T1", "Visibility-test Program T2"]);
-    expect(testPrograms).not.toContain("Visibility-test Program T3");
+    const testProgramNames = programs.map((p) => p.name);
+    expect(testProgramNames).toContain(testProgramNamesByTier[1]);
+    expect(testProgramNames).toContain(testProgramNamesByTier[2]);
+    expect(testProgramNames).not.toContain(testProgramNamesByTier[3]);
   }, 15_000);
 });
