@@ -2,6 +2,20 @@ import { describe, expect, it } from "vitest";
 import { extractFromTranscript } from "@/domain/voice/extract";
 import { assess, buildScenarioInput } from "@/domain/voice/dialog";
 import { scenarioInputSchema } from "@/domain/validation/scenarioSchema";
+import { calcCltv, calcLtv } from "@/domain/calc/ltv";
+import type { Scenario } from "@/domain/types/scenario";
+
+function scenario(overrides: Partial<Scenario>): Scenario {
+  return {
+    id: "t",
+    organizationId: "o",
+    name: "t",
+    createdByUserId: "u",
+    createdAt: "2026-01-01",
+    updatedAt: "2026-01-01",
+    ...overrides,
+  };
+}
 
 // Current Loan Balance — a refinance-only conditional vital (spec section 5).
 // Never counts toward the 8-vital gate (section 6); drives the current-lien
@@ -56,6 +70,32 @@ describe("Current loan balance never blocks the 8-vital gate (section 6)", () =>
   });
 });
 
+describe("Regression: currentLoanBalance must never inflate CLTV (it is being paid off, not retained)", () => {
+  it("CLTV equals LTV for a straight refinance — the paid-off balance is NOT a retained subordinate lien", () => {
+    const x = extractFromTranscript(
+      "This is a cash-out refinance of a single family investment property. The property is worth approximately $1,000,000. They currently owe $200,000 and want a new loan amount of $700,000. Credit score is 740. DSCR to qualify."
+    );
+    const a = assess(x);
+    const input = buildScenarioInput(x, a);
+    const s = scenario(input);
+    expect(calcLtv(s).value).toBe(70);
+    // Before the fix, currentLoanBalance was written into the SAME field
+    // calc/ltv.ts's CLTV uses for retained subordinate financing
+    // (existingLienBalance), so CLTV came out as (700k+200k)/1M = 90%
+    // instead of the correct 70% — a real bug caught live in browser
+    // verification. currentLoanBalance and existingLienBalance are now
+    // distinct fields; existingLienBalance is untouched by voice intake.
+    expect(calcCltv(s).value).toBe(70);
+    expect(s.existingLienBalance).toBeUndefined();
+    expect(s.currentLoanBalance).toBe(200_000);
+  });
+
+  it("existingLienBalance (retained subordinate financing) still correctly inflates CLTV when explicitly set", () => {
+    const s = scenario({ loanPurpose: "purchase", purchasePrice: 400_000, estimatedValue: 400_000, requestedLoanAmount: 300_000, existingLienBalance: 40_000 });
+    expect(calcCltv(s).value).toBe(85);
+  });
+});
+
 describe("Test 2 (spec): refinance with current balance — full acceptance test", () => {
   // The spec's own Test 2 transcript only covers the refinance-specific
   // mechanics (purpose/value/lien/loan) — occupancy, property type, FICO,
@@ -89,11 +129,11 @@ describe("Test 2 (spec): refinance with current balance — full acceptance test
     expect(a.readyToAnalyze).toBe(true);
   });
 
-  it("the built ScenarioInput carries existingLienBalance and passes schema validation", () => {
+  it("the built ScenarioInput carries currentLoanBalance and passes schema validation", () => {
     const x = extractFromTranscript(transcript);
     const a = assess(x);
     const input = buildScenarioInput(x, a);
-    expect(input.existingLienBalance).toBe(200_000);
+    expect(input.currentLoanBalance).toBe(200_000);
     expect(input.requestedLoanAmount).toBe(700_000);
     const parsed = scenarioInputSchema.safeParse(input);
     expect(parsed.success).toBe(true);

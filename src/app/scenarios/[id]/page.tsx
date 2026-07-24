@@ -117,6 +117,9 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
                 }
               />
               <MetricTile label="Cash out" value={fmtUsd(scenario.requestedCashOut)} />
+              {scenario.currentLoanBalance !== undefined && (
+                <MetricTile label="Current loan balance" value={fmtUsd(scenario.currentLoanBalance)} />
+              )}
               <MetricTile label="Interest-only" value={scenario.interestOnlyRequested ? "Requested" : "No"} />
             </div>
           </Card>

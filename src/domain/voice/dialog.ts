@@ -227,7 +227,7 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
     ...(x.loanPurpose.value === "purchase" ? { purchasePrice: value } : {}),
     requestedLoanAmount: loan,
     ...(x.requestedCashOut ? { requestedCashOut: x.requestedCashOut.value } : {}),
-    ...(x.existingLienBalance ? { existingLienBalance: x.existingLienBalance.value } : {}),
+    ...(x.existingLienBalance ? { currentLoanBalance: x.existingLienBalance.value } : {}),
     fico: x.fico.value,
     incomeDocType: doc,
     ...(x.citizenship ? { citizenship: x.citizenship.value } : {}),

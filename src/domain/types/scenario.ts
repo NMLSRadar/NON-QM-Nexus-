@@ -122,7 +122,19 @@ export interface Scenario {
   estimatedValue?: number;
   requestedLoanAmount?: number;
   requestedCashOut?: number;
+  /** Retained SUBORDINATE financing that stays on title after closing
+   * (e.g. a HELOC kept in place during a first-lien refinance/purchase) —
+   * feeds calc/ltv.ts's CLTV as an additional lien. NOT the balance being
+   * paid off by a refinance — see currentLoanBalance below, a distinct
+   * field on purpose: conflating the two would silently inflate CLTV by
+   * counting a lien that the new loan actually retires. */
   existingLienBalance?: number;
+  /** Refinance-only: what the borrower currently owes on the subject
+   * property, being paid off by the new requested loan. Drives the
+   * current-lien-to-value / equity / cash-out figures (see
+   * src/domain/voice/dialog.ts's refinanceCalc) — deliberately NOT fed
+   * into CLTV (that would double-count a lien the refinance retires). */
+  currentLoanBalance?: number;
 
   // Borrower
   fico?: number;
