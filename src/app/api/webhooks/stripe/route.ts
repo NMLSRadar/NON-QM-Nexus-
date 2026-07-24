@@ -83,6 +83,7 @@ export async function POST(request: Request) {
         }
         break;
       }
+      case "customer.subscription.created":
       case "customer.subscription.updated": {
         await upsertFromSubscription(event.data.object as Stripe.Subscription);
         break;
