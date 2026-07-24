@@ -19,18 +19,30 @@ const env = Object.fromEntries(
 const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
 async function main() {
-  const { data: org, error: orgError } = await supabase.from("organizations").select("id").limit(1).single();
-  if (orgError || !org) throw new Error(`Failed to resolve organization: ${orgError?.message}`);
-  const organizationId = org.id;
-
+  // Resolve the organization via the platform admin's own membership —
+  // NOT organizations.select().limit(1) (unordered, can land on any
+  // leftover test-run org) and NOT users.select().eq(platform_admin,true)
+  // .limit(1) alone either (the test suite leaves MANY leftover
+  // "platform_admin=true" test accounts, each in their own org — this
+  // script must resolve the ONE REAL production admin specifically, by
+  // email, not "the first admin found"). Both failure modes were hit live
+  // during batch 3 and had to be corrected after the fact.
+  const REAL_ADMIN_EMAIL = "nonqmnexusadmin@gmail.com";
   const { data: adminUser, error: adminError } = await supabase
     .from("users")
     .select("id")
-    .eq("platform_admin", true)
-    .limit(1)
+    .eq("email", REAL_ADMIN_EMAIL)
     .single();
-  if (adminError || !adminUser) throw new Error(`Failed to resolve platform admin: ${adminError?.message}`);
+  if (adminError || !adminUser) throw new Error(`Failed to resolve the real admin user: ${adminError?.message}`);
   const adminUserId = adminUser.id;
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("memberships")
+    .select("organization_id")
+    .eq("user_id", adminUserId)
+    .maybeSingle();
+  if (membershipError || !membership) throw new Error(`Failed to resolve admin's organization: ${membershipError?.message}`);
+  const organizationId = membership.organization_id;
 
   const results = [];
   for (const entry of LENDERS) {
