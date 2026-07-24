@@ -6,6 +6,7 @@ describe("lenderBrandStyle: text-only wordmark treatments (no logos)", () => {
     const realLenders = [
       "A&D Mortgage",
       "Acra Lending",
+      "American Heritage Lending",
       "Angel Oak Mortgage Solutions",
       "BluePoint Mortgage",
       "Carrington Mortgage Services",
@@ -28,6 +29,7 @@ describe("lenderBrandStyle: text-only wordmark treatments (no logos)", () => {
       "NewFi Lending",
       "NQM Funding",
       "Orion Lending",
+      "Plaza Home Mortgage",
       "RCN Capital",
       "Stratton Equities",
       "Velocity Mortgage Capital",

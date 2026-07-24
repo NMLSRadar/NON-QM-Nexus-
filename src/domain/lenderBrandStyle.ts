@@ -32,6 +32,7 @@ export interface LenderWordmarkStyle {
 export const LENDER_WORDMARK_STYLES: Record<string, LenderWordmarkStyle> = {
   "A&D Mortgage": { first: "A&D", second: "Mortgage", firstColor: "#1E3A8A", secondColor: "#6B7280" },
   "Acra Lending": { first: "Acra", second: "Lending", firstColor: "#0F766E", secondColor: "#6B7280" },
+  "American Heritage Lending": { first: "American Heritage", second: "Lending", firstColor: "#7C2D12", secondColor: "#6B7280" },
   "Angel Oak Mortgage Solutions": { first: "Angel Oak", second: "Mortgage Solutions", firstColor: "#1D4ED8", secondColor: "#1D4ED8" },
   "BluePoint Mortgage": { first: "BluePoint", second: "Mortgage", firstColor: "#2563EB", secondColor: "#6B7280" },
   "Carrington Mortgage Services": { first: "Carrington", second: "Mortgage Services", firstColor: "#1E293B", secondColor: "#6B7280" },
@@ -54,6 +55,7 @@ export const LENDER_WORDMARK_STYLES: Record<string, LenderWordmarkStyle> = {
   "NewFi Lending": { first: "NewFi", second: "Lending", firstColor: "#059669", secondColor: "#6B7280" },
   "NQM Funding": { first: "NQM", second: "Funding", firstColor: "#1D4ED8", secondColor: "#6B7280" },
   "Orion Lending": { first: "Orion", second: "Lending", firstColor: "#1E293B", secondColor: "#6B7280" },
+  "Plaza Home Mortgage": { first: "Plaza", second: "Home Mortgage", firstColor: "#1E3A8A", secondColor: "#6B7280" },
   "RCN Capital": { first: "RCN", second: "Capital", firstColor: "#1F2937", secondColor: "#6B7280" },
   "Stratton Equities": { first: "Stratton", second: "Equities", firstColor: "#1E3A8A", secondColor: "#6B7280" },
   "Velocity Mortgage Capital": { first: "Velocity", second: "Mortgage Capital", firstColor: "#DC2626", secondColor: "#6B7280" },
