@@ -58,6 +58,9 @@ model User {
   id        String   @id @default(uuid()) @db.Uuid // mirrors Supabase auth.users id
   email     String   @unique
   platformAdmin Boolean @default(false) @map("platform_admin")
+  // Stripe customer id — created lazily on first checkout attempt so a user
+  // who never subscribes never gets a Stripe customer record.
+  stripeCustomerId String? @unique @map("stripe_customer_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
@@ -138,6 +141,10 @@ model MembershipPlan {
   description       String?
   isActive          Boolean  @default(true) @map("is_active")
   sortOrder         Int      @default(0) @map("sort_order")
+  // Stripe recurring Price id for this plan's monthly subscription
+  // (set by scripts/stripe-setup-products.js). Null for a plan that has no
+  // live Stripe price yet (e.g. before setup, or a comp-only plan).
+  stripePriceId     String?  @unique @map("stripe_price_id")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
@@ -177,6 +184,18 @@ model UserSubscription {
   startedAt    DateTime  @default(now()) @map("started_at")
   canceledAt   DateTime? @map("canceled_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Live billing (Stripe Checkout + Billing). `source` distinguishes a real
+  // paid subscription from an admin-granted comp (free/discounted access
+  // with no Stripe object behind it) — see docs/billing.md. Stripe webhooks
+  // are the only writer of stripeStatus / currentPeriodEnd; this app never
+  // guesses subscription state from client-side signals.
+  source             String    @default("comped") @map("source") // stripe | comped
+  stripeCustomerId   String?   @map("stripe_customer_id")
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id")
+  stripeStatus       String?   @map("stripe_status") // active | trialing | past_due | canceled | incomplete | ...
+  currentPeriodEnd   DateTime? @map("current_period_end")
+  cancelAtPeriodEnd  Boolean   @default(false) @map("cancel_at_period_end")
 
   user     User            @relation(fields: [userId], references: [id])
   plan     MembershipPlan? @relation(fields: [planId], references: [id])
