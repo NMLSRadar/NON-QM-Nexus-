@@ -35,11 +35,58 @@ const NO_PLAN: EffectivePlan = {
 };
 
 /**
+ * Platform admins must never be silently locked out of the catalog they
+ * administer. A platform-admin account that somehow has no
+ * user_subscriptions row at all (never assigned a plan, or one manually
+ * deleted) would otherwise resolve to tierLevel 0 — every real lender is
+ * tier >= 1, so it would look, from the admin's own account, as if every
+ * scenario simply has no applicable lenders. This self-heals that: the
+ * FIRST time such an account's plan is resolved, it's auto-assigned a
+ * comped Enterprise subscription (the top tier), so the gap can never
+ * recur silently. Returns null (falling through to NO_PLAN) if this
+ * account isn't a platform admin, or if the Enterprise plan / the write
+ * itself isn't available for any reason — this must never throw and block
+ * an ordinary read.
+ */
+async function autoProvisionAdminSubscription(supabase: SupabaseClient, userId: string): Promise<EffectivePlan | null> {
+  const { data: userRow } = await supabase.from("users").select("platform_admin").eq("id", userId).maybeSingle();
+  if (!userRow?.platform_admin) return null;
+
+  const { data: enterprisePlan } = await supabase
+    .from("membership_plans")
+    .select("id, name, monthly_price_cents, tier_level")
+    .eq("key", "enterprise")
+    .maybeSingle();
+  if (!enterprisePlan) return null;
+
+  const { error: upsertError } = await supabase.from("user_subscriptions").upsert(
+    { user_id: userId, plan_id: enterprisePlan.id, discount_id: null, assigned_by: userId, canceled_at: null, source: "comped" },
+    { onConflict: "user_id" }
+  );
+  if (upsertError) return null;
+
+  return {
+    tierLevel: enterprisePlan.tier_level as number,
+    planName: enterprisePlan.name as string,
+    monthlyPriceCents: enterprisePlan.monthly_price_cents as number,
+    discountPercentOff: null,
+    effectivePriceCents: enterprisePlan.monthly_price_cents as number,
+    canceledAt: null,
+    source: "comped",
+    stripeSubscriptionId: null,
+    cancelAtPeriodEnd: false,
+    currentPeriodEnd: null,
+  };
+}
+
+/**
  * Resolves the signed-in user's current subscription tier, price, and any
  * active discount. Admin-assigned only (see supabase/membership-rls.sql) —
  * a user with no row in user_subscriptions, or a null plan_id, has no
  * active plan and therefore tier level 0 (no lenders visible), matching
- * the "admin-controlled only for now" membership model.
+ * the "admin-controlled only for now" membership model — UNLESS this
+ * account is itself a platform admin with no subscription row at all, in
+ * which case see autoProvisionAdminSubscription() above.
  *
  * A canceled subscription (canceled_at set — see
  * supabase/subscription-cancellation.sql) also resolves to tier level 0
@@ -56,7 +103,10 @@ export async function getEffectivePlan(supabase: SupabaseClient, userId: string)
     .maybeSingle();
 
   if (error) throw new Error(`Failed to resolve subscription: ${error.message}`);
-  if (!data) return NO_PLAN;
+  if (!data) {
+    const autoProvisioned = await autoProvisionAdminSubscription(supabase, userId);
+    return autoProvisioned ?? NO_PLAN;
+  }
 
   const plan = Array.isArray(data.plan) ? data.plan[0] : data.plan;
   const discount = Array.isArray(data.discount) ? data.discount[0] : data.discount;
