@@ -27,6 +27,17 @@ export interface Assessment {
   prompt: string;
   derived: { ltv?: number; loanAmount?: number; propertyValue?: number };
   conflicts: string[];
+  /** Refinance-only figures — present whenever propertyValue and
+   * existingLienBalance are both known, regardless of whether the 8 core
+   * vitals are complete yet (so they update live as soon as they can). */
+  refinanceCalc?: {
+    currentLienLtv: number;
+    proposedLtv?: number;
+    grossEquity: number;
+    /** Only set when the requested new loan amount exceeds the current
+     * lien balance — never a negative "cash-out". */
+    grossCashOut?: number;
+  };
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -99,6 +110,23 @@ export function assess(x: VoiceExtraction): Assessment {
   if (x.firstTimeHomebuyer) filledSummary.push(x.firstTimeHomebuyer.value ? "first-time homebuyer" : "not a first-time homebuyer");
   if (x.investorExperience) filledSummary.push(investorExperienceLabel(x.investorExperience.value));
   if (x.vesting) filledSummary.push(`vesting: ${vestingLabel(x.vesting.value)}`);
+  if (x.existingLienBalance) filledSummary.push(`${usd(x.existingLienBalance.value)} current balance`);
+
+  // Refinance-only: current lien-to-value / proposed LTV / equity / cash-out
+  // — computed as soon as property value and the existing lien balance are
+  // both known, independent of whether the 8 core vitals are complete yet,
+  // so these figures can appear and update live as the borrower's answers
+  // come in. The requested NEW loan amount (never the old balance) controls
+  // the qualifying/proposed LTV — see docs/voice-vitals.md.
+  let refinanceCalc: Assessment["refinanceCalc"];
+  if (value !== undefined && x.existingLienBalance !== undefined) {
+    const lien = x.existingLienBalance.value;
+    const currentLienLtv = round2((lien / value) * 100);
+    const proposedLtv = derived.ltv;
+    const grossEquity = Math.round(value - lien);
+    const grossCashOut = loan !== undefined && loan > lien ? Math.round(loan - lien) : undefined;
+    refinanceCalc = { currentLienLtv, proposedLtv, grossEquity, grossCashOut };
+  }
 
   const vitalsFilled = VITAL_KEYS.filter((k) => has[k]).length;
   const complete = missing.length === 0;
@@ -115,7 +143,19 @@ export function assess(x: VoiceExtraction): Assessment {
     prompt = `Got ${filledSummary.join(", ")}. I still need ${listNaturally(askable.map((k) => VITAL_LABELS[k].toLowerCase()))}. ${questions.slice(0, 3).join(" ")}`;
   }
 
-  return { complete, readyToAnalyze, vitalsFilled, vitalsTotal: VITAL_KEYS.length, filledSummary, missing, questions, prompt, derived, conflicts };
+  return {
+    complete,
+    readyToAnalyze,
+    vitalsFilled,
+    vitalsTotal: VITAL_KEYS.length,
+    filledSummary,
+    missing,
+    questions,
+    prompt,
+    derived,
+    conflicts,
+    refinanceCalc,
+  };
 }
 
 function purposeLabel(p: LoanPurpose): string {
@@ -187,6 +227,7 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
     ...(x.loanPurpose.value === "purchase" ? { purchasePrice: value } : {}),
     requestedLoanAmount: loan,
     ...(x.requestedCashOut ? { requestedCashOut: x.requestedCashOut.value } : {}),
+    ...(x.existingLienBalance ? { existingLienBalance: x.existingLienBalance.value } : {}),
     fico: x.fico.value,
     incomeDocType: doc,
     ...(x.citizenship ? { citizenship: x.citizenship.value } : {}),

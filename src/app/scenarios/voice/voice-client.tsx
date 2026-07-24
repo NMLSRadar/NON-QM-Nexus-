@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui";
 import { extractFromTranscript } from "@/domain/voice/extract";
 import { assess } from "@/domain/voice/dialog";
-import { VITAL_KEYS, VITAL_LABELS, EXTRA_VITAL_KEYS, EXTRA_VITAL_LABELS, type Captured, type VitalKey, type ExtraVitalKey, type VoiceExtraction } from "@/domain/voice/slots";
+import { VITAL_KEYS, VITAL_LABELS, EXTRA_VITAL_KEYS, EXTRA_VITAL_LABELS, REFI_VITAL_LABEL, type Captured, type VitalKey, type ExtraVitalKey, type VoiceExtraction } from "@/domain/voice/slots";
 import type { IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
 import { createScenarioFromVoice } from "./actions";
 
@@ -49,6 +49,7 @@ interface Overrides {
   firstTimeHomebuyer?: boolean;
   investorExperience?: InvestorExperience;
   vesting?: Vesting;
+  existingLienBalance?: number;
 }
 
 function manual<T>(value: T): Captured<T> {
@@ -76,10 +77,12 @@ function applyOverrides(base: VoiceExtraction, o: Overrides): VoiceExtraction {
     x.firstTimeInvestor = o.investorExperience === "first_time_investor";
   }
   if (o.vesting !== undefined) x.vesting = manual(o.vesting);
+  if (o.existingLienBalance !== undefined) x.existingLienBalance = manual(o.existingLienBalance);
   return x;
 }
 
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
+const fmtPct = (n: number) => `${Math.round(n * 100) / 100}%`;
 
 const PURPOSES: Array<[LoanPurpose, string]> = [
   ["purchase", "Purchase"],
@@ -136,7 +139,9 @@ export default function VoiceClient() {
   const [serverMessage, setServerMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const recognitionRef = useRef<RecognitionLike | null>(null);
-  const submittedRef = useRef(false);
+  const lastAttemptedRef = useRef<string | null>(null);
+  const inFlightRef = useRef(false);
+  const hasFailedRef = useRef(false);
   const spokenRef = useRef("");
 
   useEffect(() => {
@@ -146,6 +151,9 @@ export default function VoiceClient() {
   const effective = useMemo(() => applyOverrides(extractFromTranscript(transcript), overrides), [transcript, overrides]);
   const assessment = useMemo(() => assess(effective), [effective]);
   const canAnalyze = assessment.readyToAnalyze || (assessment.complete && conflictConfirmed);
+  // The Current Loan Balance tab only applies to refinances — hidden and
+  // never required for a purchase.
+  const isRefinance = effective.loanPurpose?.value === "rate_term_refinance" || effective.loanPurpose?.value === "cash_out_refinance";
 
   /* -------- speech capture -------- */
   function startListening() {
@@ -193,23 +201,44 @@ export default function VoiceClient() {
 
   /* -------- auto-analyze the moment all 8 vitals resolve -------- */
   useEffect(() => {
-    if (!canAnalyze || submittedRef.current || isPending) return;
-    submittedRef.current = true;
+    if (!canAnalyze || isPending || inFlightRef.current) return;
+    const signature = JSON.stringify(effective);
+    // Fire exactly once when the scenario first becomes ready (the normal,
+    // happy-path behavior — never retriggers on every subsequent keystroke
+    // while still typing/dictating). The ONLY other case that (re-)fires is
+    // when the previous attempt was actually declined by the server AND
+    // something has genuinely changed since then — this is what lets a
+    // correction (voice or manual) automatically retry even though
+    // canAnalyze itself never changes value. Fixes a real freeze: this
+    // effect used to depend only on the `canAnalyze` boolean, so a
+    // correction made AFTER a failed attempt — while canAnalyze stayed true
+    // the whole time (e.g. fixing an out-of-range value via manual
+    // override) — never re-triggered a retry, permanently stranding the UI
+    // on the stale "Please correct the highlighted fields" message even
+    // once the data was fully valid.
+    const neverAttempted = lastAttemptedRef.current === null;
+    const changedSinceFailure = hasFailedRef.current && signature !== lastAttemptedRef.current;
+    if (!neverAttempted && !changedSinceFailure) return;
+    inFlightRef.current = true;
+    lastAttemptedRef.current = signature;
+    hasFailedRef.current = false;
+    setServerMessage(null);
     stopListening();
     startTransition(async () => {
       const result = await createScenarioFromVoice(effective);
+      inFlightRef.current = false;
       if (result?.redirectTo) {
         router.push(result.redirectTo);
         return;
       }
-      // Reaching here (no redirectTo) means it declined — show why.
+      // Reaching here (no redirectTo) means it declined — show why, and
+      // arm the retry-on-next-genuine-change path above.
       if (result?.message) {
         setServerMessage(result.message);
-        submittedRef.current = false;
+        hasFailedRef.current = true;
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canAnalyze]);
+  }, [effective, canAnalyze, isPending, router]);
 
   function setOv<K extends keyof Overrides>(key: K, value: Overrides[K]) {
     setConflictConfirmed(false);
@@ -261,6 +290,8 @@ export default function VoiceClient() {
     ),
     vesting: cell(effective.vesting ? { ...effective.vesting, value: label(VESTING_OPTIONS, effective.vesting.value) } : undefined),
   };
+
+  const lienDisplay = cell(effective.existingLienBalance ? { ...effective.existingLienBalance, value: usd(effective.existingLienBalance.value) } : undefined);
 
   return (
     <div className="space-y-5">
@@ -354,7 +385,48 @@ export default function VoiceClient() {
               </div>
             );
           })}
+          {isRefinance && (
+            <div className={`rounded-lg border p-2 ${lienDisplay.filled ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50"}`}>
+              <p className="text-[10px] uppercase tracking-wide text-slate-500">{REFI_VITAL_LABEL}</p>
+              <p className={`text-sm font-semibold ${lienDisplay.filled ? "text-slate-900" : "text-slate-400"}`}>
+                {lienDisplay.filled ? `✓ ${lienDisplay.text}` : "Not mentioned"}
+              </p>
+              {lienDisplay.filled && lienDisplay.source && (
+                <p className="text-[10px] text-slate-500 truncate" title={lienDisplay.source}>
+                  “{lienDisplay.source}”
+                </p>
+              )}
+            </div>
+          )}
         </div>
+
+        {isRefinance && assessment.refinanceCalc && (
+          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[10px] uppercase tracking-wide text-slate-500 mb-2">Refinance calculations</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+              <div>
+                <p className="text-[10px] text-slate-500">Current lien-to-value</p>
+                <p className="font-semibold text-slate-900">{fmtPct(assessment.refinanceCalc.currentLienLtv)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-500">Proposed LTV</p>
+                <p className="font-semibold text-slate-900">
+                  {assessment.refinanceCalc.proposedLtv !== undefined ? fmtPct(assessment.refinanceCalc.proposedLtv) : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-500">Estimated gross equity</p>
+                <p className="font-semibold text-slate-900">{usd(assessment.refinanceCalc.grossEquity)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-500">Estimated gross cash-out</p>
+                <p className="font-semibold text-slate-900">
+                  {assessment.refinanceCalc.grossCashOut !== undefined ? usd(assessment.refinanceCalc.grossCashOut) : "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <details className="mt-3 text-sm">
           <summary className="cursor-pointer text-slate-600">Correct a field manually</summary>
@@ -386,6 +458,9 @@ export default function VoiceClient() {
               onChange={(v) => setOv("investorExperience", v as InvestorExperience)}
             />
             <Select label="Title vesting" value={effective.vesting?.value ?? ""} options={VESTING_OPTIONS} onChange={(v) => setOv("vesting", v as Vesting)} />
+            {isRefinance && (
+              <Num label="Current loan balance ($)" value={effective.existingLienBalance?.value} onChange={(n) => setOv("existingLienBalance", n)} />
+            )}
           </div>
         </details>
       </Card>

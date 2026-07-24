@@ -260,7 +260,25 @@ const PROPERTY_VALUE_TERMS =
 const PROPERTY_VALUE_WEAK_TERMS = /\bpurchase\b|\bproperty\b|\bhome\b/;
 
 const LOAN_AMOUNT_TERMS =
-  /\brequested loan amount\b|\bloan amount\b|\bmortgage amount\b|\bfinancing amount\b|\bamount financed\b|\bnew loan\b|\bproposed loan\b|\bloan request\b|\bborrower needs?\b|\blooking to borrow\b|\bwants? to borrow\b|\bunpaid principal balance\b|\bpayoff amount\b|\bcurrent balance\b|\bexisting mortgage balance\b|\bfinancing\b|\bborrow\b|\bloan\b|\bmortgage\b/;
+  /\brequested loan amount\b|\bloan amount\b|\bmortgage amount\b|\bfinancing amount\b|\bamount financed\b|\bnew loan\b|\bproposed loan\b|\bloan request\b|\bborrower needs?\b|\blooking to borrow\b|\bwants? to borrow\b|\bunpaid principal balance\b|\bfinancing\b|\bborrow\b|\bloan\b/;
+// The specific phrases only (no bare "loan"/"borrow"/"financing") — used
+// instead of the full set above whenever the clause already contains an
+// EXISTING_LIEN_TERMS phrase, since those phrases (e.g. "current loan
+// balance", "existing loan balance") literally contain the word "loan"/
+// "borrow" themselves; without this, the bare word — sitting a few
+// characters closer to the number than the full phrase's start — would
+// win by raw distance and misclassify a lien balance as the new loan.
+const LOAN_AMOUNT_STRONG_TERMS =
+  /\brequested loan amount\b|\bloan amount\b|\bmortgage amount\b|\bfinancing amount\b|\bamount financed\b|\bnew loan\b|\bproposed loan\b|\bloan request\b|\bborrower needs?\b|\blooking to borrow\b|\bwants? to borrow\b|\bunpaid principal balance\b/;
+
+// Refinance-only: what the borrower currently owes on the subject property
+// — distinct from LOAN_AMOUNT_TERMS above (the NEW requested loan). Getting
+// these two confused would silently use the old balance as the proposed
+// loan amount (wildly wrong LTV) or vice versa, so this category is scored
+// and disambiguated the same way property value / loan amount / cash-out
+// are, never by simple keyword adjacency.
+const EXISTING_LIEN_TERMS =
+  /\bcurrent loan balance\b|\bcurrent mortgage balance\b|\bexisting mortgage balance\b|\bexisting loan balance\b|\bamount (?:they |he |she )?still owed?\b|\bstill owed?\b|\bstill owes\b|\bborrower still owes\b|\bpayoff amount\b|\bestimated payoff\b|\bcurrent payoff\b|\bremaining balance\b|\bbalance on the property\b|\bfirst mortgage balance\b|\bexisting first lien\b|\bexisting lien\b|\bdebt currently secured by the property\b|\bthey owe\b|\bhe owes\b|\bshe owes\b|\bcurrently owe[sd]?\b/;
 
 const CASH_OUT_AMOUNT_TERMS = /\bcash[\s-]?out\b|\bcash back\b|\bproceeds\b/;
 
@@ -317,6 +335,7 @@ export interface AmountClassification {
   propertyValue?: { value: number; source: string; inferred?: boolean };
   loanAmount?: { value: number; source: string; inferred?: boolean };
   requestedCashOut?: { value: number; source: string };
+  existingLienBalance?: { value: number; source: string };
   ltv?: { value: number; source: string };
   /** Set when the fallback path assigned BOTH value and loan from two
    * unlabeled dollar figures (larger → value, smaller → loan) — callers use
@@ -355,10 +374,11 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
     }
   }
 
-  // ---- dollar-band: property value / loan amount / cash-out --------------
+  // ---- dollar-band: property value / loan amount / cash-out / lien -------
   let propertyValue: { value: number; source: string; inferred?: boolean } | undefined;
   let loanAmount: { value: number; source: string; inferred?: boolean } | undefined;
   let requestedCashOut: { value: number; source: string } | undefined;
+  let existingLienBalance: { value: number; source: string } | undefined;
   const unclassified: Array<{ num: number; index: number; source: string }> = [];
   const dollarRe = /\$?(\d{4,9})\b/g;
   let dm: RegExpExecArray | null;
@@ -370,6 +390,17 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
     if (DISQUALIFYING_CONTEXT.test(clause)) continue; // rent / income / credit-score / DSCR / reserves clause — never a value or loan
 
     const sentRange = rangeAround(dm.index, dm[0].length, sentenceBoundaries, t.length);
+    const sentence = t.slice(sentRange.start, sentRange.end);
+    // A clause carrying a specific EXISTING_LIEN_TERMS phrase (e.g.
+    // "current loan balance") must not lose to the bare "loan"/"borrow"/
+    // "property"/"purchase" words embedded WITHIN that very phrase, which
+    // otherwise sit a few characters closer to the number and would win on
+    // raw distance alone — so weak/bare terms from other categories are
+    // suppressed whenever a lien phrase is already present.
+    const clauseHasLien = EXISTING_LIEN_TERMS.test(clause);
+    const sentenceHasLien = EXISTING_LIEN_TERMS.test(sentence);
+    const loanTermsForClause = clauseHasLien ? LOAN_AMOUNT_STRONG_TERMS : LOAN_AMOUNT_TERMS;
+    const loanTermsForSentence = sentenceHasLien ? LOAN_AMOUNT_STRONG_TERMS : LOAN_AMOUNT_TERMS;
     // Clause-scoped distance first — this is what stops a term that
     // actually belongs to the OTHER number in the same sentence (e.g. "the
     // purchase price is $600,000 and the loan request is $450,000") from
@@ -378,23 +409,29 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
     // relevant term at all (e.g. "...worth approximately $600,000" with no
     // comma/"and" to bound a narrower clause).
     let dCashOut = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, CASH_OUT_AMOUNT_TERMS);
-    let dLoan = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, LOAN_AMOUNT_TERMS);
-    let dValue = Math.min(
-      nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, PROPERTY_VALUE_TERMS),
-      nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, PROPERTY_VALUE_WEAK_TERMS)
-    );
-    if (dCashOut === Infinity && dLoan === Infinity && dValue === Infinity) {
+    let dLien = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, EXISTING_LIEN_TERMS);
+    let dLoan = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, loanTermsForClause);
+    let dValue = clauseHasLien
+      ? nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, PROPERTY_VALUE_TERMS)
+      : Math.min(
+          nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, PROPERTY_VALUE_TERMS),
+          nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, PROPERTY_VALUE_WEAK_TERMS)
+        );
+    if (dCashOut === Infinity && dLien === Infinity && dLoan === Infinity && dValue === Infinity) {
       dCashOut = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, CASH_OUT_AMOUNT_TERMS);
-      dLoan = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, LOAN_AMOUNT_TERMS);
+      dLien = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, EXISTING_LIEN_TERMS);
+      dLoan = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, loanTermsForSentence);
       dValue = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, PROPERTY_VALUE_TERMS);
     }
-    const min = Math.min(dCashOut, dLoan, dValue);
+    const min = Math.min(dCashOut, dLien, dLoan, dValue);
     const source = clause.trim();
 
     if (min === Infinity) {
       unclassified.push({ num: n, index: dm.index, source: `$${n}` });
     } else if (min === dCashOut && !requestedCashOut) {
       requestedCashOut = { value: n, source };
+    } else if (min === dLien && !existingLienBalance) {
+      existingLienBalance = { value: n, source };
     } else if (min === dLoan && !loanAmount) {
       loanAmount = { value: n, source };
     } else if (min === dValue && !propertyValue) {
@@ -427,9 +464,12 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
       nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, PROPERTY_VALUE_WEAK_TERMS)
     );
     const dLoan = nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, LOAN_AMOUNT_TERMS);
-    if (!propertyValue && dValue <= NEAR_CHARS && dValue <= dLoan) {
+    const dLien = nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, EXISTING_LIEN_TERMS);
+    if (!propertyValue && dValue <= NEAR_CHARS && dValue <= dLoan && dValue <= dLien) {
       propertyValue = { value: n * 1_000, source: clause.trim() };
-    } else if (!loanAmount && dLoan <= NEAR_CHARS && dLoan < dValue) {
+    } else if (!existingLienBalance && dLien <= NEAR_CHARS && dLien < dValue && dLien <= dLoan) {
+      existingLienBalance = { value: n * 1_000, source: clause.trim() };
+    } else if (!loanAmount && dLoan <= NEAR_CHARS && dLoan < dValue && dLoan < dLien) {
       loanAmount = { value: n * 1_000, source: clause.trim() };
     }
   }
@@ -455,7 +495,7 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
     }
   }
 
-  return { propertyValue, loanAmount, requestedCashOut, ltv, assumedBothFromUnlabeledPair };
+  return { propertyValue, loanAmount, requestedCashOut, existingLienBalance, ltv, assumedBothFromUnlabeledPair };
 }
 
 export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
@@ -485,6 +525,7 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   if (amounts.propertyValue) x.propertyValue = cap(Math.round(amounts.propertyValue.value), amounts.propertyValue.source, amounts.propertyValue.inferred);
   if (amounts.loanAmount) x.loanAmount = cap(Math.round(amounts.loanAmount.value), amounts.loanAmount.source, amounts.loanAmount.inferred);
   if (amounts.requestedCashOut) x.requestedCashOut = cap(Math.round(amounts.requestedCashOut.value), amounts.requestedCashOut.source);
+  if (amounts.existingLienBalance) x.existingLienBalance = cap(Math.round(amounts.existingLienBalance.value), amounts.existingLienBalance.source);
   if (amounts.assumedBothFromUnlabeledPair) {
     x.notesFragments.push("Two dollar figures were given without labels; assumed the larger is the property value.");
   }

@@ -1,7 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { scenarioInputSchema, type ScenarioInput } from "@/domain/validation/scenarioSchema";
+import { scenarioInputSchema, friendlyValidationMessage, type ScenarioInput } from "@/domain/validation/scenarioSchema";
 import { getCurrentOrganizationId, getRepository } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import type { Scenario } from "@/domain/types/scenario";
@@ -28,7 +28,10 @@ export interface CreateScenarioState {
 export async function createScenario(payload: ScenarioInput): Promise<CreateScenarioState> {
   const parsed = scenarioInputSchema.safeParse(payload);
   if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors as Record<string, string[]>, message: "Please correct the highlighted fields." };
+    return {
+      errors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+      message: friendlyValidationMessage(parsed.error.issues),
+    };
   }
 
   const org = await getCurrentOrganizationId();

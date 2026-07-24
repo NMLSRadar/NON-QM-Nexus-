@@ -67,6 +67,16 @@ export const EXTRA_VITAL_QUESTIONS: Record<ExtraVitalKey, string> = {
   vesting: "Will title be held individually, in an LLC, corporation, or trust?",
 };
 
+/** Refinance-only conditional vital — captured and used for current-lien
+ * LTV / equity / cash-out calculations whenever mentioned, but (like the
+ * EXTRA vitals above) never counted toward the 8-vital gate: on a purchase
+ * it's simply irrelevant and hidden; on a refinance it's genuinely useful
+ * but the new requested loan amount + property value alone are already
+ * enough to run matching, so it must not block the first results. */
+export const REFI_VITAL_KEY = "existingLienBalance" as const;
+export const REFI_VITAL_LABEL = "Current loan balance";
+export const REFI_VITAL_QUESTION = "About how much do they currently still owe on the property?";
+
 /** A value heard in (or derived from) the transcript, with provenance. */
 export interface Captured<T> {
   value: T;
@@ -92,6 +102,9 @@ export interface VoiceExtraction {
   bankStatementMonths?: 12 | 24;
   bankStatementKind?: "personal" | "business";
   requestedCashOut?: Captured<number>;
+  /** Refinance-only: what the borrower currently owes on the subject
+   * property (distinct from loanAmount, the NEW requested loan). */
+  existingLienBalance?: Captured<number>;
   citizenship?: Captured<Citizenship>;
   /** Legacy simple flag — still populated for backward compatibility; prefer investorExperience. */
   firstTimeInvestor?: boolean;
