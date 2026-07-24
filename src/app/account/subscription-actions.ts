@@ -2,6 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getEffectivePlan } from "@/lib/repository/membership";
+import { sendTransactionalEmail } from "@/lib/email";
+import { subscriptionCanceledEmail } from "@/lib/emailTemplates";
 
 export interface CancelSubscriptionState {
   error?: string;
@@ -25,6 +28,25 @@ export async function cancelSubscription(
   const { error } = await supabase.rpc("cancel_own_subscription");
   if (error) {
     return { error: error.message };
+  }
+
+  // Send the confirmation email — best-effort: a delivery failure here
+  // must never block or roll back the cancellation itself, which already
+  // succeeded above.
+  try {
+    const plan = await getEffectivePlan(supabase, user.id);
+    if (plan.planName && plan.canceledAt && user.email) {
+      const { subject, html } = subscriptionCanceledEmail({
+        planName: plan.planName,
+        canceledAtIso: plan.canceledAt,
+      });
+      const result = await sendTransactionalEmail({ to: user.email, subject, html });
+      if (!result.ok) {
+        console.error("Cancellation email failed to send:", result.error);
+      }
+    }
+  } catch (err) {
+    console.error("Cancellation email threw:", err);
   }
 
   revalidatePath("/account");
