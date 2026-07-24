@@ -4,6 +4,7 @@ import { getEffectivePlan } from "@/lib/repository/membership";
 import { Card, fmtUsd } from "@/components/ui";
 import { PasswordForm } from "./password-form";
 import { CancelSubscriptionForm } from "./cancel-subscription-form";
+import { ReactivateSubscriptionForm } from "./reactivate-subscription-form";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export default async function AccountPage() {
                 ) : null}
               </div>
             </div>
-            {!plan.canceledAt ? <CancelSubscriptionForm /> : null}
+            {!plan.canceledAt ? <CancelSubscriptionForm /> : <ReactivateSubscriptionForm />}
           </div>
         ) : (
           <p className="text-sm text-slate-500">

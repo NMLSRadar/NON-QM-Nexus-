@@ -120,4 +120,31 @@ describe.skipIf(!hasCredentials)("Subscription cancellation (live database)", ()
     const lenders = await repo.listLenders(organizationId);
     expect(lenders.map((l) => l.name)).toEqual(["Cancel-test Lender"]);
   }, 15_000);
+
+  it("self-serve reactivate_own_subscription() restores tier access after a self-serve cancel", async () => {
+    const { error: cancelErr } = await userClient.rpc("cancel_own_subscription");
+    expect(cancelErr).toBeNull();
+    let plan = await getEffectivePlan(userClient, userId);
+    expect(plan.tierLevel).toBe(0);
+
+    const { error: reactivateErr } = await userClient.rpc("reactivate_own_subscription");
+    expect(reactivateErr).toBeNull();
+
+    plan = await getEffectivePlan(userClient, userId);
+    expect(plan.tierLevel).toBe(1);
+    expect(plan.planName).toBe("Essential");
+    expect(plan.canceledAt).toBeNull();
+
+    const repo = new SupabaseRepository(userClient, userId);
+    const lenders = await repo.listLenders(organizationId);
+    expect(lenders.map((l) => l.name)).toEqual(["Cancel-test Lender"]);
+  }, 15_000);
+
+  it("reactivate_own_subscription() on an already-active subscription is a safe no-op", async () => {
+    const { error } = await userClient.rpc("reactivate_own_subscription");
+    expect(error).toBeNull();
+    const plan = await getEffectivePlan(userClient, userId);
+    expect(plan.tierLevel).toBe(1);
+    expect(plan.canceledAt).toBeNull();
+  }, 15_000);
 });
