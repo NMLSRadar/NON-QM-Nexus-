@@ -1,6 +1,6 @@
 import VoiceClient from "./voice-client";
 
-export const metadata = { title: "Voice Scenario — NON-QM Navigator" };
+export const metadata = { title: "Voice Scenario — NON-QM Nexus" };
 
 export default function VoiceScenarioPage() {
   return (

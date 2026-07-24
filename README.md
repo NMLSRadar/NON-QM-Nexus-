@@ -1,4 +1,4 @@
-# NON-QM Navigator
+# NON-QM Nexus
 
 An original, configurable, AI-assisted **NON-QM scenario analysis and lender-matching decision-support platform** for mortgage professionals (brokers, loan officers, account executives, processors, underwriters).
 

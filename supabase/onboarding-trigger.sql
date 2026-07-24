@@ -1,4 +1,4 @@
--- NON-QM Navigator — new-user onboarding trigger.
+-- NON-QM Nexus — new-user onboarding trigger.
 --
 -- When a new user completes Supabase Auth sign-up (a row lands in
 -- auth.users), this trigger provisions the minimum tenant scaffold so the

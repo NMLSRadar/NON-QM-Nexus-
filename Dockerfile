@@ -1,4 +1,4 @@
-# NON-QM Navigator — optional self-hosted deployment image.
+# NON-QM Nexus — optional self-hosted deployment image.
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./

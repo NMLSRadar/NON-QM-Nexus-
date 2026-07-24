@@ -1,6 +1,6 @@
 import { ScenarioForm } from "./form";
 
-export const metadata = { title: "New Scenario — NON-QM Navigator" };
+export const metadata = { title: "New Scenario — NON-QM Nexus" };
 
 export default function NewScenarioPage() {
   return (

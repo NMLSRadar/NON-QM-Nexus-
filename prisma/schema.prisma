@@ -1,4 +1,4 @@
-// NON-QM Navigator — production database schema (PostgreSQL / Supabase).
+// NON-QM Nexus — production database schema (PostgreSQL / Supabase).
 //
 // ORM decision: Prisma was selected over Drizzle for its mature migration
 // tooling, typed client, and first-class PostgreSQL support; see

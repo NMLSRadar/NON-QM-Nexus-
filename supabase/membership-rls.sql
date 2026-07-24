@@ -1,4 +1,4 @@
--- NON-QM Navigator — Membership & pricing RLS.
+-- NON-QM Nexus — Membership & pricing RLS.
 --
 -- Model: membership_plans are public pricing data (readable by anyone,
 -- including anonymous visitors on the /pricing page); discounts and

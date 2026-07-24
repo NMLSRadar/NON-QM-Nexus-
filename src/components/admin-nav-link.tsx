@@ -12,7 +12,10 @@ export async function AdminNavLink() {
   if (!data?.platform_admin) return null;
 
   return (
-    <Link href="/admin" className="text-brand-100 hover:text-white rounded px-1 focus:outline-none focus:ring-2 focus:ring-white">
+    <Link
+      href="/admin"
+      className="text-slate-700 hover:text-black rounded px-1 focus:outline-none focus:ring-2 focus:ring-brand-600"
+    >
       Admin
     </Link>
   );

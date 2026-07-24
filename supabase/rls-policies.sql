@@ -1,4 +1,4 @@
--- NON-QM Navigator — Row-Level Security policies (Supabase / PostgreSQL).
+-- NON-QM Nexus — Row-Level Security policies (Supabase / PostgreSQL).
 --
 -- Model: every tenant-owned table carries organization_id. A user's
 -- organizations come from the memberships table, resolved from the Supabase
