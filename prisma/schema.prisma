@@ -223,6 +223,14 @@ model GuidelineVersion {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
+  // Automated re-check monitoring (see docs/guideline-monitoring.md): the
+  // public URL this guideline came from, a hash of its last-fetched content,
+  // when it was last checked, and whether the last check found a change.
+  sourceUrl       String?   @map("source_url")
+  contentHash     String?   @map("content_hash")
+  lastCheckedAt   DateTime? @map("last_checked_at")
+  changeDetected  Boolean   @default(false) @map("change_detected")
+
   program Program @relation(fields: [programId], references: [id])
   rules   Rule[]
 
