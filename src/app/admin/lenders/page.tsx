@@ -1,6 +1,7 @@
 import { requirePlatformAdmin } from "@/lib/admin";
 import { Card, SampleDataBadge } from "@/components/ui";
 import { TierSelect } from "./tier-select";
+import { ImportForm } from "./import-form";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,10 @@ export default async function AdminLendersPage() {
           Tier 1: {byTier[1]} · Tier 2: {byTier[2]} · Tier 3: {byTier[3]}
         </p>
       </div>
+
+      <Card title="Bulk import programs from CSV">
+        <ImportForm />
+      </Card>
 
       <Card>
         <table className="w-full text-sm">

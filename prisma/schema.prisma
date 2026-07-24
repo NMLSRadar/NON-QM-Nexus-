@@ -119,6 +119,7 @@ model Lender {
 
   organization Organization @relation(fields: [organizationId], references: [id])
   programs     Program[]
+  documents    Document[]
 
   @@map("lenders")
 }
@@ -285,17 +286,22 @@ model Document {
   id             String   @id @default(uuid()) @db.Uuid
   organizationId String   @map("organization_id") @db.Uuid
   scenarioId     String?  @map("scenario_id") @db.Uuid
+  // Set for an admin-uploaded lender guideline/matrix PDF (see
+  // supabase/lender-documents-storage.sql); null for a scenario-attached
+  // borrower document (bank statement, P&L, ...).
+  lenderId       String?  @map("lender_id") @db.Uuid
   storagePath    String   @map("storage_path") // Supabase Storage object path
   fileName       String   @map("file_name")
   mimeType       String   @map("mime_type")
   sizeBytes      Int      @map("size_bytes")
-  classification String? // bank_statement | pnl | appraisal | ...
+  classification String? // bank_statement | pnl | appraisal | lender_guideline | ...
   uploadedBy     String   @map("uploaded_by") @db.Uuid
   virusScanned   Boolean  @default(false) @map("virus_scanned")
   createdAt      DateTime @default(now()) @map("created_at")
   deletedAt      DateTime? @map("deleted_at")
 
   scenario    Scenario?           @relation(fields: [scenarioId], references: [id])
+  lender      Lender?             @relation(fields: [lenderId], references: [id])
   extractions DocumentExtraction[]
 
   @@map("documents")

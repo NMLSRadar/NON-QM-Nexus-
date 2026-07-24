@@ -27,9 +27,18 @@ export interface AiCompletionRequest {
   temperature?: number;
 }
 
+export interface AiDocumentCompletionRequest {
+  systemPrompt: string;
+  userPrompt: string;
+  /** Base64-encoded PDF bytes (no data: URL prefix). */
+  documentBase64: string;
+  maxTokens?: number;
+}
+
 export interface AiProvider {
   readonly name: string;
   complete(request: AiCompletionRequest): Promise<string>;
+  completeWithDocument(request: AiDocumentCompletionRequest): Promise<string>;
 }
 
 /** Wrap untrusted content so instruction/data separation is explicit. */
@@ -107,6 +116,44 @@ class AnthropicProvider implements AiProvider {
     const data = (await res.json()) as { content: Array<{ type: string; text?: string }> };
     return data.content.map((c) => c.text ?? "").join("");
   }
+
+  async completeWithDocument(request: AiDocumentCompletionRequest): Promise<string> {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured");
+
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5",
+        max_tokens: request.maxTokens ?? 4000,
+        temperature: 0,
+        system: request.systemPrompt,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "document",
+                source: { type: "base64", media_type: "application/pdf", data: request.documentBase64 },
+              },
+              { type: "text", text: request.userPrompt },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Anthropic API error: ${res.status} ${body}`);
+    }
+    const data = (await res.json()) as { content: Array<{ type: string; text?: string }> };
+    return data.content.map((c) => c.text ?? "").join("");
+  }
 }
 
 class OpenAiProvider implements AiProvider {
@@ -127,6 +174,37 @@ class OpenAiProvider implements AiProvider {
       }),
     });
     if (!res.ok) throw new Error(`OpenAI API error: ${res.status}`);
+    const data = (await res.json()) as { choices: Array<{ message: { content: string } }> };
+    return data.choices[0]?.message.content ?? "";
+  }
+
+  async completeWithDocument(request: AiDocumentCompletionRequest): Promise<string> {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
+
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL ?? "gpt-4o",
+        max_tokens: request.maxTokens ?? 4000,
+        temperature: 0,
+        messages: [
+          { role: "system", content: request.systemPrompt },
+          {
+            role: "user",
+            content: [
+              { type: "file", file: { filename: "guideline.pdf", file_data: `data:application/pdf;base64,${request.documentBase64}` } },
+              { type: "text", text: request.userPrompt },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`OpenAI API error: ${res.status} ${body}`);
+    }
     const data = (await res.json()) as { choices: Array<{ message: { content: string } }> };
     return data.choices[0]?.message.content ?? "";
   }

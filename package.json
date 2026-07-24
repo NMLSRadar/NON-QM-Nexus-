@@ -24,6 +24,7 @@
     "@supabase/supabase-js": "^2.110.8",
     "decimal.js": "^10.4.3",
     "next": "^15.1.6",
+    "papaparse": "^5.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "server-only": "^0.0.1",
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.7",
+    "@types/papaparse": "^5.5.2",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
