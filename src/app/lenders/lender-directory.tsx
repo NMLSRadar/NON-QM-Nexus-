@@ -22,27 +22,13 @@ interface Props {
   userTierLevel: number;
 }
 
-type ChipKey =
-  | "all"
-  | "tier1"
-  | "tier2"
-  | "tier3"
-  | "dscr"
-  | "bank_statement"
-  | "pnl_only"
-  | "foreign_national"
-  | "asset_depletion";
+type ChipKey = "all" | "tier1" | "tier2" | "tier3";
 
 const CHIPS: Array<{ key: ChipKey; label: string }> = [
   { key: "all", label: "All" },
   { key: "tier1", label: "Tier 1" },
   { key: "tier2", label: "Tier 2" },
   { key: "tier3", label: "Tier 3" },
-  { key: "dscr", label: "DSCR" },
-  { key: "bank_statement", label: "Bank Statement" },
-  { key: "pnl_only", label: "P&L Only" },
-  { key: "foreign_national", label: "Foreign National" },
-  { key: "asset_depletion", label: "Asset Depletion" },
 ];
 
 function matchesChip(d: DirectoryLender, chip: ChipKey): boolean {
@@ -55,16 +41,6 @@ function matchesChip(d: DirectoryLender, chip: ChipKey): boolean {
       return d.lender.tierLevel === 2;
     case "tier3":
       return d.lender.tierLevel === 3;
-    case "dscr":
-      return d.programs.some((p) => p.incomeDocTypes.includes("dscr"));
-    case "bank_statement":
-      return d.programs.some((p) => p.incomeDocTypes.includes("bank_statement"));
-    case "pnl_only":
-      return d.programs.some((p) => p.incomeDocTypes.includes("pnl_only"));
-    case "asset_depletion":
-      return d.programs.some((p) => p.incomeDocTypes.includes("asset_depletion"));
-    case "foreign_national":
-      return d.programs.some((p) => p.citizenshipEligible.includes("foreign_national"));
     default:
       return true;
   }

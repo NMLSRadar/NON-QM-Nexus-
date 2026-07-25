@@ -105,9 +105,12 @@ describe("LenderDirectory: every tier is always visible; access is locked, not h
     expect(screen.queryByRole("button", { name: "Investor" })).not.toBeInTheDocument();
   });
 
-  it("the other real program filter chips (DSCR, Bank Statement, P&L Only, Foreign National, Asset Depletion) are present and functional", () => {
+  it("the program-type filter chips (DSCR, Bank Statement, P&L Only, Foreign National, Asset Depletion) have been removed — only All/Tier 1/Tier 2/Tier 3 remain", () => {
     render(<LenderDirectory tier1={tier1} tier2={tier2} tier3={tier3} userTierLevel={3} />);
     for (const label of ["DSCR", "Bank Statement", "P&L Only", "Foreign National", "Asset Depletion"]) {
+      expect(screen.queryByRole("button", { name: label })).not.toBeInTheDocument();
+    }
+    for (const label of ["All", "Tier 1", "Tier 2", "Tier 3"]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
   });
