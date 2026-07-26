@@ -6,6 +6,7 @@ import { DISCLAIMER } from "@/domain/types/enums";
 import { AuthStatus } from "@/components/auth-status";
 import { AdminNavLink } from "@/components/admin-nav-link";
 import { PwaRegister } from "@/components/pwa-register";
+import { BuildVersionGuard } from "@/components/build-version-guard";
 import { PrimaryNav } from "@/components/primary-nav";
 
 export const metadata: Metadata = {
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="min-h-screen flex flex-col bg-surface-bg text-ink-primary">
         <PwaRegister />
+        <BuildVersionGuard />
         <header className="gold-theme sticky top-0 z-40 bg-[#060606] text-white border-b border-amber-500/20">
           <div className="mx-auto max-w-7xl px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link href="/" className="flex items-center gap-2.5 text-lg font-semibold tracking-tight shrink-0">

@@ -2,6 +2,15 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Baked into the client bundle at build time — compared at runtime by
+  // src/components/build-version-guard.tsx against the currently-deployed
+  // server's own build id (via /api/version) so an already-open installed
+  // PWA session self-heals onto the latest deploy instead of silently
+  // running stale JS indefinitely (see that file's comment for the history
+  // of real bugs this caused before this guard existed).
+  env: {
+    NEXT_PUBLIC_BUILD_SHA: process.env.VERCEL_GIT_COMMIT_SHA || String(Date.now()),
+  },
   // The deterministic domain layer is framework-agnostic and lives under src/domain.
   // Keep server-only secrets out of the client bundle by never importing them into
   // "use client" components.
