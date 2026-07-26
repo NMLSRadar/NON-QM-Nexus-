@@ -34,7 +34,7 @@ export default async function DashboardPage() {
   const topFails = [...failCounts.values()].sort((a, b) => b.count - a.count).slice(0, 6);
 
   return (
-    <div className="gold-theme space-y-8 -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl">
+    <div className="gold-theme gold-page space-y-8 -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl">
       {/* Hero — Voice Scenario is the flagship feature and dominates the page. */}
       <HomeVoiceHero />
 

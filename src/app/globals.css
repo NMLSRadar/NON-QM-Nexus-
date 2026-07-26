@@ -91,6 +91,25 @@ body {
   box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.6) !important;
 }
 
+/* When a page's main content area is one of the full dark redesigns
+   (marked with `.gold-page`, not just the always-dark header), extend
+   the dark background to the body itself so there's no white gutter
+   visible beyond the centered max-w-7xl content column on wide
+   viewports. Scoped to `.gold-page` (not `.gold-theme`, which the
+   header always carries) so pages that keep their original light body
+   — scenario detail, the manual New Scenario form, the dedicated Voice
+   Scenario page — are completely unaffected. */
+body:has(.gold-page) {
+  background-color: #050505;
+}
+
+.gold-theme .bg-amber-50.border-amber-300,
+.gold-theme span.bg-amber-50 {
+  background-color: rgba(212, 175, 55, 0.12) !important;
+  border-color: rgba(212, 175, 55, 0.35) !important;
+  color: #f0c860 !important;
+}
+
 /* Escape hatch: a handful of complex existing light-theme components
    (the scenario table, the scenario browser search/sort bar, the inline
    voice client) are deliberately kept as their original light "island"

@@ -57,7 +57,7 @@ export default async function PricingPage() {
   const highlightedKey = plans[1]?.key; // the middle-priced active plan, if any
 
   return (
-    <div className="gold-theme -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-8">
+    <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-8">
       <div className="text-center max-w-2xl mx-auto space-y-2">
         <h1 className="text-3xl font-semibold text-white">Simple, transparent pricing</h1>
         <p className="text-slate-400">

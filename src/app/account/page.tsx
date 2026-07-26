@@ -25,7 +25,7 @@ export default async function AccountPage() {
   const isCancelingAtPeriodEnd = plan.source === "stripe" && plan.cancelAtPeriodEnd && !isFullyCanceled;
 
   return (
-    <div className="gold-theme -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl max-w-2xl space-y-6">
+    <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-white">Account settings</h1>
         <p className="text-sm text-slate-400">{user.email}</p>

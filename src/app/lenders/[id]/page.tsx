@@ -26,7 +26,7 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
   const style = getWordmarkStyle(lender.name);
 
   return (
-    <div className="gold-theme -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-5">
+    <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-5">
       <Link href="/lenders" className="text-sm text-amber-400 hover:underline">
         ← All lenders
       </Link>
