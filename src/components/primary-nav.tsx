@@ -10,6 +10,7 @@ const NAV = [
   { href: "/lenders", label: "Lenders" },
   { href: "/programs", label: "Programs" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/account", label: "Account" },
 ] as const;
 
 export function PrimaryNav() {
