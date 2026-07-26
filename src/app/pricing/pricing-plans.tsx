@@ -85,8 +85,8 @@ export function PricingPlans({
           >
             <span
               aria-hidden
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-gradient-to-br from-amber-300 to-amber-600 shadow-md transition-transform ${
-                interval === "annual" ? "translate-x-7" : "translate-x-0.5"
+              className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-gradient-to-br from-amber-300 to-amber-600 shadow-md transition-transform ${
+                interval === "annual" ? "translate-x-8" : "translate-x-0"
               }`}
             />
           </button>
