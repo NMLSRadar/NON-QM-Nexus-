@@ -61,7 +61,7 @@ export default async function ScenariosPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl bg-white p-4 sm:p-6 shadow-xl">
+      <div className="light-surface rounded-2xl bg-white p-4 sm:p-6 shadow-xl">
         <ScenarioBrowser rows={rows} />
       </div>
 

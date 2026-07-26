@@ -95,7 +95,7 @@ export function HomeVoiceHero() {
       </div>
 
       {voiceActive ? (
-        <div id="home-voice-panel" className="relative z-10 mt-8 rounded-2xl bg-white p-4 sm:p-6 shadow-2xl gold-fade-up">
+        <div id="home-voice-panel" className="light-surface relative z-10 mt-8 rounded-2xl bg-white p-4 sm:p-6 shadow-2xl gold-fade-up">
           <div
             role="status"
             aria-live="polite"

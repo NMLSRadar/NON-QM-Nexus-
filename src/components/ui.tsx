@@ -1,10 +1,25 @@
 import type { ReactNode } from "react";
 import { MatchStatus, SAMPLE_DATA_LABEL } from "@/domain/types/enums";
 
-export function Card({ title, children, className = "" }: { title?: string; children: ReactNode; className?: string }) {
+export function Card({
+  title,
+  children,
+  className = "",
+  dark = false,
+}: {
+  title?: string;
+  children: ReactNode;
+  className?: string;
+  dark?: boolean;
+}) {
+  const base = dark
+    ? "bg-[#111113] rounded-card border border-amber-500/20 shadow-lg"
+    : "bg-white rounded-card border border-surface-border shadow-soft";
   return (
-    <section className={`bg-white rounded-card border border-surface-border shadow-soft p-5 transition-shadow duration-200 ${className}`}>
-      {title ? <h2 className="text-sm font-semibold text-ink-secondary uppercase tracking-wide mb-3">{title}</h2> : null}
+    <section className={`${base} p-5 transition-shadow duration-200 ${className}`}>
+      {title ? (
+        <h2 className={`text-sm font-semibold uppercase tracking-wide mb-3 ${dark ? "text-amber-300/80" : "text-ink-secondary"}`}>{title}</h2>
+      ) : null}
       {children}
     </section>
   );

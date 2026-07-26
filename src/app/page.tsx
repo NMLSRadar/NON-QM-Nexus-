@@ -75,7 +75,7 @@ export default async function DashboardPage() {
             <p className="max-w-sm text-sm text-slate-400">Start a Voice Scenario or create one manually to see it here.</p>
           </div>
         ) : (
-          <div className="mt-5 rounded-xl bg-white p-3 sm:p-4 shadow-xl">
+          <div className="light-surface mt-5 rounded-xl bg-white p-3 sm:p-4 shadow-xl">
             <ScenarioTable rows={summaries.slice(0, 8)} />
           </div>
         )}

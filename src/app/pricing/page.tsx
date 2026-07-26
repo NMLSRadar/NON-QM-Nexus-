@@ -57,10 +57,10 @@ export default async function PricingPage() {
   const highlightedKey = plans[1]?.key; // the middle-priced active plan, if any
 
   return (
-    <div className="space-y-8">
+    <div className="gold-theme -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-8">
       <div className="text-center max-w-2xl mx-auto space-y-2">
-        <h1 className="text-3xl font-semibold text-slate-900">Simple, transparent pricing</h1>
-        <p className="text-slate-600">
+        <h1 className="text-3xl font-semibold text-white">Simple, transparent pricing</h1>
+        <p className="text-slate-400">
           Every plan includes the deterministic calculation and matching engine — no black-box AI eligibility
           decisions, ever.
         </p>
@@ -73,26 +73,27 @@ export default async function PricingPage() {
           return (
             <Card
               key={plan.id}
-              className={`flex flex-col ${highlighted ? "ring-2 ring-brand-600 shadow-md" : ""}`}
+              dark
+              className={`flex flex-col ${highlighted ? "ring-2 ring-amber-400 shadow-lg" : ""}`}
             >
               {highlighted ? (
-                <span className="self-start mb-2 inline-block rounded-full bg-brand-600 text-white text-[11px] font-medium px-2.5 py-0.5">
+                <span className="self-start mb-2 inline-block rounded-full bg-gradient-to-r from-amber-300 to-amber-600 text-black text-[11px] font-semibold px-2.5 py-0.5">
                   Most popular
                 </span>
               ) : null}
-              <h2 className="text-lg font-semibold text-slate-900">{plan.name}</h2>
+              <h2 className="text-lg font-semibold text-white">{plan.name}</h2>
               <p className="mt-1 flex items-baseline gap-1">
-                <span className="text-3xl font-semibold text-slate-900">
+                <span className="text-3xl font-semibold text-white">
                   ${priceDollars % 1 === 0 ? priceDollars : priceDollars.toFixed(2)}
                 </span>
-                <span className="text-sm text-slate-500">/month</span>
+                <span className="text-sm text-slate-400">/month</span>
               </p>
-              <p className="mt-2 text-sm text-slate-500">{plan.description}</p>
+              <p className="mt-2 text-sm text-slate-400">{plan.description}</p>
 
               <ul className="mt-4 space-y-2 flex-1">
                 {(TIER_FEATURES[plan.tier_level] ?? []).map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
-                    <span aria-hidden className="mt-0.5 text-emerald-600">✓</span>
+                  <li key={f} className="flex items-start gap-2 text-sm text-slate-300">
+                    <span aria-hidden className="mt-0.5 text-emerald-400">✓</span>
                     <span>{f}</span>
                   </li>
                 ))}
@@ -104,25 +105,25 @@ export default async function PricingPage() {
                     <input type="hidden" name="planId" value={plan.id} />
                     <button
                       type="submit"
-                      className={`mt-6 w-full rounded-md text-sm font-medium px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 ${
+                      className={`mt-6 w-full rounded-md text-sm font-medium px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
                         highlighted
-                          ? "bg-brand-600 text-white hover:bg-brand-700"
-                          : "bg-slate-100 text-slate-900 hover:bg-slate-200"
+                          ? "gold-button"
+                          : "bg-white/5 border border-amber-500/20 text-white hover:bg-white/10"
                       }`}
                     >
                       Subscribe
                     </button>
                   </form>
                 ) : (
-                  <p className="mt-6 text-center text-xs text-slate-400">Billing not yet configured for this plan</p>
+                  <p className="mt-6 text-center text-xs text-slate-500">Billing not yet configured for this plan</p>
                 )
               ) : (
                 <Link
                   href={`/signup?next=/pricing`}
-                  className={`mt-6 block text-center rounded-md text-sm font-medium px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 ${
+                  className={`mt-6 block text-center rounded-md text-sm font-medium px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
                     highlighted
-                      ? "bg-brand-600 text-white hover:bg-brand-700"
-                      : "bg-slate-100 text-slate-900 hover:bg-slate-200"
+                      ? "gold-button"
+                      : "bg-white/5 border border-amber-500/20 text-white hover:bg-white/10"
                   }`}
                 >
                   Sign up to subscribe

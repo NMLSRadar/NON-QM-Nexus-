@@ -25,42 +25,42 @@ export default async function AccountPage() {
   const isCancelingAtPeriodEnd = plan.source === "stripe" && plan.cancelAtPeriodEnd && !isFullyCanceled;
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="gold-theme -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Account settings</h1>
-        <p className="text-sm text-slate-500">{user.email}</p>
+        <h1 className="text-2xl font-semibold text-white">Account settings</h1>
+        <p className="text-sm text-slate-400">{user.email}</p>
       </div>
 
-      <Card title="Subscription">
+      <Card title="Subscription" dark>
         {plan.planName ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-slate-900">
+                <p className="font-medium text-white">
                   {plan.planName}
                   {isFullyCanceled ? (
-                    <span className="ml-2 text-xs rounded-full bg-slate-200 text-slate-700 px-2 py-0.5">Canceled</span>
+                    <span className="ml-2 text-xs rounded-full bg-white/10 text-slate-300 px-2 py-0.5">Canceled</span>
                   ) : isCancelingAtPeriodEnd ? (
-                    <span className="ml-2 text-xs rounded-full bg-amber-100 text-amber-800 px-2 py-0.5">
+                    <span className="ml-2 text-xs rounded-full bg-amber-500/20 text-amber-300 px-2 py-0.5">
                       Canceling
                     </span>
                   ) : (
-                    <span className="ml-2 text-xs rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5">
+                    <span className="ml-2 text-xs rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5">
                       Active
                     </span>
                   )}
                   {plan.source === "stripe" ? (
-                    <span className="ml-2 text-xs rounded-full bg-slate-100 text-slate-600 px-2 py-0.5">Billed via Stripe</span>
+                    <span className="ml-2 text-xs rounded-full bg-white/10 text-slate-300 px-2 py-0.5">Billed via Stripe</span>
                   ) : null}
                 </p>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-400">
                   {fmtUsd((plan.effectivePriceCents ?? 0) / 100)}/month
                   {plan.discountPercentOff ? ` (${plan.discountPercentOff}% off applied)` : ""}
                 </p>
                 {isFullyCanceled && plan.canceledAt ? (
                   <p className="text-xs text-slate-500 mt-1">Canceled on {new Date(plan.canceledAt).toLocaleDateString()}</p>
                 ) : isCancelingAtPeriodEnd && plan.currentPeriodEnd ? (
-                  <p className="text-xs text-amber-700 mt-1">
+                  <p className="text-xs text-amber-300 mt-1">
                     Access continues until {new Date(plan.currentPeriodEnd).toLocaleDateString()}, then cancels.
                   </p>
                 ) : null}
@@ -78,9 +78,9 @@ export default async function AccountPage() {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-400">
             You don&apos;t have an active plan yet. Visit{" "}
-            <a href="/pricing" className="text-brand-700 underline">
+            <a href="/pricing" className="text-amber-400 underline">
               pricing
             </a>{" "}
             to see the available tiers and subscribe.
@@ -88,7 +88,7 @@ export default async function AccountPage() {
         )}
       </Card>
 
-      <Card title="Change password">
+      <Card title="Change password" dark>
         <PasswordForm />
       </Card>
     </div>

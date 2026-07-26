@@ -26,8 +26,8 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
   const style = getWordmarkStyle(lender.name);
 
   return (
-    <div className="space-y-5">
-      <Link href="/lenders" className="text-sm text-brand-700 hover:underline">
+    <div className="gold-theme -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-5">
+      <Link href="/lenders" className="text-sm text-amber-400 hover:underline">
         ← All lenders
       </Link>
 
@@ -57,21 +57,21 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
       />
 
       {!unlocked ? (
-        <Card>
+        <Card dark>
           <div className="flex flex-col items-center gap-3 py-10 text-center">
             <span
               aria-hidden
-              className="flex h-16 w-16 items-center justify-center rounded-full text-3xl bg-gradient-to-br from-amber-300 via-amber-400 to-yellow-600 ring-4 ring-white shadow-lg"
+              className="flex h-16 w-16 items-center justify-center rounded-full text-3xl bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 ring-4 ring-black shadow-lg"
             >
               🔒
             </span>
             <Pill tone="neutral">Tier {lender.tierLevel} Access Required</Pill>
-            <p className="max-w-md text-sm text-ink-secondary">
+            <p className="max-w-md text-sm text-slate-400">
               Upgrade your membership to access this lender’s complete guidelines and program details.
             </p>
             <Link
               href="/pricing"
-              className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-yellow-600 shadow-md hover:shadow-lg transition-shadow"
+              className="gold-button inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold"
             >
               👑 Upgrade to Unlock
             </Link>
@@ -80,21 +80,21 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
       ) : (
         <>
           {lender.notes && (
-            <Card title="Notes">
-              <p className="text-sm text-ink-secondary whitespace-pre-line">{lender.notes}</p>
+            <Card title="Notes" dark>
+              <p className="text-sm text-slate-400 whitespace-pre-line">{lender.notes}</p>
             </Card>
           )}
 
-          <Card title={`Programs (${lenderPrograms.length})`}>
+          <Card title={`Programs (${lenderPrograms.length})`} dark>
             {lenderPrograms.length === 0 ? (
-              <p className="text-sm text-ink-secondary">No active programs on file for this lender yet.</p>
+              <p className="text-sm text-slate-400">No active programs on file for this lender yet.</p>
             ) : (
               <div className="space-y-4">
                 {lenderPrograms.map((p) => (
-                  <div key={p.id} className="rounded-control border border-surface-border p-4">
+                  <div key={p.id} className="rounded-control border border-amber-500/20 bg-black/30 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="font-semibold text-ink-primary">{p.name}</h3>
-                      <span className="text-xs text-ink-secondary">
+                      <h3 className="font-semibold text-white">{p.name}</h3>
+                      <span className="text-xs text-slate-400">
                         {p.guidelineVersionLabel} · eff. {p.effectiveDate}
                         {p.lastVerifiedDate ? ` · verified ${p.lastVerifiedDate}` : ""}
                       </span>
@@ -120,8 +120,8 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
                         </Pill>
                       ))}
                     </div>
-                    {p.notes && <p className="mt-3 text-xs text-ink-secondary whitespace-pre-line">{p.notes}</p>}
-                    <p className="mt-2 text-xs text-ink-secondary">
+                    {p.notes && <p className="mt-3 text-xs text-slate-400 whitespace-pre-line">{p.notes}</p>}
+                    <p className="mt-2 text-xs text-slate-400">
                       Source: <span className="italic">{p.sourceCitation}</span>
                     </p>
                   </div>

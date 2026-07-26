@@ -25,6 +25,113 @@ body {
   --panel-black: #0d0d0f;
   --panel-charcoal: #141417;
   color-scheme: dark;
+  color: #fff;
+}
+
+/* ---------------------------------------------------------------------
+   Shared-primitive surface overrides. Pages built with the original
+   light-theme components (Card, Pill, PageHeader, MetricTile, Button,
+   tables, inputs, etc. from src/components/ui.tsx and hand-rolled page
+   markup) render correctly on a dark page simply by being wrapped in
+   `.gold-theme` — no per-page JSX edits needed, no risk to the shared
+   components' behavior on pages that are NOT wrapped in `.gold-theme`
+   (scenario detail, new-scenario form, dedicated voice page keep their
+   original light look, untouched).
+--------------------------------------------------------------------- */
+.gold-theme .bg-white {
+  background-color: #111113 !important;
+}
+.gold-theme .text-ink-primary,
+.gold-theme .text-slate-900,
+.gold-theme .text-slate-800,
+.gold-theme .text-slate-700 {
+  color: #f5f5f5 !important;
+}
+.gold-theme .text-ink-secondary,
+.gold-theme .text-slate-600,
+.gold-theme .text-slate-500 {
+  color: #9ca3af !important;
+}
+.gold-theme .text-slate-400 {
+  color: #6b7280 !important;
+}
+.gold-theme .border-surface-border,
+.gold-theme .border-slate-200,
+.gold-theme .border-slate-300 {
+  border-color: rgba(212, 175, 55, 0.2) !important;
+}
+.gold-theme .bg-slate-50,
+.gold-theme .bg-slate-100 {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+.gold-theme .hover\:bg-slate-50:hover,
+.gold-theme .hover\:bg-brand-50:hover {
+  background-color: rgba(212, 175, 55, 0.12) !important;
+}
+.gold-theme .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.gold-theme .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(212, 175, 55, 0.14) !important;
+}
+.gold-theme input,
+.gold-theme select,
+.gold-theme textarea {
+  background-color: rgba(0, 0, 0, 0.35) !important;
+  color: #fff !important;
+  border-color: rgba(212, 175, 55, 0.25) !important;
+}
+.gold-theme ::placeholder {
+  color: #6b7280 !important;
+}
+.gold-theme table thead tr {
+  border-color: rgba(212, 175, 55, 0.25) !important;
+}
+.gold-theme .shadow-soft,
+.gold-theme .shadow-soft-hover,
+.gold-theme .shadow-soft-lg {
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Escape hatch: a handful of complex existing light-theme components
+   (the scenario table, the scenario browser search/sort bar, the inline
+   voice client) are deliberately kept as their original light "island"
+   card inside an otherwise dark page, rather than being restyled blind —
+   wrap that specific container in `.light-surface` to opt it (and its
+   children) back out of the overrides above. */
+.light-surface,
+.light-surface .bg-white {
+  background-color: #fff !important;
+  color-scheme: light;
+}
+.light-surface .text-ink-primary,
+.light-surface .text-slate-900,
+.light-surface .text-slate-800,
+.light-surface .text-slate-700 {
+  color: #111827 !important;
+}
+.light-surface .text-ink-secondary,
+.light-surface .text-slate-600,
+.light-surface .text-slate-500,
+.light-surface .text-slate-400 {
+  color: #6b7280 !important;
+}
+.light-surface .border-surface-border,
+.light-surface .border-slate-200,
+.light-surface .border-slate-300 {
+  border-color: #ececec !important;
+}
+.light-surface .bg-slate-50,
+.light-surface .bg-slate-100 {
+  background-color: #f8fafc !important;
+}
+.light-surface input,
+.light-surface select,
+.light-surface textarea {
+  background-color: #fff !important;
+  color: #111827 !important;
+  border-color: #ececec !important;
+}
+.light-surface ::placeholder {
+  color: #94a3b8 !important;
 }
 
 .gold-text-gradient {
