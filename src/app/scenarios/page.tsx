@@ -1,7 +1,7 @@
 import { Mic, Sparkles, ClipboardList } from "lucide-react";
+import Link from "next/link";
 import { analyzeScenario } from "@/domain/analyze";
 import { getCurrentOrganizationId, getRepository } from "@/lib/session";
-import { Card, IconBadge, LinkButton, PageHeader } from "@/components/ui";
 import type { ScenarioRowData } from "@/components/scenario-table";
 import { ScenarioBrowser } from "./scenario-browser";
 
@@ -36,43 +36,53 @@ export default async function ScenariosPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Scenarios"
-        subtitle="Manage and organize your borrower scenarios."
-        actions={
-          <>
-            <LinkButton href="/scenarios/voice" variant="secondary">
+    <div className="gold-theme -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
+      <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-[#0a0a0b] p-6 sm:p-8">
+        <div className="gold-ambient" />
+        <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">Scenarios</h1>
+            <p className="mt-2 text-sm sm:text-base text-slate-400">Manage and organize your borrower scenarios.</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/scenarios/voice"
+              className="gold-outline-button inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold whitespace-nowrap"
+            >
               <Mic className="h-4 w-4" /> Voice Scenario
-            </LinkButton>
-            <LinkButton href="/scenarios/new">+ New Scenario</LinkButton>
-          </>
-        }
-      />
+            </Link>
+            <Link
+              href="/scenarios/new"
+              className="gold-button inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold whitespace-nowrap"
+            >
+              + New Scenario
+            </Link>
+          </div>
+        </div>
+      </div>
 
-      <Card className="p-6">
+      <div className="rounded-2xl bg-white p-4 sm:p-6 shadow-xl">
         <ScenarioBrowser rows={rows} />
-      </Card>
+      </div>
 
-      <Card className="p-6">
-        <h2 className="text-lg font-bold text-ink-primary">About Scenarios</h2>
-        <p className="mt-1 text-sm text-ink-secondary">
+      <div className="gold-panel rounded-2xl p-6">
+        <h2 className="text-lg font-bold text-white">About Scenarios</h2>
+        <p className="mt-1 text-sm text-slate-400">
           Scenarios help you organize and track different borrower situations — create them with voice or manually,
           then let AI do the guideline comparison.
         </p>
         <div className="mt-5 grid sm:grid-cols-3 gap-4">
           {ABOUT_FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className="rounded-control bg-gradient-to-br from-brand-50 to-white border border-surface-border p-4 transition-all duration-200 hover:shadow-soft-hover hover:-translate-y-0.5"
-            >
-              <IconBadge size="sm">{f.icon}</IconBadge>
-              <p className="mt-3 font-semibold text-ink-primary">{f.title}</p>
-              <p className="mt-1 text-xs text-ink-secondary">{f.description}</p>
+            <div key={f.title} className="gold-card gold-fade-up rounded-2xl p-4">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/30">
+                {f.icon}
+              </span>
+              <p className="mt-3 font-semibold text-white">{f.title}</p>
+              <p className="mt-1 text-xs text-slate-400">{f.description}</p>
             </div>
           ))}
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

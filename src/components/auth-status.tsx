@@ -12,7 +12,7 @@ export async function AuthStatus() {
     return (
       <Link
         href="/login"
-        className="text-slate-700 hover:text-black text-sm rounded px-1 focus:outline-none focus:ring-2 focus:ring-brand-600"
+        className="text-slate-300 hover:text-white text-sm rounded px-1 focus:outline-none focus:ring-2 focus:ring-amber-400"
       >
         Sign in
       </Link>
@@ -23,14 +23,14 @@ export async function AuthStatus() {
     <div className="flex items-center gap-3 text-sm">
       <Link
         href="/account"
-        className="text-slate-700 hover:text-black rounded px-1 focus:outline-none focus:ring-2 focus:ring-brand-600"
+        className="text-slate-300 hover:text-white rounded px-1 focus:outline-none focus:ring-2 focus:ring-amber-400"
       >
         {user.email}
       </Link>
       <form action={signOut}>
         <button
           type="submit"
-          className="text-slate-700 hover:text-black underline focus:outline-none focus:ring-2 focus:ring-brand-600 rounded px-1"
+          className="text-amber-300 hover:text-amber-200 underline focus:outline-none focus:ring-2 focus:ring-amber-400 rounded px-1"
         >
           Sign out
         </button>

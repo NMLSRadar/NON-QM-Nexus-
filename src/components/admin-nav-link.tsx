@@ -14,7 +14,7 @@ export async function AdminNavLink() {
   return (
     <Link
       href="/admin"
-      className="text-slate-700 hover:text-black rounded px-1 focus:outline-none focus:ring-2 focus:ring-brand-600"
+      className="text-amber-200/90 hover:text-amber-100 rounded px-1 focus:outline-none focus:ring-2 focus:ring-amber-400"
     >
       Admin
     </Link>

@@ -91,33 +91,33 @@ interface TierTheme {
 const TIER_THEMES: Record<1 | 2 | 3, TierTheme> = {
   1: {
     icon: "🏆",
-    sectionClass: "bg-gradient-to-b from-amber-50 to-white border border-amber-200",
-    headingClass: "text-slate-900",
-    descriptionClass: "text-slate-600",
-    iconCircleClass: "bg-gradient-to-br from-amber-300 via-amber-400 to-yellow-600 ring-4 ring-white shadow-lg",
-    pillClass: "bg-amber-50 border border-amber-300 text-amber-800",
-    buttonClass: "bg-gradient-to-r from-amber-400 to-yellow-600 text-white shadow-md hover:shadow-lg",
-    cardClass: "bg-white border border-slate-200 shadow-md",
-    cardBorderHover: "hover:border-amber-400 hover:shadow-lg",
-    tierPillClass: "bg-white border border-slate-300 text-slate-600",
-    lockedPillClass: "bg-amber-100 border border-amber-200 text-amber-800",
-    upgradeButtonClass: "bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-300 text-amber-800 hover:from-amber-100 hover:to-amber-200",
-    lockIconClass: "text-slate-400",
-    dark: false,
+    sectionClass: "bg-gradient-to-b from-[#0d0d0f] to-black border border-amber-500/25",
+    headingClass: "text-white",
+    descriptionClass: "text-slate-400",
+    iconCircleClass: "bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 ring-4 ring-black shadow-lg",
+    pillClass: "bg-amber-500/10 border border-amber-400/50 text-amber-300",
+    buttonClass: "bg-gradient-to-r from-amber-300 to-amber-600 text-black shadow-md hover:shadow-lg",
+    cardClass: "bg-[#111113] border border-amber-500/25 shadow-lg",
+    cardBorderHover: "hover:border-amber-400/70 hover:shadow-[0_0_20px_-4px_rgba(212,175,55,0.5)]",
+    tierPillClass: "bg-black/60 border border-slate-700 text-slate-300",
+    lockedPillClass: "bg-amber-500/15 border border-amber-500/30 text-amber-300",
+    upgradeButtonClass: "bg-gradient-to-r from-amber-300 to-amber-600 text-black border border-amber-300 hover:brightness-110",
+    lockIconClass: "text-amber-400",
+    dark: true,
   },
   2: {
     icon: "💎",
-    sectionClass: "bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800",
+    sectionClass: "bg-gradient-to-b from-slate-900 to-slate-950 border border-sky-500/20",
     headingClass: "text-white",
     descriptionClass: "text-slate-300",
-    iconCircleClass: "bg-slate-800 ring-4 ring-amber-400/70 shadow-lg",
-    pillClass: "bg-slate-800 border border-amber-400/60 text-amber-300",
-    buttonClass: "bg-gradient-to-r from-amber-400 to-yellow-600 text-slate-900 shadow-md hover:shadow-lg",
-    cardClass: "bg-slate-800/90 border border-amber-500/30 shadow-lg",
-    cardBorderHover: "hover:border-amber-400/70 hover:shadow-xl",
+    iconCircleClass: "bg-slate-800 ring-4 ring-sky-400/60 shadow-lg",
+    pillClass: "bg-slate-800 border border-sky-400/50 text-sky-300",
+    buttonClass: "bg-gradient-to-r from-amber-400 to-amber-600 text-slate-900 shadow-md hover:shadow-lg",
+    cardClass: "bg-slate-800/90 border border-amber-500/25 shadow-lg",
+    cardBorderHover: "hover:border-amber-400/70 hover:shadow-[0_0_20px_-4px_rgba(212,175,55,0.5)]",
     tierPillClass: "bg-slate-700 border border-slate-600 text-slate-300",
     lockedPillClass: "bg-amber-500/20 border border-amber-500/30 text-amber-300",
-    upgradeButtonClass: "bg-gradient-to-r from-amber-400 to-yellow-600 text-slate-900 border border-amber-300 hover:from-amber-300 hover:to-yellow-500",
+    upgradeButtonClass: "bg-gradient-to-r from-amber-400 to-amber-600 text-slate-900 border border-amber-300 hover:brightness-110",
     lockIconClass: "text-amber-400",
     dark: true,
   },
@@ -288,7 +288,7 @@ export function LenderDirectory({ tier1, tier2, tier3, userTierLevel }: Props) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search lenders..."
-          className="w-full max-w-md rounded-control border border-surface-border px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+          className="w-full max-w-md rounded-xl border border-amber-500/25 bg-black/40 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/30"
         />
         <div className="flex flex-wrap gap-2" role="group" aria-label="Filter lenders by category">
           {CHIPS.map((c) => (
@@ -299,8 +299,8 @@ export function LenderDirectory({ tier1, tier2, tier3, userTierLevel }: Props) {
               aria-pressed={chip === c.key}
               className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                 chip === c.key
-                  ? "bg-gradient-to-r from-amber-400 to-yellow-600 text-white border-amber-500 shadow-sm"
-                  : "bg-white text-ink-secondary border-surface-border hover:border-brand-400 hover:text-brand-700"
+                  ? "bg-gradient-to-r from-amber-400 to-amber-600 text-black border-amber-400 shadow-sm"
+                  : "bg-black/40 text-slate-300 border-amber-500/20 hover:border-amber-400/60 hover:text-amber-300"
               }`}
             >
               {c.label}
@@ -310,7 +310,7 @@ export function LenderDirectory({ tier1, tier2, tier3, userTierLevel }: Props) {
       </div>
 
       {isFiltering && filtered.length === 0 && (
-        <p className="text-sm text-ink-secondary py-8 text-center">No lenders match “{query || CHIPS.find((c) => c.key === chip)?.label}”.</p>
+        <p className="text-sm text-slate-400 py-8 text-center">No lenders match “{query || CHIPS.find((c) => c.key === chip)?.label}”.</p>
       )}
 
       <TierSection
@@ -341,7 +341,7 @@ export function LenderDirectory({ tier1, tier2, tier3, userTierLevel }: Props) {
         theme={TIER_THEMES[3]}
       />
 
-      {all.length === 0 && <p className="text-center py-12 text-sm text-ink-secondary">No lenders are configured for this organization yet.</p>}
+      {all.length === 0 && <p className="text-center py-12 text-sm text-slate-400">No lenders are configured for this organization yet.</p>}
     </div>
   );
 }

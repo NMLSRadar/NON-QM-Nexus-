@@ -9,3 +9,171 @@
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
 }
+
+/* ---------------------------------------------------------------------
+   Premium black/gold theme primitives — used by the global header and by
+   the Homepage / Lenders / Scenarios page bodies. Kept as plain CSS
+   (rather than Tailwind config additions) so the rest of the app's light
+   theme is completely untouched. All motion here is slow/ambient and is
+   fully disabled under prefers-reduced-motion below.
+--------------------------------------------------------------------- */
+.gold-theme {
+  --gold: #d4af37;
+  --gold-bright: #f0c860;
+  --gold-deep: #9c7a1f;
+  --ink-black: #060606;
+  --panel-black: #0d0d0f;
+  --panel-charcoal: #141417;
+  color-scheme: dark;
+}
+
+.gold-text-gradient {
+  background: linear-gradient(90deg, var(--gold-bright), var(--gold), var(--gold-deep));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gold-panel {
+  background: linear-gradient(160deg, rgba(20, 20, 23, 0.9), rgba(10, 10, 11, 0.95));
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.05) inset, 0 20px 40px -20px rgba(0, 0, 0, 0.8);
+}
+
+.gold-card {
+  background: linear-gradient(160deg, rgba(24, 24, 27, 0.85), rgba(12, 12, 13, 0.9));
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+.gold-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(212, 175, 55, 0.5);
+  box-shadow: 0 0 24px -6px rgba(212, 175, 55, 0.35);
+}
+
+.gold-button {
+  background: linear-gradient(135deg, #f0c860, #d4af37 45%, #9c7a1f);
+  color: #0a0a0a;
+  box-shadow: 0 6px 18px -6px rgba(212, 175, 55, 0.55);
+  transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease;
+}
+.gold-button:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 8px 22px -4px rgba(212, 175, 55, 0.7);
+  transform: translateY(-1px);
+}
+.gold-button:active {
+  transform: translateY(0);
+}
+.gold-button:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+.gold-outline-button {
+  background: rgba(212, 175, 55, 0.06);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  color: var(--gold-bright);
+  transition: background 150ms ease, border-color 150ms ease;
+}
+.gold-outline-button:hover {
+  background: rgba(212, 175, 55, 0.14);
+  border-color: var(--gold);
+}
+.gold-outline-button:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+/* Slowly drifting ambient particles/glow behind hero + section headers. */
+.gold-ambient {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.gold-ambient::before,
+.gold-ambient::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(60px);
+  opacity: 0.35;
+}
+.gold-ambient::before {
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.55), transparent 70%);
+  top: -140px;
+  right: -120px;
+  animation: gold-drift-a 26s ease-in-out infinite;
+}
+.gold-ambient::after {
+  width: 360px;
+  height: 360px;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.35), transparent 70%);
+  bottom: -120px;
+  left: -100px;
+  animation: gold-drift-b 32s ease-in-out infinite;
+}
+
+@keyframes gold-drift-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-40px, 30px) scale(1.08); }
+}
+@keyframes gold-drift-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(30px, -20px) scale(1.05); }
+}
+
+@keyframes gold-pulse-ring {
+  0% { transform: scale(1); opacity: 0.55; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.gold-pulse-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 1.5px solid var(--gold);
+  animation: gold-pulse-ring 2.6s ease-out infinite;
+}
+.gold-pulse-ring.delay-1 { animation-delay: 0.9s; }
+.gold-pulse-ring.delay-2 { animation-delay: 1.8s; }
+
+@keyframes gold-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.gold-shimmer-border {
+  position: relative;
+}
+.gold-shimmer-border::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(100deg, transparent 30%, rgba(240, 200, 96, 0.5) 50%, transparent 70%);
+  background-size: 300% 100%;
+  animation: gold-shimmer 6s linear infinite;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+@keyframes gold-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.gold-fade-up {
+  animation: gold-fade-up 420ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gold-ambient::before,
+  .gold-ambient::after,
+  .gold-pulse-ring,
+  .gold-shimmer-border::after,
+  .gold-fade-up {
+    animation: none !important;
+  }
+}
