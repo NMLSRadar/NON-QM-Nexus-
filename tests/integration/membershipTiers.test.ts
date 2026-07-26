@@ -126,8 +126,17 @@ describe.skipIf(!hasCredentials)("Membership tiers (live database)", () => {
 
     const plan = await getEffectivePlan(userClient, userId);
     expect(plan.tierLevel).toBe(1);
-    expect(plan.monthlyPriceCents).toBe(6000);
-    expect(plan.effectivePriceCents).toBe(3000);
+    // Assert against the plan's real current monthly price rather than a
+    // hardcoded dollar figure — admins can (and did, this session) change
+    // it live, and this test shouldn't need updating every time they do.
+    const { data: essentialPlan } = await admin
+      .from("membership_plans")
+      .select("monthly_price_cents")
+      .eq("id", essentialPlanId)
+      .single();
+    const expectedMonthlyCents = essentialPlan!.monthly_price_cents as number;
+    expect(plan.monthlyPriceCents).toBe(expectedMonthlyCents);
+    expect(plan.effectivePriceCents).toBe(Math.round(expectedMonthlyCents * 0.5));
 
     // Tier access must be unaffected by the discount.
     const repo = new SupabaseRepository(userClient, userId);

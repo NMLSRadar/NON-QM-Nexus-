@@ -19,6 +19,8 @@ export async function startCheckout(formData: FormData): Promise<void> {
   if (typeof planId !== "string" || !planId) {
     throw new Error("Missing plan.");
   }
+  const intervalRaw = formData.get("interval");
+  const interval = intervalRaw === "annual" ? "annual" : "monthly";
 
   const supabase = await createClient();
   const {
@@ -30,13 +32,18 @@ export async function startCheckout(formData: FormData): Promise<void> {
 
   const { data: plan, error: planError } = await supabase
     .from("membership_plans")
-    .select("id, name, stripe_price_id, is_active")
+    .select("id, name, stripe_price_id, stripe_annual_price_id, is_active")
     .eq("id", planId)
     .maybeSingle();
   if (planError) throw new Error(`Failed to load plan: ${planError.message}`);
   if (!plan || !plan.is_active) throw new Error("That plan is not available.");
-  if (!plan.stripe_price_id) {
-    throw new Error(`${plan.name} has no Stripe price configured yet — run scripts/stripe-setup-products.js.`);
+  const priceId = interval === "annual" ? plan.stripe_annual_price_id : plan.stripe_price_id;
+  if (!priceId) {
+    throw new Error(
+      interval === "annual"
+        ? `${plan.name} has no annual Stripe price configured yet.`
+        : `${plan.name} has no Stripe price configured yet — run scripts/stripe-setup-products.js.`
+    );
   }
 
   const stripe = getStripe();

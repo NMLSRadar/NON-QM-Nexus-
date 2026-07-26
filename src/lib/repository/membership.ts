@@ -5,8 +5,11 @@ export interface EffectivePlan {
   tierLevel: number;
   planName: string | null;
   monthlyPriceCents: number | null;
+  annualPriceCents: number | null;
+  /** "monthly" | "annual" — which recurring price this subscription is actually on ("monthly" for a comped/no-plan account too). */
+  billingInterval: "monthly" | "annual";
   discountPercentOff: number | null;
-  /** monthlyPriceCents with the discount applied, or null if no plan. */
+  /** The price for the active billingInterval, with the discount applied, or null if no plan. */
   effectivePriceCents: number | null;
   /** Set if the user canceled (self-serve or admin) — the plan/price above still reflect what they had, for display. */
   canceledAt: string | null;
@@ -25,6 +28,8 @@ const NO_PLAN: EffectivePlan = {
   tierLevel: 0,
   planName: null,
   monthlyPriceCents: null,
+  annualPriceCents: null,
+  billingInterval: "monthly",
   discountPercentOff: null,
   effectivePriceCents: null,
   canceledAt: null,
@@ -69,6 +74,8 @@ async function autoProvisionAdminSubscription(supabase: SupabaseClient, userId: 
     tierLevel: enterprisePlan.tier_level as number,
     planName: enterprisePlan.name as string,
     monthlyPriceCents: enterprisePlan.monthly_price_cents as number,
+    annualPriceCents: null,
+    billingInterval: "monthly",
     discountPercentOff: null,
     effectivePriceCents: enterprisePlan.monthly_price_cents as number,
     canceledAt: null,
@@ -97,7 +104,7 @@ export async function getEffectivePlan(supabase: SupabaseClient, userId: string)
   const { data, error } = await supabase
     .from("user_subscriptions")
     .select(
-      "canceled_at, source, stripe_subscription_id, cancel_at_period_end, current_period_end, plan:membership_plans(name, monthly_price_cents, tier_level), discount:discounts(percent_off)"
+      "canceled_at, source, stripe_subscription_id, cancel_at_period_end, current_period_end, billing_interval, plan:membership_plans(name, monthly_price_cents, annual_price_cents, tier_level), discount:discounts(percent_off)"
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -114,12 +121,17 @@ export async function getEffectivePlan(supabase: SupabaseClient, userId: string)
 
   const canceledAt = (data.canceled_at as string | null) ?? null;
   const percentOff = discount?.percent_off ?? 0;
-  const effectivePriceCents = Math.round((plan.monthly_price_cents as number) * (1 - percentOff / 100));
+  const billingInterval: "monthly" | "annual" = (data.billing_interval as string) === "annual" ? "annual" : "monthly";
+  const annualPriceCents = (plan.annual_price_cents as number | null) ?? null;
+  const basePriceCents = billingInterval === "annual" && annualPriceCents != null ? annualPriceCents : (plan.monthly_price_cents as number);
+  const effectivePriceCents = Math.round(basePriceCents * (1 - percentOff / 100));
 
   return {
     tierLevel: canceledAt ? 0 : (plan.tier_level as number),
     planName: plan.name as string,
     monthlyPriceCents: plan.monthly_price_cents as number,
+    annualPriceCents,
+    billingInterval,
     discountPercentOff: discount ? percentOff : null,
     effectivePriceCents,
     canceledAt,

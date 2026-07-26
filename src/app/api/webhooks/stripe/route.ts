@@ -40,12 +40,18 @@ export async function POST(request: Request) {
     }
 
     const priceId = subscription.items.data[0]?.price?.id;
+    const recurringInterval = subscription.items.data[0]?.price?.recurring?.interval;
+    const billingInterval = recurringInterval === "year" ? "annual" : "monthly";
     let planId: string | null = null;
     if (priceId) {
+      // A plan's monthly and annual Stripe prices are two different Price
+      // ids on the same membership_plans row — match either column so an
+      // annual subscriber resolves to their real plan/tier instead of
+      // silently landing on plan_id: null (no lender access at all).
       const { data: plan } = await supabase
         .from("membership_plans")
         .select("id")
-        .eq("stripe_price_id", priceId)
+        .or(`stripe_price_id.eq.${priceId},stripe_annual_price_id.eq.${priceId}`)
         .maybeSingle();
       planId = (plan?.id as string | undefined) ?? null;
     }
@@ -64,6 +70,7 @@ export async function POST(request: Request) {
         current_period_end: currentPeriodEndUnix ? new Date(currentPeriodEndUnix * 1000).toISOString() : null,
         cancel_at_period_end: subscription.cancel_at_period_end,
         canceled_at: isCanceled ? new Date().toISOString() : null,
+        billing_interval: billingInterval,
       },
       { onConflict: "user_id" }
     );

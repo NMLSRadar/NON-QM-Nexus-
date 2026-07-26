@@ -135,6 +135,11 @@ model MembershipPlan {
   key               String   @unique // stable code reference, e.g. "essential"
   name              String
   monthlyPriceCents Int      @map("monthly_price_cents")
+  // Annual price in cents (billed once per year) — null means this plan has
+  // no annual option configured yet. A plain override rather than a
+  // computed discount, so admins can set any annual price they want; the
+  // pricing UI's "Save 20%" copy is presentation, not enforced math.
+  annualPriceCents  Int?     @map("annual_price_cents")
   // The lender tier level this plan unlocks (see Lender.tierLevel): a user
   // on a plan with tierLevel N can see any lender with tierLevel <= N.
   tierLevel         Int      @map("tier_level")
@@ -145,6 +150,10 @@ model MembershipPlan {
   // (set by scripts/stripe-setup-products.js). Null for a plan that has no
   // live Stripe price yet (e.g. before setup, or a comp-only plan).
   stripePriceId     String?  @unique @map("stripe_price_id")
+  // Stripe recurring Price id for this plan's annual subscription (20% off
+  // the monthly*12 equivalent, by convention — see scripts/stripe-annual-
+  // billing.js). Null until an annual price has been created for this plan.
+  stripeAnnualPriceId String? @unique @map("stripe_annual_price_id")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
@@ -196,6 +205,11 @@ model UserSubscription {
   stripeStatus       String?   @map("stripe_status") // active | trialing | past_due | canceled | incomplete | ...
   currentPeriodEnd   DateTime? @map("current_period_end")
   cancelAtPeriodEnd  Boolean   @default(false) @map("cancel_at_period_end")
+  // "monthly" | "annual" — which recurring price the active Stripe
+  // subscription is actually billed on (or "monthly" by default for a
+  // comped/admin-assigned plan, which has no real interval). Written by the
+  // Stripe webhook from the subscription's own price, never guessed.
+  billingInterval    String    @default("monthly") @map("billing_interval")
 
   user     User            @relation(fields: [userId], references: [id])
   plan     MembershipPlan? @relation(fields: [planId], references: [id])

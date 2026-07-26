@@ -10,6 +10,7 @@ interface PlanRow {
   key: string;
   name: string;
   monthly_price_cents: number;
+  annual_price_cents: number | null;
   tier_level: number;
   description: string | null;
   is_active: boolean;
@@ -20,7 +21,7 @@ export default async function AdminPlansPage() {
   const { supabase } = await requirePlatformAdmin();
   const { data, error } = await supabase
     .from("membership_plans")
-    .select("id, key, name, monthly_price_cents, tier_level, description, is_active, sort_order")
+    .select("id, key, name, monthly_price_cents, annual_price_cents, tier_level, description, is_active, sort_order")
     .order("sort_order");
   if (error) throw new Error(error.message);
   const plans = (data ?? []) as PlanRow[];
@@ -45,6 +46,11 @@ export default async function AdminPlansPage() {
               </div>
               <span className="text-lg font-semibold">{fmtUsd(plan.monthly_price_cents / 100)}/mo</span>
             </div>
+            {plan.annual_price_cents != null && (
+              <p className="mt-0.5 text-xs text-emerald-700">
+                {fmtUsd(plan.annual_price_cents / 100)}/yr annual option (Stripe-managed — see scripts, not editable here)
+              </p>
+            )}
             <p className="mt-1 text-sm text-slate-600">{plan.description}</p>
             <p className="mt-1 text-xs text-slate-500">Unlocks lender tier level: {plan.tier_level}</p>
             <div className="mt-3 flex items-center justify-between">

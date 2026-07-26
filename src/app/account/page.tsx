@@ -54,7 +54,7 @@ export default async function AccountPage() {
                   ) : null}
                 </p>
                 <p className="text-sm text-slate-400">
-                  {fmtUsd((plan.effectivePriceCents ?? 0) / 100)}/month
+                  {fmtUsd((plan.effectivePriceCents ?? 0) / 100)}/{plan.billingInterval === "annual" ? "year" : "month"}
                   {plan.discountPercentOff ? ` (${plan.discountPercentOff}% off applied)` : ""}
                 </p>
                 {isFullyCanceled && plan.canceledAt ? (
