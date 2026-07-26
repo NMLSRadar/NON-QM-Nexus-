@@ -1,5 +1,6 @@
 import { requirePlatformAdmin } from "@/lib/admin";
 import { Card } from "@/components/ui";
+import { PLATFORM_CATALOG_ORGANIZATION_ID } from "@/lib/platformCatalog";
 import { UploadForm } from "./upload-form";
 import { ExtractionReviewCard } from "./extraction-review";
 
@@ -17,7 +18,19 @@ export default async function AdminDocumentsPage() {
   const { supabase } = await requirePlatformAdmin();
 
   const [{ data: lenders, error: lendersError }, { data: extractions, error: extractionsError }] = await Promise.all([
-    supabase.from("lenders").select("id, name").is("deleted_at", null).order("name"),
+    // Scoped to the shared platform catalog (see src/lib/platformCatalog.ts)
+    // and excludes sample/demo lenders — without this, a platform admin's
+    // unrestricted RLS read returns every lender across every leftover
+    // test-run organization ever created, producing a bloated, duplicated
+    // dropdown (this was a real bug found live: sample lenders like "Atlas
+    // Investor Finance (Sample)" appeared 8x, one per stray test org).
+    supabase
+      .from("lenders")
+      .select("id, name")
+      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+      .eq("is_sample_data", false)
+      .is("deleted_at", null)
+      .order("name"),
     supabase
       .from("document_extractions")
       .select("id, document_id, fields, documents(file_name, lender_id, lenders(name))")
