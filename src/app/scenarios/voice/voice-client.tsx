@@ -131,6 +131,7 @@ export default function VoiceClient() {
   const router = useRouter();
   const [supported, setSupported] = useState<boolean | null>(null);
   const [listening, setListening] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
   const [transcript, setTranscript] = useState("");
   const [interim, setInterim] = useState("");
   const [overrides, setOverrides] = useState<Overrides>({});
@@ -156,9 +157,29 @@ export default function VoiceClient() {
   const isRefinance = effective.loanPurpose?.value === "rate_term_refinance" || effective.loanPurpose?.value === "cash_out_refinance";
 
   /* -------- speech capture -------- */
+  function micErrorMessage(code: string): string {
+    switch (code) {
+      case "not-allowed":
+      case "service-not-allowed":
+      case "permission-denied":
+        return "Microphone access was blocked. Open your device/browser's site settings for this app and allow microphone access, then tap the mic again.";
+      case "audio-capture":
+        return "No microphone was found on this device.";
+      case "no-speech":
+        return "No speech was detected — tap the mic and try again.";
+      case "network":
+        return "Speech recognition needs an active internet connection — check your connection and try again.";
+      case "aborted":
+        return "";
+      default:
+        return `Speech recognition stopped unexpectedly (${code || "unknown error"}). You can type or paste the scenario below instead.`;
+    }
+  }
+
   function startListening() {
     const Ctor = getRecognitionCtor();
     if (!Ctor) return;
+    setMicError(null);
     const rec = new Ctor();
     rec.continuous = true;
     rec.interimResults = true;
@@ -175,14 +196,28 @@ export default function VoiceClient() {
       if (finalText) setTranscript((t) => `${t}${t && !t.endsWith(" ") ? " " : ""}${finalText}`);
       setInterim(interimText);
     };
-    rec.onerror = () => setListening(false);
+    rec.onerror = (e) => {
+      setListening(false);
+      const message = micErrorMessage(e.error);
+      if (message) setMicError(message);
+    };
     rec.onend = () => {
       setListening(false);
       setInterim("");
     };
     recognitionRef.current = rec;
-    rec.start();
-    setListening(true);
+    try {
+      rec.start();
+      setListening(true);
+    } catch {
+      // Most commonly thrown when the mic is already in use elsewhere, or
+      // the platform silently refuses to start recognition (some Android
+      // WebView/PWA containers do this instead of firing onerror) — show
+      // the same actionable message rather than leaving the button looking
+      // unresponsive with no feedback at all.
+      setListening(false);
+      setMicError(micErrorMessage("not-allowed"));
+    }
   }
   function stopListening() {
     recognitionRef.current?.stop();
@@ -297,8 +332,15 @@ export default function VoiceClient() {
     <div className="space-y-5">
       {supported === false && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 text-amber-800 text-sm p-3">
-          This browser doesn&apos;t support speech recognition (Chrome, Edge, or Safari do). You can type or paste the scenario below —
-          everything else works the same.
+          This browser doesn&apos;t support speech recognition (Chrome or Edge do; Safari on iOS does not — this is an
+          Apple platform limitation, not a bug). You can type or paste the scenario below — everything else works the
+          same.
+        </div>
+      )}
+
+      {micError && (
+        <div role="alert" className="rounded-lg border border-rose-300 bg-rose-50 text-rose-800 text-sm p-3">
+          {micError}
         </div>
       )}
 
