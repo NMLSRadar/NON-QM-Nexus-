@@ -45,14 +45,16 @@ export function ImportForm() {
     <div className="space-y-4">
       <form action={formAction} className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-xs font-medium text-slate-700 mb-1">CSV file</label>
-          <input
-            type="file"
-            name="file"
-            accept=".csv,text/csv"
-            required
-            className="text-sm file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm"
-          />
+          <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">CSV file</label>
+          <div className="gold-panel rounded-xl px-3 py-2.5">
+            <input
+              type="file"
+              name="file"
+              accept=".csv,text/csv"
+              required
+              className="text-sm text-slate-300 cursor-pointer file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-amber-400/40 file:bg-gradient-to-r file:from-amber-300 file:via-amber-400 file:to-amber-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-black file:shadow-[0_4px_14px_-4px_rgba(212,175,55,0.55)] file:transition-all file:duration-150 hover:file:brightness-110 focus-visible:outline-none"
+            />
+          </div>
         </div>
         <button
           type="submit"
