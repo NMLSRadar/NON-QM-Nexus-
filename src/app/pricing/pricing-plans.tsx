@@ -72,14 +72,16 @@ export function PricingPlans({
   return (
     <div className="space-y-8">
       {anyAnnual && (
-        <div className="flex items-center justify-center gap-3">
-          <span className={`text-sm font-medium ${interval === "monthly" ? "text-white" : "text-slate-400"}`}>Monthly</span>
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+          <span className={`shrink-0 text-sm font-medium ${interval === "monthly" ? "text-white" : "text-slate-400"}`}>
+            Monthly
+          </span>
           <button
             type="button"
             role="switch"
             aria-checked={interval === "annual"}
             onClick={() => setInterval_((v) => (v === "monthly" ? "annual" : "monthly"))}
-            className="relative h-7 w-14 rounded-full border border-amber-400/40 bg-black/40 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="relative h-7 w-14 shrink-0 rounded-full border border-amber-400/40 bg-black/40 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400"
           >
             <span
               aria-hidden
@@ -88,10 +90,10 @@ export function PricingPlans({
               }`}
             />
           </button>
-          <span className={`text-sm font-medium ${interval === "annual" ? "text-white" : "text-slate-400"}`}>
+          <span className={`shrink-0 text-sm font-medium ${interval === "annual" ? "text-white" : "text-slate-400"}`}>
             Annual
           </span>
-          <span className="rounded-full border border-emerald-400/40 bg-emerald-500/10 text-emerald-300 text-[11px] font-semibold uppercase tracking-wide px-2.5 py-1">
+          <span className="shrink-0 rounded-full border border-emerald-400/40 bg-emerald-500/10 text-emerald-300 text-[11px] font-semibold uppercase tracking-wide px-2.5 py-1">
             Save 20%
           </span>
         </div>
