@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Trophy, ChevronDown } from "lucide-react";
 import { SampleDataBadge, StatusBadge, Stat, Pill, fmtPct, fmtUsd } from "@/components/ui";
 import type { ProgramEvaluation } from "@/domain/types/results";
@@ -241,7 +242,21 @@ function CompareTable({ items }: { items: ProgramEvaluation[] }) {
 /** The signature experience of the scenario detail page: every applicable
  * program ranked by real match score, color-coded, with an inline
  * side-by-side compare — replaces the old flat grouped list. */
-export function BestLenderMatches({ evaluations }: { evaluations: ProgramEvaluation[] }) {
+export function BestLenderMatches({
+  evaluations,
+  tierLevel,
+}: {
+  evaluations: ProgramEvaluation[];
+  /** The viewer's subscription tier (0 = no active plan). When there are
+   * zero evaluations AND tierLevel is 0, the empty state isn't "no lenders
+   * matched this scenario" — it's "there's nothing to match against yet
+   * because this account has no active subscription" (the shared lender
+   * catalog is tier-gated; see src/lib/repository/supabaseRepository.ts).
+   * Those are two very different situations and need two different
+   * messages — the generic one reads exactly like a broken matching
+   * engine to a brand-new, not-yet-subscribed account. */
+  tierLevel?: number;
+}) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const sorted = useMemo(() => [...evaluations].sort((a, b) => b.matchScore - a.matchScore), [evaluations]);
   const selected = sorted.filter((e) => selectedIds.includes(e.programId));
@@ -251,6 +266,23 @@ export function BestLenderMatches({ evaluations }: { evaluations: ProgramEvaluat
   }
 
   if (sorted.length === 0) {
+    if (tierLevel === 0) {
+      return (
+        <div className="rounded-control border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">No active subscription — lender matching is locked for this account.</p>
+          <p className="mt-1 text-amber-800">
+            The scenario itself was captured and calculated correctly; there just isn&apos;t a plan on this account yet
+            to compare it against real lender guidelines.
+          </p>
+          <Link
+            href="/pricing"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-600 text-white text-xs font-semibold px-4 py-2 hover:bg-brand-700"
+          >
+            View plans & subscribe
+          </Link>
+        </div>
+      );
+    }
     return <p className="text-sm text-ink-secondary">No applicable lender programs found for this scenario yet.</p>;
   }
 

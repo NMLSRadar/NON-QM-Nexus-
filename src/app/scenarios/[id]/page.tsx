@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, FileEdit, RotateCw, Layers, ClipboardList, Clock } from "lucide-react";
 import { analyzeScenario } from "@/domain/analyze";
-import { getCurrentOrganizationId, getRepository } from "@/lib/session";
+import { getCurrentOrganizationId, getLenderAccessInfo, getRepository } from "@/lib/session";
 import { Card, MetricTile, StatusBadge, SectionHeading, LinkButton, Pill, fmtNum, fmtPct, fmtUsd } from "@/components/ui";
 import type { CalcResult } from "@/domain/types/results";
 import type { MatchStatus } from "@/domain/types/enums";
@@ -53,7 +53,7 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
   const org = await getCurrentOrganizationId();
   const scenario = await repo.getScenario(org, id);
   if (!scenario) notFound();
-  const catalog = await repo.getCatalog(org);
+  const [catalog, access] = await Promise.all([repo.getCatalog(org), getLenderAccessInfo()]);
   const analysis = analyzeScenario(scenario, catalog);
   const best = analysis.evaluations[0];
 
@@ -148,7 +148,7 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
               description="Every applicable lender program, ranked by real match score — sorted automatically."
             />
             <div className="mt-4">
-              <BestLenderMatches evaluations={analysis.evaluations} />
+              <BestLenderMatches evaluations={analysis.evaluations} tierLevel={access.tierLevel} />
             </div>
           </Card>
 
