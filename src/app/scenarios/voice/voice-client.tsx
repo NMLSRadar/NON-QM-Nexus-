@@ -132,7 +132,7 @@ const VESTING_OPTIONS: Array<[Vesting, string]> = [
   ["trust", "Trust"],
 ];
 
-export default function VoiceClient() {
+export default function VoiceClient({ autoStart = false }: { autoStart?: boolean }) {
   const router = useRouter();
   const [supported, setSupported] = useState<boolean | null>(null);
   const [listening, setListening] = useState(false);
@@ -149,10 +149,24 @@ export default function VoiceClient() {
   const inFlightRef = useRef(false);
   const hasFailedRef = useRef(false);
   const spokenRef = useRef("");
+  const autoStartedRef = useRef(false);
 
   useEffect(() => {
     setSupported(getRecognitionCtor() !== undefined);
   }, []);
+
+  // One-tap auto-start: when embedded on the homepage, the caller reveals
+  // this component AND wants recording to begin immediately — no second
+  // tap on the mic button. Fires once, only after we know whether speech
+  // recognition is actually supported (so an unsupported platform shows
+  // the real explanatory message immediately instead of silently doing
+  // nothing).
+  useEffect(() => {
+    if (!autoStart || autoStartedRef.current || supported === null) return;
+    autoStartedRef.current = true;
+    startListening();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, supported]);
 
   const effective = useMemo(() => applyOverrides(extractFromTranscript(transcript), overrides), [transcript, overrides]);
   const assessment = useMemo(() => assess(effective), [effective]);
@@ -237,7 +251,18 @@ export default function VoiceClient() {
 
   function startListening() {
     const Ctor = getRecognitionCtor();
-    if (!Ctor) return;
+    if (!Ctor) {
+      // Previously a silent no-op — on a platform/context where speech
+      // recognition genuinely isn't available (unsupported browser, or an
+      // installed PWA whose WebKit build restricts the API), the mic
+      // button looked completely unresponsive with zero feedback. Now
+      // surfaces the same actionable message the "unsupported browser"
+      // banner shows, so a tap always produces a visible result.
+      setMicError(
+        "Voice recognition isn't available in this app/browser. If you're using the installed home-screen app, try opening nonqmnexus.com directly in Safari instead — or just type the scenario below, everything else works the same.",
+      );
+      return;
+    }
     setMicError(null);
     const rec = new Ctor();
     rec.continuous = true;

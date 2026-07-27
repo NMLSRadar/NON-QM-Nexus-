@@ -108,7 +108,7 @@ export function HomeVoiceHero() {
             Voice Scenario is live — speak or type below. Applicable lenders will appear automatically once enough
             details are captured.
           </div>
-          <VoiceClient />
+          <VoiceClient autoStart />
         </div>
       ) : null}
     </section>
