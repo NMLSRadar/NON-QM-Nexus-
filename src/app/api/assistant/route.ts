@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getRepository } from "@/lib/session";
+import { getLenderAccessInfo, getRepository } from "@/lib/session";
 import { getAiProvider, asUntrustedData, type AiMessage } from "@/lib/ai/provider";
 import { ASSISTANT_SYSTEM_PROMPT, buildGuidelineContext } from "@/lib/ai/assistantContext";
 
@@ -55,6 +55,21 @@ export async function POST(request: Request) {
 
   if (messages.length === 0) {
     return Response.json({ error: "No message provided" }, { status: 400 });
+  }
+
+  // Same tier-gating as the rest of the app (Programs page, scenario
+  // matching): an account with no active subscription genuinely has zero
+  // lender data to answer from. Short-circuit with a clear, accurate
+  // reply instead of spending an LLM call only to have the model say "I
+  // don't have that data" with no explanation of why — the actual reason
+  // is account status, not a guideline-content gap, and the assistant on
+  // its own can't tell those two situations apart from an empty catalog.
+  const access = await getLenderAccessInfo();
+  if (access.tierLevel === 0) {
+    return Response.json({
+      reply:
+        "This account doesn't have an active subscription, so there's no lender guideline data available to me yet — that's an account issue, not missing data on our end. Subscribing to any plan unlocks the real, human-verified lender catalog immediately, and I'll be able to answer from it right away.",
+    });
   }
 
   const catalog = await repo.getCatalog(org); // same tier-gated catalog the rest of the app uses
