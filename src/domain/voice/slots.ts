@@ -60,19 +60,21 @@ export const VITAL_QUESTIONS: Record<VitalKey, string> = {
 
 /** Additional, non-blocking vitals — surfaced in the UI and used in
  * matching when captured, but never gate `readyToAnalyze`. */
-export const EXTRA_VITAL_KEYS = ["firstTimeHomebuyer", "investorExperience", "vesting"] as const;
+export const EXTRA_VITAL_KEYS = ["firstTimeHomebuyer", "investorExperience", "vesting", "state"] as const;
 export type ExtraVitalKey = (typeof EXTRA_VITAL_KEYS)[number];
 
 export const EXTRA_VITAL_LABELS: Record<ExtraVitalKey, string> = {
   firstTimeHomebuyer: "First-time homebuyer",
   investorExperience: "Investor experience",
   vesting: "Title vesting",
+  state: "Property state",
 };
 
 export const EXTRA_VITAL_QUESTIONS: Record<ExtraVitalKey, string> = {
   firstTimeHomebuyer: "Has the borrower owned a primary residence before?",
   investorExperience: "Has the borrower previously owned an investment property?",
   vesting: "Will title be held individually, in an LLC, corporation, or trust?",
+  state: "What state is the property located in?",
 };
 
 /** Refinance-only conditional vital — captured and used for current-lien
@@ -120,6 +122,11 @@ export interface VoiceExtraction {
   investorExperience?: Captured<InvestorExperience>;
   vesting?: Captured<Vesting>;
   shortTermRental?: boolean;
+  /** Property state — a 2-letter USPS code (e.g. "GA"), recognized from a
+   * full state name or, only in an unambiguous anchored phrase ("in the
+   * state of TX", "located in TX"), a spoken abbreviation. Used for the
+   * real state-licensing eligibility check in baseChecks.ts. */
+  state?: Captured<string>;
   /** Assumptions and notes accumulated during extraction, surfaced to the user. */
   notesFragments: string[];
 }

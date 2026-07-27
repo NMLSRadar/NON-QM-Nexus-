@@ -267,14 +267,17 @@ const CITIZENSHIP_RE = new RegExp(
     // each dot), or "non-U.S. citizen" would fail this stricter pattern and
     // fall through to matching the plain "U.S. citizen" alternative later
     // in the same phrase instead — silently losing the "non-" negation.
-    String.raw`(?<foreignNational>\bforeign national\b|\bfn borrower\b|\bforeign investor\b|non[\s-]?u\s*\.?\s*s\s*\.?\s*citizen\b|\binternational borrower\b|\boverseas (?:buyer|borrower|investor)\b)`,
-    // Non-Permanent Resident
-    String.raw`(?<nonPermanentResident>\bnon[\s-]*perm(?:anent)?(?:\s+resident)?\b|\bwork visa\b|\bemployment authorization\b|\bead holder\b|\btemporary resident\b|\bvisa holder\b)`,
+    String.raw`(?<foreignNational>\bforeign national\b|\bfn borrower\b|\bforeign investor\b|\bforeign buyer\b|non[\s-]?u\s*\.?\s*s\s*\.?\s*citizen\b|\binternational borrower\b|\binternational buyer\b|\boverseas (?:buyer|borrower|investor)\b)`,
+    // Non-Permanent Resident — "EAD" is a mortgage-specific abbreviation
+    // rare enough outside this domain to match bare (not just "EAD
+    // holder"), since real phrasing varies freely: "EAD card", "on an
+    // EAD", "with an EAD", "holding a valid EAD".
+    String.raw`(?<nonPermanentResident>\bnon[\s-]*perm(?:anent)?(?:\s+resident)?\b|\bwork visa\b|\bemployment authorization\b|\bead\b|\btemporary resident\b|\bvisa holder\b)`,
     // Permanent Resident (green card) — a real, distinct category already
     // used by real lender program data (citizenshipEligible), even though
     // it wasn't one of the four requested UI options; kept recognizable so
     // a green-card borrower is never miscategorized into one of the four.
-    String.raw`(?<permanentResident>\bpermanent resident\b|\bgreen card(?:\s+holder)?\b)`,
+    String.raw`(?<permanentResident>\bpermanent resident\b|\blawful permanent resident\b|\blpr\b|\bgreen card(?:\s+holder)?\b)`,
     // U.S. Citizen
     String.raw`(?<usCitizen>\bu\s*\.?\s*s\s*\.?\s*citizen\b|\bunited states citizen\b|\bamerican citizen\b|\bnaturalized citizen\b|\bborn here\b|\bcitizen\b)`,
   ].join("|"),
@@ -304,6 +307,62 @@ export function classifyCitizenship(t: string): { value: Citizenship; source: st
     if (value) winner = { value, source: m[0].trim() }; // last valid match wins (self-corrections)
   }
   return winner;
+}
+
+// ---------------------------------------------------------------------------
+// Property state classifier — a 2-letter USPS code, recognized from a full
+// state name (safe, unambiguous, case-insensitive — this is how brokers
+// actually say it on a call: "in Georgia", never "in G-A") or, ONLY when
+// anchored by an unambiguous phrase immediately before it, a spoken
+// abbreviation ("in the state of TX", "located in TX", "property in TX").
+// Bare 2-letter abbreviations are deliberately NOT matched unanchored: many
+// (OR, IN, ME, HI, OK, PA, ID, LA, DE, AT...) collide with common English
+// words, and by the time this runs the transcript has already been
+// lowercased, so there's no capitalization signal left to disambiguate "in"
+// (preposition) from "IN" (Indiana).
+// ---------------------------------------------------------------------------
+
+const STATE_NAME_TO_ABBR: Record<string, string> = {
+  alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR", california: "CA",
+  colorado: "CO", connecticut: "CT", delaware: "DE", florida: "FL", georgia: "GA",
+  hawaii: "HI", idaho: "ID", illinois: "IL", indiana: "IN", iowa: "IA",
+  kansas: "KS", kentucky: "KY", louisiana: "LA", maine: "ME", maryland: "MD",
+  massachusetts: "MA", michigan: "MI", minnesota: "MN", mississippi: "MS", missouri: "MO",
+  montana: "MT", nebraska: "NE", nevada: "NV", "new hampshire": "NH", "new jersey": "NJ",
+  "new mexico": "NM", "new york": "NY", "north carolina": "NC", "north dakota": "ND", ohio: "OH",
+  oklahoma: "OK", oregon: "OR", pennsylvania: "PA", "rhode island": "RI", "south carolina": "SC",
+  "south dakota": "SD", tennessee: "TN", texas: "TX", utah: "UT", vermont: "VT",
+  virginia: "VA", washington: "WA", "west virginia": "WV", wisconsin: "WI", wyoming: "WY",
+  "district of columbia": "DC", "washington dc": "DC",
+};
+const STATE_NAME_RE = new RegExp(
+  `\\b(${Object.keys(STATE_NAME_TO_ABBR).sort((a, b) => b.length - a.length).join("|")})\\b`,
+  "gi"
+);
+const STATE_ABBR_ANCHOR_RE = new RegExp(
+  `\\b(?:in the state of|state of|located in|property is in|property in)\\s+([a-z]{2})\\b`,
+  "gi"
+);
+const VALID_STATE_ABBRS = new Set(Object.values(STATE_NAME_TO_ABBR));
+
+export function classifyState(t: string): { value: string; source: string } | undefined {
+  // Last-mention-wins (same self-correction semantics used throughout this
+  // file) — scans every match of both patterns and keeps whichever ends up
+  // latest in the transcript, not just the first one found.
+  let winner: { value: string; source: string; index: number } | undefined;
+  const nameRe = new RegExp(STATE_NAME_RE.source, STATE_NAME_RE.flags);
+  let nm: RegExpExecArray | null;
+  while ((nm = nameRe.exec(t)) !== null) {
+    const abbr = STATE_NAME_TO_ABBR[nm[1]!.toLowerCase()];
+    if (abbr && (!winner || nm.index >= winner.index)) winner = { value: abbr, source: nm[0].trim(), index: nm.index };
+  }
+  const abbrRe = new RegExp(STATE_ABBR_ANCHOR_RE.source, STATE_ABBR_ANCHOR_RE.flags);
+  let am: RegExpExecArray | null;
+  while ((am = abbrRe.exec(t)) !== null) {
+    const abbr = am[1]!.toUpperCase();
+    if (VALID_STATE_ABBRS.has(abbr) && (!winner || am.index >= winner.index)) winner = { value: abbr, source: am[0].trim(), index: am.index };
+  }
+  return winner ? { value: winner.value, source: winner.source } : undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -399,7 +458,7 @@ const LOAN_AMOUNT_STRONG_TERMS =
 // and disambiguated the same way property value / loan amount / cash-out
 // are, never by simple keyword adjacency.
 const EXISTING_LIEN_TERMS =
-  /\bcurrent loan balance\b|\bcurrent mortgage balance\b|\bexisting mortgage balance\b|\bexisting loan balance\b|\bmortgage balance\b|\bcurrent balance\b|\bexisting balance\b|\bcurrent mortgage\b|\bexisting mortgage\b|\bexisting loan\b|\bremaining mortgage\b|\bfirst mortgage\b|\bunpaid principal balance\b|\bamount (?:they |he |she )?still owed?\b|\bstill owed?\b|\bstill owes\b|\bborrower still owes\b|\bpayoff\b|\bpayoff amount\b|\bestimated payoff\b|\bcurrent payoff\b|\bremaining balance\b|\bbalance on the property\b|\bfirst mortgage balance\b|\bexisting first lien\b|\bexisting lien\b|\bdebt currently secured by the property\b|\bthey owe\b|\bhe owes\b|\bshe owes\b|\bcurrently owe[sd]?\b|\bowed?\b|\bowes\b/;
+  /\bcurrent loan balance\b|\bcurrent mortgage balance\b|\bexisting mortgage balance\b|\bexisting loan balance\b|\bloan balance\b|\bmortgage balance\b|\bcurrent balance\b|\bexisting balance\b|\bcurrent mortgage\b|\bexisting mortgage\b|\bexisting loan\b|\bremaining mortgage\b|\bremaining on (?:the )?mortgage\b|\bfirst mortgage\b|\bunpaid principal balance\b|\bamount (?:they |he |she )?still owed?\b|\bstill owed?\b|\bstill owes\b|\bborrower still owes\b|\bpayoff\b|\bpayoff amount\b|\bestimated payoff\b|\bcurrent payoff\b|\bremaining balance\b|\bbalance on the property\b|\bfirst mortgage balance\b|\bexisting first lien\b|\bexisting lien\b|\bdebt currently secured by the property\b|\bthey owe\b|\bhe owes\b|\bshe owes\b|\bcurrently owe[sd]?\b|\bowed?\b|\bowes\b/;
 
 // Requested cash-out proceeds — the DOLLAR figure a cash-out refinance
 // borrower wants in hand. Broadened beyond the literal "cash out"/"cash
@@ -409,7 +468,7 @@ const EXISTING_LIEN_TERMS =
 // state the amount with NONE of the three original phrases anywhere near
 // it (e.g. "would like to receive $250,000 in cash after closing costs").
 const CASH_OUT_AMOUNT_TERMS =
-  /\bcash[\s-]?out\b|\bcash back\b|\bproceeds\b|\breceive\b|\breceiving\b|\bnet\b|\bwalk away with\b|\bcash in hand\b|\bin cash\b|\bafter closing costs\b|\bafter fees\b|\bafter costs\b|\bafter closing\b|\bafter closing expenses\b/;
+  /\bcash[\s-]?out\b|\bcash back\b|\bproceeds\b|\breceive\b|\breceiving\b|\bnet\b|\bwalk away with\b|\bcash in hand\b|\bin cash\b|\bafter closing costs\b|\bafter fees\b|\bafter costs\b|\bafter closing\b|\bafter closing expenses\b|\bback at closing\b/;
 
 const CREDIT_SCORE_CONTEXT = /\bfico\b|credit score|\bscore\b|\bcredit\b/;
 const INCOME_CONTEXT = /\bincome\b|\bannually\b|\bearns?\b|\bsalary\b|per year|per month|\bearning\b/;
@@ -852,6 +911,7 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
 
   // ---- Borrower extras ----------------------------------------------------
   x.citizenship = classifyCitizenship(t);
+  x.state = classifyState(t);
 
   const investorExperience = classifyInvestorExperience(t);
   if (investorExperience) {

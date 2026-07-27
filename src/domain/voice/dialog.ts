@@ -183,6 +183,7 @@ export function assess(x: VoiceExtraction): Assessment {
   if (x.firstTimeHomebuyer) filledSummary.push(x.firstTimeHomebuyer.value ? "first-time homebuyer" : "not a first-time homebuyer");
   if (x.investorExperience) filledSummary.push(investorExperienceLabel(x.investorExperience.value));
   if (x.vesting) filledSummary.push(`vesting: ${vestingLabel(x.vesting.value)}`);
+  if (x.state) filledSummary.push(`${x.state.value} property`);
   if (x.existingLienBalance) filledSummary.push(`${usd(x.existingLienBalance.value)} current balance`);
 
   // Refinance-only: current lien-to-value / proposed LTV / equity / cash-out
@@ -324,6 +325,7 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
     fico: x.fico.value,
     incomeDocType: doc,
     citizenship: x.citizenship.value,
+    ...(x.state ? { state: x.state.value } : {}),
     ...(x.firstTimeInvestor !== undefined ? { firstTimeInvestor: x.firstTimeInvestor } : {}),
     ...(x.investorExperience ? { investorExperience: x.investorExperience.value } : {}),
     ...(x.firstTimeHomebuyer ? { firstTimeHomebuyer: x.firstTimeHomebuyer.value } : {}),

@@ -55,6 +55,7 @@ interface Overrides {
   vesting?: Vesting;
   existingLienBalance?: number;
   citizenship?: Citizenship;
+  state?: string;
 }
 
 function manual<T>(value: T): Captured<T> {
@@ -84,6 +85,7 @@ function applyOverrides(base: VoiceExtraction, o: Overrides): VoiceExtraction {
   if (o.vesting !== undefined) x.vesting = manual(o.vesting);
   if (o.existingLienBalance !== undefined) x.existingLienBalance = manual(o.existingLienBalance);
   if (o.citizenship !== undefined) x.citizenship = manual(o.citizenship);
+  if (o.state !== undefined) x.state = manual(o.state);
   return x;
 }
 
@@ -143,6 +145,19 @@ const CITIZENSHIP_OPTIONS: Array<[Citizenship, string]> = [
   ["non_permanent_resident", "Non-Permanent Resident"],
   ["itin", "ITIN Borrower"],
   ["foreign_national", "Foreign National"],
+];
+const STATE_OPTIONS: Array<[string, string]> = [
+  ["AL", "Alabama"], ["AK", "Alaska"], ["AZ", "Arizona"], ["AR", "Arkansas"], ["CA", "California"],
+  ["CO", "Colorado"], ["CT", "Connecticut"], ["DE", "Delaware"], ["FL", "Florida"], ["GA", "Georgia"],
+  ["HI", "Hawaii"], ["ID", "Idaho"], ["IL", "Illinois"], ["IN", "Indiana"], ["IA", "Iowa"],
+  ["KS", "Kansas"], ["KY", "Kentucky"], ["LA", "Louisiana"], ["ME", "Maine"], ["MD", "Maryland"],
+  ["MA", "Massachusetts"], ["MI", "Michigan"], ["MN", "Minnesota"], ["MS", "Mississippi"], ["MO", "Missouri"],
+  ["MT", "Montana"], ["NE", "Nebraska"], ["NV", "Nevada"], ["NH", "New Hampshire"], ["NJ", "New Jersey"],
+  ["NM", "New Mexico"], ["NY", "New York"], ["NC", "North Carolina"], ["ND", "North Dakota"], ["OH", "Ohio"],
+  ["OK", "Oklahoma"], ["OR", "Oregon"], ["PA", "Pennsylvania"], ["RI", "Rhode Island"], ["SC", "South Carolina"],
+  ["SD", "South Dakota"], ["TN", "Tennessee"], ["TX", "Texas"], ["UT", "Utah"], ["VT", "Vermont"],
+  ["VA", "Virginia"], ["WA", "Washington"], ["WV", "West Virginia"], ["WI", "Wisconsin"], ["WY", "Wyoming"],
+  ["DC", "District of Columbia"],
 ];
 
 export default function VoiceClient({ autoStart = false }: { autoStart?: boolean }) {
@@ -222,6 +237,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
       fico: effective.fico?.value,
       incomeDocType: doc,
       citizenship: effective.citizenship?.value,
+      state: effective.state?.value,
       vesting: effective.vesting?.value,
       firstTimeHomebuyer: effective.firstTimeHomebuyer?.value,
       investorExperience: effective.investorExperience?.value,
@@ -422,6 +438,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         : undefined
     ),
     vesting: cell(effective.vesting ? { ...effective.vesting, value: label(VESTING_OPTIONS, effective.vesting.value) } : undefined),
+    state: cell(effective.state ? { ...effective.state, value: label(STATE_OPTIONS, effective.state.value) } : undefined),
   };
 
   const lienDisplay = cell(effective.existingLienBalance ? { ...effective.existingLienBalance, value: usd(effective.existingLienBalance.value) } : undefined);
@@ -604,6 +621,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
               onChange={(v) => setOv("investorExperience", v as InvestorExperience)}
             />
             <Select label="Title vesting" value={effective.vesting?.value ?? ""} options={VESTING_OPTIONS} onChange={(v) => setOv("vesting", v as Vesting)} />
+            <Select label="Property state" value={effective.state?.value ?? ""} options={STATE_OPTIONS} onChange={(v) => setOv("state", v)} />
             {isRefinance && (
               <Num label="Current loan balance ($)" value={effective.existingLienBalance?.value} onChange={(n) => setOv("existingLienBalance", n)} />
             )}
