@@ -47,14 +47,14 @@ describe("Default down-payment safety net (only fires when nothing was ever stat
     expect(a.assumedDownPaymentNote).toMatch(/bank statement/);
   });
 
-  it("DSCR: defaults to 20% down (80% LTV), the conservative majority figure, not the 85% minority exception", () => {
+  it("DSCR: defaults to 15% down (85% LTV) per the 2026-07-27 user decision", () => {
     const x = emptyExtraction();
     x.propertyValue = { value: 500_000, source: "value $500,000" };
     x.incomeDocType = { value: "dscr", source: "DSCR loan" };
     const a = assess(x);
-    expect(a.derived.ltv).toBe(80);
-    expect(a.derived.loanAmount).toBe(400_000);
-    expect(a.assumedDownPaymentNote).toMatch(/20% down/);
+    expect(a.derived.ltv).toBe(85);
+    expect(a.derived.loanAmount).toBe(425_000);
+    expect(a.assumedDownPaymentNote).toMatch(/15% down/);
   });
 
   it("ITIN: defaults to 15% down (85% LTV) regardless of income doc type", () => {

@@ -22,14 +22,14 @@ export interface PricingPlanRow {
 // descriptive bullets are presentational copy, not billing logic.
 const TIER_FEATURES: Record<number, string[]> = {
   1: [
-    "Compare guidelines from the Top 12 Non-QM lenders",
+    "Compare guidelines from the Top 10 Non-QM lenders",
     "Deterministic eligibility matching",
     "Saved scenarios",
     "Email support",
   ],
   2: [
     "Everything in Essential",
-    "Compare guidelines from the Top 25 Non-QM lenders",
+    "Compare guidelines from the Top 26 Non-QM lenders",
     "Voice scenario intake",
     "Restructuring & needs-list generation",
     "Priority email support",

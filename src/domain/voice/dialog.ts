@@ -28,7 +28,7 @@ export interface Assessment {
   derived: { ltv?: number; loanAmount?: number; propertyValue?: number };
   conflicts: string[];
   /** Set when down payment/LTV was never stated and a conservative default
-   * (bank statement 10% down / DSCR 20% down / ITIN 15% down) was assumed
+   * (bank statement 10% down / DSCR 15% down / ITIN 15% down) was assumed
    * instead — surfaced to the user so they can correct it. */
   assumedDownPaymentNote?: string;
   /** Refinance-only figures — present whenever propertyValue and
@@ -52,15 +52,16 @@ const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 // payment/LTV first (see the `ltv` VITAL_QUESTION); this only fires if a
 // scenario is otherwise complete except for down payment/LTV never having
 // been captured despite asking. Per real published guidelines: no real
-// bank-statement Non-QM program exceeds 90% LTV (10% min down); the
-// majority of DSCR programs cap at 80% LTV (20% min down) with only a
-// handful of lenders allowing up to 85% — 80% is used as the conservative
-// default rather than the more permissive minority figure. Only the two
-// doc types the user explicitly specified a rule for are covered here;
-// other doc types fall back to no default (the assistant keeps asking).
+// bank-statement Non-QM program exceeds 90% LTV (10% min down). DSCR: per
+// user decision 2026-07-27, the default is 85% LTV (15% min down) — a real,
+// commonly-available DSCR ceiling across this catalog (e.g. NQM Funding's
+// Investor DSCR, Angel Oak), used deliberately over the more conservative
+// 80%/20%-down figure some lenders cap at. Only the two doc types the user
+// explicitly specified a rule for are covered here; other doc types fall
+// back to no default (the assistant keeps asking).
 const DEFAULT_MAX_LTV_BY_DOC_TYPE: Partial<Record<IncomeDocType, number>> = {
   bank_statement: 90,
-  dscr: 80,
+  dscr: 85,
 };
 // ITIN borrowers: typically capped at 85% LTV (15% min down) across this
 // catalog, with GreenBox Loans' ITIN Full Doc program as the one disclosed
