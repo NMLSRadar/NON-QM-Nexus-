@@ -32,7 +32,7 @@ export function HomeVoiceHero() {
   const [voiceActive, setVoiceActive] = useState(false);
 
   return (
-    <section className="gold-theme relative overflow-hidden rounded-3xl border border-amber-500/25 bg-[#080808] p-6 sm:p-10 shadow-[0_0_60px_-20px_rgba(212,175,55,0.35)]">
+    <section className="gold-theme gold-sheen relative overflow-hidden rounded-3xl border border-amber-500/25 bg-[#080808] p-6 sm:p-10 shadow-[0_0_60px_-20px_rgba(212,175,55,0.35)]">
       <div className="gold-ambient" />
       <div className="relative z-10 flex flex-col lg:flex-row lg:items-center gap-8">
         <div className="flex items-start gap-5">

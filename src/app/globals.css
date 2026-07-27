@@ -303,3 +303,146 @@ body:has(.gold-page) {
     animation: none !important;
   }
 }
+
+/* ---------------------------------------------------------------------
+   Global AI ambient engine — mounted once (root layout), runs behind
+   every page. Pure CSS, GPU-friendly (transform/opacity only), fixed +
+   pointer-events:none so it never intercepts clicks or affects layout.
+   Kept deliberately faint (opacity ~0.05-0.35 depending on element) so it
+   reads as ambient texture in the page's negative space, not as a
+   competing visual layer — Apple/OpenAI/Tesla restraint, not a gaming
+   site. Every animation here is disabled under prefers-reduced-motion.
+--------------------------------------------------------------------- */
+.ambient-engine {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+}
+
+.ambient-glow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(120px);
+  opacity: 0.14;
+  will-change: transform;
+}
+.ambient-glow-a {
+  width: 42vw;
+  height: 42vw;
+  max-width: 640px;
+  max-height: 640px;
+  top: -10vw;
+  left: -8vw;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.55), transparent 70%);
+  animation: ambient-drift-a 48s ease-in-out infinite;
+}
+.ambient-glow-b {
+  width: 36vw;
+  height: 36vw;
+  max-width: 560px;
+  max-height: 560px;
+  bottom: -6vw;
+  right: -6vw;
+  background: radial-gradient(circle, rgba(240, 200, 96, 0.4), transparent 70%);
+  animation: ambient-drift-b 56s ease-in-out infinite;
+}
+@keyframes ambient-drift-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(6vw, 8vw) scale(1.1); }
+}
+@keyframes ambient-drift-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-5vw, -7vw) scale(1.08); }
+}
+
+.ambient-network {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.12;
+}
+.ambient-link {
+  stroke: #d4af37;
+  stroke-width: 0.06;
+  opacity: 0.5;
+  animation: ambient-link-pulse 7s ease-in-out infinite;
+  vector-effect: non-scaling-stroke;
+}
+.ambient-node {
+  fill: #f0c860;
+  animation: ambient-node-pulse 6s ease-in-out infinite;
+}
+@keyframes ambient-link-pulse {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.55; }
+}
+@keyframes ambient-node-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.6); }
+}
+
+.ambient-particles {
+  position: absolute;
+  inset: 0;
+}
+.ambient-particle {
+  position: absolute;
+  border-radius: 999px;
+  background: radial-gradient(circle, #f0c860, transparent 75%);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: ambient-particle-float linear infinite;
+}
+@keyframes ambient-particle-float {
+  0% { opacity: 0; transform: translateY(0) scale(0.8); }
+  10% { opacity: 0.5; }
+  50% { opacity: 0.3; transform: translateY(-6vh) scale(1.1); }
+  90% { opacity: 0.4; }
+  100% { opacity: 0; transform: translateY(-12vh) scale(0.8); }
+}
+
+/* Continuous soft light-reflection sweep for premium cards/panels —
+   distinct from .gold-shimmer-border (a one-shot hover accent): this one
+   runs constantly but very slowly and faintly, like light drifting across
+   glass. Opt in per-element with `.gold-sheen`. */
+.gold-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.gold-sheen::after {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.06) 48%, rgba(240, 200, 96, 0.12) 50%, rgba(255, 255, 255, 0.06) 52%, transparent 60%);
+  background-size: 200% 200%;
+  animation: gold-sheen-sweep 9s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes gold-sheen-sweep {
+  0% { background-position: 200% 0%; }
+  100% { background-position: -50% 0%; }
+}
+
+/* Glassmorphism + gold accents — a translucent, blurred panel with a thin
+   gold hairline, for premium chrome (headers, hero panels) layered above
+   the ambient engine. */
+.gold-glass {
+  background: rgba(12, 12, 14, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(212, 175, 55, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-glow,
+  .ambient-link,
+  .ambient-node,
+  .ambient-particle,
+  .gold-sheen::after {
+    animation: none !important;
+  }
+}

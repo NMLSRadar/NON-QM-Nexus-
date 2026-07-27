@@ -8,6 +8,7 @@ import { AdminNavLink } from "@/components/admin-nav-link";
 import { PwaRegister } from "@/components/pwa-register";
 import { BuildVersionGuard } from "@/components/build-version-guard";
 import { PrimaryNav } from "@/components/primary-nav";
+import { GlobalAmbientEngine } from "@/components/global-ambient-engine";
 
 export const metadata: Metadata = {
   title: "NON-QM Nexus",
@@ -37,7 +38,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen flex flex-col bg-surface-bg text-ink-primary">
         <PwaRegister />
         <BuildVersionGuard />
-        <header className="gold-theme sticky top-0 z-40 bg-[#060606] text-white border-b border-amber-500/20">
+        <GlobalAmbientEngine />
+        <header className="relative z-40 gold-theme gold-glass sticky top-0 text-white">
           <div className="mx-auto max-w-7xl px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link href="/" className="flex items-center gap-2.5 text-lg font-semibold tracking-tight shrink-0">
               <Image src="/logo.png" alt="NON-QM Nexus" width={36} height={36} className="rounded-full ring-1 ring-amber-400/40" priority />
@@ -54,8 +56,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
         </header>
-        <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6">{children}</main>
-        <footer className="border-t-2 border-black bg-white">
+        <main className="relative z-10 flex-1 mx-auto w-full max-w-7xl px-4 py-6">{children}</main>
+        <footer className="relative z-10 border-t-2 border-black bg-white">
           <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-slate-500 space-y-2">
             <p>{DISCLAIMER}</p>
             <p>
