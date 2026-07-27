@@ -60,15 +60,36 @@ export async function GET(request: Request) {
 
   // Extract every unique https URL out of each program's free-text
   // sourceCitation, and remember which lender/program(s) cite it so a
-  // broken link can be reported with enough context to act on.
-  const urlRe = /https?:\/\/[^\s)\]'"]+/g;
+  // broken link can be reported with enough context to act on. Matches
+  // greedily then trims only a genuinely UNBALANCED trailing ')' or other
+  // punctuation — some real cited URLs contain literal parentheses as
+  // part of the filename itself (e.g. GreenBox's "...PLUS-DSCR (2026.02.01).pdf"),
+  // and naively excluding all ')' from the match would truncate those into
+  // a URL that never existed, producing a permanent false "broken" alert.
+  const urlRe = /https?:\/\/[^\s'"]+/g;
+  function trimTrailingPunctuation(raw: string): string {
+    let url = raw.replace(/[.,;]+$/, "");
+    // Strip trailing ')' one at a time only while parens are unbalanced
+    // (more ')' than '(' in the string so far) — preserves a URL whose
+    // real path legitimately contains a balanced "(...)" segment.
+    while (url.endsWith(")")) {
+      const opens = (url.match(/\(/g) ?? []).length;
+      const closes = (url.match(/\)/g) ?? []).length;
+      if (closes > opens) {
+        url = url.slice(0, -1);
+      } else {
+        break;
+      }
+    }
+    return url;
+  }
   const citedBy = new Map<string, Array<{ lender: string; program: string }>>();
   for (const row of (programs ?? []) as unknown as ProgramRow[]) {
     const citation = row.config?.sourceCitation;
     if (!citation) continue;
     const lenderRaw = row.lenders;
     const lender = (Array.isArray(lenderRaw) ? lenderRaw[0] : lenderRaw)?.name ?? "Unknown lender";
-    const urls = [...new Set((citation.match(urlRe) ?? []).map((u) => u.replace(/[.,;]+$/, "")))];
+    const urls = [...new Set((citation.match(urlRe) ?? []).map(trimTrailingPunctuation))];
     for (const url of urls) {
       const list = citedBy.get(url) ?? [];
       list.push({ lender, program: row.name });
