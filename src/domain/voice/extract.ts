@@ -86,6 +86,17 @@ export function normalizeTranscript(raw: string): string {
   s = s.replace(/[\w$%]+,?\s*(?:actually|excuse me|i mean|let me correct that|my mistake|correction|sorry)\b,?\s*/gi, "");
   s = s.replace(/,/g, " , "); // remaining commas become separators
   s = s.replace(/([a-z0-9])([.!?;])/g, "$1 $2"); // detach sentence punctuation
+  // A DIGIT directly followed by the spoken word "thousand" ("105
+  // thousand", "1960 thousand") — must run BEFORE wordsToDigits() below,
+  // which tokenizes on whitespace and only recognizes a fully spelled-out
+  // word sequence ("one hundred five thousand"); given a literal digit
+  // token like "1960" (which it doesn't treat as a number word at all) it
+  // flushes that digit unchanged and then processes "thousand" against a
+  // reset accumulator, producing "1960 1000" as two SEPARATE tokens
+  // instead of the combined "1960000" — a real, silent 1000x undercount
+  // real broker speech commonly mixing digit + literal number word
+  // ("existing balance is roughly 250 thousand") would otherwise trigger.
+  s = s.replace(/(\d+(?:\.\d+)?)\s*thousand\b/g, (_m, n: string) => String(Math.round(parseFloat(n) * 1_000)));
   // Spoken credit-score shorthand ("seven-forty", "seven forty", "six eighty",
   // "seven oh five") — mortgage-broker slang for a 3-digit FICO, said as a
   // hundreds digit (six/seven/eight) plus a separate tens/teens/"oh"+unit
@@ -384,7 +395,7 @@ const VESTING_PHRASES: Array<{ value: Vesting; re: RegExp }> = [
   },
   {
     value: Vesting.Individual,
-    re: /\bindividual\b|personal name\b|borrower'?s name\b|their own name\b|husband and wife\b|\bjointly\b|joint tenants\b|tenants in common\b|individual vesting\b|vested personally\b/,
+    re: /\bindividually?\b|personal name\b|borrower'?s name\b|their own name\b|husband and wife\b|\bjointly\b|joint tenants\b|tenants in common\b|individual vesting\b|vested personally\b/,
   },
 ];
 
@@ -470,11 +481,18 @@ const EXISTING_LIEN_TERMS =
 const CASH_OUT_AMOUNT_TERMS =
   /\bcash[\s-]?out\b|\bcash back\b|\bproceeds\b|\breceive\b|\breceiving\b|\bnet\b|\bwalk away with\b|\bcash in hand\b|\bin cash\b|\bafter closing costs\b|\bafter fees\b|\bafter costs\b|\bafter closing\b|\bafter closing expenses\b|\bback at closing\b/;
 
-const CREDIT_SCORE_CONTEXT = /\bfico\b|credit score|\bscore\b|\bcredit\b/;
+const CREDIT_SCORE_CONTEXT = /\bfico\b|credit score|\bscore\b|\bcredit\b|\bsitting at\b/;
 const INCOME_CONTEXT = /\bincome\b|\bannually\b|\bearns?\b|\bsalary\b|per year|per month|\bearning\b/;
 const RENT_CONTEXT = /\brent\b|rental income\b/;
 const DISQUALIFYING_CONTEXT = new RegExp(
-  `${CREDIT_SCORE_CONTEXT.source}|${INCOME_CONTEXT.source}|${RENT_CONTEXT.source}|\\bdscr\\b|\\breserves?\\b|\\binterest rate\\b|\\brate of\\b|\\bunits?\\b|\\byears? in business\\b|\\bmonths? of seasoning\\b|\\bzip\\b`
+  `${CREDIT_SCORE_CONTEXT.source}|${INCOME_CONTEXT.source}|${RENT_CONTEXT.source}|\\bdscr\\b|\\breserves?\\b|\\binterest rate\\b|\\brate of\\b|\\bunits?\\b|\\byears? in business\\b|\\bmonths? of seasoning\\b|\\bzip\\b|\\b1099s?\\b`
+  // "1099" is added here specifically: the literal number 1099 is
+  // unambiguously the tax-form reference ("1099 only", "a 1099
+  // contractor"), never a real dollar figure at that scale — but its own
+  // narrow clause (after "independent contractor income, 1099 only" is
+  // split by the comma into two clauses) doesn't always contain "income"
+  // or another disqualifying word, so without this it can fall through to
+  // the generic unlabeled-number fallback and get misread as a loan amount.
 );
 
 // NOTE: "X percent financing"/"X percent financed"/"financing percentage of
@@ -765,7 +783,7 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   const fico = firstMatch(
     t,
     [
-      /(?:\bfico\b|credit score|\bscore\b|\bcredit\b)[^\d%]{0,32}(\d{3})\b/,
+      /(?:\bfico\b|credit score|\bscore\b|\bcredit\b|\bsitting at\b)[^\d%]{0,32}(\d{3})\b/,
       /\b(\d{3})\s*(?:\bfico\b|credit score|\bscore\b|\bcredit\b)/,
     ],
     (n) => n >= 300 && n <= 850
@@ -850,7 +868,7 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
 
   // ---- Occupancy ----------------------------------------------------------
   if (/second home|vacation home|secondary residence/.test(t)) x.occupancy = cap(Occupancy.SecondHome, "second home");
-  else if (/investment propert|rental propert|\binvestment\b|\brental\b|\binvestor\b|non[\s-]owner|tenant[\s-]occupied|airbnb|short[\s-]term rental|\bstr\b|purchas\w* to rent\b|buying (?:it |this |the property )?as an investment\b|strictly as an investment\b/.test(t)) {
+  else if (/investment propert|rental propert|\binvestment\b(?!\s+account|\s+portfolio)|\brental\b|\binvestor\b|non[\s-]owner|tenant[\s-]occupied|airbnb|short[\s-]term rental|\bstr\b|purchas\w* to rent\b|buying (?:it |this |the property )?as an investment\b|strictly as an investment\b/.test(t)) {
     x.occupancy = cap(Occupancy.Investment, "investment / rental");
     if (/airbnb|short[\s-]term rental|\bstr\b/.test(t)) x.shortTermRental = true;
   } else if (/primary residence|primary home|owner[\s-]occupied|principal residence|\bprimary\b|live in/.test(t)) {
@@ -871,7 +889,7 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
     if (n >= 5) { x.propertyType = cap(PropertyType.FivePlusUnit, unitMatch[0].trim()); x.units = n; }
     else if (n >= 2) { x.propertyType = cap(PropertyType.TwoToFourUnit, unitMatch[0].trim()); x.units = n; }
     else if (n === 1) { x.propertyType = cap(PropertyType.SingleFamily, unitMatch[0].trim()); x.units = 1; }
-  } else if (/\bpud\b/.test(t)) x.propertyType = cap(PropertyType.Pud, "PUD");
+  } else if (/\bpud\b|planned unit development/.test(t)) x.propertyType = cap(PropertyType.Pud, "PUD");
   else if (/manufactured|mobile home/.test(t)) x.propertyType = cap(PropertyType.Manufactured, "manufactured");
   else if (/\brural\b|\bfarm\b|acreage/.test(t)) x.propertyType = cap(PropertyType.Rural, "rural");
   else if (/single[\s-]?family|\bsfr\b|detached (?:home|house)|\bhouse\b/.test(t)) x.propertyType = cap(PropertyType.SingleFamily, "single-family");
@@ -887,7 +905,7 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   // across every doc type this platform models — real broker slang and
   // paraphrases for each are recognized as the same underlying concept,
   // not just the formal name of the product.
-  if (/bank statements?|bank deposits\b|qualifying off deposits\b|deposit[\s-]only income\b|deposit[\s-]based income\b/.test(t)) {
+  if (/bank statements?|bank deposits\b|qualifying off deposits\b|deposit[\s-]only income\b|deposit[\s-]based income\b|\b(?:personal|business)\s+deposits\b|deposits for income\b/.test(t)) {
     x.incomeDocType = cap(IncomeDocType.BankStatement, "bank statements");
     const months = /\b(12|24)\s*months?\b/.exec(t);
     if (months) x.bankStatementMonths = parseInt(months[1] ?? "", 10) as 12 | 24;
@@ -899,11 +917,11 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
     x.incomeDocType = cap(IncomeDocType.Dscr, "DSCR");
   } else if (/p\s*&\s*l|p and l|\bpnl\b|profit and loss|cpa[\s-]prepared statement|accountant[\s-]prepared statement/.test(t)) {
     x.incomeDocType = cap(IncomeDocType.ProfitAndLoss, "P&L");
-  } else if (/\b1099\b|independent contractor income|contractor income only/.test(t)) {
+  } else if (/\b1099s?\b|independent contractor income|contractor income only/.test(t)) {
     x.incomeDocType = cap(IncomeDocType.Income1099, "1099");
-  } else if (/asset (?:depletion|utilization|based|qualifier)|qualify(?:ing)? off (?:their |his |her )?assets\b|using (?:their |his |her )?assets to qualify\b/.test(t)) {
+  } else if (/asset (?:depletion|utilization|based|qualifier)|qualify(?:ing)? off (?:their |his |her )?assets\b|using (?:their |his |her )?assets to qualify\b|no income at all\s*,?\s*just using (?:their |his |her )?(?:investment )?accounts\b|qualifying off (?:their |his |her )?(?:investment )?(?:accounts|portfolio)\b/.test(t)) {
     x.incomeDocType = cap(IncomeDocType.AssetDepletion, "asset depletion");
-  } else if (/\bwvoe\b|written voe|verbal (?:verification|voe)|employer letter only/.test(t)) {
+  } else if (/\bwvoe\b|written voe|written verification of employment|verbal (?:verification|voe)|employer letter only/.test(t)) {
     x.incomeDocType = cap(IncomeDocType.WvoeOnly, "WVOE");
   } else if (/full[\s-]?doc(?:umentation)?|\bw-?2s?\b|tax returns?|paystubs?|traditional income doc(?:umentation)?/.test(t)) {
     x.incomeDocType = cap(IncomeDocType.FullDoc, "full documentation");
