@@ -82,6 +82,8 @@ function LenderCard({
   return (
     <div
       className={`gold-fade-up rounded-card border bg-white p-5 transition-all duration-200 hover:shadow-soft-hover ${
+        isBestMatch ? "gold-shimmer-border" : ""
+      } ${
         selected ? "border-brand-500 ring-2 ring-brand-200" : `border-surface-border ring-1 ${RING_BY_STATUS[e.status]}`
       }`}
       style={{ animationDelay: `${Math.min(rank, 8) * 70}ms` }}
@@ -350,7 +352,7 @@ export function BestLenderMatches({
           </p>
           <Link
             href="/pricing"
-            className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-600 text-white text-xs font-semibold px-4 py-2 hover:bg-brand-700"
+            className="gold-cta-glow mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-600 text-white text-xs font-semibold px-4 py-2 hover:bg-brand-700"
           >
             View plans & subscribe
           </Link>

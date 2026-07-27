@@ -67,7 +67,7 @@ export function HomeVoiceHero() {
           type="button"
           onClick={() => setVoiceActive(true)}
           aria-pressed={voiceActive}
-          className="gold-button inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold whitespace-nowrap"
+          className="gold-button gold-cta-glow inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold whitespace-nowrap"
         >
           <Mic className="h-5 w-5" /> Start Voice Scenario
         </button>

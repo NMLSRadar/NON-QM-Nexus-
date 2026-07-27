@@ -112,7 +112,7 @@ export function PricingPlans({
             <Card
               key={plan.id}
               dark
-              className={`flex flex-col ${highlighted ? "ring-2 ring-amber-400 shadow-lg" : ""}`}
+              className={`flex flex-col ${highlighted ? "ring-2 ring-amber-400 shadow-lg gold-shimmer-border" : ""}`}
             >
               {highlighted ? (
                 <span className="self-start mb-2 inline-block rounded-full bg-gradient-to-r from-amber-300 to-amber-600 text-black text-[11px] font-semibold px-2.5 py-0.5">
@@ -153,7 +153,7 @@ export function PricingPlans({
                     <button
                       type="submit"
                       className={`mt-6 w-full rounded-md text-sm font-medium px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                        highlighted ? "gold-button" : "bg-white/5 border border-amber-500/20 text-white hover:bg-white/10"
+                        highlighted ? "gold-button gold-cta-glow" : "bg-white/5 border border-amber-500/20 text-white hover:bg-white/10"
                       }`}
                     >
                       Subscribe
@@ -168,7 +168,7 @@ export function PricingPlans({
                 <Link
                   href={`/signup?next=/pricing`}
                   className={`mt-6 block text-center rounded-md text-sm font-medium px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                    highlighted ? "gold-button" : "bg-white/5 border border-amber-500/20 text-white hover:bg-white/10"
+                    highlighted ? "gold-button gold-cta-glow" : "bg-white/5 border border-amber-500/20 text-white hover:bg-white/10"
                   }`}
                 >
                   Sign up to subscribe

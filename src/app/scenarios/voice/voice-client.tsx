@@ -353,7 +353,7 @@ export default function VoiceClient() {
             disabled={supported === false || isPending}
             aria-label={listening ? "Stop listening" : "Start listening"}
             className={`h-16 w-16 rounded-full text-2xl text-white focus:outline-none focus:ring-4 focus:ring-brand-100 disabled:opacity-40 ${
-              listening ? "bg-rose-600 hover:bg-rose-700" : "bg-brand-600 hover:bg-brand-700"
+              listening ? "bg-rose-600 hover:bg-rose-700" : "bg-brand-600 hover:bg-brand-700 gold-cta-glow"
             }`}
           >
             {listening ? "■" : "🎤"}

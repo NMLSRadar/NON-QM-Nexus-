@@ -446,3 +446,23 @@ body:has(.gold-page) {
     animation: none !important;
   }
 }
+
+/* Pulsing AI glow for rectangular/pill CTAs (buttons, badges) — the
+   box-shadow analog of .gold-pulse-ring (which is ring-shaped and only
+   suits circular elements like the mic icon). Signals "this is the
+   primary, AI-driven action" without a hard border change; the glow
+   breathes slowly so it reads as "alive," not urgent/alarming. */
+.gold-cta-glow {
+  animation: gold-cta-pulse 3.2s ease-in-out infinite;
+}
+@keyframes gold-cta-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.45), 0 4px 14px -4px rgba(212, 175, 55, 0.5); }
+  50% { box-shadow: 0 0 0 10px rgba(212, 175, 55, 0), 0 4px 22px -2px rgba(212, 175, 55, 0.75); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gold-cta-glow {
+    animation: none !important;
+    box-shadow: 0 4px 14px -4px rgba(212, 175, 55, 0.5);
+  }
+}
