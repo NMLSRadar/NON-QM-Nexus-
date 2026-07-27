@@ -10,11 +10,11 @@ export default async function LoginPage({
   const { next, checkEmail } = await searchParams;
 
   return (
-    <main className="max-w-md mx-auto mt-16 px-4">
-      <h1 className="text-2xl font-semibold text-slate-900 mb-6">Sign in</h1>
+    <main className="gold-theme gold-page -mx-4 -my-10 px-4 py-16 sm:px-6 min-h-[70vh] max-w-md mx-auto">
+      <h1 className="text-2xl font-semibold text-white mb-6">Sign in</h1>
       <Card>
         {checkEmail ? (
-          <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-3 mb-4">
+          <p className="text-sm text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded p-3 mb-4">
             Check your email to confirm your account, then sign in below.
           </p>
         ) : null}
