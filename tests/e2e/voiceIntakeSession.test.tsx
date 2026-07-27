@@ -35,11 +35,12 @@ vi.mock("@/app/scenarios/voice/actions", () => ({
   getVoiceCatalog: (...args: unknown[]) => getVoiceCatalog(...args),
 }));
 
-// A transcript covering the 7 non-purpose vitals, so only loan-purpose
-// classification differs between cases and every case but the ambiguous one
-// reaches "8 of 8 captured" and auto-submits.
+// A transcript covering the 8 non-purpose vitals (including citizenship,
+// now a required core vital), so only loan-purpose classification differs
+// between cases and every case but the ambiguous one reaches "9 of 9
+// captured" and auto-submits.
 const BASE =
-  "single family primary residence worth $500,000, loan amount 350k, credit score 720, full doc income";
+  "single family primary residence worth $500,000, loan amount 350k, credit score 720, full doc income, U.S. citizen";
 
 async function typeTranscript(text: string) {
   const box = screen.getByLabelText("Transcript (editable)");
@@ -78,7 +79,7 @@ describe("Voice intake session: Purchase", () => {
       expect(tile.className).toContain("bg-emerald-50");
     });
 
-    expect(screen.getByText(/All set — 8 of 8 vitals captured/)).toHaveTextContent("purchase");
+    expect(screen.getByText(/All set — 9 of 9 vitals captured/)).toHaveTextContent("purchase");
 
     await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
     const sentExtraction = createScenarioFromVoice.mock.calls[0]![0];
@@ -126,7 +127,7 @@ describe("Voice intake session: Cash-Out Refinance", () => {
       expect(tile.className).toContain("border-emerald-200");
     });
 
-    expect(screen.getByText(/All set — 8 of 8 vitals captured/)).toHaveTextContent("cash-out refinance");
+    expect(screen.getByText(/All set — 9 of 9 vitals captured/)).toHaveTextContent("cash-out refinance");
 
     await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
     const sentExtraction = createScenarioFromVoice.mock.calls[0]![0];
@@ -146,7 +147,7 @@ describe("Voice intake session: Rate-and-Term Refinance", () => {
       expect(tile.className).toContain("border-emerald-200");
     });
 
-    expect(screen.getByText(/All set — 8 of 8 vitals captured/)).toHaveTextContent("rate-and-term refinance");
+    expect(screen.getByText(/All set — 9 of 9 vitals captured/)).toHaveTextContent("rate-and-term refinance");
 
     await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
     const sentExtraction = createScenarioFromVoice.mock.calls[0]![0];

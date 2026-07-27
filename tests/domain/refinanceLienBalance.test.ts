@@ -50,30 +50,30 @@ describe("Current loan balance: required natural-language phrasings", () => {
 describe("Current loan balance never blocks the 8-vital gate (section 6)", () => {
   it("a fully complete purchase scenario is ready to analyze with no mention of a lien balance at all", () => {
     const x = extractFromTranscript(
-      "Purchase of a single family primary residence worth $500,000, loan amount 400k, credit score 720, full doc income."
+      "Purchase of a single family primary residence worth $500,000, loan amount 400k, credit score 720, full doc income. Borrower is a U.S. citizen."
     );
     const a = assess(x);
     expect(a.complete).toBe(true);
     expect(a.readyToAnalyze).toBe(true);
-    expect(a.vitalsTotal).toBe(8);
+    expect(a.vitalsTotal).toBe(9);
     expect(x.existingLienBalance).toBeUndefined();
   });
 
   it("a fully complete refinance scenario is ready to analyze even when the lien balance is never mentioned", () => {
     const x = extractFromTranscript(
-      "This is a rate and term refinance of a single family investment property worth $500,000, loan amount 350k, credit score 700, DSCR to qualify."
+      "This is a rate and term refinance of a single family investment property worth $500,000, loan amount 350k, credit score 700, DSCR to qualify. Borrower is a U.S. citizen."
     );
     const a = assess(x);
     expect(a.complete).toBe(true);
     expect(a.readyToAnalyze).toBe(true);
-    expect(a.vitalsTotal).toBe(8); // still 8, not 9
+    expect(a.vitalsTotal).toBe(9); // still 9, not 10 — the lien balance is never a core/gating vital
   });
 });
 
 describe("Regression: currentLoanBalance must never inflate CLTV (it is being paid off, not retained)", () => {
   it("CLTV equals LTV for a straight refinance — the paid-off balance is NOT a retained subordinate lien", () => {
     const x = extractFromTranscript(
-      "This is a cash-out refinance of a single family investment property. The property is worth approximately $1,000,000. They currently owe $200,000 and want a new loan amount of $700,000. Credit score is 740. DSCR to qualify."
+      "This is a cash-out refinance of a single family investment property. The property is worth approximately $1,000,000. They currently owe $200,000 and want a new loan amount of $700,000. Credit score is 740. DSCR to qualify. Borrower is a U.S. citizen."
     );
     const a = assess(x);
     const input = buildScenarioInput(x, a);
@@ -103,7 +103,7 @@ describe("Test 2 (spec): refinance with current balance — full acceptance test
   // reach "complete and ready to analyze" per the real 8-vital gate,
   // without changing any of the spec's required calculated figures.
   const transcript =
-    "This is a cash-out refinance of a single family investment property. The property is worth approximately $1,000,000. They currently owe $200,000 and want a new loan amount of $700,000. Credit score is 740. DSCR to qualify.";
+    "This is a cash-out refinance of a single family investment property. The property is worth approximately $1,000,000. They currently owe $200,000 and want a new loan amount of $700,000. Credit score is 740. DSCR to qualify. Borrower is a U.S. citizen.";
 
   it("captures transaction type, property value, current loan balance, and requested loan amount distinctly", () => {
     const x = extractFromTranscript(transcript);

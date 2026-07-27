@@ -39,15 +39,15 @@ afterEach(() => {
   cleanup();
 });
 
-describe("Test 1 & 3 (spec): the 8 required vitals alone are enough — investor experience and vesting are optional", () => {
-  it("submits automatically with only the 8 core vitals, no investor experience or vesting mentioned", async () => {
+describe("Test 1 & 3 (spec): the 9 required vitals alone are enough — investor experience and vesting are optional", () => {
+  it("submits automatically with only the 9 core vitals, no investor experience or vesting mentioned", async () => {
     render(<VoiceClient />);
     setTranscript(
-      "Purchase of a single family investment property worth $500,000, loan amount 400k, credit score 720, DSCR to qualify."
+      "Purchase of a single family investment property worth $500,000, loan amount 400k, credit score 720, DSCR to qualify. Borrower is a U.S. citizen."
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Vitals — 8 of 8 captured/)).toBeInTheDocument();
+      expect(screen.getByText(/Vitals — 9 of 9 captured/)).toBeInTheDocument();
     });
 
     // Both optional fields show "Not mentioned" — never an error state.
@@ -81,11 +81,11 @@ describe("Test 6 (spec): purchase scenario hides the Current Loan Balance tab", 
   it("never shows a Current Loan Balance tile or manual field for a purchase", async () => {
     render(<VoiceClient />);
     setTranscript(
-      "Purchase of a single family investment property worth $500,000, loan amount 400k, credit score 720, DSCR to qualify."
+      "Purchase of a single family investment property worth $500,000, loan amount 400k, credit score 720, DSCR to qualify. Borrower is a U.S. citizen."
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Vitals — 8 of 8 captured/)).toBeInTheDocument();
+      expect(screen.getByText(/Vitals — 9 of 9 captured/)).toBeInTheDocument();
     });
 
     expect(screen.queryByText("Current loan balance")).not.toBeInTheDocument();

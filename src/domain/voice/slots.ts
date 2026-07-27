@@ -3,10 +3,15 @@ import type { Citizenship, IncomeDocType, InvestorExperience, LoanPurpose, Occup
 /**
  * Voice-intake vital slots.
  *
- * A spoken scenario must resolve all eight CORE vitals before analysis runs
- * (the user speaks 6–8 details; LTV counts as resolved when it is either
+ * A spoken scenario must resolve all NINE CORE vitals before analysis runs
+ * (the user speaks the details; LTV counts as resolved when it is either
  * stated or derivable from property value + loan amount, and any one of
- * {value, loan amount, LTV} may be derived from the other two).
+ * {value, loan amount, LTV} may be derived from the other two). Citizenship
+ * classification is a core vital too — it gates real program eligibility
+ * downstream (baseChecks.ts), so it's asked for like any other required
+ * field rather than silently defaulted; when nothing about it was ever
+ * said, it stays unresolved and the assistant keeps asking, exactly like
+ * FICO or property type.
  *
  * Three EXTRA vitals (first-time homebuyer, investor experience, title
  * vesting) are captured, highlighted, and fed into lender matching whenever
@@ -25,6 +30,7 @@ export const VITAL_KEYS = [
   "ltv",
   "fico",
   "incomeDocType",
+  "citizenship",
 ] as const;
 export type VitalKey = (typeof VITAL_KEYS)[number];
 
@@ -37,6 +43,7 @@ export const VITAL_LABELS: Record<VitalKey, string> = {
   ltv: "LTV",
   fico: "Credit score",
   incomeDocType: "Income documentation",
+  citizenship: "Citizenship classification",
 };
 
 export const VITAL_QUESTIONS: Record<VitalKey, string> = {
@@ -48,6 +55,7 @@ export const VITAL_QUESTIONS: Record<VitalKey, string> = {
   ltv: "What LTV are you targeting (or give me the loan amount and value)?",
   fico: "What's the credit score?",
   incomeDocType: "How is income documented — bank statements, DSCR, full doc, P&L, 1099, or asset depletion?",
+  citizenship: "What's the borrower's citizenship — U.S. citizen, permanent resident, non-permanent resident, ITIN borrower, or foreign national?",
 };
 
 /** Additional, non-blocking vitals — surfaced in the UI and used in

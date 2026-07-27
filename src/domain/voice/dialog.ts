@@ -150,6 +150,7 @@ export function assess(x: VoiceExtraction): Assessment {
     ltv: derived.ltv !== undefined,
     fico: x.fico !== undefined,
     incomeDocType: x.incomeDocType !== undefined,
+    citizenship: x.citizenship !== undefined,
   };
 
   const missing = VITAL_KEYS.filter((k) => !has[k]);
@@ -176,6 +177,7 @@ export function assess(x: VoiceExtraction): Assessment {
         ? `${x.bankStatementMonths ?? 12}-mo ${x.bankStatementKind ?? "business"} bank statements`
         : x.incomeDocType.source
     );
+  if (x.citizenship) filledSummary.push(citizenshipLabel(x.citizenship.value));
   // Extra (non-blocking) vitals — included in the summary whenever captured
   // so the assistant's spoken response and the Vitals tiles never disagree.
   if (x.firstTimeHomebuyer) filledSummary.push(x.firstTimeHomebuyer.value ? "first-time homebuyer" : "not a first-time homebuyer");
@@ -244,6 +246,21 @@ function vestingLabel(v: "individual" | "joint_tenants" | "llc" | "corporation" 
   return v === "joint_tenants" ? "joint tenants" : v;
 }
 
+function citizenshipLabel(v: "us_citizen" | "permanent_resident" | "non_permanent_resident" | "itin" | "foreign_national"): string {
+  switch (v) {
+    case "us_citizen":
+      return "U.S. citizen";
+    case "permanent_resident":
+      return "permanent resident";
+    case "non_permanent_resident":
+      return "non-permanent resident";
+    case "itin":
+      return "ITIN borrower";
+    case "foreign_national":
+      return "foreign national";
+  }
+}
+
 function listNaturally(items: string[]): string {
   if (items.length <= 1) return items[0] ?? "";
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
@@ -258,7 +275,7 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
   if (!a.complete) throw new Error("buildScenarioInput requires a complete assessment");
   const value = x.propertyValue?.value ?? a.derived.propertyValue;
   const loan = x.loanAmount?.value ?? a.derived.loanAmount;
-  if (value === undefined || loan === undefined || !x.loanPurpose || !x.occupancy || !x.propertyType || !x.fico || !x.incomeDocType) {
+  if (value === undefined || loan === undefined || !x.loanPurpose || !x.occupancy || !x.propertyType || !x.fico || !x.incomeDocType || !x.citizenship) {
     throw new Error("buildScenarioInput: assessment reported complete but a vital is missing");
   }
 
@@ -288,6 +305,7 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
     x.loanAmount ? `loan ← "${x.loanAmount.source}"` : `loan ← derived from LTV`,
     x.fico && `FICO ← "${x.fico.source}"`,
     x.incomeDocType && `income doc ← "${x.incomeDocType.source}"`,
+    x.citizenship && `citizenship ← "${x.citizenship.source}"`,
   ]
     .filter(Boolean)
     .join("; ");
@@ -305,7 +323,7 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
     ...(x.existingLienBalance ? { currentLoanBalance: x.existingLienBalance.value } : {}),
     fico: x.fico.value,
     incomeDocType: doc,
-    ...(x.citizenship ? { citizenship: x.citizenship.value } : {}),
+    citizenship: x.citizenship.value,
     ...(x.firstTimeInvestor !== undefined ? { firstTimeInvestor: x.firstTimeInvestor } : {}),
     ...(x.investorExperience ? { investorExperience: x.investorExperience.value } : {}),
     ...(x.firstTimeHomebuyer ? { firstTimeHomebuyer: x.firstTimeHomebuyer.value } : {}),

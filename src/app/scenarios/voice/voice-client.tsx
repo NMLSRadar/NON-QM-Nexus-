@@ -10,7 +10,7 @@ import type { Scenario } from "@/domain/types/scenario";
 import { extractFromTranscript } from "@/domain/voice/extract";
 import { assess } from "@/domain/voice/dialog";
 import { VITAL_KEYS, VITAL_LABELS, EXTRA_VITAL_KEYS, EXTRA_VITAL_LABELS, REFI_VITAL_LABEL, type Captured, type VitalKey, type ExtraVitalKey, type VoiceExtraction } from "@/domain/voice/slots";
-import type { IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
+import type { Citizenship, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
 import { createScenarioFromVoice, getVoiceCatalog } from "./actions";
 
 /* ------------------------------------------------------------------------ *
@@ -54,6 +54,7 @@ interface Overrides {
   investorExperience?: InvestorExperience;
   vesting?: Vesting;
   existingLienBalance?: number;
+  citizenship?: Citizenship;
 }
 
 function manual<T>(value: T): Captured<T> {
@@ -82,6 +83,7 @@ function applyOverrides(base: VoiceExtraction, o: Overrides): VoiceExtraction {
   }
   if (o.vesting !== undefined) x.vesting = manual(o.vesting);
   if (o.existingLienBalance !== undefined) x.existingLienBalance = manual(o.existingLienBalance);
+  if (o.citizenship !== undefined) x.citizenship = manual(o.citizenship);
   return x;
 }
 
@@ -130,6 +132,17 @@ const VESTING_OPTIONS: Array<[Vesting, string]> = [
   ["llc", "LLC"],
   ["corporation", "Corporation"],
   ["trust", "Trust"],
+];
+// The 4 categories requested by the product spec, plus Permanent Resident
+// (green card) — a real, distinct category already used by live lender
+// program eligibility data (citizenshipEligible), kept selectable so a
+// green-card borrower is never forced into one of the four.
+const CITIZENSHIP_OPTIONS: Array<[Citizenship, string]> = [
+  ["us_citizen", "U.S. Citizen"],
+  ["permanent_resident", "Permanent Resident"],
+  ["non_permanent_resident", "Non-Permanent Resident"],
+  ["itin", "ITIN Borrower"],
+  ["foreign_national", "Foreign National"],
 ];
 
 export default function VoiceClient({ autoStart = false }: { autoStart?: boolean }) {
@@ -396,6 +409,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
             : label(DOC_TYPES, effective.incomeDocType.value),
       },
     ),
+    citizenship: cell(effective.citizenship && { ...effective.citizenship, value: label(CITIZENSHIP_OPTIONS, effective.citizenship.value) }),
   };
 
   const extraVitalDisplay: Record<ExtraVitalKey, { text: string; source?: string; inferred?: boolean; filled: boolean }> = {
@@ -565,6 +579,12 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
             <Num label="Loan amount ($)" value={effective.loanAmount?.value} onChange={(n) => setOv("loanAmount", n)} />
             <Num label="LTV (%)" value={effective.statedLtv?.value} onChange={(n) => setOv("ltv", n)} />
             <Num label="FICO" value={effective.fico?.value} onChange={(n) => setOv("fico", n)} />
+            <Select
+              label="Citizenship classification"
+              value={effective.citizenship?.value ?? ""}
+              options={CITIZENSHIP_OPTIONS}
+              onChange={(v) => setOv("citizenship", v as Citizenship)}
+            />
             {effective.incomeDocType?.value === "bank_statement" && (
               <>
                 <Select label="Statement months" value={String(effective.bankStatementMonths ?? 12)} options={[["12", "12 months"], ["24", "24 months"]]} onChange={(v) => setOv("bankStatementMonths", Number(v) as 12 | 24)} />

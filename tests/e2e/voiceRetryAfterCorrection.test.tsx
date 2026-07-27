@@ -64,11 +64,11 @@ describe("Voice retry after a correction (no canAnalyze toggle required)", () =>
 
     render(<VoiceClient />);
     setTranscript(
-      "Purchase of a single family primary residence worth $500,000, loan amount 400k, credit score 720, full doc income."
+      "Purchase of a single family primary residence worth $500,000, loan amount 400k, credit score 720, full doc income. Borrower is a U.S. citizen."
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Vitals — 8 of 8 captured/)).toBeInTheDocument();
+      expect(screen.getByText(/Vitals — 9 of 9 captured/)).toBeInTheDocument();
     });
     await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
     await waitFor(() => {
@@ -101,7 +101,7 @@ describe("Voice retry after a correction (no canAnalyze toggle required)", () =>
 
     render(<VoiceClient />);
     setTranscript(
-      "Purchase of a single family primary residence worth $500,000, loan amount 400k, credit score 720, full doc income."
+      "Purchase of a single family primary residence worth $500,000, loan amount 400k, credit score 720, full doc income. Borrower is a U.S. citizen."
     );
     await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
 

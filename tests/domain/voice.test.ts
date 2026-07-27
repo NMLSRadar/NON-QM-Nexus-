@@ -9,7 +9,7 @@ import { sampleRules } from "@/data/sampleRules";
 import type { Scenario } from "@/domain/types/scenario";
 
 const FULL =
-  "This is a purchase of a single family primary residence worth $850,000, loan amount 680k, credit score 742, 12 months of business bank statements";
+  "This is a purchase of a single family primary residence worth $850,000, loan amount 680k, credit score 742, 12 months of business bank statements. Borrower is a U.S. citizen.";
 
 describe("voice extraction: number normalization", () => {
   it("converts spoken numbers, k, and millions to integers", () => {
@@ -32,12 +32,13 @@ describe("voice extraction: a full 8-vital utterance", () => {
     expect(x.incomeDocType?.value).toBe("bank_statement");
     expect(x.bankStatementMonths).toBe(12);
     expect(x.bankStatementKind).toBe("business");
+    expect(x.citizenship?.value).toBe("us_citizen");
   });
   it("assesses complete, derives LTV, and is ready to analyze", () => {
     const a = assess(x);
     expect(a.complete).toBe(true);
     expect(a.readyToAnalyze).toBe(true);
-    expect(a.vitalsFilled).toBe(8);
+    expect(a.vitalsFilled).toBe(9);
     expect(a.derived.ltv).toBe(80);
     expect(a.prompt).toContain("All set");
   });
@@ -94,12 +95,13 @@ describe("voice dialog: intuitive prompting when details are missing", () => {
     expect(a.missing).toContain("propertyValue");
     expect(a.missing).toContain("incomeDocType");
     // Loan amount is known, so the redundant standalone-LTV question is dropped.
-    expect(a.questions).toHaveLength(4);
+    // Citizenship is also missing here — a 5th question, since it's a core vital.
+    expect(a.questions).toHaveLength(5);
     expect(a.prompt).toContain("Got");
     expect(a.prompt).toContain("occupancy");
   });
   it("asks the refinance-subtype clarifier, then resolves it on merge", () => {
-    const first = extractFromTranscript("refinance my single family primary residence, value 500000, loan 350000, 700 fico, full doc");
+    const first = extractFromTranscript("refinance my single family primary residence, value 500000, loan 350000, 700 fico, full doc, U.S. citizen");
     const a1 = assess(first);
     expect(a1.complete).toBe(false);
     expect(a1.questions[0]).toBe("Is the refinance rate-and-term or cash-out?");
@@ -110,7 +112,7 @@ describe("voice dialog: intuitive prompting when details are missing", () => {
   });
   it("derives the loan amount from value + stated LTV", () => {
     const x = extractFromTranscript(
-      "rate and term refinance, condo investment property, 600000 appraised value, 75 percent ltv, 720 score, dscr"
+      "rate and term refinance, condo investment property, 600000 appraised value, 75 percent ltv, 720 score, dscr, U.S. citizen"
     );
     const a = assess(x);
     expect(a.derived.loanAmount).toBe(450_000);
@@ -118,14 +120,14 @@ describe("voice dialog: intuitive prompting when details are missing", () => {
     expect(a.readyToAnalyze).toBe(true);
   });
   it("flags an LTV that contradicts value/loan and holds auto-analysis", () => {
-    const a = assess(extractFromTranscript("purchase primary sfr, value 500000, loan amount 450000, 80% ltv, 720 fico, full doc"));
+    const a = assess(extractFromTranscript("purchase primary sfr, value 500000, loan amount 450000, 80% ltv, 720 fico, full doc, U.S. citizen"));
     expect(a.complete).toBe(true);
     expect(a.readyToAnalyze).toBe(false);
     expect(a.conflicts).toHaveLength(1);
     expect(a.conflicts[0]).toContain("90");
   });
   it("assigns unlabeled dollar figures larger→value / smaller→loan, marked inferred", () => {
-    const x = extractFromTranscript("purchase primary sfr, 720 credit, bank statements, 800000 and 600000");
+    const x = extractFromTranscript("purchase primary sfr, 720 credit, bank statements, 800000 and 600000, U.S. citizen");
     expect(x.propertyValue?.value).toBe(800_000);
     expect(x.propertyValue?.inferred).toBe(true);
     expect(x.loanAmount?.value).toBe(600_000);
@@ -158,7 +160,7 @@ describe("voice → scenario: schema round-trip and full pipeline", () => {
 
   it("produces a schema-valid payload for a DSCR refinance with derived loan amount", () => {
     const x = extractFromTranscript(
-      "rate and term refinance, condo investment property, 600000 appraised value, 75 percent ltv, 720 score, dscr"
+      "rate and term refinance, condo investment property, 600000 appraised value, 75 percent ltv, 720 score, dscr, U.S. citizen"
     );
     const input = buildScenarioInput(x, assess(x));
     expect(scenarioInputSchema.safeParse(input).success).toBe(true);

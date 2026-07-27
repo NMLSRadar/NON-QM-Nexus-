@@ -30,7 +30,7 @@ const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const hasCredentials = Boolean(SUPABASE_URL && ANON_KEY && SERVICE_ROLE_KEY);
 
-const BASE = "single family primary residence worth $500,000, loan amount 350k, credit score 720, full doc income";
+const BASE = "single family primary residence worth $500,000, loan amount 350k, credit score 720, full doc income, U.S. citizen";
 
 /** Runs a transcript through the exact same functions createScenarioFromVoice
  * uses, then persists via the real repository — bypassing only the Next.js

@@ -225,6 +225,88 @@ export function classifyInvestorExperience(t: string): { value: InvestorExperien
 }
 
 // ---------------------------------------------------------------------------
+// Citizenship / residency classifier — a required (core) vital: the
+// borrower's citizenship classification gates real program eligibility
+// (baseChecks.ts hard-fails a program whose citizenshipEligible list doesn't
+// include it), so it must be either explicitly captured or explicitly asked
+// for — never guessed when nothing is said (returns undefined, same as any
+// other unset vital).
+//
+// A single combined, ORDERED alternation (not five independent regexes) is
+// used deliberately so overlapping phrases resolve to the right, more
+// specific category instead of both matching at once:
+//   - "non-U.S. citizen" (Foreign National) contains the substring "U.S.
+//     citizen" — the Foreign National alternative is listed BEFORE the U.S.
+//     Citizen alternative, so a global left-to-right scan consumes the whole
+//     "non-U.S. citizen" phrase first and never gets a second, separate
+//     chance to match "citizen" bare inside it.
+//   - "non-permanent resident" contains the substring "permanent resident" —
+//     same fix, Non-Permanent Resident is listed before Permanent Resident.
+//
+// Multiple mentions are handled last-mention-wins (mirrors the same
+// correction semantics used for LTV/down-payment above): if the borrower
+// self-corrects ("Actually, they're not a U.S. citizen — they're an ITIN
+// borrower"), the LATER category found wins. A short negation lookback
+// ("not", "isn't", "never", "no longer") immediately before a match discards
+// that specific mention entirely, rather than mis-registering "not a U.S.
+// citizen" as an assertion of U.S. citizenship — it does NOT force any other
+// category by itself; whatever explicit category is actually stated (here,
+// "ITIN borrower") is what wins, exactly as a plain last-wins scan already
+// produces once the negated mention is discarded.
+const CITIZENSHIP_RE = new RegExp(
+  [
+    // ITIN Borrower — including the phonetic/speech-to-text variants a
+    // voice platform must tolerate: spelled letter-by-letter ("I-T-I-N"),
+    // "eye-tin", and the common STT misinterpretation "I-10" (heard as the
+    // highway number). Scoped to this mortgage-intake domain, so a bare
+    // "I-10" is treated as a mis-transcribed ITIN, not the highway.
+    String.raw`(?<itin>\bi[\s.-]*t[\s.-]*i[\s.-]*n\b|\beye[\s-]*tin\b|\bi[\s-]*10\b|\bitin\s+(?:borrower|loan)\b|\btax id\s+borrower\b|individual taxpayer id(?:entification)?(?:\s+number)?|no social security number)`,
+    // Foreign National — the "u.s." spacing must tolerate the same
+    // detached-punctuation normalization as the U.S. Citizen pattern below
+    // (normalizeTranscript turns "U.S." into "u .s ." with a space before
+    // each dot), or "non-U.S. citizen" would fail this stricter pattern and
+    // fall through to matching the plain "U.S. citizen" alternative later
+    // in the same phrase instead — silently losing the "non-" negation.
+    String.raw`(?<foreignNational>\bforeign national\b|\bfn borrower\b|\bforeign investor\b|non[\s-]?u\s*\.?\s*s\s*\.?\s*citizen\b|\binternational borrower\b|\boverseas (?:buyer|borrower|investor)\b)`,
+    // Non-Permanent Resident
+    String.raw`(?<nonPermanentResident>\bnon[\s-]*perm(?:anent)?(?:\s+resident)?\b|\bwork visa\b|\bemployment authorization\b|\bead holder\b|\btemporary resident\b|\bvisa holder\b)`,
+    // Permanent Resident (green card) — a real, distinct category already
+    // used by real lender program data (citizenshipEligible), even though
+    // it wasn't one of the four requested UI options; kept recognizable so
+    // a green-card borrower is never miscategorized into one of the four.
+    String.raw`(?<permanentResident>\bpermanent resident\b|\bgreen card(?:\s+holder)?\b)`,
+    // U.S. Citizen
+    String.raw`(?<usCitizen>\bu\s*\.?\s*s\s*\.?\s*citizen\b|\bunited states citizen\b|\bamerican citizen\b|\bnaturalized citizen\b|\bborn here\b|\bcitizen\b)`,
+  ].join("|"),
+  "gi"
+);
+const CITIZENSHIP_NEGATION_LOOKBACK = /\b(?:not|isn'?t|never|no longer)\b\s*(?:a|an)?\s*$/i;
+
+export function classifyCitizenship(t: string): { value: Citizenship; source: string } | undefined {
+  const re = new RegExp(CITIZENSHIP_RE.source, CITIZENSHIP_RE.flags);
+  let m: RegExpExecArray | null;
+  let winner: { value: Citizenship; source: string } | undefined;
+  while ((m = re.exec(t)) !== null) {
+    const before = t.slice(Math.max(0, m.index - 20), m.index);
+    if (CITIZENSHIP_NEGATION_LOOKBACK.test(before)) continue; // e.g. "not a U.S. citizen" — discard, don't assert UsCitizen
+    const g = m.groups ?? {};
+    const value = g.itin
+      ? Citizenship.Itin
+      : g.foreignNational
+        ? Citizenship.ForeignNational
+        : g.nonPermanentResident
+          ? Citizenship.NonPermanentResident
+          : g.permanentResident
+            ? Citizenship.PermanentResident
+            : g.usCitizen
+              ? Citizenship.UsCitizen
+              : undefined;
+    if (value) winner = { value, source: m[0].trim() }; // last valid match wins (self-corrections)
+  }
+  return winner;
+}
+
+// ---------------------------------------------------------------------------
 // Title vesting classifier.
 // ---------------------------------------------------------------------------
 
@@ -769,9 +851,7 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   }
 
   // ---- Borrower extras ----------------------------------------------------
-  if (/\bitin\b|individual taxpayer id(?:entification)?(?: number)?|no social security number/.test(t)) x.citizenship = cap(Citizenship.Itin, "ITIN");
-  else if (/foreign national|non[\s-]us citizen|international borrower|overseas buyer/.test(t)) x.citizenship = cap(Citizenship.ForeignNational, "foreign national");
-  else if (/\bu\s*\.?\s*s\s*\.?\s*citizen\b|united states citizen\b|american citizen\b/.test(t)) x.citizenship = cap(Citizenship.UsCitizen, "U.S. citizen");
+  x.citizenship = classifyCitizenship(t);
 
   const investorExperience = classifyInvestorExperience(t);
   if (investorExperience) {

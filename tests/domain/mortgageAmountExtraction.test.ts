@@ -154,7 +154,7 @@ describe("Required acceptance tests (spec items 14.A-14.J)", () => {
 describe("Regression: the reported screenshot transcript (multi-sentence, LTV stated far from the value)", () => {
   it("captures property value even when separated from its keyword by other complete sentences", () => {
     const raw =
-      "Good afternoon. I have a first-time home buyer looking to purchase their first investment property at 80% LTV. Their credit score is 740, and they are trying to use DSCR to qualify. Property value is estimated to be about 600,000, and it is a single-family residence.";
+      "Good afternoon. I have a first-time home buyer looking to purchase their first investment property at 80% LTV. Their credit score is 740, and they are trying to use DSCR to qualify. Property value is estimated to be about 600,000, and it is a single-family residence. Borrower is a U.S. citizen.";
     const x = extractFromTranscript(raw);
     expect(x.propertyValue?.value).toBe(600_000);
     expect(x.statedLtv?.value).toBe(80);
