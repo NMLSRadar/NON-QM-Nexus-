@@ -88,6 +88,20 @@ export function assess(x: VoiceExtraction): Assessment {
   let loan = x.loanAmount?.value;
   const stated = x.statedLtv?.value;
 
+  // Cash-out refinance derivation: Property Value + Current Mortgage
+  // Balance + Cash Requested -> Estimated New Loan Amount -> Estimated LTV.
+  // Takes priority over the generic value/loan/LTV algebra below whenever
+  // no loan amount or LTV was stated directly but the two refinance-
+  // specific figures were — this is the single most common way a real
+  // cash-out refinance is actually described ("they owe $300,000 and want
+  // $250,000 cash after closing costs" — never a loan amount or LTV
+  // stated at all, since the broker doesn't do that math out loud).
+  if (loan === undefined && stated === undefined && value !== undefined && x.existingLienBalance !== undefined && x.requestedCashOut !== undefined) {
+    loan = Math.round(x.existingLienBalance.value + x.requestedCashOut.value);
+    derived.loanAmount = loan;
+    derived.ltv = round2((loan / value) * 100);
+  }
+
   if (value && loan) {
     derived.ltv = round2((loan / value) * 100);
     if (stated !== undefined && Math.abs(stated - derived.ltv) > 1) {

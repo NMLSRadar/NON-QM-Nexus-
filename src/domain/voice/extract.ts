@@ -64,7 +64,26 @@ function unitToNumber(token: string): number {
 
 export function normalizeTranscript(raw: string): string {
   let s = ` ${raw.toLowerCase()} `;
-  s = s.replace(/(\d),(?=\d{3}\b)/g, "$1"); // 850,000 -> 850000 (before any comma splitting)
+  s = s.replace(/\.{2,}/g, " "); // collapse an ellipsis ("Seven...") to a space BEFORE correction-stripping below, so it never acts as a false sentence boundary that blocks the lookback from reaching the misspoken word
+  s = s.replace(/(\d),(?=\d{3}\b)/g, "$1"); // 850,000 -> 850000 (BEFORE correction-stripping below, so a thousands-separator comma inside a number is never mistaken for a real clause boundary)
+  // Mid-speech self-corrections ("actually...", "excuse me...", "I mean...",
+  // "let me correct that...", "my mistake...", "sorry...") — a broker
+  // restating a value mid-sentence should have ONLY the corrected value
+  // extracted, never the misspoken one before it. Removes ONLY the single
+  // token immediately preceding the correction marker (e.g. "700," /
+  // "seven" / "down,") along with the marker phrase itself — deliberately
+  // NOT a broad multi-word/character span, which would also delete any
+  // LABEL word earlier in the same clause ("credit score is 700, let me
+  // correct that, 720" must become "credit score is 720", not just "720"
+  // with the "credit score is" label gone too, or the FICO extractor has
+  // no context word left to recognize the corrected number by). When the
+  // misspoken value was itself multi-word ("twenty percent down, I mean,
+  // twenty-five percent down"), only the LAST word of it ("down") is
+  // removed, but that's enough — "twenty percent" is orphaned from the
+  // "down" it needed to be classified as a down payment at all, so it's
+  // silently ignored by every classifier while the corrected "twenty-five
+  // percent down" remains intact and gets picked up normally.
+  s = s.replace(/[\w$%]+,?\s*(?:actually|excuse me|i mean|let me correct that|my mistake|correction|sorry)\b,?\s*/gi, "");
   s = s.replace(/,/g, " , "); // remaining commas become separators
   s = s.replace(/([a-z0-9])([.!?;])/g, "$1 $2"); // detach sentence punctuation
   // Spoken credit-score shorthand ("seven-forty", "seven forty", "six eighty",
@@ -123,7 +142,7 @@ function cap<T>(value: T, source: string, inferred = false): Captured<T> {
 // ---------------------------------------------------------------------------
 
 const CASH_OUT_PHRASES =
-  /cash[\s-]?outs?\b|cash[\s-]?out refi(?:nance)?\b|take (?:some |the )?cash out\b|pull(?:ing)? cash out\b|pull(?:ing)?[^.!?]{0,25}\bout\b|pull(?:ing)? equity\b|access(?:ing)? equity\b|tap(?:ping)? into equity\b|receiv(?:e|ing) proceeds\b|consolidat\w* debt with equity\b|pay(?:ing)? off debt using the property\b|refinanc\w*.{0,20}receiv\w* cash back\b/;
+  /cash[\s-]?outs?\b|cash[\s-]?out refi(?:nance)?\b|take (?:some |the )?cash out\b|pull(?:ing)? cash out\b|pull(?:ing)?[^.!?]{0,25}\bout\b|pull(?:ing)? equity\b|access(?:ing)? equity\b|tap(?:ping)? into equity\b|leverag(?:e|ing) (?:the )?equity\b|equity (?:take[\s-]?out|withdrawal)\b|refinanc\w*[^.!?]{0,25}\bfor cash\b|refinanc\w*[^.!?]{0,25}\breceiv\w* cash\b|refinanc\w*[^.!?]{0,25}\ba larger loan\b|receiv(?:e|ing) proceeds\b|consolidat\w* debt with equity\b|pay(?:ing)? off debt using the property\b|refinanc\w*.{0,20}receiv\w* cash back\b/;
 
 // Explicit negations of cash-out language ("without cash out", "no cash
 // back", "not taking cash back") must never be matched by CASH_OUT_PHRASES
@@ -176,7 +195,7 @@ export function classifyLoanPurpose(t: string): LoanPurposeClassification | unde
 const NOT_FIRST_TIME_BUYER_PHRASES =
   /not a first[\s-]?time (?:home\s?)?buyer\b|currently owns? a home\b|has owned property before\b|previously owned a primary residence\b/;
 const FIRST_TIME_BUYER_PHRASES =
-  /first[\s-]?time (?:home\s?)?buyer\b|first home\b|first house\b|never owned a home\b|never owned before\b|has not owned a home before\b|hasn't owned a home\b|buying (?:their|his|her) first (?:primary residence|home|house)\b|buying their first house\b/;
+  /first[\s-]?time (?:home\s?)?buyer\b|first home\b|first house\b|first purchase\b|never owned a home\b|never owned before\b|never purchased a home\b|never purchased before\b|has not owned a home before\b|hasn't owned a home\b|buying (?:their|his|her) first (?:primary residence|home|house)\b|buying their first house\b/;
 
 export function classifyFirstTimeHomebuyer(t: string): { value: boolean; source: string } | undefined {
   // Negative phrasing is checked first so "not a first-time homebuyer" doesn't
@@ -280,7 +299,7 @@ const PROPERTY_VALUE_TERMS =
 const PROPERTY_VALUE_WEAK_TERMS = /\bpurchase\b|\bproperty\b|\bhome\b|\bhouse\b|\bcondo\b/;
 
 const LOAN_AMOUNT_TERMS =
-  /\brequested loan amount\b|\bloan amount\b|\bmortgage amount\b|\bfinancing amount\b|\bamount financed\b|\bnew loan\b|\bproposed loan\b|\bloan request\b|\bborrower needs?\b|\blooking to borrow\b|\bwants? to borrow\b|\bneeds? to finance\b|\blooking to finance\b|\bwants? to finance\b|\bunpaid principal balance\b|\bfinancing\b|\bborrow\b|\bloan\b/;
+  /\brequested loan amount\b|\bloan amount\b|\bmortgage amount\b|\bfinancing amount\b|\bamount financed\b|\bnew loan\b|\bproposed loan\b|\bloan request\b|\bborrower needs?\b|\blooking to borrow\b|\bwants? to borrow\b|\bneeds? to finance\b|\blooking to finance\b|\bwants? to finance\b|\bfinancing\b|\bborrow\b|\bloan\b/;
 // The specific phrases only (no bare "loan"/"borrow"/"financing") — used
 // instead of the full set above whenever the clause already contains an
 // EXISTING_LIEN_TERMS phrase, since those phrases (e.g. "current loan
@@ -289,7 +308,7 @@ const LOAN_AMOUNT_TERMS =
 // characters closer to the number than the full phrase's start — would
 // win by raw distance and misclassify a lien balance as the new loan.
 const LOAN_AMOUNT_STRONG_TERMS =
-  /\brequested loan amount\b|\bloan amount\b|\bmortgage amount\b|\bfinancing amount\b|\bamount financed\b|\bnew loan\b|\bproposed loan\b|\bloan request\b|\bborrower needs?\b|\blooking to borrow\b|\bwants? to borrow\b|\bneeds? to finance\b|\blooking to finance\b|\bwants? to finance\b|\bunpaid principal balance\b/;
+  /\brequested loan amount\b|\bloan amount\b|\bmortgage amount\b|\bfinancing amount\b|\bamount financed\b|\bnew loan\b|\bproposed loan\b|\bloan request\b|\bborrower needs?\b|\blooking to borrow\b|\bwants? to borrow\b|\bneeds? to finance\b|\blooking to finance\b|\bwants? to finance\b/;
 
 // Refinance-only: what the borrower currently owes on the subject property
 // — distinct from LOAN_AMOUNT_TERMS above (the NEW requested loan). Getting
@@ -298,9 +317,17 @@ const LOAN_AMOUNT_STRONG_TERMS =
 // and disambiguated the same way property value / loan amount / cash-out
 // are, never by simple keyword adjacency.
 const EXISTING_LIEN_TERMS =
-  /\bcurrent loan balance\b|\bcurrent mortgage balance\b|\bexisting mortgage balance\b|\bexisting loan balance\b|\bamount (?:they |he |she )?still owed?\b|\bstill owed?\b|\bstill owes\b|\bborrower still owes\b|\bpayoff amount\b|\bestimated payoff\b|\bcurrent payoff\b|\bremaining balance\b|\bbalance on the property\b|\bfirst mortgage balance\b|\bexisting first lien\b|\bexisting lien\b|\bdebt currently secured by the property\b|\bthey owe\b|\bhe owes\b|\bshe owes\b|\bcurrently owe[sd]?\b/;
+  /\bcurrent loan balance\b|\bcurrent mortgage balance\b|\bexisting mortgage balance\b|\bexisting loan balance\b|\bmortgage balance\b|\bcurrent balance\b|\bexisting balance\b|\bcurrent mortgage\b|\bexisting mortgage\b|\bexisting loan\b|\bremaining mortgage\b|\bfirst mortgage\b|\bunpaid principal balance\b|\bamount (?:they |he |she )?still owed?\b|\bstill owed?\b|\bstill owes\b|\bborrower still owes\b|\bpayoff\b|\bpayoff amount\b|\bestimated payoff\b|\bcurrent payoff\b|\bremaining balance\b|\bbalance on the property\b|\bfirst mortgage balance\b|\bexisting first lien\b|\bexisting lien\b|\bdebt currently secured by the property\b|\bthey owe\b|\bhe owes\b|\bshe owes\b|\bcurrently owe[sd]?\b|\bowed?\b|\bowes\b/;
 
-const CASH_OUT_AMOUNT_TERMS = /\bcash[\s-]?out\b|\bcash back\b|\bproceeds\b/;
+// Requested cash-out proceeds — the DOLLAR figure a cash-out refinance
+// borrower wants in hand. Broadened beyond the literal "cash out"/"cash
+// back"/"proceeds" phrases to the many equivalent ways a broker actually
+// says this ("receive $X", "net $X", "walk away with $X", "$X after
+// closing costs/fees/costs", "cash in hand") — real transcripts routinely
+// state the amount with NONE of the three original phrases anywhere near
+// it (e.g. "would like to receive $250,000 in cash after closing costs").
+const CASH_OUT_AMOUNT_TERMS =
+  /\bcash[\s-]?out\b|\bcash back\b|\bproceeds\b|\breceive\b|\breceiving\b|\bnet\b|\bwalk away with\b|\bcash in hand\b|\bin cash\b|\bafter closing costs\b|\bafter fees\b|\bafter costs\b|\bafter closing\b|\bafter closing expenses\b/;
 
 const CREDIT_SCORE_CONTEXT = /\bfico\b|credit score|\bscore\b|\bcredit\b/;
 const INCOME_CONTEXT = /\bincome\b|\bannually\b|\bearns?\b|\bsalary\b|per year|per month|\bearning\b/;
@@ -318,7 +345,19 @@ const DISQUALIFYING_CONTEXT = new RegExp(
 // into an assumed 20% LTV).
 const DOWN_PAYMENT_TERMS = /\bdown payment\b|\bputting down\b|\bput down\b|\bequity position\b|\bminimum down\b|\bdown\b/;
 const LTV_DIRECT_TERMS =
-  /\bltv\b|loan[\s-]*to[\s-]*value|\bleverage\b|\bpercent(?:age)? financ(?:ed|ing)\b|\bfinanc(?:ed|ing) percent(?:age)?\b|\bfinanc(?:e|ing|ed)\b[^.!?;]{0,20}\bpercent(?:age)?\b|\bpercent(?:age)?\b[^.!?;]{0,20}\bfinanc(?:e|ing|ed)\b/;
+  /\bltv\b|loan[\s-]*to[\s-]*value|\bleverage\b|\bpercent(?:age)? financ(?:ed|ing)\b|\bfinanc(?:ed|ing) percent(?:age)?\b/;
+// The reversed word-order variant ("they'll finance eighty percent", with
+// the number sitting between "finance" and "percent") needs a wider,
+// bounded character gap to bridge that word order — but that gap is wide
+// enough to also bridge an UNRELATED "and"-joined clause in the same
+// sentence ("finance seventy-five percent AND put twenty-five percent
+// down" — checking this pattern at the SENTENCE level would wrongly make
+// the down-payment clause's "25" look like it's also "X percent
+// financing", since the earlier clause's "finance...percent" text is
+// still physically present somewhere in that wider sentence scope). Kept
+// as a separate, CLAUSE-ONLY check for exactly that reason — never tested
+// against the wider `sentence` fallback the way LTV_DIRECT_TERMS above is.
+const LTV_DIRECT_REVERSED_CLAUSE_ONLY = /\bfinanc(?:e|ing|ed)\b[^.!?;]{0,20}\bpercent(?:age)?\b|\bpercent(?:age)?\b[^.!?;]{0,20}\bfinanc(?:e|ing|ed)\b/;
 // Dollar-DENOMINATED down payment ("putting $100,000 down", "$50k down
 // payment", "bringing $80,000 to closing") — previously had no home in the
 // dollar-band classifier at all (only a PERCENT-based down payment, e.g.
@@ -407,6 +446,17 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
   const sentenceBoundaries = findBoundaries(t, /\.|\?|!/);
 
   // ---- percent-band: LTV stated directly, or down payment / equity -------
+  // Deliberately keeps scanning ALL matching candidates and lets the LAST
+  // one win (no `break` on first match) rather than stopping at the first
+  // qualifying percentage in the transcript. Two percent candidates can
+  // legitimately end up sharing one clause after a mid-speech correction
+  // is stripped ("twenty percent down, I mean, twenty-five percent down"
+  // becomes one clause with a single trailing "down" once the misspoken
+  // "down," and the correction phrase are removed) — first-match-wins
+  // would silently keep the WRONG, earlier value in that case. Last-wins
+  // is also the correct default with no correction at all: if a broker
+  // restates a number in natural speech, the later figure is the one that
+  // was meant to stick.
   let ltv: { value: number; source: string } | undefined;
   const percentRe = /\$?(\d{1,3}(?:\.\d+)?)\s*(?:%|percent)?\b/g;
   let pm: RegExpExecArray | null;
@@ -417,13 +467,12 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
     const sentRange = rangeAround(pm.index, pm[0].length, sentenceBoundaries, t.length);
     const clause = t.slice(clauseRange.start, clauseRange.end);
     const sentence = t.slice(sentRange.start, sentRange.end);
-    if (LTV_DIRECT_TERMS.test(clause) || LTV_DIRECT_TERMS.test(sentence)) {
+    if (LTV_DIRECT_TERMS.test(clause) || LTV_DIRECT_TERMS.test(sentence) || LTV_DIRECT_REVERSED_CLAUSE_ONLY.test(clause)) {
       ltv = { value: n, source: clause.trim() || sentence.trim() };
-      break;
+      continue;
     }
     if (DOWN_PAYMENT_TERMS.test(clause) || DOWN_PAYMENT_TERMS.test(sentence)) {
       ltv = { value: round2ForLtv(100 - n), source: `${clause.trim() || sentence.trim()} (down payment converted to LTV)` };
-      break;
     }
   }
 
@@ -620,6 +669,20 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   if (purposeResult) {
     x.loanPurpose = cap(purposeResult.value, purposeResult.source, purposeResult.inferred);
     if (purposeResult.pendingSubtype) x.refinancePendingSubtype = true;
+  } else if (x.requestedCashOut) {
+    // A real requested cash-out dollar amount was captured — receiving
+    // cash proceeds on a refinance IS a cash-out refinance by definition,
+    // even when no literal "cash-out"/"cash-out refi" label was ever
+    // spoken (e.g. "...owe $300,000 and want $250,000 cash after closing
+    // costs" never says the words "cash-out" at all).
+    x.loanPurpose = cap(LoanPurpose.CashOutRefinance, `inferred from a stated cash-out amount ($${x.requestedCashOut.value})`, true);
+  } else if (x.existingLienBalance) {
+    // A stated existing mortgage balance/payoff on the subject property
+    // can only mean a refinance (a purchase has no existing lien to
+    // refer to) — pending subtype since no cash-out amount was found to
+    // resolve cash-out vs. plain rate-and-term.
+    x.loanPurpose = cap(LoanPurpose.RateAndTermRefinance, `inferred from a stated existing mortgage balance ($${x.existingLienBalance.value}) — no purchase has an existing lien`, true);
+    x.refinancePendingSubtype = true;
   } else {
     // No explicit purchase/refinance language at all — but "first-time
     // homebuyer" (in any of its phrasings) is only ever possible on a
@@ -632,10 +695,21 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
       x.loanPurpose = cap(LoanPurpose.Purchase, `inferred from "${fthbSignal.source}" (a first-time buyer can only be purchasing)`, true);
     }
   }
+  // A generic "refinance"/"refi" with no subtype language ALSO resolves
+  // immediately once a real cash-out dollar amount was separately
+  // captured — the broker never needs to be asked "cash-out or
+  // rate-and-term?" when they already stated an actual amount they want
+  // in hand (e.g. "Need some refinance options... want $250,000 cash
+  // after closing" — "refinance" alone only matched the generic/pending
+  // phrase above, but the cash amount makes the subtype unambiguous).
+  if (x.refinancePendingSubtype && x.requestedCashOut) {
+    x.loanPurpose = cap(LoanPurpose.CashOutRefinance, `inferred from a stated cash-out amount ($${x.requestedCashOut.value})`, true);
+    x.refinancePendingSubtype = false;
+  }
 
   // ---- Occupancy ----------------------------------------------------------
   if (/second home|vacation home|secondary residence/.test(t)) x.occupancy = cap(Occupancy.SecondHome, "second home");
-  else if (/investment propert|rental propert|\binvestment\b|\brental\b|\binvestor\b|non[\s-]owner|tenant[\s-]occupied|airbnb|short[\s-]term rental|\bstr\b/.test(t)) {
+  else if (/investment propert|rental propert|\binvestment\b|\brental\b|\binvestor\b|non[\s-]owner|tenant[\s-]occupied|airbnb|short[\s-]term rental|\bstr\b|purchas\w* to rent\b|buying (?:it |this |the property )?as an investment\b|strictly as an investment\b/.test(t)) {
     x.occupancy = cap(Occupancy.Investment, "investment / rental");
     if (/airbnb|short[\s-]term rental|\bstr\b/.test(t)) x.shortTermRental = true;
   } else if (/primary residence|primary home|owner[\s-]occupied|principal residence|\bprimary\b|live in/.test(t)) {
@@ -697,6 +771,7 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   // ---- Borrower extras ----------------------------------------------------
   if (/\bitin\b|individual taxpayer id(?:entification)?(?: number)?|no social security number/.test(t)) x.citizenship = cap(Citizenship.Itin, "ITIN");
   else if (/foreign national|non[\s-]us citizen|international borrower|overseas buyer/.test(t)) x.citizenship = cap(Citizenship.ForeignNational, "foreign national");
+  else if (/\bu\s*\.?\s*s\s*\.?\s*citizen\b|united states citizen\b|american citizen\b/.test(t)) x.citizenship = cap(Citizenship.UsCitizen, "U.S. citizen");
 
   const investorExperience = classifyInvestorExperience(t);
   if (investorExperience) {
