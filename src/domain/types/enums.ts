@@ -28,6 +28,7 @@ export const PropertyType = {
   Pud: "pud",
   Manufactured: "manufactured",
   Rural: "rural",
+  Condotel: "condotel",
 } as const;
 export type PropertyType = (typeof PropertyType)[keyof typeof PropertyType];
 

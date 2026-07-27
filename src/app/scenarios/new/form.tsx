@@ -208,6 +208,7 @@ export function ScenarioForm() {
             <option value="pud">PUD</option>
             <option value="rural">Rural</option>
             <option value="manufactured">Manufactured</option>
+            <option value="condotel">Condotel</option>
           </select>
         </Field>
         <Field name="purchasePrice" title="Purchase price ($)">

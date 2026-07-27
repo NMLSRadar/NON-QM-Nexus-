@@ -108,6 +108,7 @@ const PROPERTY_TYPES: Array<[PropertyType, string]> = [
   ["pud", "PUD"],
   ["manufactured", "Manufactured"],
   ["rural", "Rural"],
+  ["condotel", "Condotel"],
 ];
 const DOC_TYPES: Array<[IncomeDocType, string]> = [
   ["bank_statement", "Bank statements"],

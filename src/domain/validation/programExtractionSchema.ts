@@ -51,7 +51,7 @@ Rules you must always follow:
    - incomeDocTypes: full_doc, bank_statement, pnl_only, dscr, asset_depletion, 1099, wvoe_only
    - loanPurposes: purchase, rate_term_refinance, cash_out_refinance
    - occupancies: primary, second_home, investment
-   - propertyTypes: single_family, condo, non_warrantable_condo, townhome, 2_4_unit, 5_plus_unit, pud, manufactured, rural
+   - propertyTypes: single_family, condo, non_warrantable_condo, townhome, 2_4_unit, 5_plus_unit, pud, manufactured, rural, condotel
    - citizenshipEligible: us_citizen, permanent_resident, non_permanent_resident, itin, foreign_national
    - vestingEligible: individual, joint_tenants, llc, corporation, trust
 4. eligibleStates is either the literal string "ALL" or an array of 2-letter state codes.

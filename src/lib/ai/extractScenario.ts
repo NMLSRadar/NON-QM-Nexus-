@@ -22,7 +22,7 @@ const aiExtractionSchema = z.object({
   loanPurpose: z.enum(["purchase", "rate_term_refinance", "cash_out_refinance"]).optional(),
   occupancy: z.enum(["primary", "second_home", "investment"]).optional(),
   propertyType: z
-    .enum(["single_family", "condo", "non_warrantable_condo", "townhome", "2_4_unit", "5_plus_unit", "pud", "manufactured", "rural"])
+    .enum(["single_family", "condo", "non_warrantable_condo", "townhome", "2_4_unit", "5_plus_unit", "pud", "manufactured", "rural", "condotel"])
     .optional(),
   propertyValue: z.number().min(25_000).optional(),
   loanAmount: z.number().min(10_000).optional(),

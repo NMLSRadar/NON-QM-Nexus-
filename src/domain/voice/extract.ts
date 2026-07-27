@@ -555,6 +555,7 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   // ---- Property type ------------------------------------------------------
   const unitMatch = /\b(\d{1,2})\s*(?:to\s*4\s*)?units?\b/.exec(t);
   if (/non[\s-]?warrantable/.test(t)) x.propertyType = cap(PropertyType.NonWarrantableCondo, "non-warrantable condo");
+  else if (/condo[\s-]?tel|\bpudtel\b/.test(t)) x.propertyType = cap(PropertyType.Condotel, "condotel");
   else if (/condo(?:minium)?s?\b/.test(t)) x.propertyType = cap(PropertyType.Condo, "condo");
   else if (/town\s?(?:home|house)/.test(t)) x.propertyType = cap(PropertyType.Townhome, "townhome");
   else if (/\bduplex\b/.test(t)) { x.propertyType = cap(PropertyType.TwoToFourUnit, "duplex"); x.units = 2; }
