@@ -9,6 +9,8 @@ import { PwaRegister } from "@/components/pwa-register";
 import { BuildVersionGuard } from "@/components/build-version-guard";
 import { PrimaryNav } from "@/components/primary-nav";
 import { GlobalAmbientEngine } from "@/components/global-ambient-engine";
+import { AiAssistantWidget } from "@/components/ai-assistant-widget";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "NON-QM Nexus",
@@ -32,7 +34,12 @@ export const viewport: Viewport = {
   themeColor: "#060606",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col bg-surface-bg text-ink-primary">
@@ -76,6 +83,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </div>
         </footer>
+        {user && <AiAssistantWidget />}
       </body>
     </html>
   );

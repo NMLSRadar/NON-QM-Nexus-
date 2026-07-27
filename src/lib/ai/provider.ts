@@ -17,7 +17,7 @@ import { z } from "zod";
  */
 
 export interface AiMessage {
-  role: "system" | "user";
+  role: "system" | "user" | "assistant";
   content: string;
 }
 
@@ -95,7 +95,7 @@ class AnthropicProvider implements AiProvider {
     if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured");
 
     const system = request.messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
-    const user = request.messages.filter((m) => m.role === "user");
+    const conversation = request.messages.filter((m) => m.role !== "system");
 
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -109,7 +109,7 @@ class AnthropicProvider implements AiProvider {
         max_tokens: request.maxTokens ?? 1500,
         temperature: request.temperature ?? 0.2,
         system,
-        messages: user.map((m) => ({ role: "user", content: m.content })),
+        messages: conversation.map((m) => ({ role: m.role, content: m.content })),
       }),
     });
     if (!res.ok) throw new Error(`Anthropic API error: ${res.status}`);
