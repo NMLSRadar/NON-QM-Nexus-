@@ -1,4 +1,4 @@
-import { Mic, Sparkles, ClipboardList } from "lucide-react";
+import { Mic, Sparkles, ClipboardList, Folder } from "lucide-react";
 import Link from "next/link";
 import { analyzeScenario } from "@/domain/analyze";
 import { getCurrentOrganizationId, getRepository } from "@/lib/session";
@@ -37,12 +37,19 @@ export default async function ScenariosPage() {
 
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
-      <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-[#0a0a0b] p-6 sm:p-8">
+      <div className="gold-scenarios-panel relative overflow-hidden p-6 sm:p-8">
         <div className="gold-ambient" />
         <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">Scenarios</h1>
-            <p className="mt-2 text-sm sm:text-base text-slate-400">Manage and organize your borrower scenarios.</p>
+          <div className="flex items-start gap-4">
+            <span className="gold-header-icon relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full">
+              <Folder className="h-6 w-6 text-amber-300" />
+            </span>
+            <div>
+              <h1 className="text-[32px] font-bold leading-tight tracking-tight text-white">Scenarios</h1>
+              <p className="mt-1 text-sm sm:text-base text-slate-400">
+                Manage and organize your <span className="font-semibold text-amber-300">borrower scenarios</span>.
+              </p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
@@ -61,8 +68,8 @@ export default async function ScenariosPage() {
         </div>
       </div>
 
-      <div className="light-surface rounded-2xl bg-white p-4 sm:p-6 shadow-xl">
-        <ScenarioBrowser rows={rows} />
+      <div className="gold-scenarios-panel p-4 sm:p-6">
+        <ScenarioBrowser rows={rows} variant="dark" />
       </div>
 
       <div className="gold-panel rounded-2xl p-6">

@@ -8,8 +8,11 @@ type SortKey = "updated" | "name" | "loanAmount";
 
 /** Client-side search + sort over the already-fetched scenario list — no
  * new data fetching or API surface, just interaction on data the server
- * component already loaded (see src/app/scenarios/page.tsx). */
-export function ScenarioBrowser({ rows }: { rows: ScenarioRowData[] }) {
+ * component already loaded (see src/app/scenarios/page.tsx). `variant`
+ * mirrors ScenarioTable's — default "light" keeps the original look for
+ * any future caller; the /scenarios page itself opts into "dark" to match
+ * the Dashboard's premium black/gold redesign. */
+export function ScenarioBrowser({ rows, variant = "light" }: { rows: ScenarioRowData[]; variant?: "light" | "dark" }) {
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updated");
 
@@ -31,26 +34,36 @@ export function ScenarioBrowser({ rows }: { rows: ScenarioRowData[] }) {
     return sorted;
   }, [rows, query, sortKey]);
 
+  const dark = variant === "dark";
+
   return (
     <div>
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-secondary" aria-hidden />
+          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${dark ? "text-slate-500" : "text-ink-secondary"}`} aria-hidden />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search scenarios, borrowers, or states…"
-            className="w-full rounded-control border border-surface-border bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className={
+              dark
+                ? "w-full rounded-control border border-amber-500/20 bg-black/40 pl-9 pr-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+                : "w-full rounded-control border border-surface-border bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            }
           />
         </div>
-        <label className="flex items-center gap-2 text-sm text-ink-secondary">
+        <label className={`flex items-center gap-2 text-sm ${dark ? "text-slate-400" : "text-ink-secondary"}`}>
           <SlidersHorizontal className="h-4 w-4" aria-hidden />
           <span className="sr-only">Sort by</span>
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value as SortKey)}
-            className="rounded-control border border-surface-border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className={
+              dark
+                ? "rounded-control border border-amber-500/20 bg-black/40 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+                : "rounded-control border border-surface-border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            }
           >
             <option value="updated">Recently updated</option>
             <option value="name">Name (A–Z)</option>
@@ -60,9 +73,9 @@ export function ScenarioBrowser({ rows }: { rows: ScenarioRowData[] }) {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="py-8 text-center text-sm text-ink-secondary">No scenarios match &quot;{query}&quot;.</p>
+        <p className={`py-8 text-center text-sm ${dark ? "text-slate-400" : "text-ink-secondary"}`}>No scenarios match &quot;{query}&quot;.</p>
       ) : (
-        <ScenarioTable rows={filtered} />
+        <ScenarioTable rows={filtered} variant={variant} />
       )}
     </div>
   );
