@@ -67,6 +67,23 @@ export function normalizeTranscript(raw: string): string {
   s = s.replace(/(\d),(?=\d{3}\b)/g, "$1"); // 850,000 -> 850000 (before any comma splitting)
   s = s.replace(/,/g, " , "); // remaining commas become separators
   s = s.replace(/([a-z0-9])([.!?;])/g, "$1 $2"); // detach sentence punctuation
+  // Spoken credit-score shorthand ("seven-forty", "seven forty", "six eighty",
+  // "seven oh five") — mortgage-broker slang for a 3-digit FICO, said as a
+  // hundreds digit (six/seven/eight) plus a separate tens/teens/"oh"+unit
+  // word, NEVER as a proper "hundred"-grammar number. The generic word-to-
+  // number pass below would otherwise just ADD the two words together
+  // ("seven" + "forty" = 47, instead of 740), since normal English number
+  // grammar has no other way to combine them. Detected and converted to a
+  // literal 3-digit number BEFORE that generic pass runs.
+  s = s.replace(
+    /\b(six|seven|eight)[\s-](oh|zero|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[\s-](one|two|three|four|five|six|seven|eight|nine))?\b/g,
+    (_m, hundreds: string, tensWord: string, unitWord?: string) => {
+      const hundredsDigit = (UNITS[hundreds] as number) * 100;
+      const tens = tensWord === "oh" || tensWord === "zero" ? 0 : (TEENS[tensWord] as number) ?? (TENS[tensWord] as number);
+      const unit = unitWord ? (UNITS[unitWord] as number) : 0;
+      return String(hundredsDigit + tens + unit);
+    }
+  );
   // A trailing hyphenated non-number word ("six-hundred-thousand-dollar
   // range") otherwise invalidates the ENTIRE hyphen-joined token for
   // wordsToDigits below, since it splits on "-" and requires every part to
@@ -83,6 +100,9 @@ export function normalizeTranscript(raw: string): string {
   s = s.replace(/(\d+)\s+point\s+(\d+)/g, "$1.$2");
   s = s.replace(/(\d+(?:\.\d+)?)\s*(?:million|mil\b|mm\b)/g, (_m, n: string) => String(Math.round(parseFloat(n) * 1_000_000)));
   s = s.replace(/(\d+(?:\.\d+)?)\s*k\b/g, (_m, n: string) => String(Math.round(parseFloat(n) * 1_000)));
+  // "two hundred grand" -> "200 grand" -> 200000 ("grand" is common mortgage-
+  // broker slang for thousands, same meaning as "k").
+  s = s.replace(/(\d+(?:\.\d+)?)\s*grand\b/g, (_m, n: string) => String(Math.round(parseFloat(n) * 1_000)));
   s = s.replace(/\$\s+/g, "$");
   return s.replace(/\s+/g, " ").trim();
 }
@@ -156,7 +176,7 @@ export function classifyLoanPurpose(t: string): LoanPurposeClassification | unde
 const NOT_FIRST_TIME_BUYER_PHRASES =
   /not a first[\s-]?time (?:home\s?)?buyer\b|currently owns? a home\b|has owned property before\b|previously owned a primary residence\b/;
 const FIRST_TIME_BUYER_PHRASES =
-  /first[\s-]?time (?:home\s?)?buyer\b|first home\b|never owned a home\b|has not owned a home before\b|buying (?:their|his|her) first primary residence\b/;
+  /first[\s-]?time (?:home\s?)?buyer\b|first home\b|first house\b|never owned a home\b|never owned before\b|has not owned a home before\b|hasn't owned a home\b|buying (?:their|his|her) first (?:primary residence|home|house)\b|buying their first house\b/;
 
 export function classifyFirstTimeHomebuyer(t: string): { value: boolean; source: string } | undefined {
   // Negative phrasing is checked first so "not a first-time homebuyer" doesn't
@@ -289,8 +309,16 @@ const DISQUALIFYING_CONTEXT = new RegExp(
   `${CREDIT_SCORE_CONTEXT.source}|${INCOME_CONTEXT.source}|${RENT_CONTEXT.source}|\\bdscr\\b|\\breserves?\\b|\\binterest rate\\b|\\brate of\\b|\\bunits?\\b|\\byears? in business\\b|\\bmonths? of seasoning\\b|\\bzip\\b`
 );
 
-const DOWN_PAYMENT_TERMS = /\bdown payment\b|\bputting down\b|\bput down\b|\bbring(?:ing)?\b|\bto closing\b|\bcash to close\b|\bout of pocket\b|\bpercent(?:age)? financed\b|\bfinancing percentage\b|\bequity position\b|\bminimum down\b|\bdown\b/;
-const LTV_DIRECT_TERMS = /\bltv\b|loan[\s-]*to[\s-]*value|\bleverage\b/;
+// NOTE: "X percent financing"/"X percent financed"/"financing percentage of
+// X" all mean X IS the LTV directly (the percentage of value being
+// financed/borrowed) — NOT a down payment to invert. These belong in
+// LTV_DIRECT_TERMS, never in DOWN_PAYMENT_TERMS (an earlier version of this
+// code wrongly bucketed them as a down payment and computed 100-X, which
+// silently flipped e.g. "eighty percent financing" — meaning 80% LTV —
+// into an assumed 20% LTV).
+const DOWN_PAYMENT_TERMS = /\bdown payment\b|\bputting down\b|\bput down\b|\bequity position\b|\bminimum down\b|\bdown\b/;
+const LTV_DIRECT_TERMS =
+  /\bltv\b|loan[\s-]*to[\s-]*value|\bleverage\b|\bpercent(?:age)? financ(?:ed|ing)\b|\bfinanc(?:ed|ing) percent(?:age)?\b|\bfinanc(?:e|ing|ed)\b[^.!?;]{0,20}\bpercent(?:age)?\b|\bpercent(?:age)?\b[^.!?;]{0,20}\bfinanc(?:e|ing|ed)\b/;
 // Dollar-DENOMINATED down payment ("putting $100,000 down", "$50k down
 // payment", "bringing $80,000 to closing") — previously had no home in the
 // dollar-band classifier at all (only a PERCENT-based down payment, e.g.
@@ -301,8 +329,17 @@ const LTV_DIRECT_TERMS = /\bltv\b|loan[\s-]*to[\s-]*value|\bleverage\b/;
 // alternatives ("bring(?:ing)?" / "to closing", not a joined "bringing to
 // closing") because the dollar figure itself normally sits BETWEEN the two
 // halves ("bringing $65,000 to closing") — a joined phrase would never
-// match since the words aren't actually adjacent in real speech.
-const DOWN_PAYMENT_DOLLAR_TERMS = /\bdown payment\b|\bputting down\b|\bput down\b|\bbring(?:ing)?\b|\bto closing\b|\bcash to close\b|\bminimum down\b|\bdown\b/;
+// match since the words aren't actually adjacent in real speech. Kept
+// SEPARATE from DOWN_PAYMENT_TERMS above (the percent-band set) — "bring
+// to closing"/"cash to close"/"out of pocket" only make sense next to a
+// DOLLAR figure ("bringing $X to closing"); nobody says "bringing 80% to
+// closing", and letting those phrases leak into the percent-band matcher
+// previously caused a real regression (a sentence mentioning BOTH a dollar
+// down payment AND a separate LTV percentage, e.g. "bringing $200,000 to
+// closing, so eighty percent financing", had the unrelated 80% wrongly
+// re-classified as a down-payment percentage just because "bringing"/"to
+// closing" appeared anywhere in the same sentence).
+const DOWN_PAYMENT_DOLLAR_TERMS = /\bdown payment\b|\bputting down\b|\bput down\b|\bbring(?:ing)?\b|\bto closing\b|\bcash to close\b|\bout of pocket\b|\bminimum down\b|\bdown\b/;
 
 interface BoundaryHit {
   index: number;
@@ -531,10 +568,14 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   const t = ` ${normalizeTranscript(rawTranscript)} `;
 
   // ---- FICO ---------------------------------------------------------------
+  // Window widened from 14 to 32 chars so an estimate qualifier between the
+  // label and the number ("credit score is approximately 740") doesn't push
+  // the number outside the match — "approximately "/"around "/"roughly "
+  // alone can already eat 12-15 characters.
   const fico = firstMatch(
     t,
     [
-      /(?:\bfico\b|credit score|\bscore\b|\bcredit\b)[^\d%]{0,14}(\d{3})\b/,
+      /(?:\bfico\b|credit score|\bscore\b|\bcredit\b)[^\d%]{0,32}(\d{3})\b/,
       /\b(\d{3})\s*(?:\bfico\b|credit score|\bscore\b|\bcredit\b)/,
     ],
     (n) => n >= 300 && n <= 850
@@ -579,6 +620,17 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   if (purposeResult) {
     x.loanPurpose = cap(purposeResult.value, purposeResult.source, purposeResult.inferred);
     if (purposeResult.pendingSubtype) x.refinancePendingSubtype = true;
+  } else {
+    // No explicit purchase/refinance language at all — but "first-time
+    // homebuyer" (in any of its phrasings) is only ever possible on a
+    // purchase; a first-time buyer cannot be refinancing a property they've
+    // never owned. Several real broker transcripts open straight with "need
+    // a bank statement loan for a first-time homebuyer..." and never say
+    // "purchase" or "buying" explicitly at all.
+    const fthbSignal = classifyFirstTimeHomebuyer(t);
+    if (fthbSignal?.value === true) {
+      x.loanPurpose = cap(LoanPurpose.Purchase, `inferred from "${fthbSignal.source}" (a first-time buyer can only be purchasing)`, true);
+    }
   }
 
   // ---- Occupancy ----------------------------------------------------------
@@ -608,31 +660,43 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   else if (/manufactured|mobile home/.test(t)) x.propertyType = cap(PropertyType.Manufactured, "manufactured");
   else if (/\brural\b|\bfarm\b|acreage/.test(t)) x.propertyType = cap(PropertyType.Rural, "rural");
   else if (/single[\s-]?family|\bsfr\b|detached (?:home|house)|\bhouse\b/.test(t)) x.propertyType = cap(PropertyType.SingleFamily, "single-family");
+  // Bare "home" only as the LAST resort (after every more specific type
+  // above already failed to match) — "home" alone is genuinely ambiguous
+  // in general (it appears constantly in occupancy phrasing like "primary
+  // home"), but once nothing more specific was said, it is the single most
+  // common real-world case and the natural-language default a broker means.
+  else if (/\bhome\b/.test(t)) x.propertyType = cap(PropertyType.SingleFamily, "home (assumed single-family — no more specific type stated)", true);
 
   // ---- Income documentation ----------------------------------------------
-  if (/bank statements?/.test(t)) {
+  // Same concept-based (not exact-phrase) approach applied consistently
+  // across every doc type this platform models — real broker slang and
+  // paraphrases for each are recognized as the same underlying concept,
+  // not just the formal name of the product.
+  if (/bank statements?|bank deposits\b|qualifying off deposits\b|deposit[\s-]only income\b|deposit[\s-]based income\b/.test(t)) {
     x.incomeDocType = cap(IncomeDocType.BankStatement, "bank statements");
     const months = /\b(12|24)\s*months?\b/.exec(t);
     if (months) x.bankStatementMonths = parseInt(months[1] ?? "", 10) as 12 | 24;
     const kind = /\b(personal|business)\b/.exec(t);
     if (kind) x.bankStatementKind = (kind[1] ?? "") as "personal" | "business";
-  } else if (/\bdscr\b|debt[\s-]?service|investor cash[\s-]?flow|rental income only|no[\s-]ratio/.test(t)) {
+  } else if (
+    /\bdscr\b|debt[\s-]?service|investor cash[\s-]?flow|rental income only|no[\s-]ratio|cash[\s-]?flow (?:only )?loan|rental cash[\s-]?flow|property('s)? cash[\s-]?flow|qualify(?:ing)? off (?:the )?(?:rent|property)|no income no employment/.test(t)
+  ) {
     x.incomeDocType = cap(IncomeDocType.Dscr, "DSCR");
-  } else if (/p\s*&\s*l|p and l|\bpnl\b|profit and loss/.test(t)) {
+  } else if (/p\s*&\s*l|p and l|\bpnl\b|profit and loss|cpa[\s-]prepared statement|accountant[\s-]prepared statement/.test(t)) {
     x.incomeDocType = cap(IncomeDocType.ProfitAndLoss, "P&L");
-  } else if (/\b1099\b/.test(t)) {
+  } else if (/\b1099\b|independent contractor income|contractor income only/.test(t)) {
     x.incomeDocType = cap(IncomeDocType.Income1099, "1099");
-  } else if (/asset (?:depletion|utilization|based)/.test(t)) {
+  } else if (/asset (?:depletion|utilization|based|qualifier)|qualify(?:ing)? off (?:their |his |her )?assets\b|using (?:their |his |her )?assets to qualify\b/.test(t)) {
     x.incomeDocType = cap(IncomeDocType.AssetDepletion, "asset depletion");
-  } else if (/\bwvoe\b|written voe/.test(t)) {
+  } else if (/\bwvoe\b|written voe|verbal (?:verification|voe)|employer letter only/.test(t)) {
     x.incomeDocType = cap(IncomeDocType.WvoeOnly, "WVOE");
-  } else if (/full[\s-]?doc(?:umentation)?|\bw-?2s?\b|tax returns?|paystubs?/.test(t)) {
+  } else if (/full[\s-]?doc(?:umentation)?|\bw-?2s?\b|tax returns?|paystubs?|traditional income doc(?:umentation)?/.test(t)) {
     x.incomeDocType = cap(IncomeDocType.FullDoc, "full documentation");
   }
 
   // ---- Borrower extras ----------------------------------------------------
-  if (/\bitin\b/.test(t)) x.citizenship = cap(Citizenship.Itin, "ITIN");
-  else if (/foreign national/.test(t)) x.citizenship = cap(Citizenship.ForeignNational, "foreign national");
+  if (/\bitin\b|individual taxpayer id(?:entification)?(?: number)?|no social security number/.test(t)) x.citizenship = cap(Citizenship.Itin, "ITIN");
+  else if (/foreign national|non[\s-]us citizen|international borrower|overseas buyer/.test(t)) x.citizenship = cap(Citizenship.ForeignNational, "foreign national");
 
   const investorExperience = classifyInvestorExperience(t);
   if (investorExperience) {
