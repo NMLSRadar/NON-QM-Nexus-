@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui";
+import { AiProcessingSequence } from "@/components/ai-processing-sequence";
 import { extractFromTranscript } from "@/domain/voice/extract";
 import { assess } from "@/domain/voice/dialog";
 import { VITAL_KEYS, VITAL_LABELS, EXTRA_VITAL_KEYS, EXTRA_VITAL_LABELS, REFI_VITAL_LABEL, type Captured, type VitalKey, type ExtraVitalKey, type VoiceExtraction } from "@/domain/voice/slots";
@@ -529,11 +530,7 @@ export default function VoiceClient() {
         </div>
       )}
 
-      {isPending && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-          ⏳ Analyzing — taking you to the ranked lender matches, best option first…
-        </div>
-      )}
+      {isPending && <AiProcessingSequence active={isPending} />}
       {serverMessage && !isPending && <p className="text-sm text-rose-700">{serverMessage}</p>}
     </div>
   );

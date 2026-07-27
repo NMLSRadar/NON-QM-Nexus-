@@ -1,4 +1,4 @@
-import type { MatchStatus, RuleOutcome, RuleSeverity } from "./enums";
+import type { Citizenship, IncomeDocType, LoanPurpose, MatchStatus, Occupancy, PropertyType, RuleOutcome, RuleSeverity } from "./enums";
 
 /**
  * A calculation output with a fully transparent trace: every result carries the
@@ -52,6 +52,17 @@ export interface ProgramEvaluation {
   estimatedQualifyingIncome?: number;
   estimatedReservesRequiredMonths?: number;
   documentationType: string;
+  // Real program eligibility flags, passed straight through from the
+  // Program record — surfaced on the premium recommendation cards
+  // (occupancy/property/doc/purpose/citizenship badges, IO availability).
+  // Never fabricated: every value here traces to a real, admin-managed
+  // Program field.
+  incomeDocTypes: IncomeDocType[];
+  loanPurposes: LoanPurpose[];
+  occupancies: Occupancy[];
+  propertyTypes: PropertyType[];
+  citizenshipEligible: Citizenship[];
+  interestOnlyAvailable: boolean;
   ruleResults: RuleEvaluationResult[];
   failedRules: RuleEvaluationResult[];
   warnings: RuleEvaluationResult[];

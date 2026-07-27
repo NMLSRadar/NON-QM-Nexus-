@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Trophy, ChevronDown } from "lucide-react";
+import { Trophy, ChevronDown, Sparkles, CheckCircle2, AlertTriangle } from "lucide-react";
 import { SampleDataBadge, StatusBadge, Stat, Pill, fmtPct, fmtUsd } from "@/components/ui";
 import type { ProgramEvaluation } from "@/domain/types/results";
 import type { MatchStatus } from "@/domain/types/enums";
+import { whyThisLender, potentialIssues, aiNarrative } from "@/domain/matching/narrative";
 
 const MAX_COMPARE = 4;
 
@@ -47,18 +48,30 @@ function MatchScoreRing({ score }: { score: number }) {
   );
 }
 
+function StarRating({ score }: { score: number }) {
+  const stars = Math.max(1, Math.min(5, Math.round(score / 20)));
+  return (
+    <span className="text-amber-500 text-sm tracking-tight" aria-label={`${stars} out of 5 stars`}>
+      {"★".repeat(stars)}
+      <span className="text-slate-300">{"★".repeat(5 - stars)}</span>
+    </span>
+  );
+}
+
 function LenderCard({
   rank,
   e,
   selected,
   onToggle,
   disabled,
+  runnerUpName,
 }: {
   rank: number;
   e: ProgramEvaluation;
   selected: boolean;
   onToggle: () => void;
   disabled: boolean;
+  runnerUpName?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const tone = TONE_BY_STATUS[e.status];
@@ -68,9 +81,10 @@ function LenderCard({
 
   return (
     <div
-      className={`rounded-card border bg-white p-5 transition-all duration-200 hover:shadow-soft-hover ${
+      className={`gold-fade-up rounded-card border bg-white p-5 transition-all duration-200 hover:shadow-soft-hover ${
         selected ? "border-brand-500 ring-2 ring-brand-200" : `border-surface-border ring-1 ${RING_BY_STATUS[e.status]}`
       }`}
+      style={{ animationDelay: `${Math.min(rank, 8) * 70}ms` }}
     >
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-start gap-4">
@@ -78,6 +92,7 @@ function LenderCard({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <p className="font-bold text-ink-primary">{e.lenderName}</p>
+              <StarRating score={e.matchScore} />
               {isBestMatch ? (
                 <Pill tone="gold">
                   <Trophy className="h-3 w-3 mr-1 inline" /> Best Match
@@ -120,6 +135,65 @@ function LenderCard({
         <Stat label="Documentation" value={e.documentationType} />
         <Stat label="Guideline" value={`eff. ${e.effectiveDate}`} />
       </dl>
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {e.loanPurposes.includes("cash_out_refinance") && <Pill tone="sky">Cash-Out Eligible</Pill>}
+        {e.citizenshipEligible.includes("foreign_national") && <Pill tone="sky">Foreign National</Pill>}
+        {e.incomeDocTypes.includes("bank_statement") && <Pill tone="neutral">Bank Statement</Pill>}
+        {e.incomeDocTypes.includes("dscr") && <Pill tone="neutral">DSCR</Pill>}
+        {e.incomeDocTypes.includes("pnl_only") && <Pill tone="neutral">P&amp;L Only</Pill>}
+        {e.incomeDocTypes.includes("asset_depletion") && <Pill tone="neutral">Asset Depletion</Pill>}
+        {e.interestOnlyAvailable && <Pill tone="neutral">Interest-Only</Pill>}
+        {e.occupancies.includes("investment") && <Pill tone="neutral">Investment Property</Pill>}
+      </div>
+
+      {(() => {
+        const why = whyThisLender(e);
+        const issues = potentialIssues(e);
+        return (
+          <div className="mt-4 grid sm:grid-cols-2 gap-4 border-t border-surface-border pt-4">
+            {why.length > 0 && (
+              <div>
+                <h4 className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 uppercase tracking-wide">
+                  <Sparkles className="h-3.5 w-3.5" /> Why This Lender?
+                </h4>
+                <ul className="mt-1.5 space-y-1">
+                  {why.map((w) => (
+                    <li key={w} className="flex items-start gap-1.5 text-sm text-ink-primary">
+                      <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0 text-emerald-600" />
+                      <span>{w}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {issues.length > 0 && (
+              <div>
+                <h4 className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 uppercase tracking-wide">
+                  <AlertTriangle className="h-3.5 w-3.5" /> Potential Issues
+                </h4>
+                <ul className="mt-1.5 space-y-1">
+                  {issues.map((w) => (
+                    <li key={w} className="flex items-start gap-1.5 text-sm text-ink-primary">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500" />
+                      <span>{w}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      <div className="mt-3 rounded-control bg-brand-50/40 border border-brand-100 p-3">
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-800 uppercase tracking-wide">
+          <Sparkles className="h-3.5 w-3.5" /> AI Analysis
+        </p>
+        <p className="mt-1 text-sm text-ink-primary italic">
+          &ldquo;{aiNarrative(e, rank, rank === 0 ? runnerUpName : undefined)}&rdquo;
+        </p>
+      </div>
 
       {(e.failedRules.length > 0 || e.warnings.length > 0 || e.manualReviewItems.length > 0 || e.scoreBreakdown.length > 0) && (
         <button
@@ -306,6 +380,7 @@ export function BestLenderMatches({
             selected={selectedIds.includes(e.programId)}
             onToggle={() => toggle(e.programId)}
             disabled={selectedIds.length >= MAX_COMPARE}
+            runnerUpName={i === 0 ? sorted[1]?.lenderName : undefined}
           />
         ))}
       </div>
