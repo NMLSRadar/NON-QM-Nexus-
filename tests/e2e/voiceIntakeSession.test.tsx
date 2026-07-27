@@ -29,8 +29,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 const createScenarioFromVoice = vi.fn();
+const getVoiceCatalog = vi.fn();
 vi.mock("@/app/scenarios/voice/actions", () => ({
   createScenarioFromVoice: (...args: unknown[]) => createScenarioFromVoice(...args),
+  getVoiceCatalog: (...args: unknown[]) => getVoiceCatalog(...args),
 }));
 
 // A transcript covering the 7 non-purpose vitals, so only loan-purpose
@@ -56,6 +58,8 @@ beforeEach(() => {
   push.mockReset();
   createScenarioFromVoice.mockReset();
   createScenarioFromVoice.mockResolvedValue({ redirectTo: "/scenarios/mock-id" });
+  getVoiceCatalog.mockReset();
+  getVoiceCatalog.mockResolvedValue({ lenders: [], programs: [], rules: [] });
 });
 
 afterEach(() => {

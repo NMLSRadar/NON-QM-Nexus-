@@ -25,8 +25,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 const createScenarioFromVoice = vi.fn();
+const getVoiceCatalog = vi.fn();
 vi.mock("@/app/scenarios/voice/actions", () => ({
   createScenarioFromVoice: (...args: unknown[]) => createScenarioFromVoice(...args),
+  getVoiceCatalog: (...args: unknown[]) => getVoiceCatalog(...args),
 }));
 
 // Sets the FULL final transcript in one atomic change event — deliberately
@@ -46,6 +48,8 @@ function setTranscript(text: string) {
 beforeEach(() => {
   push.mockReset();
   createScenarioFromVoice.mockReset();
+  getVoiceCatalog.mockReset();
+  getVoiceCatalog.mockResolvedValue({ lenders: [], programs: [], rules: [] });
 });
 
 afterEach(() => {

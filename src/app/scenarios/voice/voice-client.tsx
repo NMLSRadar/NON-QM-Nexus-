@@ -4,11 +4,14 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui";
 import { AiProcessingSequence } from "@/components/ai-processing-sequence";
+import { LiveLenderRankings } from "@/components/live-lender-rankings";
+import { analyzeScenario, type ProgramCatalog } from "@/domain/analyze";
+import type { Scenario } from "@/domain/types/scenario";
 import { extractFromTranscript } from "@/domain/voice/extract";
 import { assess } from "@/domain/voice/dialog";
 import { VITAL_KEYS, VITAL_LABELS, EXTRA_VITAL_KEYS, EXTRA_VITAL_LABELS, REFI_VITAL_LABEL, type Captured, type VitalKey, type ExtraVitalKey, type VoiceExtraction } from "@/domain/voice/slots";
 import type { IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
-import { createScenarioFromVoice } from "./actions";
+import { createScenarioFromVoice, getVoiceCatalog } from "./actions";
 
 /* ------------------------------------------------------------------------ *
  * Minimal Web Speech API typings (Chromium/WebKit expose these unprefixed
@@ -152,6 +155,60 @@ export default function VoiceClient() {
 
   const effective = useMemo(() => applyOverrides(extractFromTranscript(transcript), overrides), [transcript, overrides]);
   const assessment = useMemo(() => assess(effective), [effective]);
+
+  /* -------- live lender rankings (3-panel real-time experience) --------
+   * Fetches the real, tier-gated catalog once on mount, then re-runs the
+   * SAME deterministic analyzeScenario() locally on every transcript
+   * update — no network round-trip per keystroke — so the right-hand
+   * panel can reorder live as the borrower speaks, well before the
+   * scenario is complete enough to submit. */
+  const [liveCatalog, setLiveCatalog] = useState<ProgramCatalog | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  useEffect(() => {
+    getVoiceCatalog()
+      .then(setLiveCatalog)
+      .catch(() => setLiveCatalog(null))
+      .finally(() => setCatalogLoading(false));
+  }, []);
+
+  const liveScenario = useMemo<Scenario | null>(() => {
+    // Require at least an income-documentation type before attempting a
+    // live match — without it every program's doc-type check is simply
+    // skipped (baseChecks.ts only runs a check when the relevant scenario
+    // field is present), which would misleadingly show every lender as a
+    // "match" from the very first word spoken.
+    if (!effective.incomeDocType) return null;
+    const doc = effective.incomeDocType.value;
+    const value = effective.propertyValue?.value ?? assessment.derived.propertyValue;
+    const loan = effective.loanAmount?.value ?? assessment.derived.loanAmount;
+    return {
+      id: "live-preview",
+      organizationId: "live-preview",
+      name: "live-preview",
+      createdByUserId: "live-preview",
+      loanPurpose: effective.loanPurpose?.value,
+      occupancy: effective.occupancy?.value,
+      propertyType: effective.propertyType?.value,
+      estimatedValue: value,
+      requestedLoanAmount: loan,
+      fico: effective.fico?.value,
+      incomeDocType: doc,
+      citizenship: effective.citizenship?.value,
+      vesting: effective.vesting?.value,
+      firstTimeHomebuyer: effective.firstTimeHomebuyer?.value,
+      investorExperience: effective.investorExperience?.value,
+      bankStatement: doc === "bank_statement" ? { personalOrBusiness: effective.bankStatementKind ?? "business", months: effective.bankStatementMonths ?? 12 } : undefined,
+      pnl: doc === "pnl_only" ? { periodMonths: 12 } : undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }, [effective, assessment.derived]);
+
+  const liveEvaluations = useMemo(() => {
+    if (!liveCatalog || !liveScenario) return [];
+    return analyzeScenario(liveScenario, liveCatalog).evaluations;
+  }, [liveCatalog, liveScenario]);
+
   const canAnalyze = assessment.readyToAnalyze || (assessment.complete && conflictConfirmed);
   // The Current Loan Balance tab only applies to refinances — hidden and
   // never required for a purchase.
@@ -506,6 +563,13 @@ export default function VoiceClient() {
             )}
           </div>
         </details>
+      </Card>
+
+      <Card title="Live Lender Rankings">
+        <p className="text-xs text-slate-500 -mt-2 mb-3">
+          Reorders in real time as the scenario resolves — the same ranking engine used on the final results page.
+        </p>
+        <LiveLenderRankings evaluations={liveEvaluations} loading={catalogLoading} enoughData={liveScenario !== null} />
       </Card>
 
       <section className="rounded-r-lg border-l-4 border-brand-500 bg-brand-50 p-3" aria-live="polite">
