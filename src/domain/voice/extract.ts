@@ -66,6 +66,20 @@ export function normalizeTranscript(raw: string): string {
   let s = ` ${raw.toLowerCase()} `;
   s = s.replace(/\.{2,}/g, " "); // collapse an ellipsis ("Seven...") to a space BEFORE correction-stripping below, so it never acts as a false sentence boundary that blocks the lookback from reaching the misspoken word
   s = s.replace(/(\d),(?=\d{3}\b)/g, "$1"); // 850,000 -> 850000 (BEFORE correction-stripping below, so a thousands-separator comma inside a number is never mistaken for a real clause boundary)
+  // Speech-to-text commonly renders mortgage abbreviations as spelled-out
+  // or misheard letter sequences rather than the compact acronym itself
+  // ("D-S-C-R", "S F R", "He-lock" for HELOC, "ten ninety-nine" for 1099).
+  // Normalized here, BEFORE any downstream classifier runs, so every
+  // existing bare-acronym check (\bdscr\b, \bsfr\b, \bllc\b, \bltv\b,
+  // \bdti\b, 1099) keeps working unchanged against these spoken variants.
+  s = s.replace(/\bd[\s-]*s[\s-]*c[\s-]*r\b/g, "dscr");
+  s = s.replace(/\bs[\s-]*f[\s-]*r\b/g, "sfr");
+  s = s.replace(/\bl[\s-]*l[\s-]*c\b/g, "llc");
+  s = s.replace(/\bl[\s-]*t[\s-]*v\b/g, "ltv");
+  s = s.replace(/\bd[\s-]*t[\s-]*i\b/g, "dti");
+  s = s.replace(/\bhe[\s-]*lock\b/g, "heloc");
+  s = s.replace(/\bfye[\s-]*co\b/g, "fico");
+  s = s.replace(/\bten[\s-]+ninety[\s-]*nine\b/g, "1099");
   // Mid-speech self-corrections ("actually...", "excuse me...", "I mean...",
   // "let me correct that...", "my mistake...", "sorry...") — a broker
   // restating a value mid-sentence should have ONLY the corrected value
@@ -83,7 +97,22 @@ export function normalizeTranscript(raw: string): string {
   // "down" it needed to be classified as a down payment at all, so it's
   // silently ignored by every classifier while the corrected "twenty-five
   // percent down" remains intact and gets picked up normally.
-  s = s.replace(/[\w$%]+,?\s*(?:actually|excuse me|i mean|let me correct that|my mistake|correction|sorry)\b,?\s*/gi, "");
+  const CORRECTION_MARKERS = "actually|excuse me|i mean|let me correct that|my mistake|correction|sorry|wait|one second|that'?s incorrect|no,? make that|update that|i misspoke|scratch that";
+  // Handles the REVERSED order too — "680 credit, no, make that 720" states
+  // the misspoken NUMBER *before* its label word, unlike "credit score is
+  // 700, let me correct that, 720" (label before number). A plain 1-token
+  // strip would either lose the number (if the label is closer to the
+  // marker) or the label (if the number is closer) depending on which
+  // order the broker happened to use. This first pass only fires when the
+  // token RIGHT before the marker is a recognized label word — in that
+  // case it also reaches back one more token to drop the actual (numeric)
+  // misspoken value, while keeping the label itself intact for the
+  // corrected number that follows.
+  s = s.replace(
+    new RegExp(`(?:\\$?[\\d,.]+%?\\s+)?\\b(credit|score|fico|value|price|ltv|balance|cash|loan)\\b,?\\s*(?:${CORRECTION_MARKERS})\\b,?\\s*`, "gi"),
+    "$1 "
+  );
+  s = s.replace(new RegExp(`[\\w$%]+,?\\s*(?:${CORRECTION_MARKERS})\\b,?\\s*`, "gi"), "");
   s = s.replace(/,/g, " , "); // remaining commas become separators
   s = s.replace(/([a-z0-9])([.!?;])/g, "$1 $2"); // detach sentence punctuation
   // A DIGIT directly followed by the spoken word "thousand" ("105
@@ -153,7 +182,7 @@ function cap<T>(value: T, source: string, inferred = false): Captured<T> {
 // ---------------------------------------------------------------------------
 
 const CASH_OUT_PHRASES =
-  /cash[\s-]?outs?\b|cash[\s-]?out refi(?:nance)?\b|take (?:some |the )?cash out\b|pull(?:ing)? cash out\b|pull(?:ing)?[^.!?]{0,25}\bout\b|pull(?:ing)? equity\b|access(?:ing)? equity\b|tap(?:ping)? into equity\b|leverag(?:e|ing) (?:the )?equity\b|equity (?:take[\s-]?out|withdrawal)\b|refinanc\w*[^.!?]{0,25}\bfor cash\b|refinanc\w*[^.!?]{0,25}\breceiv\w* cash\b|refinanc\w*[^.!?]{0,25}\ba larger loan\b|receiv(?:e|ing) proceeds\b|consolidat\w* debt with equity\b|pay(?:ing)? off debt using the property\b|refinanc\w*.{0,20}receiv\w* cash back\b/;
+  /cash[\s-]?outs?\b|cash[\s-]?out refi(?:nance)?\b|take (?:some |the )?cash out\b|pull(?:ing)? cash out\b|pull(?:ing)?[^.!?]{0,25}\bout\b|pull(?:ing)? (?:money|funds)( out)?\b|pull(?:ing)? equity\b|access(?:ing)? (?:equity|cash)\b|tap(?:ping)? (?:into )?(?:the )?equity\b|use (?:the )?equity\b|leverag(?:e|ing) (?:the )?equity\b|borrow(?:ing)? against (?:the )?equity\b|equity (?:take[\s-]?out|withdrawal)\b|refi(?:nance)? for cash\b|refinanc\w*[^.!?]{0,25}\bfor cash\b|refinanc\w*[^.!?]{0,25}\breceiv\w* cash\b|refinanc\w*[^.!?]{0,25}\ba larger loan\b|refinanc\w*[^.!?]{0,25}\baccess (?:to )?equity\b|refinanc\w*[^.!?]{0,25}\btake money out\b|refinanc\w*[^.!?]{0,25}\bwalk away with cash\b|refinanc\w*[^.!?]{0,25}\breceive proceeds\b|receiv(?:e|ing) proceeds\b|consolidat\w* debt with equity\b|pay(?:ing)? off debt using the property\b|refinanc\w*.{0,20}receiv\w* cash back\b|cash[\s-]?back refinance\b|cash equity refinance\b|equity refinance\b/;
 
 // Explicit negations of cash-out language ("without cash out", "no cash
 // back", "not taking cash back") must never be matched by CASH_OUT_PHRASES
@@ -283,7 +312,7 @@ const CITIZENSHIP_RE = new RegExp(
     // rare enough outside this domain to match bare (not just "EAD
     // holder"), since real phrasing varies freely: "EAD card", "on an
     // EAD", "with an EAD", "holding a valid EAD".
-    String.raw`(?<nonPermanentResident>\bnon[\s-]*perm(?:anent)?(?:\s+resident)?\b|\bwork visa\b|\bemployment authorization\b|\bead\b|\btemporary resident\b|\bvisa holder\b)`,
+    String.raw`(?<nonPermanentResident>\bnon[\s-]*perm(?:anent)?(?:\s+resident)?\b|\bwork visa\b|\bemployment authorization\b|\bead\b|\btemporary resident\b|\bvisa holder\b|\bc[\s-]?09\b)`,
     // Permanent Resident (green card) — a real, distinct category already
     // used by real lender program data (citizenshipEligible), even though
     // it wasn't one of the four requested UI options; kept recognizable so
@@ -443,7 +472,7 @@ function firstMatch(
 // ---------------------------------------------------------------------------
 
 const PROPERTY_VALUE_TERMS =
-  /\brequested loan amount\b|\bproperty value\b|\bestimated value\b|\bmarket value\b|\bappraised value\b|\bappraisal value\b|\bexpected appraisal\b|\bappraises? for\b|\bsubject value\b|\bvalue of the property\b|\bpurchase price\b|\bsales? price\b|\basking price\b|\blist(?:ed)? price\b|\blisted for\b|\bgoing for\b|\bselling for\b|\bpriced at\b|\bacquisition price\b|\bcontract price\b|\bhome price\b|\bproperty price\b|\bvalued at\b|\bworth\b|\bappraisal\b|\bappraise\b|\bvalue\b|\bprice\b/;
+  /\brequested loan amount\b|\bproperty value\b|\bestimated value\b|\bmarket value\b|\bappraised value\b|\bappraisal value\b|\bexpected appraisal\b|\bexpected value\b|\bappraises? for\b|\bshould appraise for\b|\bsubject value\b|\bvalue of the property\b|\bpurchase price\b|\bsales? price\b|\basking price\b|\blist(?:ed)? price\b|\blisted for\b|\bgoing for\b|\bselling for\b|\bpriced at\b|\bacquisition price\b|\bcontract price\b|\bhome price\b|\bproperty price\b|\bvalued at\b|\bworth\b|\bprobably worth\b|\bappraisal\b|\bappraise\b|\bvalue\b|\bprice\b|\bcoming in (?:around|at)\b|\bin the neighborhood of\b|\bcurrent market estimate\b|\bzestimate\b/;
 // Generic single words ("purchase", "property", "home") are real signals
 // ("a $600,000 purchase", "looking at a $600,000 property") but far too
 // common to search sentence-wide without false hits — scoped to the
@@ -469,7 +498,7 @@ const LOAN_AMOUNT_STRONG_TERMS =
 // and disambiguated the same way property value / loan amount / cash-out
 // are, never by simple keyword adjacency.
 const EXISTING_LIEN_TERMS =
-  /\bcurrent loan balance\b|\bcurrent mortgage balance\b|\bexisting mortgage balance\b|\bexisting loan balance\b|\bloan balance\b|\bmortgage balance\b|\bcurrent balance\b|\bexisting balance\b|\bcurrent mortgage\b|\bexisting mortgage\b|\bexisting loan\b|\bremaining mortgage\b|\bremaining on (?:the )?mortgage\b|\bfirst mortgage\b|\bunpaid principal balance\b|\bamount (?:they |he |she )?still owed?\b|\bstill owed?\b|\bstill owes\b|\bborrower still owes\b|\bpayoff\b|\bpayoff amount\b|\bestimated payoff\b|\bcurrent payoff\b|\bremaining balance\b|\bbalance on the property\b|\bfirst mortgage balance\b|\bexisting first lien\b|\bexisting lien\b|\bdebt currently secured by the property\b|\bthey owe\b|\bhe owes\b|\bshe owes\b|\bcurrently owe[sd]?\b|\bowed?\b|\bowes\b/;
+  /\bcurrent loan balance\b|\bcurrent mortgage balance\b|\bexisting mortgage balance\b|\bexisting loan balance\b|\bloan balance\b|\bmortgage balance\b|\bcurrent balance\b|\bexisting balance\b|\bcurrent mortgage\b|\bexisting mortgage\b|\bexisting loan\b|\bremaining mortgage\b|\bremaining on (?:the )?mortgage\b|\bfirst mortgage\b|\bunpaid principal balance\b|\bprincipal balance\b|\bupb\b|\bamount (?:they |he |she )?still owed?\b|\bstill owed?\b|\bstill owes\b|\bborrower still owes\b|\bpayoff\b|\bpayoff amount\b|\bestimated payoff\b|\bcurrent payoff\b|\bremaining balance\b|\bbalance on the property\b|\bfirst mortgage balance\b|\bexisting first lien\b|\bexisting lien\b|\bdebt currently secured by the property\b|\bthey owe\b|\bhe owes\b|\bshe owes\b|\bcurrently owe[sd]?\b|\bowed?\b|\bowes\b/;
 
 // Requested cash-out proceeds — the DOLLAR figure a cash-out refinance
 // borrower wants in hand. Broadened beyond the literal "cash out"/"cash
@@ -479,7 +508,7 @@ const EXISTING_LIEN_TERMS =
 // state the amount with NONE of the three original phrases anywhere near
 // it (e.g. "would like to receive $250,000 in cash after closing costs").
 const CASH_OUT_AMOUNT_TERMS =
-  /\bcash[\s-]?out\b|\bcash back\b|\bproceeds\b|\breceive\b|\breceiving\b|\bnet\b|\bwalk away with\b|\bcash in hand\b|\bin cash\b|\bafter closing costs\b|\bafter fees\b|\bafter costs\b|\bafter closing\b|\bafter closing expenses\b|\bback at closing\b/;
+  /\bcash[\s-]?out\b|\bcash back\b|\bproceeds\b|\breceive\b|\breceiving\b|\bnet\b|\bwalk away with\b|\bcash in hand\b|\bin cash\b|\bafter closing costs\b|\bafter fees\b|\bafter costs\b|\bafter closing\b|\bafter closing expenses\b|\bback at closing\b|\bcash requested\b|\bcash needed\b|\bwants to net\b|\bwants proceeds\b|\bneeds proceeds\b|\bpulling out\b|\btaking out\b|\bwants equity\b|\bwants money\b|\bwants funds\b|\bwants access to\b|\bcash to (?:the )?borrower\b|\bfunds to (?:the )?borrower\b/;
 
 const CREDIT_SCORE_CONTEXT = /\bfico\b|credit score|\bscore\b|\bcredit\b|\bsitting at\b/;
 const INCOME_CONTEXT = /\bincome\b|\bannually\b|\bearns?\b|\bsalary\b|per year|per month|\bearning\b/;
