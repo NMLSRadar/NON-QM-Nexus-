@@ -218,6 +218,7 @@ export class SupabaseRepository implements Repository {
       .from("lenders")
       .select("id, organization_id, name, is_sample_data, active, contact_email, notes, tier_level")
       .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+      .eq("is_sample_data", false)
       .lte("tier_level", tier)
       .is("deleted_at", null);
     if (error) throw new Error(`Failed to list lenders: ${error.message}`);
@@ -235,6 +236,7 @@ export class SupabaseRepository implements Repository {
       .from("lenders")
       .select("id, organization_id, name, is_sample_data, active, contact_email, notes, tier_level")
       .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+      .eq("is_sample_data", false)
       .is("deleted_at", null);
     if (error) throw new Error(`Failed to list all lenders: ${error.message}`);
     return (data as LenderRow[]).map(rowToLender);
@@ -247,6 +249,7 @@ export class SupabaseRepository implements Repository {
       .from("programs")
       .select("id, organization_id, lender_id, name, is_sample_data, active, config, lenders!inner(tier_level)")
       .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+      .eq("is_sample_data", false)
       .lte("lenders.tier_level", tier)
       .is("deleted_at", null);
     if (error) throw new Error(`Failed to list programs: ${error.message}`);

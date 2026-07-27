@@ -51,8 +51,11 @@ async function typeTranscript(text: string) {
 function purposeTile() {
   // Locate the Vitals tile by its exact label text ("Purchase or refinance"),
   // which is unique — the manual-correction dropdown below uses different
-  // wording ("Purchase / refi") so there's no ambiguity.
-  return screen.getByText("Purchase or refinance").closest("div")!;
+  // wording ("Purchase / refi") so there's no ambiguity. The premium redesign
+  // wraps the label+value in an inner flex column alongside an icon badge, so
+  // the bordered/colored tile itself is now two ancestors up, not one.
+  const label = screen.getByText("Purchase or refinance");
+  return (label.closest("div")!.parentElement as HTMLElement) ?? label.closest("div")!;
 }
 
 beforeEach(() => {
@@ -75,8 +78,8 @@ describe("Voice intake session: Purchase", () => {
     await waitFor(() => {
       const tile = purposeTile();
       expect(tile).toHaveTextContent(/✓ Purchase/);
-      expect(tile.className).toContain("border-emerald-200");
-      expect(tile.className).toContain("bg-emerald-50");
+      expect(tile.className).toContain("border-emerald-400/40");
+      expect(tile.className).toContain("bg-emerald-500/10");
     });
 
     expect(screen.getByText(/All set — 9 of 9 vitals captured/)).toHaveTextContent("purchase");
@@ -97,8 +100,8 @@ describe("Voice intake session: Refinance (ambiguous, no subtype stated)", () =>
     await waitFor(() => {
       const tile = purposeTile();
       expect(tile).toHaveTextContent("◐ Refinance — subtype needed");
-      expect(tile.className).toContain("border-brand-400");
-      expect(tile.className).toContain("bg-brand-50");
+      expect(tile.className).toContain("border-amber-400/60");
+      expect(tile.className).toContain("bg-amber-500/10");
     });
 
     // Assistant must ask the one clarifying question rather than guess or
@@ -124,7 +127,7 @@ describe("Voice intake session: Cash-Out Refinance", () => {
     await waitFor(() => {
       const tile = purposeTile();
       expect(tile).toHaveTextContent(/✓ Cash-out refi/);
-      expect(tile.className).toContain("border-emerald-200");
+      expect(tile.className).toContain("border-emerald-400/40");
     });
 
     expect(screen.getByText(/All set — 9 of 9 vitals captured/)).toHaveTextContent("cash-out refinance");
@@ -144,7 +147,7 @@ describe("Voice intake session: Rate-and-Term Refinance", () => {
     await waitFor(() => {
       const tile = purposeTile();
       expect(tile).toHaveTextContent(/✓ Rate\/term refi/);
-      expect(tile.className).toContain("border-emerald-200");
+      expect(tile.className).toContain("border-emerald-400/40");
     });
 
     expect(screen.getByText(/All set — 9 of 9 vitals captured/)).toHaveTextContent("rate-and-term refinance");

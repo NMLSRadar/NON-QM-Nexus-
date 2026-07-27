@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ClipboardList, Home, User, CreditCard, FolderOpen, Flag } from "lucide-react";
 import { createScenario } from "./actions";
 import type { ScenarioInput } from "@/domain/validation/scenarioSchema";
 
@@ -12,8 +13,9 @@ import type { ScenarioInput } from "@/domain/validation/scenarioSchema";
  * schema; basic HTML constraints assist client-side.
  */
 
-const field = "block w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:ring-brand-500";
-const label = "block text-xs font-medium text-slate-600 mb-1";
+const field =
+  "block w-full rounded-md border border-amber-500/25 bg-black/40 px-3 py-1.5 text-sm text-white placeholder:text-slate-500 focus:border-amber-400 focus:ring-amber-400/50";
+const label = "block text-xs font-medium text-slate-300 mb-1";
 
 function Field({ name, title, children }: { name: string; title: string; children: React.ReactNode }) {
   return (
@@ -23,6 +25,17 @@ function Field({ name, title, children }: { name: string; title: string; childre
       </label>
       {children}
     </div>
+  );
+}
+
+/** Icon-badge + bold-white title legend for a form section — matches the
+ * premium black/gold section headers used elsewhere in the redesign. */
+function SectionLegend({ icon, title }: { icon: React.ReactNode; title: string }) {
+  return (
+    <legend className="col-span-full flex items-center gap-3 px-1 pb-1">
+      <span className="gold-icon-badge flex h-9 w-9 shrink-0 items-center justify-center rounded-full">{icon}</span>
+      <span className="text-lg font-bold text-white">{title}</span>
+    </legend>
   );
 }
 
@@ -163,16 +176,16 @@ export function ScenarioForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-6" noValidate>
       {message ? (
-        <p role="alert" className="rounded-md bg-rose-50 border border-rose-200 text-rose-800 text-sm px-3 py-2">
+        <p role="alert" className="rounded-md bg-rose-950/40 border border-rose-500/40 text-rose-300 text-sm px-3 py-2">
           {message}
         </p>
       ) : null}
 
-      <fieldset className="bg-white rounded-lg border border-slate-200 p-4 grid sm:grid-cols-3 gap-4">
-        <legend className="text-sm font-semibold text-slate-700 px-1">Scenario</legend>
+      <fieldset className="gold-card rounded-2xl p-5 grid sm:grid-cols-3 gap-4">
+        <SectionLegend icon={<ClipboardList className="h-4 w-4 text-amber-300" />} title="Scenario" />
         <Field name="name" title="Scenario name *">
           <input id="name" name="name" required className={field} aria-invalid={!!errors.name} />
-          {errors.name ? <p className="text-xs text-rose-600 mt-1">{errors.name[0]}</p> : null}
+          {errors.name ? <p className="text-xs text-rose-400 mt-1">{errors.name[0]}</p> : null}
         </Field>
         <Field name="borrowerReference" title="Borrower reference (anonymized)">
           <input id="borrowerReference" name="borrowerReference" placeholder="e.g. B-2001" className={field} />
@@ -182,8 +195,8 @@ export function ScenarioForm() {
         </Field>
       </fieldset>
 
-      <fieldset className="bg-white rounded-lg border border-slate-200 p-4 grid sm:grid-cols-3 gap-4">
-        <legend className="text-sm font-semibold text-slate-700 px-1">Loan &amp; property</legend>
+      <fieldset className="gold-card rounded-2xl p-5 grid sm:grid-cols-3 gap-4">
+        <SectionLegend icon={<Home className="h-4 w-4 text-amber-300" />} title="Loan & property" />
         <Field name="loanPurpose" title="Loan purpose">
           <select id="loanPurpose" name="loanPurpose" className={field} defaultValue="purchase">
             <option value="purchase">Purchase</option>
@@ -227,14 +240,14 @@ export function ScenarioForm() {
           <input id="existingLienBalance" name="existingLienBalance" type="number" min="0" className={field} />
         </Field>
         <div className="flex items-end gap-4">
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" name="interestOnlyRequested" className="rounded border-slate-300" /> Interest-only requested
+          <label className="flex items-center gap-2 text-sm text-slate-200">
+            <input type="checkbox" name="interestOnlyRequested" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" /> Interest-only requested
           </label>
         </div>
       </fieldset>
 
-      <fieldset className="bg-white rounded-lg border border-slate-200 p-4 grid sm:grid-cols-3 gap-4">
-        <legend className="text-sm font-semibold text-slate-700 px-1">Borrower</legend>
+      <fieldset className="gold-card rounded-2xl p-5 grid sm:grid-cols-3 gap-4">
+        <SectionLegend icon={<User className="h-4 w-4 text-amber-300" />} title="Borrower" />
         <Field name="fico" title="FICO">
           <input id="fico" name="fico" type="number" min="300" max="850" className={field} />
         </Field>
@@ -276,17 +289,17 @@ export function ScenarioForm() {
           <input id="selfEmploymentMonths" name="selfEmploymentMonths" type="number" min="0" className={field} />
         </Field>
         <div className="flex items-end gap-4 flex-wrap">
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" name="firstTimeHomebuyer" className="rounded border-slate-300" /> First-time homebuyer
+          <label className="flex items-center gap-2 text-sm text-slate-200">
+            <input type="checkbox" name="firstTimeHomebuyer" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" /> First-time homebuyer
           </label>
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" name="firstTimeInvestor" className="rounded border-slate-300" /> First-time investor
+          <label className="flex items-center gap-2 text-sm text-slate-200">
+            <input type="checkbox" name="firstTimeInvestor" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" /> First-time investor
           </label>
         </div>
       </fieldset>
 
-      <fieldset className="bg-white rounded-lg border border-slate-200 p-4 grid sm:grid-cols-3 gap-4">
-        <legend className="text-sm font-semibold text-slate-700 px-1">Obligations, assets &amp; credit</legend>
+      <fieldset className="gold-card rounded-2xl p-5 grid sm:grid-cols-3 gap-4">
+        <SectionLegend icon={<CreditCard className="h-4 w-4 text-amber-300" />} title="Obligations, assets & credit" />
         <Field name="monthlyHousingPayment" title="Proposed housing payment / PITIA ($/mo)">
           <input id="monthlyHousingPayment" name="monthlyHousingPayment" type="number" min="0" className={field} />
         </Field>
@@ -309,14 +322,14 @@ export function ScenarioForm() {
           <input id="lates30" name="lates30" type="number" min="0" max="12" className={field} />
         </Field>
         <div className="flex items-end">
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" name="prepaymentPenaltyAccepted" className="rounded border-slate-300" /> Prepayment penalty acceptable
+          <label className="flex items-center gap-2 text-sm text-slate-200">
+            <input type="checkbox" name="prepaymentPenaltyAccepted" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" /> Prepayment penalty acceptable
           </label>
         </div>
       </fieldset>
 
-      <fieldset className="bg-white rounded-lg border border-slate-200 p-4 space-y-4">
-        <legend className="text-sm font-semibold text-slate-700 px-1">Income documentation</legend>
+      <fieldset className="gold-card rounded-2xl p-5 space-y-4">
+        <SectionLegend icon={<FolderOpen className="h-4 w-4 text-amber-300" />} title="Income documentation" />
         <Field name="incomeDocType" title="Income-documentation type">
           <select id="incomeDocType" name="incomeDocType" className={field} value={incomeDocType} onChange={(e) => setIncomeDocType(e.target.value)}>
             <option value="bank_statement">Bank statements</option>
@@ -360,11 +373,11 @@ export function ScenarioForm() {
                 <option value="unknown">Unknown</option>
               </select>
             </Field>
-            <div className="sm:col-span-3 flex flex-wrap gap-4 text-sm text-slate-700">
-              <label className="flex items-center gap-2"><input type="checkbox" name="bsCash" className="rounded border-slate-300" /> Cash deposits</label>
-              <label className="flex items-center gap-2"><input type="checkbox" name="bsAtm" className="rounded border-slate-300" /> ATM deposits</label>
-              <label className="flex items-center gap-2"><input type="checkbox" name="bsDeclining" className="rounded border-slate-300" /> Declining deposits</label>
-              <label className="flex items-center gap-2"><input type="checkbox" name="bsUnusual" className="rounded border-slate-300" /> Large unusual deposits</label>
+            <div className="sm:col-span-3 flex flex-wrap gap-4 text-sm text-slate-200">
+              <label className="flex items-center gap-2"><input type="checkbox" name="bsCash" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" /> Cash deposits</label>
+              <label className="flex items-center gap-2"><input type="checkbox" name="bsAtm" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" /> ATM deposits</label>
+              <label className="flex items-center gap-2"><input type="checkbox" name="bsDeclining" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" /> Declining deposits</label>
+              <label className="flex items-center gap-2"><input type="checkbox" name="bsUnusual" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" /> Large unusual deposits</label>
             </div>
           </div>
         )}
@@ -395,8 +408,8 @@ export function ScenarioForm() {
               </select>
             </Field>
             <div className="flex items-end">
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" name="pnlSupport" className="rounded border-slate-300" defaultChecked /> Supporting bank statements
+              <label className="flex items-center gap-2 text-sm text-slate-200">
+                <input type="checkbox" name="pnlSupport" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" defaultChecked /> Supporting bank statements
               </label>
             </div>
           </div>
@@ -429,8 +442,8 @@ export function ScenarioForm() {
               <input id="dscrFinanced" name="dscrFinanced" type="number" min="0" className={field} />
             </Field>
             <div className="flex items-end">
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" name="dscrStr" className="rounded border-slate-300" /> Short-term rental
+              <label className="flex items-center gap-2 text-sm text-slate-200">
+                <input type="checkbox" name="dscrStr" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" /> Short-term rental
               </label>
             </div>
           </div>
@@ -463,8 +476,8 @@ export function ScenarioForm() {
               <input id="adDivisor" name="adDivisor" type="number" min="1" max="480" defaultValue="120" className={field} />
             </Field>
             <div className="flex items-end">
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" name="adUsedToClose" className="rounded border-slate-300" defaultChecked /> Assets also used to close
+              <label className="flex items-center gap-2 text-sm text-slate-200">
+                <input type="checkbox" name="adUsedToClose" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" defaultChecked /> Assets also used to close
               </label>
             </div>
           </div>
@@ -480,8 +493,8 @@ export function ScenarioForm() {
       </fieldset>
 
       {(citizenship === "foreign_national" || citizenship === "itin") && (
-        <fieldset className="bg-white rounded-lg border border-slate-200 p-4 grid sm:grid-cols-3 gap-4">
-          <legend className="text-sm font-semibold text-slate-700 px-1">Foreign national / ITIN details</legend>
+        <fieldset className="gold-card rounded-2xl p-5 grid sm:grid-cols-3 gap-4">
+          <SectionLegend icon={<Flag className="h-4 w-4 text-amber-300" />} title="Foreign national / ITIN details" />
           <Field name="fnCountry" title="Country of citizenship">
             <input id="fnCountry" name="fnCountry" className={field} />
           </Field>
@@ -493,11 +506,11 @@ export function ScenarioForm() {
             </select>
           </Field>
           <div className="flex items-end gap-4 flex-wrap">
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" name="fnPassport" className="rounded border-slate-300" /> Valid passport
+            <label className="flex items-center gap-2 text-sm text-slate-200">
+              <input type="checkbox" name="fnPassport" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" /> Valid passport
             </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" name="fnUsBank" className="rounded border-slate-300" /> U.S. bank account
+            <label className="flex items-center gap-2 text-sm text-slate-200">
+              <input type="checkbox" name="fnUsBank" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" /> U.S. bank account
             </label>
           </div>
         </fieldset>
@@ -511,7 +524,7 @@ export function ScenarioForm() {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-brand-600 text-white text-sm font-medium px-6 py-2.5 hover:bg-brand-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-brand-500 gold-cta-glow"
+        className="gold-button gold-cta-glow rounded-xl text-sm font-semibold px-6 py-3 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
       >
         {pending ? "Analyzing…" : "Save & run preliminary analysis"}
       </button>

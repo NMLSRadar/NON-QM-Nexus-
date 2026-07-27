@@ -95,11 +95,11 @@ export function HomeVoiceHero() {
       </div>
 
       {voiceActive ? (
-        <div id="home-voice-panel" className="light-surface relative z-10 mt-8 rounded-2xl bg-white p-4 sm:p-6 shadow-2xl gold-fade-up">
+        <div id="home-voice-panel" className="relative z-10 mt-8 gold-fade-up">
           <div
             role="status"
             aria-live="polite"
-            className="mb-3 flex items-center gap-2 text-xs font-medium text-amber-700"
+            className="mb-3 flex items-center gap-2 text-xs font-medium text-amber-300"
           >
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-60" />

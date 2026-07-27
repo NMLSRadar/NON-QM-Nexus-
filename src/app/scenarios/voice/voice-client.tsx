@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Home, User, DollarSign, Wallet, Percent, Gauge, FolderOpen, IdCard, TrendingUp, MapPin, Mic } from "lucide-react";
 import { Card } from "@/components/ui";
 import { AiProcessingSequence } from "@/components/ai-processing-sequence";
 import { LiveLenderRankings } from "@/components/live-lender-rankings";
@@ -12,6 +13,26 @@ import { assess } from "@/domain/voice/dialog";
 import { VITAL_KEYS, VITAL_LABELS, EXTRA_VITAL_KEYS, EXTRA_VITAL_LABELS, REFI_VITAL_LABEL, type Captured, type VitalKey, type ExtraVitalKey, type VoiceExtraction } from "@/domain/voice/slots";
 import type { Citizenship, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
 import { createScenarioFromVoice, getVoiceCatalog } from "./actions";
+
+/** Per-vital icon, matching the mockup's gold-ringed icon badges. */
+const VITAL_ICONS: Record<VitalKey, typeof Home> = {
+  loanPurpose: Home,
+  occupancy: User,
+  propertyType: Home,
+  propertyValue: DollarSign,
+  loanAmount: Wallet,
+  ltv: Percent,
+  fico: Gauge,
+  incomeDocType: FolderOpen,
+  citizenship: IdCard,
+};
+const EXTRA_VITAL_ICONS: Record<ExtraVitalKey, typeof Home> = {
+  firstTimeHomebuyer: Home,
+  investorExperience: TrendingUp,
+  vesting: User,
+  state: MapPin,
+};
+
 
 /* ------------------------------------------------------------------------ *
  * Minimal Web Speech API typings (Chromium/WebKit expose these unprefixed
@@ -446,7 +467,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   return (
     <div className="space-y-5">
       {supported === false && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 text-amber-800 text-sm p-3">
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-200 text-sm p-3">
           This browser doesn&apos;t support speech recognition (Chrome or Edge do; Safari on iOS does not — this is an
           Apple platform limitation, not a bug). You can type or paste the scenario below — everything else works the
           same.
@@ -454,29 +475,39 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
       )}
 
       {micError && (
-        <div role="alert" className="rounded-lg border border-rose-300 bg-rose-50 text-rose-800 text-sm p-3">
+        <div role="alert" className="rounded-lg border border-rose-500/40 bg-rose-500/10 text-rose-200 text-sm p-3">
           {micError}
         </div>
       )}
 
-      <Card title="Speak or type the full scenario">
+      <Card dark title="Speak or type the full scenario">
         <div className="flex flex-col items-center gap-2">
-          <button
-            type="button"
-            onClick={listening ? stopListening : startListening}
-            disabled={supported === false || isPending}
-            aria-label={listening ? "Stop listening" : "Start listening"}
-            className={`h-16 w-16 rounded-full text-2xl text-white focus:outline-none focus:ring-4 focus:ring-brand-100 disabled:opacity-40 ${
-              listening ? "bg-rose-600 hover:bg-rose-700" : "bg-brand-600 hover:bg-brand-700 gold-cta-glow"
-            }`}
-          >
-            {listening ? "■" : "🎤"}
-          </button>
-          <p className="text-xs font-medium text-brand-700" aria-live="polite">
+          <div className="relative">
+            {listening ? null : (
+              <>
+                <span className="gold-pulse-ring" />
+                <span className="gold-pulse-ring delay-1" />
+              </>
+            )}
+            <button
+              type="button"
+              onClick={listening ? stopListening : startListening}
+              disabled={supported === false || isPending}
+              aria-label={listening ? "Stop listening" : "Start listening"}
+              className={`relative flex h-16 w-16 items-center justify-center rounded-full text-2xl focus:outline-none focus:ring-4 focus:ring-amber-400/30 disabled:opacity-40 ${
+                listening
+                  ? "bg-rose-600 text-white hover:bg-rose-700"
+                  : "bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 text-black shadow-[0_0_30px_-4px_rgba(240,200,96,0.8)]"
+              }`}
+            >
+              {listening ? "■" : <Mic className="h-7 w-7" />}
+            </button>
+          </div>
+          <p className="text-xs font-semibold text-amber-300" aria-live="polite">
             {isPending ? "Analyzing…" : listening ? "● Listening — speak the scenario" : "Tap to dictate"}
           </p>
         </div>
-        <label className="block text-xs text-slate-500 mt-3 mb-1" htmlFor="voice-transcript">
+        <label className="block text-xs text-slate-400 mt-3 mb-1" htmlFor="voice-transcript">
           Transcript (editable)
         </label>
         <textarea
@@ -485,99 +516,116 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
           onChange={(e) => setTranscript(e.target.value)}
           rows={3}
           placeholder='e.g. "Purchase of a single-family primary residence worth $850,000, loan amount 680k, credit score 742, 12 months of business bank statements"'
-          className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-brand-500 focus:outline-none"
+          className="w-full rounded-md border border-amber-500/25 bg-black/40 p-2 text-sm text-white placeholder:text-slate-500 focus:border-amber-400 focus:outline-none"
         />
         {interim && <p className="text-sm italic text-slate-400 mt-1">{interim}…</p>}
       </Card>
 
-      <Card title={`Vitals — ${assessment.vitalsFilled} of ${assessment.vitalsTotal} captured`}>
-        <div className="h-2 rounded bg-slate-200 overflow-hidden mb-4" role="progressbar" aria-valuenow={assessment.vitalsFilled} aria-valuemin={0} aria-valuemax={assessment.vitalsTotal}>
-          <div className="h-full bg-brand-500 transition-all" style={{ width: `${(assessment.vitalsFilled / assessment.vitalsTotal) * 100}%` }} />
+      <Card dark title={`Vitals — ${assessment.vitalsFilled} of ${assessment.vitalsTotal} captured`}>
+        <div className="h-2 rounded bg-white/10 overflow-hidden mb-4" role="progressbar" aria-valuenow={assessment.vitalsFilled} aria-valuemin={0} aria-valuemax={assessment.vitalsTotal}>
+          <div className="h-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all" style={{ width: `${(assessment.vitalsFilled / assessment.vitalsTotal) * 100}%` }} />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {VITAL_KEYS.map((k) => {
             const d = vitalDisplay[k];
+            const Icon = VITAL_ICONS[k];
             return (
               <div
                 key={k}
-                className={`rounded-lg border p-2 ${
+                className={`flex items-start gap-2.5 rounded-lg border p-2.5 ${
                   d.pending
-                    ? "border-brand-400 bg-brand-50"
+                    ? "border-amber-400/60 bg-amber-500/10"
                     : d.filled
-                      ? "border-emerald-200 bg-emerald-50"
-                      : "border-amber-300 bg-amber-50"
+                      ? "border-emerald-400/40 bg-emerald-500/10"
+                      : "border-amber-500/25 bg-black/30"
                 }`}
               >
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">{VITAL_LABELS[k]}</p>
-                <p className={`text-sm font-semibold ${d.pending ? "text-brand-800" : d.filled ? "text-slate-900" : "text-amber-800"}`}>
-                  {d.pending ? `◐ ${d.text}` : d.filled ? `✓ ${d.text}` : "Needed"}
-                </p>
-                {d.filled && d.source && (
-                  <p className="text-[10px] text-slate-500 truncate" title={d.source}>
-                    {d.inferred ? "≈ " : "“"}
-                    {d.source}
-                    {d.inferred ? " (confirm)" : "”"}
+                <span className="gold-icon-badge flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                  <Icon className="h-4 w-4 text-amber-300" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-slate-400">{VITAL_LABELS[k]}</p>
+                  <p className={`text-sm font-semibold ${d.pending ? "text-amber-300" : d.filled ? "text-white" : "text-amber-400"}`}>
+                    {d.pending ? `◐ ${d.text}` : d.filled ? `✓ ${d.text}` : "Needed"}
                   </p>
-                )}
+                  {d.filled && d.source && (
+                    <p className="text-[10px] text-slate-500 truncate" title={d.source}>
+                      {d.inferred ? "≈ " : "“"}
+                      {d.source}
+                      {d.inferred ? " (confirm)" : "”"}
+                    </p>
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
 
-        <p className="text-[10px] uppercase tracking-wide text-slate-400 mt-4 mb-1">Borrower profile (captured when mentioned)</p>
+        <p className="text-[11px] uppercase tracking-wide text-slate-500 mt-4 mb-1">Borrower profile (captured when mentioned)</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {EXTRA_VITAL_KEYS.map((k) => {
             const d = extraVitalDisplay[k];
+            const Icon = EXTRA_VITAL_ICONS[k];
             return (
-              <div key={k} className={`rounded-lg border p-2 ${d.filled ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50"}`}>
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">{EXTRA_VITAL_LABELS[k]}</p>
-                <p className={`text-sm font-semibold ${d.filled ? "text-slate-900" : "text-slate-400"}`}>
-                  {d.filled ? `✓ ${d.text}` : "Not mentioned"}
-                </p>
-                {d.filled && d.source && (
-                  <p className="text-[10px] text-slate-500 truncate" title={d.source}>
-                    “{d.source}”
+              <div key={k} className={`flex items-start gap-2.5 rounded-lg border p-2.5 ${d.filled ? "border-emerald-400/40 bg-emerald-500/10" : "border-white/10 bg-black/20"}`}>
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${d.filled ? "gold-icon-badge" : "border border-white/10 bg-black/30"}`}>
+                  <Icon className={`h-4 w-4 ${d.filled ? "text-amber-300" : "text-slate-500"}`} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-slate-400">{EXTRA_VITAL_LABELS[k]}</p>
+                  <p className={`text-sm font-semibold ${d.filled ? "text-white" : "text-slate-500"}`}>
+                    {d.filled ? d.text : "Not mentioned"}
                   </p>
-                )}
+                  {d.filled && d.source && (
+                    <p className="text-[10px] text-slate-500 truncate" title={d.source}>
+                      “{d.source}”
+                    </p>
+                  )}
+                </div>
               </div>
             );
           })}
           {isRefinance && (
-            <div className={`rounded-lg border p-2 ${lienDisplay.filled ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50"}`}>
-              <p className="text-[10px] uppercase tracking-wide text-slate-500">{REFI_VITAL_LABEL}</p>
-              <p className={`text-sm font-semibold ${lienDisplay.filled ? "text-slate-900" : "text-slate-400"}`}>
-                {lienDisplay.filled ? `✓ ${lienDisplay.text}` : "Not mentioned"}
-              </p>
-              {lienDisplay.filled && lienDisplay.source && (
-                <p className="text-[10px] text-slate-500 truncate" title={lienDisplay.source}>
-                  “{lienDisplay.source}”
+            <div className={`flex items-start gap-2.5 rounded-lg border p-2.5 ${lienDisplay.filled ? "border-emerald-400/40 bg-emerald-500/10" : "border-white/10 bg-black/20"}`}>
+              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${lienDisplay.filled ? "gold-icon-badge" : "border border-white/10 bg-black/30"}`}>
+                <Wallet className={`h-4 w-4 ${lienDisplay.filled ? "text-amber-300" : "text-slate-500"}`} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[11px] text-slate-400">{REFI_VITAL_LABEL}</p>
+                <p className={`text-sm font-semibold ${lienDisplay.filled ? "text-white" : "text-slate-500"}`}>
+                  {lienDisplay.filled ? lienDisplay.text : "Not mentioned"}
                 </p>
-              )}
+                {lienDisplay.filled && lienDisplay.source && (
+                  <p className="text-[10px] text-slate-500 truncate" title={lienDisplay.source}>
+                    “{lienDisplay.source}”
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
 
         {isRefinance && assessment.refinanceCalc && (
-          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="text-[10px] uppercase tracking-wide text-slate-500 mb-2">Refinance calculations</p>
+          <div className="mt-3 rounded-lg border border-amber-500/20 bg-black/30 p-3">
+            <p className="text-[11px] uppercase tracking-wide text-slate-500 mb-2">Refinance calculations</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
               <div>
                 <p className="text-[10px] text-slate-500">Current lien-to-value</p>
-                <p className="font-semibold text-slate-900">{fmtPct(assessment.refinanceCalc.currentLienLtv)}</p>
+                <p className="font-semibold text-white">{fmtPct(assessment.refinanceCalc.currentLienLtv)}</p>
               </div>
               <div>
                 <p className="text-[10px] text-slate-500">Proposed LTV</p>
-                <p className="font-semibold text-slate-900">
+                <p className="font-semibold text-white">
                   {assessment.refinanceCalc.proposedLtv !== undefined ? fmtPct(assessment.refinanceCalc.proposedLtv) : "—"}
                 </p>
               </div>
               <div>
                 <p className="text-[10px] text-slate-500">Estimated gross equity</p>
-                <p className="font-semibold text-slate-900">{usd(assessment.refinanceCalc.grossEquity)}</p>
+                <p className="font-semibold text-white">{usd(assessment.refinanceCalc.grossEquity)}</p>
               </div>
               <div>
                 <p className="text-[10px] text-slate-500">Estimated gross cash-out</p>
-                <p className="font-semibold text-slate-900">
+                <p className="font-semibold text-white">
                   {assessment.refinanceCalc.grossCashOut !== undefined ? usd(assessment.refinanceCalc.grossCashOut) : "—"}
                 </p>
               </div>
@@ -586,7 +634,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         )}
 
         <details className="mt-3 text-sm">
-          <summary className="cursor-pointer text-slate-600">Correct a field manually</summary>
+          <summary className="cursor-pointer text-amber-300 font-medium">Correct a field manually</summary>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
             <Select label="Purchase / refi" value={effective.loanPurpose?.value ?? ""} options={PURPOSES} onChange={(v) => setOv("loanPurpose", v as LoanPurpose)} />
             <Select label="Occupancy" value={effective.occupancy?.value ?? ""} options={OCCUPANCIES} onChange={(v) => setOv("occupancy", v as Occupancy)} />
@@ -629,37 +677,37 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         </details>
       </Card>
 
-      <Card title="Live Lender Rankings">
-        <p className="text-xs text-slate-500 -mt-2 mb-3">
+      <Card dark title="Live Lender Rankings">
+        <p className="text-xs text-slate-400 -mt-2 mb-3">
           Reorders in real time as the scenario resolves — the same ranking engine used on the final results page.
         </p>
         <LiveLenderRankings evaluations={liveEvaluations} loading={catalogLoading} enoughData={liveScenario !== null} />
       </Card>
 
-      <section className="rounded-r-lg border-l-4 border-brand-500 bg-brand-50 p-3" aria-live="polite">
-        <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-brand-700">
+      <section className="rounded-r-lg border-l-4 border-amber-500 bg-amber-500/10 p-3" aria-live="polite">
+        <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-amber-300">
           <span>Assistant</span>
-          <label className="flex items-center gap-1 cursor-pointer normal-case font-normal text-slate-600">
-            <input type="checkbox" checked={speakBack} onChange={(e) => setSpeakBack(e.target.checked)} className="rounded border-slate-300" />
+          <label className="flex items-center gap-1 cursor-pointer normal-case font-normal text-slate-400">
+            <input type="checkbox" checked={speakBack} onChange={(e) => setSpeakBack(e.target.checked)} className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" />
             🔊 speak replies
           </label>
         </div>
-        <p className="text-sm text-slate-800 mt-1">{assessment.prompt}</p>
+        <p className="text-sm text-slate-200 mt-1">{assessment.prompt}</p>
       </section>
 
       {assessment.conflicts.length > 0 && !conflictConfirmed && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
           {assessment.conflicts.map((c) => (
             <p key={c}>{c}</p>
           ))}
-          <button type="button" onClick={() => setConflictConfirmed(true)} className="mt-2 rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
+          <button type="button" onClick={() => setConflictConfirmed(true)} className="gold-button mt-2 rounded-md px-3 py-1.5 text-xs font-semibold">
             Use the computed figures &amp; analyze
           </button>
         </div>
       )}
 
       {isPending && <AiProcessingSequence active={isPending} />}
-      {serverMessage && !isPending && <p className="text-sm text-rose-700">{serverMessage}</p>}
+      {serverMessage && !isPending && <p className="text-sm text-rose-400">{serverMessage}</p>}
     </div>
   );
 }
@@ -673,9 +721,9 @@ function label<T extends string>(options: Array<[T, string]>, value: T): string 
 }
 function Select({ label: l, value, options, onChange }: { label: string; value: string; options: Array<[string, string]>; onChange: (v: string) => void }) {
   return (
-    <label className="block text-xs text-slate-500">
+    <label className="block text-xs text-slate-400">
       {l}
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 p-1.5 text-sm">
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="mt-1 w-full rounded-md border border-amber-500/25 bg-black/40 p-1.5 text-sm text-white">
         <option value="" disabled>
           —
         </option>
@@ -690,13 +738,13 @@ function Select({ label: l, value, options, onChange }: { label: string; value: 
 }
 function Num({ label: l, value, onChange }: { label: string; value: number | undefined; onChange: (n: number) => void }) {
   return (
-    <label className="block text-xs text-slate-500">
+    <label className="block text-xs text-slate-400">
       {l}
       <input
         type="number"
         value={value ?? ""}
         onChange={(e) => e.target.value !== "" && onChange(Number(e.target.value))}
-        className="mt-1 w-full rounded-md border border-slate-300 p-1.5 text-sm"
+        className="mt-1 w-full rounded-md border border-amber-500/25 bg-black/40 p-1.5 text-sm text-white"
       />
     </label>
   );

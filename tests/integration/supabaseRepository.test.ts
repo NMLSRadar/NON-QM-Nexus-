@@ -107,7 +107,16 @@ describe.skipIf(!hasCredentials)("SupabaseRepository (live database)", () => {
     // organization a signup happens to create.
     expect(catalog.lenders.length).toBeGreaterThan(0);
     expect(catalog.programs.length).toBeGreaterThan(0);
-    expect(catalog.rules.length).toBeGreaterThan(0);
+    // NOT asserting catalog.rules.length > 0: the real, ingested 38-lender/
+    // 100+-program platform catalog encodes its eligibility criteria
+    // (citizenship, state, property type, min FICO, max LTV, reserves, etc.)
+    // entirely in each program's `config` JSONB, evaluated by
+    // baseProgramChecks — the separate `rules` table (a more flexible
+    // custom-rule DSL) was only ever populated by the fictional sample-data
+    // demo catalog, which has been permanently removed (no more sample
+    // lenders/programs/rules anywhere, including this seed path). An empty
+    // `catalog.rules` is therefore the correct, expected state now, not a
+    // regression.
     // Every returned program must resolve to a lender ALSO present in this
     // same catalog result (internal consistency, not org-membership).
     const lenderIds = new Set(catalog.lenders.map((l) => l.id));
