@@ -26,6 +26,12 @@ export function deriveMaxLtv(scenario: Scenario, program: Program): number {
       .sort((a, b) => b.minFico - a.minFico)[0];
     if (applicable) cap = Math.min(cap, applicable.maxLtv);
   }
+  // A citizenship-specific cap (e.g. "Non-Permanent Resident Aliens:
+  // Maximum 75% LTV") only ever tightens the cap, never loosens it — a
+  // program's general LTV ceiling still applies if no cap is documented
+  // for this specific citizenship classification.
+  const citizenshipCap = scenario.citizenship ? program.citizenshipLtvCaps?.[scenario.citizenship] : undefined;
+  if (citizenshipCap != null) cap = Math.min(cap, citizenshipCap);
   return cap;
 }
 
@@ -111,6 +117,30 @@ export function baseProgramChecks(
   if (program.experiencedInvestorRequired === true && investorExperience && investorExperience !== "experienced_investor") {
     out.push(result(`${p}:expinv`, "Experienced investor required", "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
       "This program requires an experienced investor (prior investment-property ownership)."));
+  }
+
+  // Mortgage / housing history (30-day lates in the trailing 12 months) —
+  // real guideline language like "0x30x12" / "1x30x12 allowed with LLPA".
+  // Only evaluated when BOTH the scenario stated a count AND the program
+  // has a documented ceiling — undefined on either side means "not yet
+  // known", never a silent guess. Exceeding the ceiling is a hard fail
+  // (the guideline's own housing-history requirement); landing exactly at
+  // it is flagged as a soft/conditional note (an LLPA or pricing
+  // adjustment commonly applies at the ceiling, distinct from a clean
+  // history) rather than a plain pass.
+  if (scenario.creditEvents?.mortgageLates30x12 != null && program.maxMortgageLates30x12 != null) {
+    const lates = scenario.creditEvents.mortgageLates30x12;
+    const max = program.maxMortgageLates30x12;
+    if (lates > max) {
+      out.push(result(`${p}:lates`, "Mortgage/housing history (30-day lates)", "credit", RuleOutcome.Fail, RuleSeverity.Hard,
+        `${lates}x30 in the last 12 months exceeds this program's housing-history requirement (max ${max}x30x12).`));
+    } else if (lates === max && max > 0) {
+      out.push(result(`${p}:lates`, "Mortgage/housing history (30-day lates)", "credit", RuleOutcome.Warning, RuleSeverity.Soft,
+        `${lates}x30 in the last 12 months is at this program's housing-history ceiling — typically allowed only with an LLPA/pricing adjustment; confirm final pricing.`));
+    } else {
+      out.push(result(`${p}:lates`, "Mortgage/housing history (30-day lates)", "credit", RuleOutcome.Pass, RuleSeverity.Soft,
+        `${lates}x30 in the last 12 months is within this program's housing-history requirement (max ${max}x30x12).`));
+    }
   }
 
   // Loan amount

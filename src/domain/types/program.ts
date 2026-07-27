@@ -114,6 +114,25 @@ export interface Program {
   /** true = this program requires an experienced investor (first-time
    * investors are ineligible); undefined/false = no such requirement. */
   experiencedInvestorRequired?: boolean;
+  /** Maximum 30-day mortgage/housing-history lates allowed in the trailing
+   * 12 months (real guideline language: "0x30x12", "1x30x12 allowed with
+   * LLPA"). undefined = not yet documented for this program (never
+   * evaluated, matching the "no restriction on this dimension" pattern
+   * used by the other optional eligibility flags above) — NOT the same as
+   * 0, which means the guideline explicitly requires a clean 12-month
+   * housing history. */
+  maxMortgageLates30x12?: number;
+  /** Per-citizenship maximum LTV override — real guidelines frequently cap
+   * a specific citizenship classification below the program's general
+   * baseMaxLtv/ltvMatrix (e.g. "Non-Permanent Resident Aliens: Maximum
+   * 75% LTV" even though the same program otherwise allows 80%). Applied
+   * as an ADDITIONAL cap in deriveMaxLtv (the more restrictive of this and
+   * the base/matrix-derived cap wins) — never used to grant a HIGHER LTV
+   * than the base program allows. Omit a citizenship key entirely when
+   * the guideline states no distinct cap for it (e.g. "eligible for all
+   * products" with no separate LTV language) — do not default it to the
+   * base cap, which would misrepresent an undocumented figure as verified. */
+  citizenshipLtvCaps?: Partial<Record<Citizenship, number>>;
   guidelineVersionId: string;
   guidelineVersionLabel: string;
   effectiveDate: string;
