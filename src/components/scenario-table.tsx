@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { FileText, Mic } from "lucide-react";
+import { FileText, Mic, Upload, Sparkles, CheckCircle2, AlertTriangle, XCircle, Star } from "lucide-react";
 import { StatusBadge, fmtUsd, IconBadge, Pill } from "@/components/ui";
+import { ScenarioRowActions } from "@/components/scenario-row-actions";
 import type { Scenario } from "@/domain/types/scenario";
-import type { MatchStatus } from "@/domain/types/enums";
+import type { LoanPurpose, MatchStatus } from "@/domain/types/enums";
 import type { ProgramEvaluation } from "@/domain/types/results";
 
 export interface ScenarioRowData {
@@ -23,18 +24,78 @@ function timeAgo(iso: string | undefined): string {
   return new Date(iso).toLocaleDateString();
 }
 
+/** Which of the 4 built-in intake channels a scenario came from — drives the
+ * dark-variant's premium circular icon (mic / document / upload / spark).
+ * "Voice scenario" is the only channel the app currently auto-names that
+ * way; anything AI-extracted-from-a-document is surfaced elsewhere as an
+ * import, everything else (the manual New Scenario form) is a document. */
+function channelIcon(name: string) {
+  const n = name.toLowerCase();
+  if (n.startsWith("voice")) return Mic;
+  if (n.includes("import")) return Upload;
+  if (n.includes("ai")) return Sparkles;
+  return FileText;
+}
+
+/** Dark-variant purpose badge — outlined pill, color-coded by loan purpose.
+ * Only the 3 real LoanPurpose values this schema has exist as options;
+ * DSCR/Bank Statement are income-documentation types, not loan purposes,
+ * so they're never a value here (see docs/voice-vitals.md). */
+const PURPOSE_BADGE: Record<LoanPurpose, { label: string; className: string }> = {
+  purchase: { label: "Purchase", className: "border-amber-400/50 text-amber-300 bg-amber-400/5" },
+  rate_term_refinance: { label: "Refinance", className: "border-sky-400/50 text-sky-300 bg-sky-400/5" },
+  cash_out_refinance: { label: "Cash-Out", className: "border-purple-400/50 text-purple-300 bg-purple-400/5" },
+};
+
+function DarkPurposeBadge({ purpose }: { purpose: LoanPurpose | undefined }) {
+  if (!purpose) return <span className="text-slate-500">—</span>;
+  const b = PURPOSE_BADGE[purpose];
+  return (
+    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${b.className}`}>
+      {b.label}
+    </span>
+  );
+}
+
+/** Dark-variant "Best Result" badge — colored glow/border + icon per status,
+ * matching the mockup's Strong Match / Eligible w/ Restructuring / Needs
+ * Review / Ineligible treatment across all 6 real MatchStatus values. */
+const DARK_STATUS: Record<MatchStatus, { label: string; className: string; Icon: typeof CheckCircle2 }> = {
+  strong_match: { label: "Strong match", className: "border-emerald-400/60 text-emerald-300 bg-emerald-400/10 shadow-[0_0_14px_-4px_rgba(52,211,153,0.6)]", Icon: CheckCircle2 },
+  eligible: { label: "Eligible", className: "border-emerald-400/50 text-emerald-300 bg-emerald-400/5 shadow-[0_0_10px_-6px_rgba(52,211,153,0.5)]", Icon: CheckCircle2 },
+  eligible_with_restructuring: { label: "Eligible w/ restructuring", className: "border-amber-400/60 text-amber-300 bg-amber-400/10 shadow-[0_0_14px_-4px_rgba(212,175,55,0.6)]", Icon: Star },
+  conditional: { label: "Needs review", className: "border-orange-400/60 text-orange-300 bg-orange-400/10 shadow-[0_0_14px_-4px_rgba(251,146,60,0.6)]", Icon: AlertTriangle },
+  manual_review: { label: "Needs review", className: "border-orange-400/60 text-orange-300 bg-orange-400/10 shadow-[0_0_14px_-4px_rgba(251,146,60,0.6)]", Icon: AlertTriangle },
+  ineligible: { label: "Ineligible", className: "border-rose-500/60 text-rose-400 bg-rose-500/10 shadow-[0_0_14px_-4px_rgba(244,63,94,0.6)]", Icon: XCircle },
+};
+
+function DarkStatusBadge({ status }: { status: MatchStatus }) {
+  const s = DARK_STATUS[status];
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold whitespace-nowrap ${s.className}`}>
+      <s.Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      {s.label}
+    </span>
+  );
+}
+
 /** Modern SaaS scenario table — shared by the Dashboard's "Recent Scenarios"
  * card and the full Scenarios list page, so both stay visually identical.
- * Collapses to stacked cards below `sm` so nothing scrolls horizontally on
- * mobile (see the redesign brief's responsive requirement). */
-export function ScenarioTable({ rows }: { rows: ScenarioRowData[] }) {
+ * `variant="dark"` renders the premium black/gold card-row redesign (used
+ * only on the Dashboard); the default `variant="light"` is byte-for-byte
+ * the original light-theme table the /scenarios list page already relies
+ * on — nothing about that call site changes. Collapses to stacked cards
+ * below `sm` so nothing scrolls horizontally on mobile either way. */
+export function ScenarioTable({ rows, variant = "light" }: { rows: ScenarioRowData[]; variant?: "light" | "dark" }) {
   if (rows.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-ink-secondary">
+      <p className={`py-8 text-center text-sm ${variant === "dark" ? "text-slate-400" : "text-ink-secondary"}`}>
         No scenarios yet — start a Voice Scenario or create one manually to see it here.
       </p>
     );
   }
+
+  if (variant === "dark") return <DarkScenarioTable rows={rows} />;
 
   return (
     <div>
@@ -107,6 +168,94 @@ export function ScenarioTable({ rows }: { rows: ScenarioRowData[] }) {
             </Link>
           </li>
         ))}
+      </ul>
+    </div>
+  );
+}
+
+/** A human-readable purpose subtitle line under the scenario name, e.g.
+ * "Purchase scenario" / "Cash-Out Refinance" — matches the mockup's
+ * left-column secondary line exactly. */
+function purposeSubtitle(purpose: LoanPurpose | undefined): string {
+  if (!purpose) return "Scenario";
+  if (purpose === "purchase") return "Purchase scenario";
+  if (purpose === "cash_out_refinance") return "Cash-Out Refinance";
+  return "Refinancing Scenario";
+}
+
+function DarkScenarioTable({ rows }: { rows: ScenarioRowData[] }) {
+  return (
+    <div>
+      {/* Desktop / tablet: premium card-rows */}
+      <div className="hidden sm:block">
+        <div className="grid grid-cols-[minmax(0,2.1fr)_120px_140px_70px_200px_100px_40px] items-center gap-4 px-2 pb-3 text-[13px] font-semibold uppercase tracking-wider text-slate-500">
+          <span>Scenario</span>
+          <span>Purpose</span>
+          <span>Loan amount</span>
+          <span>State</span>
+          <span>Best result</span>
+          <span>Updated</span>
+          <span className="sr-only">Actions</span>
+        </div>
+        <ul className="space-y-2.5">
+          {rows.map(({ scenario, best }, i) => {
+            const Icon = channelIcon(scenario.name);
+            return (
+              <li
+                key={scenario.id}
+                className="gold-scenario-card gold-fade-up grid grid-cols-[minmax(0,2.1fr)_120px_140px_70px_200px_100px_40px] items-center gap-4 rounded-2xl border px-4 py-4 min-h-[84px]"
+                style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+              >
+                <Link href={`/scenarios/${scenario.id}`} className="flex min-w-0 items-center gap-3">
+                  <span className="gold-icon-badge relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full">
+                    <Icon className="h-5 w-5 text-amber-300" aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-[19px] font-bold leading-tight text-white">{scenario.name}</p>
+                    <p className="mt-0.5 truncate text-[15px] text-slate-400">{purposeSubtitle(scenario.loanPurpose)}</p>
+                  </div>
+                </Link>
+                <DarkPurposeBadge purpose={scenario.loanPurpose} />
+                <span className="text-[20px] font-bold tabular-nums text-white">{fmtUsd(scenario.requestedLoanAmount)}</span>
+                <span className="text-[15px] text-slate-400">{scenario.state ?? "—"}</span>
+                <span>{best ? <DarkStatusBadge status={best.status as MatchStatus} /> : <span className="text-slate-500">—</span>}</span>
+                <span className="text-[15px] text-slate-400 whitespace-nowrap">{timeAgo(scenario.updatedAt)}</span>
+                <ScenarioRowActions scenarioId={scenario.id} />
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      {/* Mobile: stacked premium cards */}
+      <ul className="sm:hidden space-y-3">
+        {rows.map(({ scenario, best }) => {
+          const Icon = channelIcon(scenario.name);
+          return (
+            <li key={scenario.id} className="gold-scenario-card gold-fade-up rounded-2xl border p-4">
+              <div className="flex items-start gap-3">
+                <Link href={`/scenarios/${scenario.id}`} className="flex min-w-0 flex-1 items-start gap-3">
+                  <span className="gold-icon-badge relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+                    <Icon className="h-4.5 w-4.5 text-amber-300" aria-hidden />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[18px] font-bold leading-tight text-white">{scenario.name}</p>
+                    <p className="mt-0.5 text-[14px] text-slate-400">{purposeSubtitle(scenario.loanPurpose)}</p>
+                    <div className="mt-3 flex items-center gap-2 flex-wrap">
+                      <DarkPurposeBadge purpose={scenario.loanPurpose} />
+                      <span className="text-[18px] font-bold tabular-nums text-white">{fmtUsd(scenario.requestedLoanAmount)}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      {best ? <DarkStatusBadge status={best.status as MatchStatus} /> : <span className="text-slate-500 text-sm">—</span>}
+                      <span className="text-[13px] text-slate-500">{timeAgo(scenario.updatedAt)}</span>
+                    </div>
+                  </div>
+                </Link>
+                <ScenarioRowActions scenarioId={scenario.id} />
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

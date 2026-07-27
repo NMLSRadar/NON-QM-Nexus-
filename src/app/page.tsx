@@ -38,16 +38,19 @@ export default async function DashboardPage() {
       {/* Hero — Voice Scenario is the flagship feature and dominates the page. */}
       <HomeVoiceHero />
 
-      {/* Recent scenarios */}
-      <section className="gold-panel rounded-2xl p-6">
+      {/* Recent scenarios — premium black/gold card-row redesign */}
+      <section className="gold-scenarios-panel p-6 sm:p-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="flex items-start gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/30">
-              <Clock className="h-5 w-5" />
+          <div className="flex items-start gap-4">
+            <span className="gold-header-icon relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full">
+              <Clock className="h-6 w-6 text-amber-300" />
             </span>
             <div>
-              <h2 className="text-lg font-bold text-white">Recent Scenarios</h2>
-              <p className="text-sm text-slate-400">Your latest borrower scenarios and their best current match.</p>
+              <h2 className="text-[32px] font-bold leading-tight text-white">Recent Scenarios</h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Your <span className="font-semibold text-amber-300">latest borrower scenarios</span> and their{" "}
+                <span className="font-semibold text-amber-300">best current match</span>.
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -75,14 +78,17 @@ export default async function DashboardPage() {
             <p className="max-w-sm text-sm text-slate-400">Start a Voice Scenario or create one manually to see it here.</p>
           </div>
         ) : (
-          <div className="light-surface mt-5 rounded-xl bg-white p-3 sm:p-4 shadow-xl">
-            <ScenarioTable rows={summaries.slice(0, 8)} />
+          <div className="mt-6">
+            <ScenarioTable rows={summaries.slice(0, 8)} variant="dark" />
           </div>
         )}
         {scenarios.length > 8 ? (
-          <div className="mt-4 text-center">
-            <Link href="/scenarios" className="inline-flex items-center gap-1 text-sm font-medium text-amber-300 hover:underline">
-              View all {scenarios.length} scenarios <ArrowRight className="h-3.5 w-3.5" />
+          <div className="mt-6 text-center">
+            <Link
+              href="/scenarios"
+              className="gold-view-all-button inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold"
+            >
+              View all {scenarios.length} scenarios <ArrowRight className="gold-view-all-arrow h-4 w-4" />
             </Link>
           </div>
         ) : null}
