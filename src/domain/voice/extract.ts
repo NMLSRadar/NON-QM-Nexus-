@@ -252,15 +252,15 @@ function firstMatch(
 // ---------------------------------------------------------------------------
 
 const PROPERTY_VALUE_TERMS =
-  /\brequested loan amount\b|\bproperty value\b|\bestimated value\b|\bmarket value\b|\bappraised value\b|\bappraisal value\b|\bexpected appraisal\b|\bappraises? for\b|\bsubject value\b|\bvalue of the property\b|\bpurchase price\b|\bsales? price\b|\bacquisition price\b|\bcontract price\b|\bhome price\b|\bproperty price\b|\bvalued at\b|\bworth\b|\bappraisal\b|\bappraise\b|\bvalue\b|\bprice\b/;
+  /\brequested loan amount\b|\bproperty value\b|\bestimated value\b|\bmarket value\b|\bappraised value\b|\bappraisal value\b|\bexpected appraisal\b|\bappraises? for\b|\bsubject value\b|\bvalue of the property\b|\bpurchase price\b|\bsales? price\b|\basking price\b|\blist(?:ed)? price\b|\blisted for\b|\bgoing for\b|\bselling for\b|\bpriced at\b|\bacquisition price\b|\bcontract price\b|\bhome price\b|\bproperty price\b|\bvalued at\b|\bworth\b|\bappraisal\b|\bappraise\b|\bvalue\b|\bprice\b/;
 // Generic single words ("purchase", "property", "home") are real signals
 // ("a $600,000 purchase", "looking at a $600,000 property") but far too
 // common to search sentence-wide without false hits — scoped to the
 // number's own clause only (see classifyMortgageAmounts).
-const PROPERTY_VALUE_WEAK_TERMS = /\bpurchase\b|\bproperty\b|\bhome\b/;
+const PROPERTY_VALUE_WEAK_TERMS = /\bpurchase\b|\bproperty\b|\bhome\b|\bhouse\b|\bcondo\b/;
 
 const LOAN_AMOUNT_TERMS =
-  /\brequested loan amount\b|\bloan amount\b|\bmortgage amount\b|\bfinancing amount\b|\bamount financed\b|\bnew loan\b|\bproposed loan\b|\bloan request\b|\bborrower needs?\b|\blooking to borrow\b|\bwants? to borrow\b|\bunpaid principal balance\b|\bfinancing\b|\bborrow\b|\bloan\b/;
+  /\brequested loan amount\b|\bloan amount\b|\bmortgage amount\b|\bfinancing amount\b|\bamount financed\b|\bnew loan\b|\bproposed loan\b|\bloan request\b|\bborrower needs?\b|\blooking to borrow\b|\bwants? to borrow\b|\bneeds? to finance\b|\blooking to finance\b|\bwants? to finance\b|\bunpaid principal balance\b|\bfinancing\b|\bborrow\b|\bloan\b/;
 // The specific phrases only (no bare "loan"/"borrow"/"financing") — used
 // instead of the full set above whenever the clause already contains an
 // EXISTING_LIEN_TERMS phrase, since those phrases (e.g. "current loan
@@ -269,7 +269,7 @@ const LOAN_AMOUNT_TERMS =
 // characters closer to the number than the full phrase's start — would
 // win by raw distance and misclassify a lien balance as the new loan.
 const LOAN_AMOUNT_STRONG_TERMS =
-  /\brequested loan amount\b|\bloan amount\b|\bmortgage amount\b|\bfinancing amount\b|\bamount financed\b|\bnew loan\b|\bproposed loan\b|\bloan request\b|\bborrower needs?\b|\blooking to borrow\b|\bwants? to borrow\b|\bunpaid principal balance\b/;
+  /\brequested loan amount\b|\bloan amount\b|\bmortgage amount\b|\bfinancing amount\b|\bamount financed\b|\bnew loan\b|\bproposed loan\b|\bloan request\b|\bborrower needs?\b|\blooking to borrow\b|\bwants? to borrow\b|\bneeds? to finance\b|\blooking to finance\b|\bwants? to finance\b|\bunpaid principal balance\b/;
 
 // Refinance-only: what the borrower currently owes on the subject property
 // — distinct from LOAN_AMOUNT_TERMS above (the NEW requested loan). Getting
@@ -289,8 +289,20 @@ const DISQUALIFYING_CONTEXT = new RegExp(
   `${CREDIT_SCORE_CONTEXT.source}|${INCOME_CONTEXT.source}|${RENT_CONTEXT.source}|\\bdscr\\b|\\breserves?\\b|\\binterest rate\\b|\\brate of\\b|\\bunits?\\b|\\byears? in business\\b|\\bmonths? of seasoning\\b|\\bzip\\b`
 );
 
-const DOWN_PAYMENT_TERMS = /\bdown payment\b|\bputting down\b|\bpercent(?:age)? financed\b|\bfinancing percentage\b|\bequity position\b|\bdown\b/;
+const DOWN_PAYMENT_TERMS = /\bdown payment\b|\bputting down\b|\bput down\b|\bbring(?:ing)?\b|\bto closing\b|\bcash to close\b|\bout of pocket\b|\bpercent(?:age)? financed\b|\bfinancing percentage\b|\bequity position\b|\bminimum down\b|\bdown\b/;
 const LTV_DIRECT_TERMS = /\bltv\b|loan[\s-]*to[\s-]*value|\bleverage\b/;
+// Dollar-DENOMINATED down payment ("putting $100,000 down", "$50k down
+// payment", "bringing $80,000 to closing") — previously had no home in the
+// dollar-band classifier at all (only a PERCENT-based down payment, e.g.
+// "10% down", was recognized), so a spoken dollar down payment fell through
+// to the generic unlabeled-number fallback and could be misassigned as the
+// loan amount itself instead of being subtracted from the property value.
+// Note: multi-word phrases here are split into independent single-word
+// alternatives ("bring(?:ing)?" / "to closing", not a joined "bringing to
+// closing") because the dollar figure itself normally sits BETWEEN the two
+// halves ("bringing $65,000 to closing") — a joined phrase would never
+// match since the words aren't actually adjacent in real speech.
+const DOWN_PAYMENT_DOLLAR_TERMS = /\bdown payment\b|\bputting down\b|\bput down\b|\bbring(?:ing)?\b|\bto closing\b|\bcash to close\b|\bminimum down\b|\bdown\b/;
 
 interface BoundaryHit {
   index: number;
@@ -336,6 +348,10 @@ export interface AmountClassification {
   loanAmount?: { value: number; source: string; inferred?: boolean };
   requestedCashOut?: { value: number; source: string };
   existingLienBalance?: { value: number; source: string };
+  /** A DOLLAR-denominated down payment ("putting $100,000 down") — resolved
+   * against propertyValue into a real loanAmount/ltv by the caller, never
+   * treated as the loan amount itself. */
+  downPaymentDollar?: { value: number; source: string };
   ltv?: { value: number; source: string };
   /** Set when the fallback path assigned BOTH value and loan from two
    * unlabeled dollar figures (larger → value, smaller → loan) — callers use
@@ -379,6 +395,7 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
   let loanAmount: { value: number; source: string; inferred?: boolean } | undefined;
   let requestedCashOut: { value: number; source: string } | undefined;
   let existingLienBalance: { value: number; source: string } | undefined;
+  let downPaymentDollar: { value: number; source: string } | undefined;
   const unclassified: Array<{ num: number; index: number; source: string }> = [];
   const dollarRe = /\$?(\d{4,9})\b/g;
   let dm: RegExpExecArray | null;
@@ -411,19 +428,21 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
     let dCashOut = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, CASH_OUT_AMOUNT_TERMS);
     let dLien = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, EXISTING_LIEN_TERMS);
     let dLoan = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, loanTermsForClause);
+    let dDown = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, DOWN_PAYMENT_DOLLAR_TERMS);
     let dValue = clauseHasLien
       ? nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, PROPERTY_VALUE_TERMS)
       : Math.min(
           nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, PROPERTY_VALUE_TERMS),
           nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, PROPERTY_VALUE_WEAK_TERMS)
         );
-    if (dCashOut === Infinity && dLien === Infinity && dLoan === Infinity && dValue === Infinity) {
+    if (dCashOut === Infinity && dLien === Infinity && dLoan === Infinity && dValue === Infinity && dDown === Infinity) {
       dCashOut = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, CASH_OUT_AMOUNT_TERMS);
       dLien = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, EXISTING_LIEN_TERMS);
       dLoan = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, loanTermsForSentence);
       dValue = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, PROPERTY_VALUE_TERMS);
+      dDown = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, DOWN_PAYMENT_DOLLAR_TERMS);
     }
-    const min = Math.min(dCashOut, dLien, dLoan, dValue);
+    const min = Math.min(dCashOut, dLien, dLoan, dValue, dDown);
     const source = clause.trim();
 
     if (min === Infinity) {
@@ -432,6 +451,14 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
       requestedCashOut = { value: n, source };
     } else if (min === dLien && !existingLienBalance) {
       existingLienBalance = { value: n, source };
+    } else if (min === dDown && !downPaymentDollar) {
+      // Checked AHEAD of dLoan/dValue below only via the Math.min ordering
+      // above — a bare "down" is part of DOWN_PAYMENT_DOLLAR_TERMS, so a
+      // number genuinely near "down"/"down payment"/"put down" wins this
+      // category over the generic LOAN_AMOUNT_TERMS' bare "loan"/"borrow",
+      // preventing a real down payment from ever being misread as the loan
+      // amount itself.
+      downPaymentDollar = { value: n, source };
     } else if (min === dLoan && !loanAmount) {
       loanAmount = { value: n, source };
     } else if (min === dValue && !propertyValue) {
@@ -495,7 +522,7 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
     }
   }
 
-  return { propertyValue, loanAmount, requestedCashOut, existingLienBalance, ltv, assumedBothFromUnlabeledPair };
+  return { propertyValue, loanAmount, requestedCashOut, existingLienBalance, downPaymentDollar, ltv, assumedBothFromUnlabeledPair };
 }
 
 export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
@@ -526,6 +553,17 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   if (amounts.loanAmount) x.loanAmount = cap(Math.round(amounts.loanAmount.value), amounts.loanAmount.source, amounts.loanAmount.inferred);
   if (amounts.requestedCashOut) x.requestedCashOut = cap(Math.round(amounts.requestedCashOut.value), amounts.requestedCashOut.source);
   if (amounts.existingLienBalance) x.existingLienBalance = cap(Math.round(amounts.existingLienBalance.value), amounts.existingLienBalance.source);
+  // A dollar-denominated down payment ("putting $100,000 down") only makes
+  // sense once we know the property value, and only when the loan amount
+  // wasn't ALSO stated directly (which would already be more specific and
+  // authoritative than deriving it from value minus down payment).
+  if (amounts.downPaymentDollar && amounts.propertyValue && !amounts.loanAmount && !amounts.ltv) {
+    const value = amounts.propertyValue.value;
+    const down = amounts.downPaymentDollar.value;
+    const derivedLoan = Math.round(value - down);
+    x.loanAmount = cap(derivedLoan, `${amounts.downPaymentDollar.source} (down payment subtracted from value)`);
+    x.statedLtv = cap(round2ForLtv((derivedLoan / value) * 100), `${amounts.downPaymentDollar.source} (down payment converted to LTV)`);
+  }
   if (amounts.assumedBothFromUnlabeledPair) {
     x.notesFragments.push("Two dollar figures were given without labels; assumed the larger is the property value.");
   }

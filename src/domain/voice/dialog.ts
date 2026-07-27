@@ -1,4 +1,4 @@
-import { LoanPurpose } from "@/domain/types/enums";
+import { IncomeDocType, LoanPurpose } from "@/domain/types/enums";
 import type { ScenarioInput } from "@/domain/validation/scenarioSchema";
 import { VITAL_KEYS, VITAL_LABELS, VITAL_QUESTIONS, VitalKey, VoiceExtraction } from "./slots";
 
@@ -27,6 +27,10 @@ export interface Assessment {
   prompt: string;
   derived: { ltv?: number; loanAmount?: number; propertyValue?: number };
   conflicts: string[];
+  /** Set when down payment/LTV was never stated and a conservative default
+   * (bank statement 10% down / DSCR 20% down / ITIN 15% down) was assumed
+   * instead — surfaced to the user so they can correct it. */
+  assumedDownPaymentNote?: string;
   /** Refinance-only figures — present whenever propertyValue and
    * existingLienBalance are both known, regardless of whether the 8 core
    * vitals are complete yet (so they update live as soon as they can). */
@@ -43,9 +47,42 @@ export interface Assessment {
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
+// Conservative default max-LTV assumptions used ONLY as a last-resort safety
+// net — the assistant should always actively ask for the actual down
+// payment/LTV first (see the `ltv` VITAL_QUESTION); this only fires if a
+// scenario is otherwise complete except for down payment/LTV never having
+// been captured despite asking. Per real published guidelines: no real
+// bank-statement Non-QM program exceeds 90% LTV (10% min down); the
+// majority of DSCR programs cap at 80% LTV (20% min down) with only a
+// handful of lenders allowing up to 85% — 80% is used as the conservative
+// default rather than the more permissive minority figure. Only the two
+// doc types the user explicitly specified a rule for are covered here;
+// other doc types fall back to no default (the assistant keeps asking).
+const DEFAULT_MAX_LTV_BY_DOC_TYPE: Partial<Record<IncomeDocType, number>> = {
+  bank_statement: 90,
+  dscr: 80,
+};
+// ITIN borrowers: typically capped at 85% LTV (15% min down) across this
+// catalog, with GreenBox Loans' ITIN Full Doc program as the one disclosed
+// exception at 89% LTV — 85% (the general case, not the exception) is used
+// as the safety-net default; GreenBox's real 89% figure is still evaluated
+// normally by the matching engine once a real scenario is run, this only
+// affects what's ASSUMED when the user never states a down payment at all.
+const DEFAULT_MAX_LTV_ITIN = 85;
+
+function defaultMaxLtv(docType: IncomeDocType | undefined, isItin: boolean): number | undefined {
+  if (isItin) return DEFAULT_MAX_LTV_ITIN;
+  if (!docType) return undefined;
+  return DEFAULT_MAX_LTV_BY_DOC_TYPE[docType];
+}
+
 export function assess(x: VoiceExtraction): Assessment {
   const derived: Assessment["derived"] = {};
   const conflicts: string[] = [];
+  /** Set when down payment/LTV was never stated and a conservative default
+   * was assumed instead — surfaced distinctly in the summary/prompt so the
+   * user can correct it, and carried into the final scenario's notes. */
+  let assumedDownPaymentNote: string | undefined;
 
   let value = x.propertyValue?.value;
   let loan = x.loanAmount?.value;
@@ -68,6 +105,26 @@ export function assess(x: VoiceExtraction): Assessment {
     derived.ltv = stated;
   } else if (stated !== undefined) {
     derived.ltv = stated;
+  } else {
+    // Nothing about down payment/LTV was ever stated — safety-net default
+    // ONLY (never a substitute for actively asking first; this is what
+    // lets a scenario resolve if the user truly never answers).
+    const isItin = x.citizenship?.value === "itin";
+    const maxLtv = defaultMaxLtv(x.incomeDocType?.value, isItin);
+    if (maxLtv !== undefined) {
+      const docLabel = isItin ? "ITIN" : x.incomeDocType?.value === "bank_statement" ? "bank statement" : "DSCR";
+      if (value !== undefined && loan === undefined) {
+        loan = Math.round(value * (maxLtv / 100));
+        derived.loanAmount = loan;
+        derived.ltv = maxLtv;
+        assumedDownPaymentNote = `Down payment wasn't stated, so ${100 - maxLtv}% down (${maxLtv}% LTV) was assumed as the default minimum for a ${docLabel} scenario — say the actual down payment or LTV to correct this.`;
+      } else if (loan !== undefined && value === undefined) {
+        value = Math.round(loan / (maxLtv / 100));
+        derived.propertyValue = value;
+        derived.ltv = maxLtv;
+        assumedDownPaymentNote = `Property value wasn't stated, so it was derived from the loan amount assuming ${maxLtv}% LTV (the default minimum down payment for a ${docLabel} scenario) — say the actual property value, down payment, or LTV to correct this.`;
+      }
+    }
   }
 
   const has: Record<VitalKey, boolean> = {
@@ -136,7 +193,9 @@ export function assess(x: VoiceExtraction): Assessment {
   if (conflicts.length > 0) {
     prompt = conflicts.join(" ");
   } else if (complete) {
-    prompt = `All set — ${vitalsFilled} of ${VITAL_KEYS.length} vitals captured: ${filledSummary.join(", ")}. Analyzing your scenario and ranking matching lenders now.`;
+    prompt = `All set — ${vitalsFilled} of ${VITAL_KEYS.length} vitals captured: ${filledSummary.join(", ")}.${
+      assumedDownPaymentNote ? ` ${assumedDownPaymentNote}` : ""
+    } Analyzing your scenario and ranking matching lenders now.`;
   } else if (filledSummary.length === 0) {
     prompt = `Tell me the full scenario in one go — I need ${listNaturally(askable.map((k) => VITAL_LABELS[k].toLowerCase()))}.`;
   } else {
@@ -154,6 +213,7 @@ export function assess(x: VoiceExtraction): Assessment {
     prompt,
     derived,
     conflicts,
+    assumedDownPaymentNote,
     refinanceCalc,
   };
 }
@@ -189,6 +249,7 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
   }
 
   const assumptions = [...x.notesFragments];
+  if (a.assumedDownPaymentNote) assumptions.push(a.assumedDownPaymentNote);
   const doc = x.incomeDocType.value;
   const bankStatement =
     doc === "bank_statement"
