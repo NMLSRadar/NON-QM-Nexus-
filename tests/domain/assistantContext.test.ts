@@ -138,6 +138,23 @@ describe("Assistant system prompt — slang comprehension, grounded routing, and
     expect(lower).toMatch(/not every property will support/);
   });
 
+  it("Asset Depletion expert reasoning: states the real LTV tiers and the asset-divisor mechanic", () => {
+    const lower = ASSISTANT_SYSTEM_PROMPT.toLowerCase();
+    expect(lower).toContain("asset depletion");
+    expect(lower).toContain("80% ltv");
+    expect(lower).toMatch(/asset divisor/);
+    expect(lower).toMatch(/shorter divisor produces a higher/);
+  });
+
+  it("Foreign National expert reasoning: distinguishes dedicated FN programs from citizenship-capped general DSCR programs", () => {
+    const lower = ASSISTANT_SYSTEM_PROMPT.toLowerCase();
+    expect(lower).toContain("foreign national loans");
+    expect(lower).toMatch(/70-75% ltv/);
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain("Acra Lending's Platinum DSCR");
+    expect(lower).toMatch(/citizenship-specific ltv cap/);
+    expect(lower).toContain("12 months");
+  });
+
   it("clarifies the assistant's role is directional guidance, not guideline clarification — that's the AE's job", () => {
     expect(ASSISTANT_SYSTEM_PROMPT.toLowerCase()).toContain("account executive");
     expect(ASSISTANT_SYSTEM_PROMPT.toLowerCase()).toContain("not a guideline-clarification");
