@@ -1,4 +1,4 @@
-import { DISCLAIMER } from "./types/enums";
+import { DISCLAIMER, IncomeDocType } from "./types/enums";
 import type { Lender, Program, Rule } from "./types/program";
 import type { Scenario } from "./types/scenario";
 import type { AnalysisResult } from "./types/results";
@@ -6,6 +6,7 @@ import { runCalculations } from "./calc";
 import { evaluateProgram, rankEvaluations } from "./matching/evaluateProgram";
 import { generateRestructuringOptions } from "./matching/restructure";
 import { generateNeedsList } from "./matching/needsList";
+import { classifyBankStatementComplexity } from "./matching/bankStatementComplexity";
 
 export interface ProgramCatalog {
   lenders: Lender[];
@@ -31,6 +32,11 @@ export function analyzeScenario(
 ): AnalysisResult {
   const calculation = runCalculations(scenario);
 
+  const bankStatementFileClassification =
+    scenario.incomeDocType === IncomeDocType.BankStatement
+      ? classifyBankStatementComplexity(scenario, calculation)
+      : undefined;
+
   const lenderById = new Map(catalog.lenders.map((l) => [l.id, l]));
   const activePairs = catalog.programs
     .filter((p) => p.active)
@@ -39,7 +45,15 @@ export function analyzeScenario(
 
   const evaluations = rankEvaluations(
     activePairs.map(({ program, lender }) =>
-      evaluateProgram(scenario, calculation, program, lender, catalog.rules, asOf),
+      evaluateProgram(
+        scenario,
+        calculation,
+        program,
+        lender,
+        catalog.rules,
+        asOf,
+        bankStatementFileClassification?.classification,
+      ),
     ),
   );
 
@@ -66,5 +80,6 @@ export function analyzeScenario(
     needsList,
     generatedAt: new Date().toISOString(),
     disclaimer: DISCLAIMER,
+    bankStatementFileClassification,
   };
 }

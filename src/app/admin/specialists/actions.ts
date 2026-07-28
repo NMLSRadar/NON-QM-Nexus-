@@ -13,7 +13,7 @@ import { requirePlatformAdmin } from "@/lib/admin";
  */
 export async function setProgramSpecialistFlag(
   programId: string,
-  flag: "foreignNationalSpecialist" | "itinSpecialist",
+  flag: "foreignNationalSpecialist" | "itinSpecialist" | "bankStatementCleanExecution" | "bankStatementFlexible",
   value: boolean,
 ): Promise<void> {
   const { supabase } = await requirePlatformAdmin();

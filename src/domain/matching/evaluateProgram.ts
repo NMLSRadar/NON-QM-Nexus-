@@ -6,6 +6,7 @@ import { selectActiveRules } from "../rules/activeRules";
 import { evaluateRules } from "../rules/evaluate";
 import { baseProgramChecks, deriveMaxLtv } from "./baseChecks";
 import { computeScore } from "./score";
+import type { BankStatementFileClassification } from "./bankStatementComplexity";
 
 /**
  * Classify a program's overall status from its rule results.
@@ -40,6 +41,7 @@ export function evaluateProgram(
   lender: Lender,
   customRules: Rule[],
   asOf: Date = new Date(),
+  bankStatementClassification?: BankStatementFileClassification,
 ): ProgramEvaluation {
   const active = selectActiveRules(
     customRules.filter((r) => r.programId === program.id),
@@ -51,7 +53,7 @@ export function evaluateProgram(
     ...evaluateRules(scenario, calc, active),
   ];
 
-  const { score, breakdown } = computeScore(scenario, calc, program, ruleResults);
+  const { score, breakdown } = computeScore(scenario, calc, program, ruleResults, bankStatementClassification);
   const status = classifyStatus(ruleResults, score);
 
   return {
@@ -77,6 +79,8 @@ export function evaluateProgram(
     citizenshipEligible: program.citizenshipEligible,
     foreignNationalSpecialist: program.foreignNationalSpecialist ?? false,
     itinSpecialist: program.itinSpecialist ?? false,
+    bankStatementCleanExecution: program.bankStatementCleanExecution ?? false,
+    bankStatementFlexible: program.bankStatementFlexible ?? false,
     interestOnlyAvailable: program.interestOnlyAvailable,
     ruleResults,
     failedRules: ruleResults.filter((r) => r.outcome === RuleOutcome.Fail),

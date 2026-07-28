@@ -154,6 +154,20 @@ export interface Program {
    * plus a distinct "ITIN Specialist" badge in the UI. Only ever set on a
    * program ALREADY citizenship-eligible for itin. */
   itinSpecialist?: boolean;
+  /** Same editorial-signal pattern, for a CLEAN, straightforward bank
+   * statement file — per the "Bank Statement Guideline-First Lender
+   * Intelligence" spec (2026-07-28). Only applies its scoring boost when
+   * the scenario's own bank-statement file classification (see
+   * bankStatementComplexity.ts) is "clean" — never for a moderate/high/
+   * manual-review file, where pricing/technology should NOT outweigh
+   * guideline flexibility. */
+  bankStatementCleanExecution?: boolean;
+  /** Same editorial-signal pattern, for a bank-statement file that needs
+   * GUIDELINE FLEXIBILITY (a nuance, overlay, or complication) — only
+   * applies its scoring boost when the file classification is moderate,
+   * high complexity, or manual-review-recommended; never for a clean
+   * file. */
+  bankStatementFlexible?: boolean;
   guidelineVersionId: string;
   guidelineVersionLabel: string;
   effectiveDate: string;

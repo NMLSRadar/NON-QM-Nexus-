@@ -144,6 +144,8 @@ function LenderCard({
         {e.itinSpecialist && <Pill tone="gold">ITIN Specialist</Pill>}
         {e.citizenshipEligible.includes("foreign_national") && <Pill tone="sky">Foreign National</Pill>}
         {e.foreignNationalSpecialist && <Pill tone="gold">Foreign National Specialist</Pill>}
+        {e.bankStatementCleanExecution && <Pill tone="gold">Clean-File Execution</Pill>}
+        {e.bankStatementFlexible && <Pill tone="gold">Bank Statement Flexibility</Pill>}
         {e.incomeDocTypes.includes("bank_statement") && <Pill tone="neutral">Bank Statement</Pill>}
         {e.incomeDocTypes.includes("dscr") && <Pill tone="neutral">DSCR</Pill>}
         {e.incomeDocTypes.includes("pnl_only") && <Pill tone="neutral">P&amp;L Only</Pill>}

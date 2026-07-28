@@ -142,6 +142,13 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
 
           {/* Best Lender Matches — the signature section of the page. */}
           <Card className="p-6">
+            {analysis.bankStatementFileClassification ? (
+              <div className="mb-4 rounded-control border border-brand-200 bg-brand-50/60 p-3.5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">File Classification</p>
+                <p className="mt-0.5 text-sm font-semibold text-brand-900">{analysis.bankStatementFileClassification.label}</p>
+                <p className="mt-1 text-xs text-brand-800/80">{analysis.bankStatementFileClassification.explanation}</p>
+              </div>
+            ) : null}
             {scenario.citizenship === "itin" ? (
               <div className="mb-4 rounded-control border border-brand-200 bg-brand-50/60 p-3.5">
                 <p className="text-sm font-semibold text-brand-900">

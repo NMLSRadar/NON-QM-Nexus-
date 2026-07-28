@@ -9,7 +9,7 @@ export function SpecialistToggle({
   checked,
 }: {
   programId: string;
-  flag: "foreignNationalSpecialist" | "itinSpecialist";
+  flag: "foreignNationalSpecialist" | "itinSpecialist" | "bankStatementCleanExecution" | "bankStatementFlexible";
   checked: boolean;
 }) {
   const [pending, startTransition] = useTransition();

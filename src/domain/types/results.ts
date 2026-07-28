@@ -67,6 +67,8 @@ export interface ProgramEvaluation {
   foreignNationalSpecialist: boolean;
   /** Same editorial-signal pattern for ITIN — see Program.itinSpecialist. */
   itinSpecialist: boolean;
+  bankStatementCleanExecution: boolean;
+  bankStatementFlexible: boolean;
   interestOnlyAvailable: boolean;
   ruleResults: RuleEvaluationResult[];
   failedRules: RuleEvaluationResult[];
@@ -106,4 +108,7 @@ export interface AnalysisResult {
   needsList: NeedsListItem[];
   generatedAt: string;
   disclaimer: string;
+  /** Only present when scenario.incomeDocType === "bank_statement" — see
+   * src/domain/matching/bankStatementComplexity.ts. */
+  bankStatementFileClassification?: import("../matching/bankStatementComplexity").BankStatementComplexityResult;
 }

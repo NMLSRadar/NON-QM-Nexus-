@@ -3,6 +3,7 @@ import type { Program } from "../types/program";
 import type { Scenario } from "../types/scenario";
 import type { CalculationSummary, RuleEvaluationResult } from "../types/results";
 import { deriveMaxLtv } from "./baseChecks";
+import type { BankStatementFileClassification } from "./bankStatementComplexity";
 
 export interface ScoreBreakdownEntry {
   factor: string;
@@ -22,6 +23,7 @@ export function computeScore(
   calc: CalculationSummary,
   program: Program,
   ruleResults: RuleEvaluationResult[],
+  bankStatementClassification?: BankStatementFileClassification,
 ): { score: number; breakdown: ScoreBreakdownEntry[] } {
   const breakdown: ScoreBreakdownEntry[] = [];
 
@@ -99,6 +101,42 @@ export function computeScore(
       points: 5,
       maxPoints: 5,
       note: "Curated by platform admins as a specialist ITIN lender (broad guidelines, consistent execution) — editorial signal, not a guideline fact.",
+    });
+  }
+
+  // 10. Bank statement clean-file execution (5) — editorial signal, ONLY
+  // for a program flagged as a strong clean-file executor AND ONLY when
+  // this scenario's own bank-statement file classification is "clean".
+  // Never applies to a moderate/high/manual-review file, where guideline
+  // flexibility should outrank pricing/technology per the platform spec.
+  if (
+    bankStatementClassification === "clean" &&
+    program.bankStatementCleanExecution &&
+    program.incomeDocTypes.includes("bank_statement")
+  ) {
+    breakdown.push({
+      factor: "Bank statement clean-file execution",
+      points: 5,
+      maxPoints: 5,
+      note: "Curated by platform admins as a strong execution option for a CLEAN bank statement file (pricing/technology) — editorial signal, not a guideline fact, and only applied because this file has no flagged complications.",
+    });
+  }
+
+  // 11. Bank statement guideline flexibility (5) — the mirror-image
+  // editorial signal: ONLY for a program flagged as broadly flexible AND
+  // ONLY when the file classification is moderate, high complexity, or
+  // manual-review-recommended (never for a clean file).
+  if (
+    bankStatementClassification &&
+    bankStatementClassification !== "clean" &&
+    program.bankStatementFlexible &&
+    program.incomeDocTypes.includes("bank_statement")
+  ) {
+    breakdown.push({
+      factor: "Bank statement guideline flexibility",
+      points: 5,
+      maxPoints: 5,
+      note: "Curated by platform admins as a broadly flexible Non-QM bank statement lender — editorial signal, not a guideline fact, and only applied because this file has a flagged complication requiring flexibility.",
     });
   }
 
