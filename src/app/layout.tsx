@@ -10,7 +10,9 @@ import { BuildVersionGuard } from "@/components/build-version-guard";
 import { PrimaryNav } from "@/components/primary-nav";
 import { GlobalAmbientEngine } from "@/components/global-ambient-engine";
 import { AiAssistantWidget } from "@/components/ai-assistant-widget";
+import { TrialStatusBanner } from "@/components/trial-status-banner";
 import { createClient } from "@/lib/supabase/server";
+import { getLenderAccessInfo } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "NON-QM Nexus",
@@ -39,6 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const access = user ? await getLenderAccessInfo() : null;
 
   return (
     <html lang="en">
@@ -46,6 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <PwaRegister />
         <BuildVersionGuard />
         <GlobalAmbientEngine />
+        {access ? <TrialStatusBanner isTrial={access.isTrial} trialExpiresAt={access.trialExpiresAt} currentTierLevel={access.tierLevel} /> : null}
         <header className="relative z-40 gold-theme gold-glass sticky top-0 text-white">
           <div className="mx-auto max-w-7xl px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link href="/" className="flex items-center gap-2.5 text-lg font-semibold tracking-tight shrink-0">
