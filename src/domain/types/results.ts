@@ -62,6 +62,9 @@ export interface ProgramEvaluation {
   occupancies: Occupancy[];
   propertyTypes: PropertyType[];
   citizenshipEligible: Citizenship[];
+  /** Editorial flag (never a guideline fact): admin-curated as a
+   * specialist Foreign National lender — see Program.foreignNationalSpecialist. */
+  foreignNationalSpecialist: boolean;
   interestOnlyAvailable: boolean;
   ruleResults: RuleEvaluationResult[];
   failedRules: RuleEvaluationResult[];

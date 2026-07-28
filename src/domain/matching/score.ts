@@ -75,6 +75,22 @@ export function computeScore(
   const penalty = Math.min(10, warnings * 2 + manual * 3);
   breakdown.push({ factor: "Warnings / manual review", points: round(10 - penalty), maxPoints: 10, note: `${warnings} warning(s), ${manual} manual-review item(s).` });
 
+  // 8. Foreign National specialist (5) — an admin-curated editorial signal
+  // ONLY, per user direction 2026-07-28: never a substitute for real
+  // eligibility (a program that fails citizenship/LTV/etc. still scores a
+  // hard-fail cap regardless of this flag — see below) and never a hidden
+  // ranking override. Capped small relative to the substantive factors
+  // above so it can nudge a close tie, not overcome a genuinely stronger
+  // real match; disclosed here in the breakdown so it's always auditable.
+  if (scenario.citizenship === "foreign_national" && program.foreignNationalSpecialist) {
+    breakdown.push({
+      factor: "Foreign National specialist",
+      points: 5,
+      maxPoints: 5,
+      note: "Curated by platform admins as a specialist Foreign National lender (broad guidelines, consistent execution) — editorial signal, not a guideline fact.",
+    });
+  }
+
   // Any hard fail zeroes the practical score for ranking purposes.
   const hardFail = ruleResults.some((r) => r.outcome === RuleOutcome.Fail && r.severity === RuleSeverity.Hard);
 

@@ -142,6 +142,7 @@ function LenderCard({
         {e.loanPurposes.includes("cash_out_refinance") && <Pill tone="sky">Cash-Out Eligible</Pill>}
         {e.citizenshipEligible.includes("itin") && <Pill tone="gold">ITIN Eligible</Pill>}
         {e.citizenshipEligible.includes("foreign_national") && <Pill tone="sky">Foreign National</Pill>}
+        {e.foreignNationalSpecialist && <Pill tone="gold">Foreign National Specialist</Pill>}
         {e.incomeDocTypes.includes("bank_statement") && <Pill tone="neutral">Bank Statement</Pill>}
         {e.incomeDocTypes.includes("dscr") && <Pill tone="neutral">DSCR</Pill>}
         {e.incomeDocTypes.includes("pnl_only") && <Pill tone="neutral">P&amp;L Only</Pill>}

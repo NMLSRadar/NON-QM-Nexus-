@@ -133,6 +133,19 @@ export interface Program {
    * products" with no separate LTV language) — do not default it to the
    * base cap, which would misrepresent an undocumented figure as verified. */
   citizenshipLtvCaps?: Partial<Record<Citizenship, number>>;
+  /** Editorial flag, admin-set: this program is curated as a specialist
+   * Foreign National lender (broad guidelines, consistent execution) —
+   * per user direction 2026-07-28. This NEVER overrides real eligibility
+   * (a program that hard-fails citizenship/LTV/etc. is still excluded
+   * outright) and never silently reorders results — it only adds a small,
+   * disclosed scoring factor (see score.ts) shown in the transparent score
+   * breakdown, and a distinct "Foreign National Specialist" badge in the
+   * UI, so the boost is always auditable rather than a hidden thumb on
+   * the scale. Only ever set on a program ALREADY citizenship-eligible
+   * for foreign_national — flagging an ineligible program would have no
+   * effect (the hard citizenship filter runs first) but should still never
+   * be done, since it would misrepresent the editorial curation itself. */
+  foreignNationalSpecialist?: boolean;
   guidelineVersionId: string;
   guidelineVersionLabel: string;
   effectiveDate: string;
