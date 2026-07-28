@@ -286,6 +286,49 @@ export class SupabaseRepository implements Repository {
     return (data as LenderRow[]).map(rowToLender);
   }
 
+  /** See the Repository interface doc comment — tier-gated but NOT
+   * verification-gated, and deliberately returns only names + doc types
+   * (never a numeric guideline field), so the AI assistant can be aware a
+   * pending-review lender exists ("appears to offer this program, but
+   * eligibility is still being verified") without ever being handed a
+   * guideline fact that hasn't passed admin review. */
+  async listPendingReviewLenderPrograms(organizationId: string): Promise<Array<{ lenderName: string; programName: string; incomeDocTypes: string[] }>> {
+    void organizationId;
+    const tier = await this.getEffectiveTier();
+    const { data: lenderRows, error: lenderError } = await this.supabase
+      .from("lenders")
+      .select("id, name")
+      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+      .eq("is_sample_data", false)
+      .eq("active", true)
+      .lte("tier_level", tier)
+      .is("deleted_at", null);
+    if (lenderError) throw new Error(`Failed to list lenders for pending-review check: ${lenderError.message}`);
+    const lenders = lenderRows as Array<{ id: string; name: string }>;
+    if (lenders.length === 0) return [];
+
+    const verifiedLenderIds = await this.getVerifiedLenderIds(lenders.map((l) => l.id));
+    const pendingLenderIds = lenders.filter((l) => !verifiedLenderIds.has(l.id)).map((l) => l.id);
+    if (pendingLenderIds.length === 0) return [];
+
+    const { data: programRows, error: programError } = await this.supabase
+      .from("programs")
+      .select("name, lender_id, config")
+      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+      .eq("is_sample_data", false)
+      .eq("active", true)
+      .in("lender_id", pendingLenderIds)
+      .is("deleted_at", null);
+    if (programError) throw new Error(`Failed to list programs for pending-review check: ${programError.message}`);
+
+    const lenderNameById = new Map(lenders.map((l) => [l.id, l.name]));
+    return (programRows as Array<{ name: string; lender_id: string; config: { incomeDocTypes?: string[] } }>).map((p) => ({
+      lenderName: lenderNameById.get(p.lender_id) ?? "Unknown lender",
+      programName: p.name,
+      incomeDocTypes: p.config.incomeDocTypes ?? [],
+    }));
+  }
+
   async listPrograms(organizationId: string): Promise<Program[]> {
     void organizationId;
     const tier = await this.getEffectiveTier();

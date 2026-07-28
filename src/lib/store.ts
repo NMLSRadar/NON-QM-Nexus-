@@ -27,6 +27,17 @@ export interface Repository {
   listAllLenders(organizationId: string): Promise<Lender[]>;
   listPrograms(organizationId: string): Promise<Program[]>;
   listRules(organizationId: string): Promise<Rule[]>;
+  /** Tier-gated (but NOT verification-gated) list of lenders that are
+   * visible-but-pending-review — i.e. active, tier-eligible for the
+   * caller, but not yet promoted to human_verified. Returns ONLY the
+   * lender name and each program's name + incomeDocTypes — deliberately
+   * never a numeric guideline field (LTV/FICO/loan amount/etc.), so this
+   * can never be a backdoor around the verified-only gate on
+   * listLenders/listPrograms. Used by the AI assistant so it can say "X
+   * appears to offer this program, but it's still pending guideline
+   * review" instead of having zero awareness that a pending lender
+   * exists at all (see Brokers First Funding integration, 2026-07-28). */
+  listPendingReviewLenderPrograms(organizationId: string): Promise<Array<{ lenderName: string; programName: string; incomeDocTypes: string[] }>>;
 }
 
 const DEMO_ORG = "org_demo";
@@ -74,6 +85,11 @@ class InMemoryRepository implements Repository {
   async listRules(organizationId: string): Promise<Rule[]> {
     this.assertOrg(organizationId);
     return sampleRules;
+  }
+
+  async listPendingReviewLenderPrograms(organizationId: string): Promise<Array<{ lenderName: string; programName: string; incomeDocTypes: string[] }>> {
+    this.assertOrg(organizationId);
+    return []; // demo store has no verification-status concept; nothing pending by construction
   }
 
   // Tenant guard even in the demo store: callers must always scope by org.

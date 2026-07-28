@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLenderAccessInfo, getRepository } from "@/lib/session";
 import { getAiProvider, asUntrustedData, type AiMessage } from "@/lib/ai/provider";
-import { ASSISTANT_SYSTEM_PROMPT, buildGuidelineContext } from "@/lib/ai/assistantContext";
+import { ASSISTANT_SYSTEM_PROMPT, buildGuidelineContext, buildPendingReviewContext } from "@/lib/ai/assistantContext";
 
 export const dynamic = "force-dynamic";
 
@@ -74,9 +74,14 @@ export async function POST(request: Request) {
 
   const catalog = await repo.getCatalog(org); // same tier-gated catalog the rest of the app uses
   const context = buildGuidelineContext(catalog);
+  const pendingReview = await repo.listPendingReviewLenderPrograms(org);
+  const pendingContext = buildPendingReviewContext(pendingReview);
 
   const aiMessages: AiMessage[] = [
-    { role: "system", content: `${ASSISTANT_SYSTEM_PROMPT}\n\n${asUntrustedData("lender_guideline_catalog", context)}` },
+    {
+      role: "system",
+      content: `${ASSISTANT_SYSTEM_PROMPT}\n\n${asUntrustedData("lender_guideline_catalog", context)}\n\n${asUntrustedData("pending_review_lender_programs", pendingContext)}`,
+    },
     ...messages,
   ];
 
