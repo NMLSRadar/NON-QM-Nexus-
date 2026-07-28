@@ -31,6 +31,14 @@ export interface Assessment {
    * (bank statement 10% down / DSCR 15% down / ITIN 15% down) was assumed
    * instead — surfaced to the user so they can correct it. */
   assumedDownPaymentNote?: string;
+  /** Set when the citizenship classification was resolved at MEDIUM
+   * confidence — currently only the ambiguous "I-10"/"I ten"/"eye ten"
+   * ITIN surface form, accepted only because nearby mortgage-borrower
+   * context anchored it (see classifyCitizenship in extract.ts). Shown as
+   * a soft confirmation rather than a definitive statement, since an
+   * explicit "ITIN"/"eye-tin"/"individual taxpayer ID" mention needs no
+   * such caveat. */
+  citizenshipConfidenceNote?: string;
   /** Refinance-only figures — present whenever propertyValue and
    * existingLienBalance are both known, regardless of whether the 8 core
    * vitals are complete yet (so they update live as soon as they can). */
@@ -179,6 +187,8 @@ export function assess(x: VoiceExtraction): Assessment {
         : x.incomeDocType.source
     );
   if (x.citizenship) filledSummary.push(citizenshipLabel(x.citizenship.value));
+  const citizenshipConfidenceNote =
+    x.citizenship?.confidence === "medium" ? "Borrower classification interpreted as ITIN." : undefined;
   // Extra (non-blocking) vitals — included in the summary whenever captured
   // so the assistant's spoken response and the Vitals tiles never disagree.
   if (x.firstTimeHomebuyer) filledSummary.push(x.firstTimeHomebuyer.value ? "first-time homebuyer" : "not a first-time homebuyer");
@@ -212,12 +222,14 @@ export function assess(x: VoiceExtraction): Assessment {
     prompt = conflicts.join(" ");
   } else if (complete) {
     prompt = `All set — ${vitalsFilled} of ${VITAL_KEYS.length} vitals captured: ${filledSummary.join(", ")}.${
-      assumedDownPaymentNote ? ` ${assumedDownPaymentNote}` : ""
-    } Analyzing your scenario and ranking matching lenders now.`;
+      citizenshipConfidenceNote ? ` ${citizenshipConfidenceNote}` : ""
+    }${assumedDownPaymentNote ? ` ${assumedDownPaymentNote}` : ""} Analyzing your scenario and ranking matching lenders now.`;
   } else if (filledSummary.length === 0) {
     prompt = `Tell me the full scenario in one go — I need ${listNaturally(askable.map((k) => VITAL_LABELS[k].toLowerCase()))}.`;
   } else {
-    prompt = `Got ${filledSummary.join(", ")}. I still need ${listNaturally(askable.map((k) => VITAL_LABELS[k].toLowerCase()))}. ${questions.slice(0, 3).join(" ")}`;
+    prompt = `Got ${filledSummary.join(", ")}.${
+      citizenshipConfidenceNote ? ` ${citizenshipConfidenceNote}` : ""
+    } I still need ${listNaturally(askable.map((k) => VITAL_LABELS[k].toLowerCase()))}. ${questions.slice(0, 3).join(" ")}`;
   }
 
   return {
@@ -232,6 +244,7 @@ export function assess(x: VoiceExtraction): Assessment {
     derived,
     conflicts,
     assumedDownPaymentNote,
+    citizenshipConfidenceNote,
     refinanceCalc,
   };
 }

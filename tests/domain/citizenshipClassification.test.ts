@@ -73,8 +73,14 @@ describe("ITIN Borrower recognition — including phonetic/speech-to-text varian
     "i.t.i.n",
     "eye-tin",
     "eye tin",
-    "I-10", // common speech-to-text misinterpretation of ITIN
-    "I 10",
+    // NOTE: bare "I-10"/"I 10" with NO surrounding context moved out of this
+    // unconditional-recognition list on 2026-07-28 — per the ITIN
+    // contextual-disambiguation spec, that surface form is genuinely
+    // ambiguous with Interstate 10 and must NOT be classified without a
+    // nearby mortgage-context anchor. See
+    // tests/domain/itinContextualDisambiguation.test.ts for its dedicated,
+    // context-gated coverage (mortgage context -> ITIN; highway context ->
+    // not ITIN; no context either way -> left unclassified).
   ];
   for (const p of phrases) {
     it(`recognizes "${p}" as ITIN`, () => {

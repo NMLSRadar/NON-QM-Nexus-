@@ -115,7 +115,11 @@ export interface VoiceExtraction {
   /** Refinance-only: what the borrower currently owes on the subject
    * property (distinct from loanAmount, the NEW requested loan). */
   existingLienBalance?: Captured<number>;
-  citizenship?: Captured<Citizenship>;
+  /** confidence: "high" for an unambiguous ITIN/citizenship phrasing;
+   * "medium" only for the ambiguous "I-10"/"I ten"/"eye ten" ITIN surface
+   * form, resolved solely because nearby mortgage-borrower context
+   * anchored it (see classifyCitizenship in extract.ts). */
+  citizenship?: Captured<Citizenship> & { confidence?: "high" | "medium" };
   /** Legacy simple flag — still populated for backward compatibility; prefer investorExperience. */
   firstTimeInvestor?: boolean;
   firstTimeHomebuyer?: Captured<boolean>;

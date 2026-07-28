@@ -142,6 +142,17 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
 
           {/* Best Lender Matches — the signature section of the page. */}
           <Card className="p-6">
+            {scenario.citizenship === "itin" ? (
+              <div className="mb-4 rounded-control border border-brand-200 bg-brand-50/60 p-3.5">
+                <p className="text-sm font-semibold text-brand-900">
+                  ITIN borrower detected. Searching active ITIN loan programs and ranking the strongest lender matches.
+                </p>
+                <p className="mt-1 text-xs text-brand-800/80">
+                  Only programs whose current, verified guidelines list ITIN as an eligible citizenship classification are
+                  ranked below — a lender is never shown just because it&apos;s generally known for ITIN lending.
+                </p>
+              </div>
+            ) : null}
             <SectionHeading
               icon={<Layers className="h-5 w-5" />}
               title="Best Lender Matches"

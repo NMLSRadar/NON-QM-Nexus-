@@ -293,14 +293,42 @@ export function classifyInvestorExperience(t: string): { value: InvestorExperien
 // category by itself; whatever explicit category is actually stated (here,
 // "ITIN borrower") is what wins, exactly as a plain last-wins scan already
 // produces once the negated mention is discarded.
+//
+// ITIN detection confidence (2026-07-28, per platform spec): most spoken/
+// spelled ITIN phrasings are unambiguous on their own ("ITIN", "I-T-I-N",
+// "eye-tin", "individual taxpayer identification number", "tax ID borrower",
+// "no social security number") and are always HIGH confidence regardless of
+// context. The one genuinely ambiguous surface form is "I-10"/"I ten"/"eye
+// ten" — a common STT mishearing of ITIN, but also literally Interstate 10.
+// That form is gated by nearby mortgage-borrower-context words (see
+// ITIN_I10_MORTGAGE_CONTEXT/ITIN_I10_HIGHWAY_CONTEXT below): with mortgage
+// context nearby it's MEDIUM confidence ITIN; with highway context nearby
+// (and no mortgage context) it's discarded entirely, never classified as
+// ITIN; with neither context present nearby, it's also left unclassified
+// (never guess a citizenship class without any anchoring signal) — the
+// assistant simply keeps asking, exactly as it already does for any other
+// unstated vital.
 const CITIZENSHIP_RE = new RegExp(
   [
-    // ITIN Borrower — including the phonetic/speech-to-text variants a
-    // voice platform must tolerate: spelled letter-by-letter ("I-T-I-N"),
-    // "eye-tin", and the common STT misinterpretation "I-10" (heard as the
-    // highway number). Scoped to this mortgage-intake domain, so a bare
-    // "I-10" is treated as a mis-transcribed ITIN, not the highway.
-    String.raw`(?<itin>\bi[\s.-]*t[\s.-]*i[\s.-]*n\b|\beye[\s-]*tin\b|\bi[\s-]*10\b|\bitin\s+(?:borrower|loan)\b|\btax id\s+borrower\b|individual taxpayer id(?:entification)?(?:\s+number)?|no social security number)`,
+    // ITIN Borrower — unambiguous phonetic/speech-to-text variants (never
+    // gated by context, always high confidence): spelled letter-by-letter
+    // ("I-T-I-N"), "eye-tin", "individual taxpayer identification number"
+    // (with or without "individual"/"number"), "tax ID borrower", "no
+    // social security number" (and common negation phrasings of the same),
+    // "ITIN instead of an SSN". The ambiguous "I-10"/"I ten"/"eye ten"
+    // surface form is captured separately below (itinAmbiguous) so it can
+    // be context-gated before being trusted.
+    String.raw`(?<itin>\bi[\s.-]*t[\s.-]*i[\s.-]*n\b|\beye[\s-]*tin\b|\bitin\s+(?:borrower|loan|instead)\b|\btax\s?id\s+borrower\b|\bindividual taxpayer id(?:entification)?(?:\s+number)?\b|\btaxpayer identification number\b|\btax identification number\b|\bno\s+social security number\b|\b(?:does\s?n['o]?t|do\s+not|doesn['o]?t)\s+have\s+a\s+social security number\b|\bwithout\s+a\s+social security number\b)`,
+    // ITIN Borrower — the ambiguous "I-10"/"I ten"/"eye ten" form, matched
+    // separately so it can be context-gated (see the disambiguation pass
+    // right after this regex definition) rather than trusted outright. Note
+    // "eye ten" is ALSO matched as "eye 10" — normalizeTranscript's
+    // word-to-digit pass runs before this classifier and silently converts
+    // the bare number word "ten" to the digit "10" even in "eye ten"
+    // (there's no number-word before "eye" to signal it isn't a real
+    // number), so the literal text this regex sees is "eye 10", never
+    // "eye ten".
+    String.raw`(?<itinAmbiguous>\bi[\s-]*10\b|\bi[\s-]*ten\b|\beye[\s-]*ten\b|\beye[\s-]*10\b)`,
     // Foreign National — the "u.s." spacing must tolerate the same
     // detached-punctuation normalization as the U.S. Citizen pattern below
     // (normalizeTranscript turns "U.S." into "u .s ." with a space before
@@ -323,16 +351,58 @@ const CITIZENSHIP_RE = new RegExp(
   ].join("|"),
   "gi"
 );
-const CITIZENSHIP_NEGATION_LOOKBACK = /\b(?:not|isn'?t|never|no longer)\b\s*(?:a|an)?\s*$/i;
+const CITIZENSHIP_NEGATION_LOOKBACK =
+  /\b(?:not|isn'?t|never|no longer)\b\s*(?:a|an)?\s*$|\b(?:does\s?n['o]?t|do\s+not|doesn['o]?t)\s+have\s*(?:a|an)?\s*$|\bwithout\s*(?:a|an)?\s*$/i;
+// Nearby-context windows used ONLY to disambiguate the ambiguous "I-10"/"I
+// ten"/"eye ten" surface form from the literal Interstate 10 — never applied
+// to the unambiguous ITIN phrasings above, which are always trusted as-is.
+const ITIN_I10_MORTGAGE_CONTEXT =
+  /\bborrower\b|\bclient\b|\bcitizenship\b|\bimmigration\b|\bsocial security\b|\bssn\b|\btax return\b|\btaxpayer\b|\bidentification number\b|\bmortgage\b|\bloan\b|\bpurchase\b|\brefinance\b|\bbank statements?\b|\bincome documentation\b/i;
+const ITIN_I10_HIGHWAY_CONTEXT =
+  /\bfreeway\b|\bhighway\b|\btraffic\b|\bdriving\b|\bcommute\b|\bexit\b|\broad\b|\btransportation\b/i;
+const ITIN_I10_CONTEXT_WINDOW = 60;
 
-export function classifyCitizenship(t: string): { value: Citizenship; source: string } | undefined {
+export interface CitizenshipMatch {
+  value: Citizenship;
+  source: string;
+  /** high = an unambiguous ITIN phrasing (or any non-ITIN category, which
+   * has no ambiguous surface form to worry about); medium = the "I-10"/"I
+   * ten"/"eye ten" form, resolved as ITIN only because mortgage-borrower
+   * context was found nearby — surfaced to the user as a soft confirmation
+   * ("Borrower classification interpreted as ITIN.") rather than treated as
+   * definitively confirmed the way an explicit "ITIN" statement is. */
+  confidence: "high" | "medium";
+}
+
+export function classifyCitizenship(t: string): CitizenshipMatch | undefined {
   const re = new RegExp(CITIZENSHIP_RE.source, CITIZENSHIP_RE.flags);
   let m: RegExpExecArray | null;
-  let winner: { value: Citizenship; source: string } | undefined;
+  let winner: CitizenshipMatch | undefined;
   while ((m = re.exec(t)) !== null) {
     const before = t.slice(Math.max(0, m.index - 20), m.index);
     if (CITIZENSHIP_NEGATION_LOOKBACK.test(before)) continue; // e.g. "not a U.S. citizen" — discard, don't assert UsCitizen
     const g = m.groups ?? {};
+    if (g.itinAmbiguous) {
+      // "I-10"/"I ten"/"eye ten" — genuinely ambiguous with Interstate 10.
+      // Look at a window of nearby text on both sides: mortgage-borrower
+      // context anywhere in the window resolves it as ITIN (medium
+      // confidence); highway context with NO mortgage context resolves it
+      // as the freeway, never ITIN; neither context present leaves it
+      // unclassified rather than guessing either way.
+      const windowStart = Math.max(0, m.index - ITIN_I10_CONTEXT_WINDOW);
+      const windowEnd = Math.min(t.length, m.index + m[0].length + ITIN_I10_CONTEXT_WINDOW);
+      const window = t.slice(windowStart, windowEnd);
+      const hasMortgageContext = ITIN_I10_MORTGAGE_CONTEXT.test(window);
+      const hasHighwayContext = ITIN_I10_HIGHWAY_CONTEXT.test(window);
+      if (hasMortgageContext) {
+        winner = { value: Citizenship.Itin, source: m[0].trim(), confidence: "medium" };
+      } else if (hasHighwayContext) {
+        continue; // Interstate 10 — never classify as ITIN
+      } else {
+        continue; // no anchoring context either way — don't guess
+      }
+      continue;
+    }
     const value = g.itin
       ? Citizenship.Itin
       : g.foreignNational
@@ -344,7 +414,7 @@ export function classifyCitizenship(t: string): { value: Citizenship; source: st
             : g.usCitizen
               ? Citizenship.UsCitizen
               : undefined;
-    if (value) winner = { value, source: m[0].trim() }; // last valid match wins (self-corrections)
+    if (value) winner = { value, source: m[0].trim(), confidence: "high" }; // last valid match wins (self-corrections)
   }
   return winner;
 }
