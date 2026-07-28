@@ -340,7 +340,19 @@ const CITIZENSHIP_RE = new RegExp(
     // rare enough outside this domain to match bare (not just "EAD
     // holder"), since real phrasing varies freely: "EAD card", "on an
     // EAD", "with an EAD", "holding a valid EAD".
-    String.raw`(?<nonPermanentResident>\bnon[\s-]*perm(?:anent)?(?:\s+resident)?\b|\bwork visa\b|\bemployment authorization\b|\bead\b|\btemporary resident\b|\bvisa holder\b|\bc[\s-]?09\b)`,
+    // Extended per the real visa-eligibility matrix in Cake Mortgage's
+    // uploaded Non-QM guideline (2026-07-28) — H-1B, H-4, L-1/L-2,
+    // E-1/E-2/E-3, O-1/O-2, DACA (C33), TPS/refugee/asylee, and NATO/G
+    // visas are ALL real categories a broker describes in natural speech
+    // ("they're on an H1", "they're on OPT", "they're DACA"). The
+    // shorter/higher-collision-risk codes (TN, R-1, OPT) are gated to
+    // require "visa"/"on a/an" framing so bare "opt" (a common English
+    // verb) or "TN" (a state abbreviation) don't false-positive — the
+    // same context-gating principle already used for the ambiguous
+    // ITIN "I-10" surface form above. H-1B/L-1/O-1/E-visas are left
+    // ungated (bare) since they're rare enough outside this domain that
+    // the existing bare "c09"/"ead" precedent already accepts that risk.
+    String.raw`(?<nonPermanentResident>\bnon[\s-]*perm(?:anent)?(?:\s+resident)?\b|\bwork visa\b|\bemployment authorization\b|\bead\b|\btemporary resident\b|\bvisa holder\b|\bc[\s-]?09\b|\bh[\s-]?1[\s-]?b?\b|\bh[\s-]?2[\s-]?b?\b|\bh[\s-]?4\b|\bl[\s-]?1[ab]?\b|\bl[\s-]?2\b|\be[\s-]?1\b|\be[\s-]?2\b|\be[\s-]?3\b|\bo[\s-]?1\b|\bo[\s-]?2\b|\bdaca\b|\btps\b|\btemporary protected status\b|\basylee\b|\basylum\b|\brefugee\b|\bnato\b|\bstem opt\b|\bf[\s-]?1 opt\b|\bon (?:an?|the) opt\b|\bopt visa\b|\bon (?:an?|the) tn\b|\btn visa\b|\bon (?:an?|the) r[\s-]?1\b|\br[\s-]?1 visa\b)`,
     // Permanent Resident (green card) — a real, distinct category already
     // used by real lender program data (citizenshipEligible), even though
     // it wasn't one of the four requested UI options; kept recognizable so
