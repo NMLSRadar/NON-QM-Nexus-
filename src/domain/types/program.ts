@@ -146,6 +146,14 @@ export interface Program {
    * effect (the hard citizenship filter runs first) but should still never
    * be done, since it would misrepresent the editorial curation itself. */
   foreignNationalSpecialist?: boolean;
+  /** Same editorial-signal pattern, for ITIN — admin-set, per user
+   * direction 2026-07-28. Same rules apply: never overrides real
+   * eligibility (a program that hard-fails citizenship/LTV/etc. is still
+   * excluded outright regardless of this flag) and never silently
+   * reorders results — only a small, disclosed scoring factor (score.ts)
+   * plus a distinct "ITIN Specialist" badge in the UI. Only ever set on a
+   * program ALREADY citizenship-eligible for itin. */
+  itinSpecialist?: boolean;
   guidelineVersionId: string;
   guidelineVersionLabel: string;
   effectiveDate: string;

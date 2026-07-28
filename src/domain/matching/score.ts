@@ -91,6 +91,17 @@ export function computeScore(
     });
   }
 
+  // 9. ITIN specialist (5) — the identical editorial-signal pattern as
+  // Foreign National specialist above, applied to ITIN scenarios.
+  if (scenario.citizenship === "itin" && program.itinSpecialist) {
+    breakdown.push({
+      factor: "ITIN specialist",
+      points: 5,
+      maxPoints: 5,
+      note: "Curated by platform admins as a specialist ITIN lender (broad guidelines, consistent execution) — editorial signal, not a guideline fact.",
+    });
+  }
+
   // Any hard fail zeroes the practical score for ranking purposes.
   const hardFail = ruleResults.some((r) => r.outcome === RuleOutcome.Fail && r.severity === RuleSeverity.Hard);
 

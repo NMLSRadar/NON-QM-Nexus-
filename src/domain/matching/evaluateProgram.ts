@@ -76,6 +76,7 @@ export function evaluateProgram(
     propertyTypes: program.propertyTypes,
     citizenshipEligible: program.citizenshipEligible,
     foreignNationalSpecialist: program.foreignNationalSpecialist ?? false,
+    itinSpecialist: program.itinSpecialist ?? false,
     interestOnlyAvailable: program.interestOnlyAvailable,
     ruleResults,
     failedRules: ruleResults.filter((r) => r.outcome === RuleOutcome.Fail),

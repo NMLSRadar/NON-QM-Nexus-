@@ -25,6 +25,7 @@ function makeEvaluation(overrides: Partial<ProgramEvaluation> = {}): ProgramEval
     propertyTypes: ["single_family"],
     citizenshipEligible: ["us_citizen"],
     foreignNationalSpecialist: false,
+    itinSpecialist: false,
     interestOnlyAvailable: false,
     ruleResults: [],
     failedRules: [],

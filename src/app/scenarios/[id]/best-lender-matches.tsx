@@ -141,6 +141,7 @@ function LenderCard({
       <div className="mt-3 flex flex-wrap gap-1.5">
         {e.loanPurposes.includes("cash_out_refinance") && <Pill tone="sky">Cash-Out Eligible</Pill>}
         {e.citizenshipEligible.includes("itin") && <Pill tone="gold">ITIN Eligible</Pill>}
+        {e.itinSpecialist && <Pill tone="gold">ITIN Specialist</Pill>}
         {e.citizenshipEligible.includes("foreign_national") && <Pill tone="sky">Foreign National</Pill>}
         {e.foreignNationalSpecialist && <Pill tone="gold">Foreign National Specialist</Pill>}
         {e.incomeDocTypes.includes("bank_statement") && <Pill tone="neutral">Bank Statement</Pill>}

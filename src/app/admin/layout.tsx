@@ -5,6 +5,7 @@ const ADMIN_NAV = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/plans", label: "Plans" },
   { href: "/admin/lenders", label: "Lender Tiers" },
+  { href: "/admin/specialists", label: "ITIN / FN Specialists" },
   { href: "/admin/documents", label: "Documents" },
   { href: "/admin/monitoring", label: "Guideline Monitoring" },
   { href: "/admin/discounts", label: "Discounts" },

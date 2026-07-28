@@ -84,7 +84,7 @@ describe("Foreign National specialist scoring — editorial, disclosed, never a 
     const hardFailRules: RuleEvaluationResult[] = [
       {
         ruleId: "r1",
-        name: "Citizenship",
+        ruleName: "Citizenship",
         category: "borrower",
         outcome: RuleOutcome.Fail,
         severity: RuleSeverity.Hard,
@@ -92,6 +92,55 @@ describe("Foreign National specialist scoring — editorial, disclosed, never a 
       },
     ];
     const { score } = computeScore(baseScenario(), emptyCalc, program, hardFailRules);
+    expect(score).toBeLessThanOrEqual(20);
+  });
+});
+
+describe("ITIN specialist scoring — the identical editorial-signal pattern, applied to ITIN", () => {
+  it("adds a small, labeled scoring factor when the program is flagged AND the scenario is itin", () => {
+    const program = baseProgram({ citizenshipEligible: ["itin"], itinSpecialist: true });
+    const { breakdown } = computeScore(baseScenario({ citizenship: "itin" }), emptyCalc, program, noRules);
+    const factor = breakdown.find((b) => b.factor === "ITIN specialist");
+    expect(factor).toBeDefined();
+    expect(factor?.points).toBe(5);
+    expect(factor?.note).toMatch(/editorial/i);
+  });
+
+  it("does NOT add the factor for a non-ITIN scenario, even if the program is flagged", () => {
+    const program = baseProgram({ citizenshipEligible: ["itin"], itinSpecialist: true });
+    const { breakdown } = computeScore(baseScenario({ citizenship: "us_citizen" }), emptyCalc, program, noRules);
+    expect(breakdown.find((b) => b.factor === "ITIN specialist")).toBeUndefined();
+  });
+
+  it("does NOT add the factor for an ITIN scenario when the program isn't flagged", () => {
+    const program = baseProgram({ citizenshipEligible: ["itin"], itinSpecialist: false });
+    const { breakdown } = computeScore(baseScenario({ citizenship: "itin" }), emptyCalc, program, noRules);
+    expect(breakdown.find((b) => b.factor === "ITIN specialist")).toBeUndefined();
+  });
+
+  it("the two specialist flags are independent — an ITIN-flagged program gets no Foreign National factor and vice versa", () => {
+    const itinProgram = baseProgram({ citizenshipEligible: ["itin"], itinSpecialist: true, foreignNationalSpecialist: false });
+    const { breakdown: itinBreakdown } = computeScore(baseScenario({ citizenship: "itin" }), emptyCalc, itinProgram, noRules);
+    expect(itinBreakdown.find((b) => b.factor === "Foreign National specialist")).toBeUndefined();
+
+    const fnProgram = baseProgram({ foreignNationalSpecialist: true, itinSpecialist: false });
+    const { breakdown: fnBreakdown } = computeScore(baseScenario(), emptyCalc, fnProgram, noRules);
+    expect(fnBreakdown.find((b) => b.factor === "ITIN specialist")).toBeUndefined();
+  });
+
+  it("never rescues a program that hard-fails real eligibility", () => {
+    const program = baseProgram({ citizenshipEligible: ["itin"], itinSpecialist: true });
+    const hardFailRules: RuleEvaluationResult[] = [
+      {
+        ruleId: "r1",
+        ruleName: "Citizenship",
+        category: "borrower",
+        outcome: RuleOutcome.Fail,
+        severity: RuleSeverity.Hard,
+        userExplanation: "itin borrowers are not eligible for this program.",
+      },
+    ];
+    const { score } = computeScore(baseScenario({ citizenship: "itin" }), emptyCalc, program, hardFailRules);
     expect(score).toBeLessThanOrEqual(20);
   });
 });

@@ -65,6 +65,8 @@ export interface ProgramEvaluation {
   /** Editorial flag (never a guideline fact): admin-curated as a
    * specialist Foreign National lender — see Program.foreignNationalSpecialist. */
   foreignNationalSpecialist: boolean;
+  /** Same editorial-signal pattern for ITIN — see Program.itinSpecialist. */
+  itinSpecialist: boolean;
   interestOnlyAvailable: boolean;
   ruleResults: RuleEvaluationResult[];
   failedRules: RuleEvaluationResult[];
