@@ -2,12 +2,26 @@ import Link from "next/link";
 import { Clock, AlertTriangle, ArrowRight, Plus } from "lucide-react";
 import { analyzeScenario } from "@/domain/analyze";
 import { getCurrentOrganizationId, getRepository } from "@/lib/session";
+import { createClient } from "@/lib/supabase/server";
 import { ScenarioTable, type ScenarioRowData } from "@/components/scenario-table";
 import { HomeVoiceHero } from "@/components/home-voice-hero";
+import { PublicLanding } from "./public-landing";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  // External-audit fix (2026-07-28): "/" previously had no public-facing
+  // view at all — an anonymous visitor calling getCurrentOrganizationId()
+  // below would immediately hit its own redirect("/login"). Every other
+  // app route stays gated exactly as before (middleware.ts is untouched);
+  // this only adds a real marketing page for the SIGNED-OUT case at "/"
+  // itself, before any of the authenticated dashboard logic runs.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return <PublicLanding />;
+
   const repo = await getRepository();
   const org = await getCurrentOrganizationId();
   const [scenarios, catalog] = await Promise.all([repo.listScenarios(org), repo.getCatalog(org)]);
