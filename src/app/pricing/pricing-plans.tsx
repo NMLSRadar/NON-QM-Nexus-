@@ -20,24 +20,31 @@ export interface PricingPlanRow {
 // Feature bullets keyed by tier_level — the admin portal (/admin/plans)
 // controls name, price, and tier_level live from the database; these
 // descriptive bullets are presentational copy, not billing logic.
+// Lender counts below are the real, verified count as of 2026-07-28 (a
+// lender that is active AND has at least one active program backed by a
+// human_verified guideline_version — see the external-audit fix and
+// src/lib/repository/supabaseRepository.ts's verified-only filtering).
+// Update these numbers only from a real query against production, never
+// a guess — see docs/pricing-lender-count.md if one exists, or re-run the
+// same query this fix used.
 const TIER_FEATURES: Record<number, string[]> = {
   1: [
-    "Compare guidelines from the Top 10 Non-QM lenders",
+    "Compare guidelines from 10 verified Non-QM lenders — and growing",
     "Deterministic eligibility matching",
     "Saved scenarios",
     "Email support",
   ],
   2: [
     "Everything in Essential",
-    "Compare guidelines from the Top 26 Non-QM lenders",
+    "Compare guidelines from 26 verified Non-QM lenders — and growing",
     "Voice scenario intake",
     "Restructuring & needs-list generation",
     "Priority email support",
   ],
   3: [
     "Everything in Professional",
-    "Full access to every Non-QM lender in the platform",
-    "Automatically includes any future lenders added",
+    "Full access to all 38 currently verified Non-QM lenders in the platform",
+    "Automatically includes any future verified lenders added",
     "No restrictions on guideline comparisons",
     "Dedicated support",
   ],

@@ -8,6 +8,9 @@ export default function SignupPage() {
       <Card>
         <SignupForm />
       </Card>
+      <p className="mt-4 text-center text-xs text-slate-500">
+        Subscriptions are currently activated by our team after signup — usually within one business day.
+      </p>
     </main>
   );
 }

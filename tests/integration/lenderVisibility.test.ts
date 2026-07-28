@@ -64,34 +64,60 @@ describe.skipIf(!hasCredentials)("Lender visibility vs. guideline access (live d
         .select("id")
         .single();
       lenderIds[tier] = lender!.id;
-      await admin.from("programs").insert({
+      const { data: program, error: programError } = await admin
+        .from("programs")
+        .insert({
+          organization_id: PLATFORM_CATALOG_ORGANIZATION_ID,
+          lender_id: lenderIds[tier],
+          name: testProgramNamesByTier[tier],
+          config: {
+            incomeDocTypes: ["dscr"],
+            loanPurposes: ["purchase"],
+            occupancies: ["investment"],
+            propertyTypes: ["single_family"],
+            eligibleStates: "ALL",
+            citizenshipEligible: ["us_citizen"],
+            vestingEligible: ["individual"],
+            minLoanAmount: 100000,
+            maxLoanAmount: 1000000,
+            minFico: 660,
+            baseMaxLtv: 80,
+            minReservesMonths: 0,
+            interestOnlyAvailable: false,
+            prepaymentPenaltyOptions: [],
+            guidelineVersionLabel: "v1",
+            effectiveDate: "2026-01-01",
+            sourceCitation: "test fixture",
+          },
+        })
+        .select("id")
+        .single();
+      if (programError || !program) throw new Error(`Failed to insert test program: ${programError?.message}`);
+      // External-audit fix (2026-07-28) made listPrograms verified-only —
+      // this disposable test fixture needs a human_verified
+      // guideline_version to exercise TIER visibility (not verification,
+      // which isn't what this suite tests).
+      const { error: gvError } = await admin.from("guideline_versions").insert({
         organization_id: PLATFORM_CATALOG_ORGANIZATION_ID,
-        lender_id: lenderIds[tier],
-        name: testProgramNamesByTier[tier],
-        config: {
-          incomeDocTypes: ["dscr"],
-          loanPurposes: ["purchase"],
-          occupancies: ["investment"],
-          propertyTypes: ["single_family"],
-          eligibleStates: "ALL",
-          citizenshipEligible: ["us_citizen"],
-          vestingEligible: ["individual"],
-          minLoanAmount: 100000,
-          maxLoanAmount: 1000000,
-          minFico: 660,
-          baseMaxLtv: 80,
-          minReservesMonths: 0,
-          interestOnlyAvailable: false,
-          prepaymentPenaltyOptions: [],
-          guidelineVersionLabel: "v1",
-          effectiveDate: "2026-01-01",
-          sourceCitation: "test fixture",
-        },
+        program_id: program.id,
+        label: "Test fixture — verified",
+        effective_date: "2026-01-01",
+        verification_status: "human_verified",
       });
+      if (gvError) throw new Error(`Failed to insert test guideline_version: ${gvError.message}`);
     }
   }, 30_000);
 
   afterAll(async () => {
+    const { data: testPrograms } = await admin
+      .from("programs")
+      .select("id")
+      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+      .in("name", Object.values(testProgramNamesByTier));
+    const testProgramIds = (testPrograms ?? []).map((p) => p.id as string);
+    if (testProgramIds.length > 0) {
+      await admin.from("guideline_versions").delete().in("program_id", testProgramIds);
+    }
     await admin.from("programs").delete().eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID).in("name", Object.values(testProgramNamesByTier));
     await admin.from("lenders").delete().eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID).in("name", Object.values(testLenderNamesByTier));
     if (userId) {

@@ -222,7 +222,51 @@ export class SupabaseRepository implements Repository {
       .lte("tier_level", tier)
       .is("deleted_at", null);
     if (error) throw new Error(`Failed to list lenders: ${error.message}`);
-    return (data as LenderRow[]).map(rowToLender);
+    const lenders = (data as LenderRow[]).map(rowToLender);
+    // External-audit fix (2026-07-28): a lender must not be customer-
+    // visible, matched against, or counted toward any advertised tier
+    // number unless it has at least one active program backed by a
+    // human_verified guideline_version. "Pending" (no verified guideline
+    // yet) is an admin-only state — see listAllLenders below, which
+    // intentionally has NO such filter for the admin review workflow.
+    const verifiedLenderIds = await this.getVerifiedLenderIds(lenders.map((l) => l.id));
+    return lenders.filter((l) => verifiedLenderIds.has(l.id));
+  }
+
+  /** Real lender IDs that currently have >=1 active program backed by a
+   * human_verified guideline_version — the single source of truth for
+   * "verified" used by every customer-facing query. Never invents
+   * verification: a lender/program an admin hasn't reviewed through
+   * /admin/documents (or an equivalent verified guideline_versions row)
+   * stays excluded until that happens. */
+  private async getVerifiedLenderIds(candidateLenderIds: string[]): Promise<Set<string>> {
+    if (candidateLenderIds.length === 0) return new Set();
+    const { data: programs, error: programsError } = await this.supabase
+      .from("programs")
+      .select("id, lender_id")
+      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+      .eq("is_sample_data", false)
+      .eq("active", true)
+      .in("lender_id", candidateLenderIds)
+      .is("deleted_at", null);
+    if (programsError) throw new Error(`Failed to list programs for verification check: ${programsError.message}`);
+    const programIds = (programs as Array<{ id: string; lender_id: string }>).map((p) => p.id);
+    if (programIds.length === 0) return new Set();
+
+    const { data: guidelineVersions, error: gvError } = await this.supabase
+      .from("guideline_versions")
+      .select("program_id, verification_status")
+      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+      .in("program_id", programIds)
+      .eq("verification_status", "human_verified");
+    if (gvError) throw new Error(`Failed to list guideline versions for verification check: ${gvError.message}`);
+    const verifiedProgramIds = new Set((guidelineVersions as Array<{ program_id: string }>).map((g) => g.program_id));
+
+    const verifiedLenderIds = new Set<string>();
+    for (const p of programs as Array<{ id: string; lender_id: string }>) {
+      if (verifiedProgramIds.has(p.id)) verifiedLenderIds.add(p.lender_id);
+    }
+    return verifiedLenderIds;
   }
 
   /** Every lender in the platform catalog regardless of tier — see the
@@ -253,7 +297,24 @@ export class SupabaseRepository implements Repository {
       .lte("lenders.tier_level", tier)
       .is("deleted_at", null);
     if (error) throw new Error(`Failed to list programs: ${error.message}`);
-    return (data as unknown as ProgramRow[]).map(rowToProgram);
+    const programs = (data as unknown as ProgramRow[]).map(rowToProgram);
+    if (programs.length === 0) return [];
+    // External-audit fix (2026-07-28): same verified-only gate as
+    // listLenders — a program must not evaluate in matching for customer
+    // accounts unless it has a human_verified guideline_version. Pending
+    // (AI-extracted or otherwise unreviewed) programs are admin-only.
+    const { data: guidelineVersions, error: gvError } = await this.supabase
+      .from("guideline_versions")
+      .select("program_id")
+      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+      .in(
+        "program_id",
+        programs.map((p) => p.id),
+      )
+      .eq("verification_status", "human_verified");
+    if (gvError) throw new Error(`Failed to list guideline versions for verification check: ${gvError.message}`);
+    const verifiedProgramIds = new Set((guidelineVersions as Array<{ program_id: string }>).map((g) => g.program_id));
+    return programs.filter((p) => verifiedProgramIds.has(p.id));
   }
 
   async listRules(organizationId: string): Promise<Rule[]> {

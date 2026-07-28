@@ -56,9 +56,13 @@ export default async function PricingPage() {
 
       <PricingPlans plans={plans} isSignedIn={Boolean(user)} highlightedKey={highlightedKey} />
 
+      <p className="text-center text-xs text-amber-300/80 max-w-2xl mx-auto">
+        Subscriptions are currently activated by our team after signup — usually within one business day.
+      </p>
+
       <p className="text-center text-xs text-slate-500 max-w-2xl mx-auto">
-        Billing is processed securely by Stripe — your card details never touch our servers. Cancel anytime from your
-        account page; you keep access through the end of the period you&apos;ve already paid for.
+        Billing will be processed securely by Stripe — your card details never touch our servers. Cancel anytime from
+        your account page; you keep access through the end of the period you&apos;ve already paid for.
       </p>
     </div>
   );

@@ -16,9 +16,9 @@ interface LenderRow {
 
 export default async function AdminLendersPage() {
   const { supabase } = await requirePlatformAdmin();
-  // Platform admins see lenders across every organization — the Top 12 /
-  // Top 25 curation described in the membership spec is a single,
-  // platform-wide list, not per-tenant.
+  // Platform admins see lenders across every organization — the tier
+  // curation described in the membership spec is a single, platform-wide
+  // list, not per-tenant.
   const { data, error } = await supabase
     .from("lenders")
     .select("id, name, is_sample_data, active, tier_level, organization_id")

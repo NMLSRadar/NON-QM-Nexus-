@@ -27,6 +27,39 @@ const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const hasCredentials = Boolean(SUPABASE_URL && ANON_KEY && SERVICE_ROLE_KEY);
 
+/** Gives each fixture lender a minimal program + a human_verified
+ * guideline_version — required since the external-audit fix (2026-07-28)
+ * made listLenders/listPrograms verified-only. This is a disposable TEST
+ * fixture (deleted in afterAll), not a real catalog record, so marking it
+ * verified here doesn't touch the "only the owner verifies real data via
+ * admin review" rule — it only exercises the TIER-visibility mechanism
+ * this suite is actually testing. */
+async function verifyLenders(admin: SupabaseClient, lenders: Array<{ id: string; name: string }>): Promise<void> {
+  for (const lender of lenders) {
+    const { data: program, error: programError } = await admin
+      .from("programs")
+      .insert({
+        organization_id: PLATFORM_CATALOG_ORGANIZATION_ID,
+        lender_id: lender.id,
+        name: `${lender.name} — Test Program`,
+        is_sample_data: false,
+        active: true,
+        config: { minFico: 660, baseMaxLtv: 80, incomeDocTypes: ["full_doc"] },
+      })
+      .select("id")
+      .single();
+    if (programError || !program) throw new Error(`Failed to insert test program for ${lender.name}: ${programError?.message}`);
+    const { error: gvError } = await admin.from("guideline_versions").insert({
+      organization_id: PLATFORM_CATALOG_ORGANIZATION_ID,
+      program_id: program.id,
+      label: "Test fixture — verified",
+      effective_date: new Date().toISOString().slice(0, 10),
+      verification_status: "human_verified",
+    });
+    if (gvError) throw new Error(`Failed to insert test guideline_version for ${lender.name}: ${gvError.message}`);
+  }
+}
+
 describe.skipIf(!hasCredentials)("Membership tiers (live database)", () => {
   let admin: SupabaseClient;
   let userClient: SupabaseClient;
@@ -76,15 +109,40 @@ describe.skipIf(!hasCredentials)("Membership tiers (live database)", () => {
     // Seed 3 test lenders at each tier level into the SHARED PLATFORM
     // CATALOG organization (uniquely named per test run) — writes go
     // through the service-role client since lenders/programs writes are
-    // platform-admin-only under RLS.
-    await admin.from("lenders").insert([
-      { organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: tier1Name, tier_level: 1 },
-      { organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: tier2Name, tier_level: 2 },
-      { organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: tier3Name, tier_level: 3 },
-    ]);
+    // platform-admin-only under RLS. Each ALSO gets a minimal program +
+    // a human_verified guideline_version — external-audit fix (2026-07-28)
+    // made listLenders/listPrograms verified-only, so a bare lender row
+    // with no verified program is now correctly invisible to any
+    // customer account; these fixtures need that same real precondition
+    // to exercise TIER visibility (not verification) as originally
+    // intended.
+    const { data: insertedLenders, error: lenderInsertError } = await admin
+      .from("lenders")
+      .insert([
+        { organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: tier1Name, tier_level: 1 },
+        { organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: tier2Name, tier_level: 2 },
+        { organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: tier3Name, tier_level: 3 },
+      ])
+      .select("id, name");
+    if (lenderInsertError || !insertedLenders) throw new Error(`Failed to insert test lenders: ${lenderInsertError?.message}`);
+    await verifyLenders(admin, insertedLenders);
   }, 30_000);
 
   afterAll(async () => {
+    const { data: testLenders } = await admin
+      .from("lenders")
+      .select("id")
+      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+      .in("name", allTestNames);
+    const testLenderIds = (testLenders ?? []).map((l) => l.id as string);
+    if (testLenderIds.length > 0) {
+      const { data: testPrograms } = await admin.from("programs").select("id").in("lender_id", testLenderIds);
+      const testProgramIds = (testPrograms ?? []).map((p) => p.id as string);
+      if (testProgramIds.length > 0) {
+        await admin.from("guideline_versions").delete().in("program_id", testProgramIds);
+        await admin.from("programs").delete().in("id", testProgramIds);
+      }
+    }
     await admin.from("lenders").delete().eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID).in("name", allTestNames);
     if (organizationId) {
       await admin.from("memberships").delete().eq("organization_id", organizationId);
@@ -150,9 +208,11 @@ describe.skipIf(!hasCredentials)("Membership tiers (live database)", () => {
     await admin.from("user_subscriptions").update({ plan_id: enterprise!.id }).eq("user_id", userId);
 
     // Simulate a brand-new lender added after the user upgraded.
+    const brandNewId = randomUUID();
     await admin
       .from("lenders")
-      .insert({ organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: brandNewName, tier_level: 3, id: randomUUID() });
+      .insert({ organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: brandNewName, tier_level: 3, id: brandNewId });
+    await verifyLenders(admin, [{ id: brandNewId, name: brandNewName }]);
 
     const repo = new SupabaseRepository(userClient, userId);
     const lenders = await repo.listLenders(organizationId);

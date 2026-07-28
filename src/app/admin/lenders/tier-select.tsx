@@ -4,8 +4,8 @@ import { useTransition } from "react";
 import { setLenderTier } from "./actions";
 
 const TIER_LABELS: Record<number, string> = {
-  1: "Tier 1 — Essential (Top 10)",
-  2: "Tier 2 — Professional (Top 26)",
+  1: "Tier 1 — Essential (10 verified)",
+  2: "Tier 2 — Professional (26 verified cumulative)",
   3: "Tier 3 — Enterprise (Unlimited)",
 };
 

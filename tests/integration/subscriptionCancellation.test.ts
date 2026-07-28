@@ -2,6 +2,7 @@
 // REAL Supabase project. Same skip-without-credentials convention as the
 // other tests/integration/*.test.ts files.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { randomUUID } from "node:crypto";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getEffectivePlan } from "@/lib/repository/membership";
 import { SupabaseRepository } from "@/lib/repository/supabaseRepository";
@@ -27,6 +28,8 @@ describe.skipIf(!hasCredentials)("Subscription cancellation (live database)", ()
   const testEmail = `nqn-cancel-integration-${Date.now()}@gmail.com`;
   const testPassword = "Cancel-Integration-Pw-123";
   const testLenderName = `Cancel-test Lender ${Date.now()}`;
+  const testLenderId = randomUUID();
+  let testProgramId: string;
 
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, {
@@ -56,7 +59,33 @@ describe.skipIf(!hasCredentials)("Subscription cancellation (live database)", ()
       .maybeSingle();
     organizationId = membership!.organization_id as string;
 
-    await admin.from("lenders").insert({ organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: testLenderName, tier_level: 1 });
+    await admin.from("lenders").insert({ organization_id: PLATFORM_CATALOG_ORGANIZATION_ID, name: testLenderName, tier_level: 1, id: testLenderId });
+    // External-audit fix (2026-07-28) made listLenders verified-only —
+    // this disposable test fixture needs a program + human_verified
+    // guideline_version to exercise cancellation/reactivation tier
+    // access (not verification, which isn't what this suite tests).
+    const { data: testProgram, error: testProgramError } = await admin
+      .from("programs")
+      .insert({
+        organization_id: PLATFORM_CATALOG_ORGANIZATION_ID,
+        lender_id: testLenderId,
+        name: `${testLenderName} — Test Program`,
+        is_sample_data: false,
+        active: true,
+        config: { minFico: 660, baseMaxLtv: 80, incomeDocTypes: ["full_doc"] },
+      })
+      .select("id")
+      .single();
+    if (testProgramError || !testProgram) throw new Error(`Failed to insert test program: ${testProgramError?.message}`);
+    testProgramId = testProgram.id as string;
+    const { error: gvError } = await admin.from("guideline_versions").insert({
+      organization_id: PLATFORM_CATALOG_ORGANIZATION_ID,
+      program_id: testProgramId,
+      label: "Test fixture — verified",
+      effective_date: new Date().toISOString().slice(0, 10),
+      verification_status: "human_verified",
+    });
+    if (gvError) throw new Error(`Failed to insert test guideline_version: ${gvError.message}`);
 
     // Assign the Essential plan directly (mirrors what an admin does).
     await admin
@@ -65,6 +94,10 @@ describe.skipIf(!hasCredentials)("Subscription cancellation (live database)", ()
   }, 30_000);
 
   afterAll(async () => {
+    if (testProgramId) {
+      await admin.from("guideline_versions").delete().eq("program_id", testProgramId);
+      await admin.from("programs").delete().eq("id", testProgramId);
+    }
     await admin.from("lenders").delete().eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID).eq("name", testLenderName);
     if (organizationId) {
       await admin.from("memberships").delete().eq("organization_id", organizationId);
