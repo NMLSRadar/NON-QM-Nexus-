@@ -187,8 +187,17 @@ export function ScenarioForm() {
           <input id="name" name="name" required className={field} aria-invalid={!!errors.name} />
           {errors.name ? <p className="text-xs text-rose-400 mt-1">{errors.name[0]}</p> : null}
         </Field>
-        <Field name="borrowerReference" title="Borrower reference (anonymized)">
-          <input id="borrowerReference" name="borrowerReference" placeholder="e.g. B-2001" className={field} />
+        <Field name="borrowerReference" title="Borrower reference (anonymized — do not enter real names)">
+          <input
+            id="borrowerReference"
+            name="borrowerReference"
+            placeholder="e.g. B-2001"
+            aria-describedby="borrowerReference-help"
+            className={field}
+          />
+          <p id="borrowerReference-help" className="mt-1 text-[11px] text-slate-500">
+            Use a file/loan number or anonymized code — never the borrower&apos;s real name.
+          </p>
         </Field>
         <Field name="state" title="Property state (2-letter)">
           <input id="state" name="state" maxLength={2} placeholder="FL" className={field} />

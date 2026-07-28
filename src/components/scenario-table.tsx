@@ -122,7 +122,7 @@ export function ScenarioTable({ rows, variant = "light" }: { rows: ScenarioRowDa
                   </IconBadge>
                   <div className="min-w-0">
                     <p className="font-medium text-ink-primary group-hover:text-brand-700 transition-colors truncate">{scenario.name}</p>
-                    <p className="text-xs text-ink-secondary truncate">{scenario.borrowerReference ?? "—"}</p>
+                    <p className="text-xs text-ink-secondary truncate">{scenario.borrowerReference ? `Ref: ${scenario.borrowerReference}` : "—"}</p>
                   </div>
                 </Link>
               </td>
@@ -157,7 +157,7 @@ export function ScenarioTable({ rows, variant = "light" }: { rows: ScenarioRowDa
                 </IconBadge>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-ink-primary truncate">{scenario.name}</p>
-                  <p className="text-xs text-ink-secondary">{scenario.borrowerReference ?? "—"} · {scenario.state ?? "—"}</p>
+                  <p className="text-xs text-ink-secondary">{scenario.borrowerReference ? `Ref: ${scenario.borrowerReference}` : "—"} · {scenario.state ?? "—"}</p>
                   <div className="mt-2 flex items-center justify-between">
                     <span className="font-medium tabular-nums text-sm">{fmtUsd(scenario.requestedLoanAmount)}</span>
                     {best ? <StatusBadge status={best.status as MatchStatus} /> : null}
