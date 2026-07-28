@@ -66,6 +66,7 @@ export async function approveExtractedProgram(
     maxDti: program.maxDti ?? undefined,
     minDscr: program.minDscr ?? undefined,
     baseMaxLtv: program.baseMaxLtv,
+    ltvMatrix: program.ltvMatrix ?? undefined,
     minReservesMonths: program.minReservesMonths,
     interestOnlyAvailable: program.interestOnlyAvailable,
     prepaymentPenaltyOptions: program.prepaymentPenaltyOptions,
