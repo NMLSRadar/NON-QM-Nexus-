@@ -472,7 +472,7 @@ function firstMatch(
 // ---------------------------------------------------------------------------
 
 const PROPERTY_VALUE_TERMS =
-  /\brequested loan amount\b|\bproperty value\b|\bestimated value\b|\bmarket value\b|\bappraised value\b|\bappraisal value\b|\bexpected appraisal\b|\bexpected value\b|\bappraises? for\b|\bshould appraise for\b|\bsubject value\b|\bvalue of the property\b|\bpurchase price\b|\bsales? price\b|\basking price\b|\blist(?:ed)? price\b|\blisted for\b|\bgoing for\b|\bselling for\b|\bpriced at\b|\bacquisition price\b|\bcontract price\b|\bhome price\b|\bproperty price\b|\bvalued at\b|\bworth\b|\bprobably worth\b|\bappraisal\b|\bappraise\b|\bvalue\b|\bprice\b|\bcoming in (?:around|at)\b|\bin the neighborhood of\b|\bcurrent market estimate\b|\bzestimate\b/;
+  /\brequested loan amount\b|\bproperty value\b|\bestimated value\b|\bmarket value\b|\bappraised value\b|\bappraisal value\b|\bexpected appraisal\b|\bexpected value\b|\bappraises? for\b|\bshould appraise for\b|\bsubject value\b|\bvalue of the property\b|\bpurchase price\b|\bsales? price\b|\basking price\b|\blist(?:ed)? price\b|\blisted for\b|\bgoing for\b|\bselling for\b|\bpriced at\b|\bacquisition price\b|\bcontract price\b|\bhome price\b|\bproperty price\b|\bvalued at\b|\bworth\b|\bprobably worth\b|\bappraisal\b|\bappraise\b|\bappraised\b|\bvalue\b|\bprice\b|\bcoming in (?:around|at)\b|\bin the neighborhood of\b|\bcurrent market estimate\b|\bzestimate\b/;
 // Generic single words ("purchase", "property", "home") are real signals
 // ("a $600,000 purchase", "looking at a $600,000 property") but far too
 // common to search sentence-wide without false hits — scoped to the
@@ -611,7 +611,18 @@ function rangeAround(index: number, len: number, boundaries: BoundaryHit[], text
  * two labels sit at genuinely equal distance on either side of a number
  * ("value 500000 loan 400000", read left to right), the number belongs to
  * the label that comes right before it, not the one describing the NEXT
- * number that merely happens to sit an equal number of characters after. */
+ * number that merely happens to sit an equal number of characters after.
+ *
+ * A copula/filler word directly between a PRECEDING label and its number
+ * ("value IS 500000", "appraised AT 500000") is collapsed to a near-zero
+ * gap rather than counted literally — otherwise a label phrased with a
+ * linking verb ("loan IS 400000") loses to a same-sentence label phrased
+ * without one ("financing 400000" — the dollar sign sits directly against
+ * the word) purely because of that verb's character count, even though
+ * both constructions are equally direct. Only a gap of filler words ALONE
+ * collapses; genuine unrelated text in between (e.g. another clause's own
+ * label/number) still measures as a real, larger distance. */
+const FILLER_GAP = /^(?:is|was|are|were|of|at|around|about|approximately|roughly|near|for|equals|equal to|totaling|totals)?$/i;
 function nearestTermDistance(t: string, from: number, to: number, numStart: number, numEnd: number, re: RegExp): number {
   const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : `${re.flags}g`);
   let best = Infinity;
@@ -620,9 +631,15 @@ function nearestTermDistance(t: string, from: number, to: number, numStart: numb
     if (m.index < from || m.index >= to) continue;
     const termEnd = m.index + m[0].length;
     let d: number;
-    if (termEnd <= numStart) d = numStart - termEnd;
-    else if (numEnd <= m.index) d = m.index - numEnd + 0.5;
-    else d = 0; // overlapping spans
+    if (termEnd <= numStart) {
+      const gapText = t.slice(termEnd, numStart).trim();
+      d = FILLER_GAP.test(gapText) ? 0 : numStart - termEnd;
+    } else if (numEnd <= m.index) {
+      const gapText = t.slice(numEnd, m.index).trim();
+      d = (FILLER_GAP.test(gapText) ? 0 : m.index - numEnd) + 0.5;
+    } else {
+      d = 0; // overlapping spans
+    }
     if (d < best) best = d;
   }
   return best;
