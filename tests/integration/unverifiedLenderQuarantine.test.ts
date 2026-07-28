@@ -133,6 +133,12 @@ describe.skipIf(!hasCredentials)("Unverified lender quarantine (live database)",
     await admin.from("lenders").delete().eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID).in("name", allTestLenderNames);
     if (userId) {
       await admin.from("user_subscriptions").delete().eq("user_id", userId);
+    }
+    if (organizationId) {
+      await admin.from("memberships").delete().eq("organization_id", organizationId);
+      await admin.from("organizations").delete().eq("id", organizationId);
+    }
+    if (userId) {
       await admin.auth.admin.deleteUser(userId);
     }
   }, 30_000);
