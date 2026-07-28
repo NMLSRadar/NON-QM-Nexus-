@@ -3,7 +3,16 @@ import { generateNeedsList } from "@/domain/matching/needsList";
 import type { Scenario } from "@/domain/types/scenario";
 import { DocumentChecklistCard } from "./checklist-card";
 
-export const dynamic = "force-static";
+// Matches every other page in this app: force-dynamic, never force-static.
+// The root layout renders auth-aware nav (Supabase-backed) on every page,
+// so attempting to statically prerender ANY page at build time tries to
+// create a Supabase client with no credentials available in that build
+// environment — this is exactly what broke CI (see the "Should I be
+// concerned?" chat thread, 2026-07-28): GitHub Actions' bare `next build`
+// has no Supabase secrets, unlike the local dev shell (.env.local) or the
+// real Vercel deploy target (configured project env vars), so the
+// production site was never actually affected — only CI's own build step.
+export const dynamic = "force-dynamic";
 
 /** A representative, synthetic scenario per loan type/purpose — used ONLY
  * to drive the SAME deterministic generateNeedsList() logic the per-
