@@ -35,13 +35,26 @@ export function DocumentChecklistCard({
   description,
   purchaseItems,
   refinanceItems,
+  conditionalTitle,
+  conditionalPurchaseItems,
+  conditionalRefinanceItems,
 }: {
   title: string;
   description: string;
   purchaseItems: NeedsListItem[];
   refinanceItems: NeedsListItem[];
+  /** Optional, clearly-separated sub-list for items that only apply under
+   * a specific additional condition (e.g. ITIN's bank-statement-only
+   * documents) — never mixed into the main required/if-applicable list
+   * above, so a reader never mistakes a conditional-combination item for
+   * something universal to the section. */
+  conditionalTitle?: string;
+  conditionalPurchaseItems?: NeedsListItem[];
+  conditionalRefinanceItems?: NeedsListItem[];
 }) {
   const [tab, setTab] = useState<"purchase" | "refinance">("purchase");
+  const conditionalItems = tab === "purchase" ? conditionalPurchaseItems : conditionalRefinanceItems;
+
   return (
     <div className="gold-scenario-card rounded-2xl border border-white/10 bg-[#0d0d0f] p-5">
       <h3 className="text-lg font-bold text-white">{title}</h3>
@@ -65,6 +78,15 @@ export function DocumentChecklistCard({
       <div className="mt-4">
         <ChecklistRows items={tab === "purchase" ? purchaseItems : refinanceItems} />
       </div>
+
+      {conditionalItems && conditionalItems.length > 0 ? (
+        <div className="mt-4 border-t border-white/10 pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-300/80">{conditionalTitle}</p>
+          <div className="mt-2">
+            <ChecklistRows items={conditionalItems} />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
