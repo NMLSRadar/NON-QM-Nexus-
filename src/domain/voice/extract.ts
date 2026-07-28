@@ -589,17 +589,40 @@ function rangeAround(index: number, len: number, boundaries: BoundaryHit[], text
   return { start, end };
 }
 
-/** Smallest distance from `numIndex` to any occurrence of `re` whose match
- * falls within [from, to) of the full text — Infinity if none is found, so
- * "nearest relevant alias term in this sentence" can be compared across
- * candidate fields regardless of word order. */
-function nearestTermDistance(t: string, from: number, to: number, numIndex: number, re: RegExp): number {
+/** Smallest TRUE character gap between `[numStart, numEnd)` and any
+ * occurrence of `re` whose match falls within [from, to) of the full text —
+ * Infinity if none is found, so "nearest relevant alias term in this
+ * sentence" can be compared across candidate fields regardless of word
+ * order. Deliberately measures edge-to-edge (0 when the spans touch or
+ * overlap), NOT start-to-start — start-to-start distance is asymmetric: it
+ * counts a preceding term's own text length as part of the "distance" (so
+ * "property value is $500,000" looks artificially far from its own label)
+ * while a following term's text length is excluded entirely (so "$500,000,
+ * the loan amount is..." looks artificially CLOSE to a label that doesn't
+ * even describe it). That asymmetry systematically favored whichever label
+ * happened to sit right after a number over the one immediately preceding
+ * it, misreading which figure was the property value vs. the loan amount
+ * whenever a sentence named both without a clause boundary between them
+ * (e.g. two dollar figures in one un-punctuated breath).
+ *
+ * Ties are broken in favor of a term that PRECEDES the number over one
+ * that follows it (a tiny epsilon added only to a following match) — in
+ * natural English, "<label> <number>" word order is the default, so when
+ * two labels sit at genuinely equal distance on either side of a number
+ * ("value 500000 loan 400000", read left to right), the number belongs to
+ * the label that comes right before it, not the one describing the NEXT
+ * number that merely happens to sit an equal number of characters after. */
+function nearestTermDistance(t: string, from: number, to: number, numStart: number, numEnd: number, re: RegExp): number {
   const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : `${re.flags}g`);
   let best = Infinity;
   let m: RegExpExecArray | null;
   while ((m = g.exec(t)) !== null) {
     if (m.index < from || m.index >= to) continue;
-    const d = Math.abs(m.index - numIndex);
+    const termEnd = m.index + m[0].length;
+    let d: number;
+    if (termEnd <= numStart) d = numStart - termEnd;
+    else if (numEnd <= m.index) d = m.index - numEnd + 0.5;
+    else d = 0; // overlapping spans
     if (d < best) best = d;
   }
   return best;
@@ -692,6 +715,7 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
     const sentenceHasLien = EXISTING_LIEN_TERMS.test(sentence);
     const loanTermsForClause = clauseHasLien ? LOAN_AMOUNT_STRONG_TERMS : LOAN_AMOUNT_TERMS;
     const loanTermsForSentence = sentenceHasLien ? LOAN_AMOUNT_STRONG_TERMS : LOAN_AMOUNT_TERMS;
+    const dmEnd = dm.index + dm[0].length;
     // Clause-scoped distance first — this is what stops a term that
     // actually belongs to the OTHER number in the same sentence (e.g. "the
     // purchase price is $600,000 and the loan request is $450,000") from
@@ -699,22 +723,22 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
     // widen to the full sentence when the number's own clause has no
     // relevant term at all (e.g. "...worth approximately $600,000" with no
     // comma/"and" to bound a narrower clause).
-    let dCashOut = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, CASH_OUT_AMOUNT_TERMS);
-    let dLien = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, EXISTING_LIEN_TERMS);
-    let dLoan = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, loanTermsForClause);
-    let dDown = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, DOWN_PAYMENT_DOLLAR_TERMS);
+    let dCashOut = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, dmEnd, CASH_OUT_AMOUNT_TERMS);
+    let dLien = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, dmEnd, EXISTING_LIEN_TERMS);
+    let dLoan = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, dmEnd, loanTermsForClause);
+    let dDown = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, dmEnd, DOWN_PAYMENT_DOLLAR_TERMS);
     let dValue = clauseHasLien
-      ? nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, PROPERTY_VALUE_TERMS)
+      ? nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, dmEnd, PROPERTY_VALUE_TERMS)
       : Math.min(
-          nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, PROPERTY_VALUE_TERMS),
-          nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, PROPERTY_VALUE_WEAK_TERMS)
+          nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, dmEnd, PROPERTY_VALUE_TERMS),
+          nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, dmEnd, PROPERTY_VALUE_WEAK_TERMS)
         );
     if (dCashOut === Infinity && dLien === Infinity && dLoan === Infinity && dValue === Infinity && dDown === Infinity) {
-      dCashOut = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, CASH_OUT_AMOUNT_TERMS);
-      dLien = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, EXISTING_LIEN_TERMS);
-      dLoan = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, loanTermsForSentence);
-      dValue = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, PROPERTY_VALUE_TERMS);
-      dDown = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, DOWN_PAYMENT_DOLLAR_TERMS);
+      dCashOut = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, dmEnd, CASH_OUT_AMOUNT_TERMS);
+      dLien = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, dmEnd, EXISTING_LIEN_TERMS);
+      dLoan = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, dmEnd, loanTermsForSentence);
+      dValue = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, dmEnd, PROPERTY_VALUE_TERMS);
+      dDown = nearestTermDistance(t, sentRange.start, sentRange.end, dm.index, dmEnd, DOWN_PAYMENT_DOLLAR_TERMS);
     }
     const min = Math.min(dCashOut, dLien, dLoan, dValue, dDown);
     const source = clause.trim();
@@ -760,12 +784,13 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
     const clauseRange = rangeAround(sm.index, sm[0].length, clauseBoundaries, t.length);
     const clause = t.slice(clauseRange.start, clauseRange.end);
     if (DISQUALIFYING_CONTEXT.test(clause)) continue;
+    const smEnd = sm.index + sm[0].length;
     const dValue = Math.min(
-      nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, PROPERTY_VALUE_TERMS),
-      nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, PROPERTY_VALUE_WEAK_TERMS)
+      nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, smEnd, PROPERTY_VALUE_TERMS),
+      nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, smEnd, PROPERTY_VALUE_WEAK_TERMS)
     );
-    const dLoan = nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, LOAN_AMOUNT_TERMS);
-    const dLien = nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, EXISTING_LIEN_TERMS);
+    const dLoan = nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, smEnd, LOAN_AMOUNT_TERMS);
+    const dLien = nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, smEnd, EXISTING_LIEN_TERMS);
     if (!propertyValue && dValue <= NEAR_CHARS && dValue <= dLoan && dValue <= dLien) {
       propertyValue = { value: n * 1_000, source: clause.trim() };
     } else if (!existingLienBalance && dLien <= NEAR_CHARS && dLien < dValue && dLien <= dLoan) {
