@@ -29,14 +29,14 @@ export interface PricingPlanRow {
 // same query this fix used.
 const TIER_FEATURES: Record<number, string[]> = {
   1: [
-    "Compare guidelines from 10 verified Non-QM lenders — and growing",
+    "Compare guidelines from 10 NON-QM Lenders",
     "Deterministic eligibility matching",
     "Saved scenarios",
     "Email support",
   ],
   2: [
     "Everything in Essential",
-    "Compare guidelines from 26 verified Non-QM lenders — and growing",
+    "Compare guidelines from 26 NON-QM Lenders",
     "Voice scenario intake",
     "Restructuring & needs-list generation",
     "Priority email support",
