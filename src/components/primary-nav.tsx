@@ -7,6 +7,7 @@ const NAV = [
   { href: "/scenarios/new", label: "New Scenario" },
   { href: "/scenarios/voice", label: "Voice Scenario" },
   { href: "/scenarios", label: "Scenarios" },
+  { href: "/document-checklists", label: "Doc Checklists" },
   { href: "/lenders", label: "Lenders" },
   { href: "/programs", label: "Programs" },
   { href: "/pricing", label: "Pricing" },

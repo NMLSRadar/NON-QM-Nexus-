@@ -16,9 +16,11 @@ export function generateNeedsList(scenario: Scenario): NeedsListItem[] {
 
   // Universal
   items.push(
+    item("application", "Completed 1003 Uniform Residential Loan Application (URLA)", "Standard application document every lender requires."),
+    item("application", "MISMO 3.4 data file", "Standard electronic loan-data file most lenders require for submission/import."),
     item("identity", "Government-issued photo ID for each borrower", "Identity verification required by all programs."),
     item("credit", "Credit report (tri-merge where available)", "FICO and tradeline review."),
-    item("assets", "Two most recent statements for all accounts used for funds to close and reserves", "Asset sourcing and seasoning."),
+    item("assets", "Two most recent months of statements for the account(s) funding the down payment and closing costs", "Funds-to-close sourcing and seasoning."),
   );
 
   if (scenario.loanPurpose === "purchase") {
@@ -76,7 +78,11 @@ export function generateNeedsList(scenario: Scenario): NeedsListItem[] {
       items.push(item("income", "Two years of 1099s plus YTD evidence of receipts", "1099 qualifying income basis."));
       break;
     case IncomeDocType.FullDoc:
-      items.push(item("income", "Two years of personal (and business, if self-employed) tax returns, W-2s, recent pay stubs", "Full documentation income review."));
+      items.push(
+        item("income", "W-2s for the past two years", "Full-documentation income review — wage-earner history."),
+        item("income", "Personal tax returns for the past two years (and business returns, if self-employed)", "Full-documentation income review."),
+        item("income", "Most recent one month of pay stubs", "Confirms current income is consistent with tax history."),
+      );
       break;
     default:
       break;
@@ -84,13 +90,23 @@ export function generateNeedsList(scenario: Scenario): NeedsListItem[] {
 
   if (scenario.citizenship === Citizenship.ForeignNational) {
     items.push(
-      item("residency", "Valid passport (and visa where applicable)", "Identity/eligibility for foreign nationals."),
+      item("residency", "Valid passport from the country of origin", "Identity verification for foreign nationals."),
+      item("residency", "Valid visa (where applicable)", "Immigration/eligibility status for foreign nationals."),
       item("residency", "Evidence of funds in a U.S. account or acceptable transfer path", "Funds-to-close sourcing."),
+      item(
+        "residency",
+        "Certified English translation of any bank statements from a foreign (non-U.S.) account",
+        "Foreign-language account statements must be translated before they can be used for underwriting.",
+        false,
+      ),
       item("residency", "Foreign credit reference letters or international credit report (program-dependent)", "Credit depth for borrowers without U.S. credit.", false),
     );
   }
   if (scenario.citizenship === Citizenship.Itin) {
-    items.push(item("residency", "ITIN card or IRS ITIN assignment letter", "ITIN program identity requirement."));
+    items.push(
+      item("residency", "ITIN card or IRS ITIN assignment letter (both pages)", "ITIN program identity requirement — both pages of the letter/card are required."),
+      item("identity", "Second form of identification", "Most ITIN programs require a secondary ID in addition to the primary government-issued photo ID."),
+    );
   }
   if (scenario.citizenship === Citizenship.NonPermanentResident) {
     items.push(item("residency", "Valid visa or EAD (work authorization)", "Non-permanent-resident eligibility."));
