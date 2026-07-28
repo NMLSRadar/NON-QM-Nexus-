@@ -49,6 +49,13 @@ export interface LenderAccessInfo {
    * always resolve to 3 (full access) regardless of any assigned plan. */
   tierLevel: number;
   isPlatformAdmin: boolean;
+  /** True only while an ACTIVE (non-expired) 14-day trial is what's
+   * granting tierLevel — see membership.ts's EffectivePlan.isTrial. */
+  isTrial: boolean;
+  /** Present whenever this account has ever had a trial, expired or not —
+   * lets the UI show "N days remaining" while active, or "your trial
+   * ended on <date>" once expired. */
+  trialExpiresAt: string | null;
 }
 
 /**
@@ -61,12 +68,12 @@ export async function getLenderAccessInfo(): Promise<LenderAccessInfo> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { tierLevel: 0, isPlatformAdmin: false };
+  if (!user) return { tierLevel: 0, isPlatformAdmin: false, isTrial: false, trialExpiresAt: null };
 
   const [{ data: userRow }, plan] = await Promise.all([
     supabase.from("users").select("platform_admin").eq("id", user.id).maybeSingle(),
     getEffectivePlan(supabase, user.id),
   ]);
   const isPlatformAdmin = Boolean(userRow?.platform_admin);
-  return { tierLevel: isPlatformAdmin ? 3 : plan.tierLevel, isPlatformAdmin };
+  return { tierLevel: isPlatformAdmin ? 3 : plan.tierLevel, isPlatformAdmin, isTrial: plan.isTrial, trialExpiresAt: plan.trialExpiresAt };
 }

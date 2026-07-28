@@ -22,6 +22,18 @@ export interface EffectivePlan {
   stripeSubscriptionId: string | null;
   cancelAtPeriodEnd: boolean;
   currentPeriodEnd: string | null;
+  /** True only while an ACTIVE (non-expired) trial is granting this
+   * tierLevel — see Phase 1/3 of the 14-day trial spec (2026-07-28).
+   * tierLevel above already reflects expiration (resolves to 0 once
+   * trial_expires_at has passed — see getEffectivePlan below), so this
+   * flag exists purely so the UI can show trial-specific copy ("N days
+   * remaining in your trial") rather than treating trial access
+   * identically to a real paid Enterprise subscription. */
+  isTrial: boolean;
+  /** Set whenever a trial_expires_at value exists on the row, whether or
+   * not the trial is still active — lets the UI show "your trial ended
+   * on <date>" even after expiration recomputes tierLevel to 0. */
+  trialExpiresAt: string | null;
 }
 
 const NO_PLAN: EffectivePlan = {
@@ -37,6 +49,8 @@ const NO_PLAN: EffectivePlan = {
   stripeSubscriptionId: null,
   cancelAtPeriodEnd: false,
   currentPeriodEnd: null,
+  isTrial: false,
+  trialExpiresAt: null,
 };
 
 /**
@@ -83,6 +97,8 @@ async function autoProvisionAdminSubscription(supabase: SupabaseClient, userId: 
     stripeSubscriptionId: null,
     cancelAtPeriodEnd: false,
     currentPeriodEnd: null,
+    isTrial: false,
+    trialExpiresAt: null,
   };
 }
 
@@ -104,7 +120,7 @@ export async function getEffectivePlan(supabase: SupabaseClient, userId: string)
   const { data, error } = await supabase
     .from("user_subscriptions")
     .select(
-      "canceled_at, source, stripe_subscription_id, cancel_at_period_end, current_period_end, billing_interval, plan:membership_plans(name, monthly_price_cents, annual_price_cents, tier_level), discount:discounts(percent_off)"
+      "canceled_at, source, stripe_subscription_id, cancel_at_period_end, current_period_end, billing_interval, is_trial, trial_expires_at, plan:membership_plans(name, monthly_price_cents, annual_price_cents, tier_level), discount:discounts(percent_off)"
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -120,6 +136,17 @@ export async function getEffectivePlan(supabase: SupabaseClient, userId: string)
   if (!plan) return NO_PLAN;
 
   const canceledAt = (data.canceled_at as string | null) ?? null;
+  const isTrial = (data.is_trial as boolean | null) ?? false;
+  const trialExpiresAt = (data.trial_expires_at as string | null) ?? null;
+  // Trial expiration (Phase 3 — automatic, server-clock-only): a trial row
+  // resolves to tier 0 the instant `now()` (this server's own clock, via
+  // `new Date()` — never a client-supplied timestamp, never the client's
+  // device clock) passes trial_expires_at. No admin action, cron job, or
+  // background sweep is required for this to take effect — every single
+  // tier-gated read (listLenders, listPrograms, the AI assistant, etc.)
+  // calls getEffectivePlan on every request, so expiration is enforced at
+  // the moment of read, exactly like the existing canceled_at check below.
+  const trialExpired = isTrial && trialExpiresAt !== null && new Date(trialExpiresAt).getTime() <= Date.now();
   const percentOff = discount?.percent_off ?? 0;
   const billingInterval: "monthly" | "annual" = (data.billing_interval as string) === "annual" ? "annual" : "monthly";
   const annualPriceCents = (plan.annual_price_cents as number | null) ?? null;
@@ -127,7 +154,7 @@ export async function getEffectivePlan(supabase: SupabaseClient, userId: string)
   const effectivePriceCents = Math.round(basePriceCents * (1 - percentOff / 100));
 
   return {
-    tierLevel: canceledAt ? 0 : (plan.tier_level as number),
+    tierLevel: canceledAt || trialExpired ? 0 : (plan.tier_level as number),
     planName: plan.name as string,
     monthlyPriceCents: plan.monthly_price_cents as number,
     annualPriceCents,
@@ -139,5 +166,7 @@ export async function getEffectivePlan(supabase: SupabaseClient, userId: string)
     stripeSubscriptionId: (data.stripe_subscription_id as string | null) ?? null,
     cancelAtPeriodEnd: (data.cancel_at_period_end as boolean | null) ?? false,
     currentPeriodEnd: (data.current_period_end as string | null) ?? null,
+    isTrial: isTrial && !trialExpired,
+    trialExpiresAt,
   };
 }
