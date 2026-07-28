@@ -79,6 +79,26 @@ describe("Assistant system prompt — slang comprehension, grounded routing, and
     expect(ASSISTANT_SYSTEM_PROMPT.toLowerCase()).toContain("hair on it");
   });
 
+  it("teaches an expanded real broker-slang vocabulary beyond the original starter set", () => {
+    const complicatedSlang = [
+      "story loan",
+      "thick file",
+      "scratch and dent",
+      "overlay issue",
+      "doesn't fit the matrix",
+      "thin file",
+      "needs manual underwriting",
+    ];
+    const cleanSlang = ["textbook", "picture perfect", "squeaky clean", "slam dunk", "golden borrower"];
+    const lower = ASSISTANT_SYSTEM_PROMPT.toLowerCase();
+    for (const phrase of complicatedSlang) expect(lower, phrase).toContain(phrase);
+    for (const phrase of cleanSlang) expect(lower, phrase).toContain(phrase);
+  });
+
+  it("instructs the assistant to interpret novel slang by meaning, not just match this exact list", () => {
+    expect(ASSISTANT_SYSTEM_PROMPT.toLowerCase()).toContain("not listed here");
+  });
+
   it("instructs routing from the real bankStatementFlexible/itinSpecialist/foreignNationalSpecialist flags, not a hardcoded list", () => {
     expect(ASSISTANT_SYSTEM_PROMPT).toContain("bankStatementFlexible");
     expect(ASSISTANT_SYSTEM_PROMPT).toContain("itinSpecialist");
@@ -89,6 +109,33 @@ describe("Assistant system prompt — slang comprehension, grounded routing, and
   it("states the 10% bank-statement minimum down payment as conditional on FICO, not unconditional", () => {
     expect(ASSISTANT_SYSTEM_PROMPT).toMatch(/10%/);
     expect(ASSISTANT_SYSTEM_PROMPT.toLowerCase()).toContain("fico");
+  });
+
+  it("ITIN expert reasoning: states the real 15%-down market standard AND the real GreenBox 89% LTV exception with its caveats", () => {
+    const lower = ASSISTANT_SYSTEM_PROMPT.toLowerCase();
+    expect(lower).toContain("15% down");
+    expect(lower).toContain("85% ltv");
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain("GreenBox Loans");
+    expect(lower).toContain("89% ltv");
+    expect(lower).toMatch(/stricter qualification|more restrictive/);
+    expect(lower).toContain("account executive");
+    expect(lower).toMatch(/not every itin borrower/);
+  });
+
+  it("P&L Only expert reasoning: states the 80% LTV standard, the 85% exception, and its 2-month bank-statement dependency", () => {
+    const lower = ASSISTANT_SYSTEM_PROMPT.toLowerCase();
+    expect(lower).toContain("80% ltv");
+    expect(lower).toContain("85% ltv");
+    expect(lower).toContain("2 months of business bank statements");
+    expect(lower).toMatch(/capped at 80%|generally be capped/);
+  });
+
+  it("DSCR expert reasoning: states 85% LTV availability but explains the mechanical LTV-vs-DSCR-ratio tradeoff", () => {
+    const lower = ASSISTANT_SYSTEM_PROMPT.toLowerCase();
+    expect(lower).toContain("85% ltv");
+    expect(lower).toContain("dscr ratio");
+    expect(lower).toMatch(/pitia/);
+    expect(lower).toMatch(/not every property will support/);
   });
 
   it("clarifies the assistant's role is directional guidance, not guideline clarification — that's the AE's job", () => {
