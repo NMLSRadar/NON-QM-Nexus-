@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PENDING_TRIAL_KEY, type PendingTrialRegistration } from "../trial-registration-form";
+import { sendTrialActivationEmailIfNeeded } from "./actions";
 
 type Status = "activating" | "success" | "error";
 
@@ -71,6 +72,9 @@ export function ActivateTrialClient({ campaignSlug }: { campaignSlug: string }) 
 
       setStatus("success");
       setExpiresAt(Array.isArray(data) && data[0] ? data[0].expires_at : null);
+      sendTrialActivationEmailIfNeeded().catch(() => {
+        // best-effort — never block the user's redirect on email delivery
+      });
       setTimeout(() => {
         window.location.href = "/scenarios";
       }, 2500);
