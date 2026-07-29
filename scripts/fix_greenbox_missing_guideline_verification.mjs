@@ -28,6 +28,17 @@ async function main() {
       continue;
     }
     const c = p.config;
+    if (!c?.guidelineVersionLabel || !c?.effectiveDate) {
+      console.log(`Skip (missing guidelineVersionLabel/effectiveDate): ${p.name}`);
+      continue;
+    }
+    if ((c.minFico ?? 0) === 0 && (c.baseMaxLtv ?? 0) === 0) {
+      // Deliberately-incomplete program (real numeric matrix not yet
+      // located) — never fabricate verification. See
+      // tests/integration/noFabricatedVerificationSweep.test.ts.
+      console.log(`Skip (unconfirmed numeric config: minFico/baseMaxLtv both 0): ${p.name}`);
+      continue;
+    }
     await prisma.guidelineVersion.create({
       data: {
         organizationId: PLATFORM_CATALOG_ORGANIZATION_ID,

@@ -15,6 +15,16 @@
 // program's own config (the values its ingestion script intended to publish
 // with). Programs that already have ANY guideline_versions row (verified or
 // pending-review) are left untouched — this only targets true zero-row cases.
+//
+// SAFETY GUARD (added 2026-07-29 after this script was found — twice — to
+// have re-verified 13/12 programs that were DELIBERATELY left with
+// placeholder minFico=0/baseMaxLtv=0 numeric config, because those
+// programs still had a guidelineVersionLabel/effectiveDate set as
+// documentation metadata even though their real numeric matrix was never
+// located. This script must never fabricate verification for a program
+// whose core numeric fields are still the unset placeholder — see
+// tests/integration/noFabricatedVerificationSweep.test.ts, which will
+// fail the build if this guard is ever removed or bypassed.
 import { PrismaClient } from "@prisma/client";
 
 const PLATFORM_CATALOG_ORGANIZATION_ID = "bfe87b1c-86e7-4186-b1c4-ecc25d0e4420";
@@ -41,6 +51,13 @@ async function main() {
     const c = p.config ?? {};
     if (!c.guidelineVersionLabel || !c.effectiveDate) {
       skippedMissingConfig.push(`${p.lender.name} — ${p.name}`);
+      continue;
+    }
+    if ((c.minFico ?? 0) === 0 && (c.baseMaxLtv ?? 0) === 0) {
+      // Deliberately-incomplete program (real numeric matrix not yet
+      // located) — never fabricate verification just because metadata
+      // fields happen to be set. Leave unverified.
+      skippedMissingConfig.push(`${p.lender.name} — ${p.name} (unconfirmed numeric config: minFico/baseMaxLtv both 0)`);
       continue;
     }
     await prisma.guidelineVersion.create({
