@@ -11,6 +11,24 @@ import fs from "fs";
 // lenders. Adding FundLoans/LendSure's real ITIN program data is a SEPARATE
 // follow-up once their exact guideline figures (max LTV, min FICO, income
 // doc types) are supplied — this script does not fabricate that data.
+//
+// *** DO NOT RE-RUN THIS SCRIPT AS-IS ***. When it ran, its 7-name allowlist
+// stripped citizenshipEligible down to an EMPTY ARRAY on 5 real, already
+// verified ITIN programs it was never told about, including a straight
+// name confusion: "LoanStream Mortgage" (a real, distinct lender with a
+// real, independently-sourced ITIN program — 660 FICO/85% LTV/full doc +
+// bank statement, verified 2026-07-29) is NOT the same lender as the
+// allowlisted "LendSure Mortgage Corp." — the two names are similar but
+// the companies are unrelated. The other casualties (Brokers First
+// Funding, A&D Mortgage, Angel Oak Mortgage Solutions, NQM Funding) were
+// simply real ITIN programs this session had already sourced and verified
+// that were never added to this allowlist. All 5 were restored via
+// scripts/fix_itin_citizenship_stripped_2026_07_29.mjs. If this script is
+// ever run again, its allowlist MUST include every lender with a real,
+// independently-sourced ITIN program already in the catalog — never a
+// short hardcoded list assembled from memory — and its result should be
+// diffed against tests/integration/noEmptyCitizenshipEligible.test.ts
+// before trusting it.
 
 const env = Object.fromEntries(
   fs.readFileSync(".env.local", "utf8").split("\n").filter((l) => l.includes("=")).map((l) => {
