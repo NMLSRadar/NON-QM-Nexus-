@@ -79,6 +79,12 @@ export interface ProgramEvaluation {
   lastVerifiedDate?: string;
   sourceCitation: string;
   disclaimer: string;
+  /** The lender's minimum subscription tier (see Lender.tierLevel). Lets the
+   * results UI show an eligible lender from a tier the viewer hasn't
+   * subscribed to yet — locked, but still counted toward the eligible-lender
+   * threshold — instead of silently excluding it (product spec: membership-
+   * tier protection). */
+  lenderTierLevel: number;
 }
 
 export interface RestructuringOption {

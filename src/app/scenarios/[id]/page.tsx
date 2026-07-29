@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, FileEdit, RotateCw, Layers, ClipboardList, Clock } from "lucide-react";
+import { ArrowLeft, FileEdit, RotateCw, Layers, Clock } from "lucide-react";
 import { analyzeScenario } from "@/domain/analyze";
 import { getCurrentOrganizationId, getLenderAccessInfo, getRepository } from "@/lib/session";
-import { Card, MetricTile, StatusBadge, SectionHeading, LinkButton, Pill, fmtNum, fmtPct, fmtUsd } from "@/components/ui";
-import type { CalcResult } from "@/domain/types/results";
+import { Card, MetricTile, StatusBadge, SectionHeading, LinkButton, Pill, fmtUsd } from "@/components/ui";
 import type { MatchStatus } from "@/domain/types/enums";
 import { BestLenderMatches } from "./best-lender-matches";
 import { DocumentNeeds } from "./document-needs";
@@ -12,48 +11,19 @@ import { ScenarioActivity } from "./scenario-activity";
 
 export const dynamic = "force-dynamic";
 
-function CalcTrace({ calc }: { calc: CalcResult }) {
-  return (
-    <details className="text-xs text-ink-secondary">
-      <summary className="cursor-pointer hover:text-brand-700 transition-colors">How was this calculated?</summary>
-      <div className="mt-1 space-y-1 pl-3 border-l-2 border-surface-border">
-        <p className="font-mono">{calc.formula}</p>
-        <ul>
-          {Object.entries(calc.inputs).map(([k, v]) => (
-            <li key={k}>
-              {k}: <span className="font-mono">{String(v ?? "—")}</span>
-            </li>
-          ))}
-        </ul>
-        {calc.notes?.map((n) => (
-          <p key={n} className="text-amber-700">⚠ {n}</p>
-        ))}
-      </div>
-    </details>
-  );
-}
-
-function fmtCalc(calc: CalcResult): string {
-  if (calc.value == null) return "—";
-  switch (calc.unit) {
-    case "percent":
-      return fmtPct(calc.value);
-    case "usd":
-      return fmtUsd(calc.value);
-    case "months":
-      return `${calc.value} mo`;
-    default:
-      return fmtNum(calc.value);
-  }
-}
-
 export default async function ScenarioResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const repo = await getRepository();
   const org = await getCurrentOrganizationId();
   const scenario = await repo.getScenario(org, id);
   if (!scenario) notFound();
-  const [catalog, access] = await Promise.all([repo.getCatalog(org), getLenderAccessInfo()]);
+  const access = await getLenderAccessInfo();
+  // Scenario matching always sees the FULL catalog (every tier) so an
+  // eligible lender above the viewer's own plan still counts toward the
+  // eligible-lender threshold and is shown locked, not silently dropped —
+  // except for a genuinely tier-0 (no active plan) account, which keeps
+  // its existing "no active subscription" empty state below.
+  const catalog = access.tierLevel === 0 ? await repo.getCatalog(org) : await repo.getCatalogForMatching(org);
   const analysis = analyzeScenario(scenario, catalog);
   const best = analysis.evaluations[0];
 
@@ -130,21 +100,11 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
             </div>
           </Card>
 
-          <Card className="p-6">
-            <SectionHeading icon={<ClipboardList className="h-5 w-5" />} title="Calculation Summary" />
-            <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {analysis.calculation.results.map((c) => (
-                <div key={c.key} className="relative rounded-control border border-surface-border bg-white p-4 overflow-hidden">
-                  <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-brand-500 to-brand-200" aria-hidden />
-                  <p className="text-xs text-ink-secondary">{c.label}</p>
-                  <p className="mt-1 text-xl font-bold tabular-nums text-ink-primary">{fmtCalc(c)}</p>
-                  <div className="mt-1">
-                    <CalcTrace calc={c} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+          {/* Calculation Summary intentionally removed from this page (product
+              spec: scenario-results cleanup) — LTV/DTI/DSCR/etc. are still
+              computed in full by analyzeScenario above and drive lender
+              eligibility, ranking, and the AI Analysis text below; they are
+              simply no longer rendered as their own section. */}
 
           {/* Best Lender Matches — the signature section of the page. */}
           <Card className="p-6">

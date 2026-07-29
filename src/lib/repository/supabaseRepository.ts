@@ -6,6 +6,12 @@ import type { ProgramCatalog } from "@/domain/analyze";
 import { getEffectivePlan } from "./membership";
 import { PLATFORM_CATALOG_ORGANIZATION_ID } from "@/lib/platformCatalog";
 
+/** The top subscription tier (Enterprise) — passing this as a tier
+ * override effectively lifts the `.lte("tier_level", tier)` gate so every
+ * active, verified lender/program is returned regardless of the caller's
+ * real plan. Used only by getCatalogForMatching. */
+const MAX_TIER_LEVEL = 3;
+
 // ---------------------------------------------------------------------------
 // Row <-> domain object mapping.
 //
@@ -173,6 +179,22 @@ export class SupabaseRepository implements Repository {
     return { lenders, programs, rules };
   }
 
+  /** Same catalog, but for scenario MATCHING — every active, verified
+   * program regardless of the caller's subscription tier (tierOverride =
+   * MAX_TIER_LEVEL). The results page uses this so an eligible lender
+   * above the viewer's own tier still shows up (locked) and still counts
+   * toward the eligible-lender threshold, instead of the matching engine
+   * never seeing it at all. Never used to leak guideline data anywhere
+   * except through the already-locked scenario-results card. */
+  async getCatalogForMatching(organizationId: string): Promise<ProgramCatalog> {
+    const [lenders, programs, rules] = await Promise.all([
+      this.listLenders(organizationId, MAX_TIER_LEVEL),
+      this.listPrograms(organizationId, MAX_TIER_LEVEL),
+      this.listRules(organizationId, MAX_TIER_LEVEL),
+    ]);
+    return { lenders, programs, rules };
+  }
+
   async listScenarios(organizationId: string): Promise<Scenario[]> {
     const { data, error } = await this.supabase
       .from("scenarios")
@@ -207,13 +229,13 @@ export class SupabaseRepository implements Repository {
     return rowToScenario(data as ScenarioRow);
   }
 
-  async listLenders(organizationId: string): Promise<Lender[]> {
+  async listLenders(organizationId: string, tierOverride?: number): Promise<Lender[]> {
     // Catalog data is shared platform-wide, not scoped to the caller's own
     // organization — see docs on PLATFORM_CATALOG_ORGANIZATION_ID. The
     // `organizationId` parameter is kept for interface stability (and is
     // still what InMemoryRepository uses) but intentionally unused here.
     void organizationId;
-    const tier = await this.getEffectiveTier();
+    const tier = tierOverride ?? (await this.getEffectiveTier());
     const { data, error } = await this.supabase
       .from("lenders")
       .select("id, organization_id, name, is_sample_data, active, contact_email, notes, tier_level")
@@ -329,9 +351,9 @@ export class SupabaseRepository implements Repository {
     }));
   }
 
-  async listPrograms(organizationId: string): Promise<Program[]> {
+  async listPrograms(organizationId: string, tierOverride?: number): Promise<Program[]> {
     void organizationId;
-    const tier = await this.getEffectiveTier();
+    const tier = tierOverride ?? (await this.getEffectiveTier());
     const { data, error } = await this.supabase
       .from("programs")
       .select("id, organization_id, lender_id, name, is_sample_data, active, config, lenders!inner(tier_level)")
@@ -360,9 +382,9 @@ export class SupabaseRepository implements Repository {
     return programs.filter((p) => verifiedProgramIds.has(p.id));
   }
 
-  async listRules(organizationId: string): Promise<Rule[]> {
+  async listRules(organizationId: string, tierOverride?: number): Promise<Rule[]> {
     void organizationId;
-    const tier = await this.getEffectiveTier();
+    const tier = tierOverride ?? (await this.getEffectiveTier());
     const { data, error } = await this.supabase
       .from("rules")
       .select(
