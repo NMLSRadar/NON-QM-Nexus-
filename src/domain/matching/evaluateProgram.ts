@@ -59,6 +59,7 @@ export function evaluateProgram(
   return {
     programId: program.id,
     lenderId: lender.id,
+    lenderTierLevel: lender.tierLevel,
     programName: program.name,
     lenderName: lender.name,
     isSampleData: program.isSampleData || lender.isSampleData,

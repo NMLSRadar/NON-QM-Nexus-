@@ -7,6 +7,7 @@ function makeEvaluation(overrides: Partial<ProgramEvaluation> = {}): ProgramEval
   return {
     programId: "p1",
     lenderId: "l1",
+    lenderTierLevel: 1,
     programName: "Test Program",
     lenderName: "Test Lender",
     isSampleData: false,

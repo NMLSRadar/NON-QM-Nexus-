@@ -16,6 +16,13 @@ import { sampleScenarios } from "@/data/sampleScenarios";
  */
 export interface Repository {
   getCatalog(organizationId: string): Promise<ProgramCatalog>;
+  /** Same shape as getCatalog, but for SCENARIO MATCHING only — includes
+   * every active, verified lender/program regardless of the caller's
+   * subscription tier. Tier gating for matching happens at DISPLAY time
+   * (an eligible lender above the viewer's tier is still shown, just
+   * locked — see the scenario-results membership-tier protection rule),
+   * never by hiding it from the matching engine entirely. */
+  getCatalogForMatching(organizationId: string): Promise<ProgramCatalog>;
   listScenarios(organizationId: string): Promise<Scenario[]>;
   getScenario(organizationId: string, id: string): Promise<Scenario | null>;
   saveScenario(scenario: Scenario): Promise<Scenario>;
@@ -48,6 +55,12 @@ class InMemoryRepository implements Repository {
   async getCatalog(organizationId: string): Promise<ProgramCatalog> {
     this.assertOrg(organizationId);
     return { lenders: sampleLenders, programs: samplePrograms, rules: sampleRules };
+  }
+
+  async getCatalogForMatching(organizationId: string): Promise<ProgramCatalog> {
+    // The demo store has no tier gating at all, so matching already sees
+    // everything — identical to getCatalog.
+    return this.getCatalog(organizationId);
   }
 
   async listScenarios(organizationId: string): Promise<Scenario[]> {

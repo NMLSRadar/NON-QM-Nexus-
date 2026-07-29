@@ -2,13 +2,18 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Trophy, ChevronDown, Sparkles, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Trophy, ChevronDown, Sparkles, CheckCircle2, AlertTriangle, Lock, XCircle } from "lucide-react";
 import { SampleDataBadge, StatusBadge, Stat, Pill, fmtPct, fmtUsd } from "@/components/ui";
 import type { ProgramEvaluation } from "@/domain/types/results";
 import type { MatchStatus } from "@/domain/types/enums";
 import { whyThisLender, potentialIssues, aiNarrative } from "@/domain/matching/narrative";
 
 const MAX_COMPARE = 4;
+/** Never show more than this many near-match/ineligible lenders — product
+ * spec: "Do not display more than five ineligible or near-match lenders." */
+const MAX_DISPLAYED_INELIGIBLE = 5;
+/** Product spec: 3+ eligible lenders suppresses ineligible ones entirely. */
+const ELIGIBLE_SUPPRESSION_THRESHOLD = 3;
 
 // Green / yellow / red per the redesign brief — mapped from the same real
 // MatchStatus the rest of the app already uses (see src/components/ui.tsx
@@ -30,6 +35,16 @@ const RING_BY_STATUS: Record<MatchStatus, string> = {
   manual_review: "ring-sky-200",
   ineligible: "ring-rose-100",
 };
+
+/** A program is "eligible" for the results-page display rule the moment it
+ * isn't a hard-fail — strong_match/eligible/conditional/eligible_with_
+ * restructuring/manual_review all count (see classifyStatus in
+ * evaluateProgram.ts: only a hard rule failure produces "ineligible"). This
+ * is the single source of truth for the eligible/ineligible split used by
+ * the suppression rule below — never re-derive it differently elsewhere. */
+function isEligibleStatus(status: MatchStatus): boolean {
+  return status !== "ineligible";
+}
 
 function MatchScoreRing({ score }: { score: number }) {
   // Simple, dependency-free circular progress using conic-gradient — no
@@ -55,6 +70,57 @@ function StarRating({ score }: { score: number }) {
       {"★".repeat(stars)}
       <span className="text-slate-300">{"★".repeat(5 - stars)}</span>
     </span>
+  );
+}
+
+/** Locked variant of an eligible lender card — the lender belongs to a
+ * membership tier the viewer hasn't subscribed to yet. Per the product
+ * spec's membership-tier protection rule: the card stays visible and still
+ * counts as an eligible match, but every guideline detail (stats, why-this-
+ * lender, AI analysis, restrictions) is hidden behind an upgrade prompt. */
+function LockedLenderCard({ e, rank }: { e: ProgramEvaluation; rank: number }) {
+  const isBestMatch = rank === 0 && (e.status === "strong_match" || e.status === "eligible");
+  return (
+    <div
+      className={`gold-fade-up rounded-card border bg-white p-5 ${isBestMatch ? "gold-shimmer-border" : "border-surface-border"}`}
+    >
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-start gap-4">
+          <div className="relative h-14 w-14 shrink-0 rounded-full grid place-items-center bg-surface-subtle">
+            <Lock className="h-5 w-5 text-brand-600" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-bold text-ink-primary">{e.lenderName}</p>
+              {isBestMatch ? (
+                <Pill tone="gold">
+                  <Trophy className="h-3 w-3 mr-1 inline" /> Best Match
+                </Pill>
+              ) : null}
+            </div>
+            <p className="text-sm text-ink-secondary">{e.programName}</p>
+            <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+              <StatusBadge status={e.status} />
+              <Pill tone="gold">Tier {e.lenderTierLevel} required</Pill>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-control border border-brand-100 bg-brand-50/40 p-4">
+        <p className="text-sm font-semibold text-brand-900">
+          This is a real eligible match for this scenario — the specific guideline details (max LTV, FICO, loan
+          amount, reserves, and the full &ldquo;Why This Lender&rdquo; breakdown) are part of the plan tier above your
+          current subscription.
+        </p>
+        <Link
+          href="/pricing"
+          className="gold-cta-glow mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-600 text-white text-xs font-semibold px-4 py-2 hover:bg-brand-700"
+        >
+          Upgrade to unlock this lender
+        </Link>
+      </div>
+    </div>
   );
 }
 
@@ -276,6 +342,42 @@ function LenderCard({
   );
 }
 
+/** A suppressed-by-default near-match / ineligible lender card — only ever
+ * rendered when the scenario has fewer than 3 eligible lenders (product
+ * spec section 3-4). Always clearly labeled and always explains the exact
+ * disqualifying reason(s), drawn from this program's own real failed
+ * rules — never invented. */
+function IneligibleLenderCard({ e }: { e: ProgramEvaluation }) {
+  const reasons = e.failedRules.length > 0 ? e.failedRules.map((r) => r.userExplanation) : potentialIssues(e);
+  return (
+    <div className="rounded-card border border-rose-100 bg-rose-50/30 p-5">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-bold text-ink-primary">{e.lenderName}</p>
+            {e.isSampleData ? <SampleDataBadge /> : null}
+          </div>
+          <p className="text-sm text-ink-secondary">{e.programName}</p>
+        </div>
+        <Pill tone="rose">
+          <XCircle className="h-3 w-3 mr-1 inline" /> Currently Ineligible
+        </Pill>
+      </div>
+
+      {reasons.length > 0 && (
+        <div className="mt-3 border-t border-rose-100 pt-3">
+          <h4 className="text-xs font-semibold text-rose-700 uppercase tracking-wide">Guideline Conflict</h4>
+          <ul className="mt-1.5 text-sm text-rose-800 list-disc pl-5 space-y-0.5">
+            {reasons.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CompareTable({ items }: { items: ProgramEvaluation[] }) {
   const rows: Array<{ label: string; render: (e: ProgramEvaluation) => React.ReactNode }> = [
     { label: "Status", render: (e) => <StatusBadge status={e.status} /> },
@@ -322,7 +424,16 @@ function CompareTable({ items }: { items: ProgramEvaluation[] }) {
 
 /** The signature experience of the scenario detail page: every applicable
  * program ranked by real match score, color-coded, with an inline
- * side-by-side compare — replaces the old flat grouped list. */
+ * side-by-side compare — replaces the old flat grouped list.
+ *
+ * Display rule (product spec — scenario-results cleanup): eligible lenders
+ * always render first, ranked strongest to weakest. Ineligible lenders are
+ * suppressed entirely once there are 3+ eligible lenders; with 1-2 (or 0)
+ * eligible lenders, up to 5 near-match/ineligible lenders are shown after
+ * them, each clearly labeled with its exact disqualifying reason. A locked
+ * (higher-tier) eligible lender still counts toward the 3-lender threshold
+ * — it just renders with its guideline details hidden behind an upgrade
+ * prompt instead of being excluded. */
 export function BestLenderMatches({
   evaluations,
   tierLevel,
@@ -335,18 +446,32 @@ export function BestLenderMatches({
    * catalog is tier-gated; see src/lib/repository/supabaseRepository.ts).
    * Those are two very different situations and need two different
    * messages — the generic one reads exactly like a broken matching
-   * engine to a brand-new, not-yet-subscribed account. */
+   * engine to a brand-new, not-yet-subscribed account. Also controls which
+   * eligible lender cards render locked (lenderTierLevel > tierLevel). */
   tierLevel?: number;
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const sorted = useMemo(() => [...evaluations].sort((a, b) => b.matchScore - a.matchScore), [evaluations]);
-  const selected = sorted.filter((e) => selectedIds.includes(e.programId));
+  // Evaluations arrive from analyzeScenario already ranked with guideline
+  // eligibility taking priority over match score (rankEvaluations: status
+  // band first, then score, then name) — that ordering must never be
+  // discarded in favor of a pure match-score sort, or an ineligible program
+  // could visually outrank an eligible one.
+  const eligible = useMemo(() => evaluations.filter((e) => isEligibleStatus(e.status)), [evaluations]);
+  const ineligible = useMemo(() => evaluations.filter((e) => !isEligibleStatus(e.status)), [evaluations]);
+  const displayedIneligible = useMemo(
+    () => (eligible.length >= ELIGIBLE_SUPPRESSION_THRESHOLD ? [] : ineligible.slice(0, MAX_DISPLAYED_INELIGIBLE)),
+    [eligible.length, ineligible],
+  );
+
+  const effectiveTier = tierLevel ?? Number.POSITIVE_INFINITY;
+  const selectableEligible = eligible.filter((e) => e.lenderTierLevel <= effectiveTier);
+  const selected = selectableEligible.filter((e) => selectedIds.includes(e.programId));
 
   function toggle(id: string) {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : prev.length < MAX_COMPARE ? [...prev, id] : prev));
   }
 
-  if (sorted.length === 0) {
+  if (evaluations.length === 0) {
     if (tierLevel === 0) {
       return (
         <div className="rounded-control border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
@@ -379,18 +504,41 @@ export function BestLenderMatches({
       )}
 
       <div className="space-y-4">
-        {sorted.map((e, i) => (
-          <LenderCard
-            key={e.programId}
-            rank={i}
-            e={e}
-            selected={selectedIds.includes(e.programId)}
-            onToggle={() => toggle(e.programId)}
-            disabled={selectedIds.length >= MAX_COMPARE}
-            runnerUpName={i === 0 ? sorted[1]?.lenderName : undefined}
-          />
-        ))}
+        {eligible.map((e, i) => {
+          const locked = e.lenderTierLevel > effectiveTier;
+          if (locked) return <LockedLenderCard key={e.programId} e={e} rank={i} />;
+          return (
+            <LenderCard
+              key={e.programId}
+              rank={i}
+              e={e}
+              selected={selectedIds.includes(e.programId)}
+              onToggle={() => toggle(e.programId)}
+              disabled={selectedIds.length >= MAX_COMPARE}
+              runnerUpName={i === 0 ? eligible[1]?.lenderName : undefined}
+            />
+          );
+        })}
       </div>
+
+      {displayedIneligible.length > 0 && (
+        <div className="space-y-3 pt-2">
+          <div className="border-t border-surface-border pt-4">
+            <h3 className="text-sm font-semibold text-ink-primary">
+              {eligible.length === 0 ? "Strongest near-match lenders" : "Near-match / currently ineligible lenders"}
+            </h3>
+            <p className="mt-0.5 text-xs text-ink-secondary">
+              Shown for reference only — these programs do not currently qualify for this scenario. See
+              &ldquo;How to make this work&rdquo; below for the specific changes that could unlock eligibility.
+            </p>
+          </div>
+          <div className="space-y-3">
+            {displayedIneligible.map((e) => (
+              <IneligibleLenderCard key={e.programId} e={e} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
