@@ -28,7 +28,7 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
   const best = analysis.evaluations[0];
 
   return (
-    <div className="space-y-6">
+    <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
       {/* Header */}
       <div className="space-y-3">
         <Link href="/scenarios" className="inline-flex items-center gap-1 text-sm text-ink-secondary hover:text-brand-700 transition-colors">
@@ -74,9 +74,6 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
                 value={`${scenario.citizenship?.replace(/_/g, " ") ?? "—"}${scenario.visaType ? ` (${scenario.visaType} visa)` : ""}`}
               />
               <MetricTile label="Income doc" value={scenario.incomeDocType ?? "—"} />
-              <MetricTile label="Housing payment" value={fmtUsd(scenario.monthlyHousingPayment)} />
-              <MetricTile label="Other liabilities" value={fmtUsd(scenario.monthlyLiabilities)} />
-              <MetricTile label="Liquid assets" value={fmtUsd(scenario.liquidAssets)} />
               <MetricTile label="Vesting" value={scenario.vesting ?? "—"} />
               <MetricTile
                 label="First-time homebuyer"
