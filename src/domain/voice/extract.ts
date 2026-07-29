@@ -802,7 +802,8 @@ const LTV_DIRECT_REVERSED_CLAUSE_ONLY = /\bfinanc(?:e|ing|ed)\b[^.!?;]{0,20}\bpe
 // closing, so eighty percent financing", had the unrelated 80% wrongly
 // re-classified as a down-payment percentage just because "bringing"/"to
 // closing" appeared anywhere in the same sentence).
-const DOWN_PAYMENT_DOLLAR_TERMS = /\bdown payment\b|\bputting down\b|\bput down\b|\bbring(?:ing)?\b|\bto closing\b|\bcash to close\b|\bout of pocket\b|\bminimum down\b|\bdown\b/;
+const DOWN_PAYMENT_DOLLAR_TERMS =
+  /\bdown payment\b|\bputting down\b|\bput down\b|\bbring(?:ing)?\b|\bto closing\b|\bcash to close\b|\bout of pocket\b|\bminimum down\b|(?<!percent\s)(?<!%\s)\bdown\b/;
 
 interface BoundaryHit {
   index: number;
@@ -954,7 +955,20 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
     if (!Number.isFinite(n) || n < 1_000) continue;
     const clauseRange = rangeAround(dm.index, dm[0].length, clauseBoundaries, t.length);
     const clause = t.slice(clauseRange.start, clauseRange.end);
-    if (DISQUALIFYING_CONTEXT.test(clause)) continue; // rent / income / credit-score / DSCR / reserves clause — never a value or loan
+    // A clause carrying a disqualifying word (rent/income/credit-score/
+    // DSCR/reserves/etc.) does NOT automatically discard this number —
+    // continuous, unpunctuated speech routinely runs a property-value (or
+    // loan-amount) figure and an unrelated credit-score/income mention
+    // together with no comma between them ("an 800000 dollar property with
+    // a 698 credit score" is one clause end to end). Only skip the number
+    // when the disqualifying term is genuinely the NEAREST signal to it —
+    // closer than any real property-value/loan/lien/cash-out/down-payment
+    // term in the same clause — computed below alongside those distances,
+    // never by a blind whole-clause test (a real bug found 2026-07-29: a
+    // property value stated in the same breath as a credit score was
+    // silently dropped, leaving the vital unresolved and the assistant
+    // re-asking for it indefinitely).
+    const dDisqualify = nearestTermDistance(t, clauseRange.start, clauseRange.end, dm.index, dm.index + dm[0].length, DISQUALIFYING_CONTEXT);
 
     const sentRange = rangeAround(dm.index, dm[0].length, sentenceBoundaries, t.length);
     const sentence = t.slice(sentRange.start, sentRange.end);
@@ -996,6 +1010,16 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
     const min = Math.min(dCashOut, dLien, dLoan, dValue, dDown);
     const source = clause.trim();
 
+    // Disqualifying context (rent / income / credit-score / DSCR /
+    // reserves / etc.) only wins when it's genuinely the closest signal to
+    // this number — strictly closer than every real financial term found
+    // above. This still correctly discards a true income/rent/credit-score
+    // figure (no competing term nearby, so dDisqualify < Infinity = min),
+    // while no longer discarding a real property value or loan amount that
+    // merely SHARES an unpunctuated clause with a credit-score/income
+    // mention elsewhere in it.
+    if (dDisqualify < min) continue;
+
     if (min === Infinity) {
       unclassified.push({ num: n, index: dm.index, source: `$${n}` });
     } else if (min === dCashOut && !requestedCashOut) {
@@ -1036,7 +1060,6 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
     if (!Number.isFinite(n) || n < 100 || n > 999) continue;
     const clauseRange = rangeAround(sm.index, sm[0].length, clauseBoundaries, t.length);
     const clause = t.slice(clauseRange.start, clauseRange.end);
-    if (DISQUALIFYING_CONTEXT.test(clause)) continue;
     const smEnd = sm.index + sm[0].length;
     const dValue = Math.min(
       nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, smEnd, PROPERTY_VALUE_TERMS),
@@ -1044,6 +1067,14 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
     );
     const dLoan = nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, smEnd, LOAN_AMOUNT_TERMS);
     const dLien = nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, smEnd, EXISTING_LIEN_TERMS);
+    // Same fix as the dollar-band loop above: only let a disqualifying
+    // word (income/rent/credit-score/etc.) discard this number when it's
+    // genuinely closer than any real property-value/loan/lien term found —
+    // never by a blind whole-clause test, which would drop a real "worth
+    // about 600" shorthand shared in one unpunctuated breath with a
+    // credit-score/income mention.
+    const dDisqualify = nearestTermDistance(t, clauseRange.start, clauseRange.end, sm.index, smEnd, DISQUALIFYING_CONTEXT);
+    if (dDisqualify < Math.min(dValue, dLoan, dLien)) continue;
     if (!propertyValue && dValue <= NEAR_CHARS && dValue <= dLoan && dValue <= dLien) {
       propertyValue = { value: n * 1_000, source: clause.trim() };
     } else if (!existingLienBalance && dLien <= NEAR_CHARS && dLien < dValue && dLien <= dLoan) {
