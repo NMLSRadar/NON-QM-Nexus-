@@ -1178,26 +1178,113 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   // across every doc type this platform models — real broker slang and
   // paraphrases for each are recognized as the same underlying concept,
   // not just the formal name of the product.
-  if (/bank statements?|bank deposits\b|qualifying off deposits\b|deposit[\s-]only income\b|deposit[\s-]based income\b|\b(?:personal|business)\s+deposits\b|deposits for income\b/.test(t)) {
+  //
+  // Full-Documentation Income Detection update (2026-07-29): expands the
+  // Full Doc branch with the real speech-to-text variation "full dock"
+  // (a common STT mishearing of "Full Doc") plus a much broader set of
+  // real broker phrasings for traditional/tax-return/W-2 qualification
+  // (taxes to qualify, personal/business/federal tax returns, 1040s, wage/
+  // salaried/payroll/employment income, pay stubs, IRS transcripts,
+  // 4506-C, standard/conventional documentation). This branch remains
+  // LAST in the priority chain (after bank statement / DSCR / P&L / 1099
+  // / asset depletion / WVOE) so an explicitly stated ALTERNATIVE
+  // documentation program is never silently overwritten by a full-doc
+  // phrase mentioned elsewhere in the same transcript — e.g. "they don't
+  // need a bank statement loan because they can qualify using taxes"
+  // still correctly resolves to Full Doc (bank_statement's own regex
+  // requires an affirmative "bank statement(s)" mention, which isn't
+  // present in that sentence), while "12 months of bank statements, but
+  // they also have tax returns" still correctly resolves to bank_statement
+  // (the explicit alternative program wins, per spec priority rule 3).
+  //
+  // Ambiguity guard (spec priority rule 5): when the transcript hedges
+  // between two doc types with NO stated preference ("not sure which",
+  // "haven't decided", "either... or", "could go either way") alongside
+  // BOTH a full-doc-style mention (taxes/W-2/pay stubs) AND an
+  // alternative-doc mention (bank statements/P&L/1099/asset/DSCR/WVOE),
+  // leave incomeDocType unset entirely rather than guessing — this
+  // correctly re-surfaces the income-documentation Vital for the user to
+  // resolve, instead of silently picking one side.
+  const fullDocPattern =
+    /full[\s-]?doc(?:s|umentation)?\b|full[\s-]?dock\b|fully documented\b|traditional (?:income )?documentation\b|conventional (?:income )?documentation\b|standard (?:income )?documentation\b|normal (?:income )?documentation\b|(?:personal|business|federal)\s+tax returns?\b|\btax returns?\b|taxes? (?:to|used to) qualify\b|qualify(?:ing)? (?:using|with|off) (?:the )?taxes\b|\b1040s?\b|\bw-?2s?\b|wage income\b|salaried income\b|pay ?stubs?\b|payroll income\b|employment income\b|\btranscripts?\b|irs transcripts?\b|4506-?c\b/;
+  const bankStatementPattern = /bank statements?|bank deposits\b|qualifying off deposits\b|deposit[\s-]only income\b|deposit[\s-]based income\b|\b(?:personal|business)\s+deposits\b|deposits for income\b/;
+  const dscrPattern = /\bdscr\b|debt[\s-]?service|investor cash[\s-]?flow|rental income only|no[\s-]ratio|cash[\s-]?flow (?:only )?loan|rental cash[\s-]?flow|property('s)? cash[\s-]?flow|qualify(?:ing)? off (?:the )?(?:rent|property)|no income no employment/;
+  const pnlPattern = /p\s*&\s*l|p and l|\bpnl\b|profit and loss|cpa[\s-]prepared statement|accountant[\s-]prepared statement/;
+  const income1099Pattern = /\b1099s?\b|independent contractor income|contractor income only/;
+  const assetDepletionPattern = /asset (?:depletion|utilization|based|qualifier)|qualify(?:ing)? off (?:their |his |her )?assets\b|using (?:their |his |her )?assets to qualify\b|no income at all\s*,?\s*just using (?:their |his |her )?(?:investment )?accounts\b|qualifying off (?:their |his |her )?(?:investment )?(?:accounts|portfolio)\b/;
+  // WVOE (Written Verification of Employment) — first-class semantic intent
+  // (2026-07-29 WVOE Detection update). Recognized as a distinct Full-
+  // Documentation-style qualification pathway: employment (not tax returns)
+  // is the income evidence. Broad concept coverage, not just the formal
+  // "WVOE"/"written verification of employment" name — real broker speech
+  // and speech-to-text output routinely drop "written"/"of", spell the
+  // acronym out letter-by-letter, or phrase it as the employer/HR
+  // confirming or verifying income:
+  //   - the bare acronym in any spoken/STT form: "wvoe", "w v o e",
+  //     "w-v-o-e", "w.v.o.e", "double u v o e" (STT spelling out "W"),
+  //     bare "voe" ("VOE", "written VOE", "VOE loan")
+  //   - "written verification of employment" / "verification of
+  //     employment" (loan/program/type loan variants all match as
+  //     substrings) / "verification employment" (STT dropping "of")
+  //   - "verify employment" / "verifying employment" / "employment
+  //     verified" / "employment verification" / "employment confirmation"
+  //     / "employment letter" / "written employment letter" /
+  //     "written employment verification"
+  //   - "employer verification" / "employer verified (income)" /
+  //     "employer letter" / "employer confirmation" / "employer confirms
+  //     (the) income" / "verification from employer" / "verification
+  //     letter from employer"
+  //   - "income verified by employer"
+  //   - contextual "the employer can/will verify the income", "the
+  //     employer is providing income verification"
+  //   - legacy: "verbal verification"/"verbal VOE" (a related but distinct
+  //     verbal-only variant), "employer letter only"
+  const wvoePattern =
+    /\bw[\s.-]*v[\s.-]*o[\s.-]*e\b|\bdouble\s*u\s*v\s*o\s*e\b|\bvoe\b|written\s+(?:voe|verification\s+of\s+employment|employment\s+verification|employment\s+letter)\b|verif(?:y|ying|ication|ied|ies)\s+(?:of\s+)?employment\b|employment\s+(?:verif(?:ied|ication)|confirmation|letter)\b|employer\s+(?:verif(?:y|ying|ication|ied|ies)|letter|confirmation|confirms?)\b|verification\s+(?:from|letter\s+from)\s+employer\b|income\s+verified\s+by\s+employer\b|employer\s+(?:can|will|is\s+(?:able\s+to\s+)?)?\s*(?:verify|verifying|providing)\s+(?:the\s+)?income\b|verbal\s+(?:verification|voe)|employer letter only/;
+  const hedgePattern = /not sure which|haven'?t decided|either\s.+\sor\s|could go either way|not sure yet|undecided/;
+
+  // Ambiguity guard (spec priority rule 5): checked FIRST, before any
+  // single doc-type branch commits — otherwise (e.g.) the bank-statement
+  // branch below would always win outright and this guard would never be
+  // reachable. Only fires when the transcript BOTH hedges between options
+  // ("not sure which", "haven't decided", "either... or", "could go
+  // either way") AND mentions 2+ distinct doc-type categories — a genuine
+  // "has both, hasn't chosen" case, never a guess.
+  const matchedCategoryCount = [bankStatementPattern, dscrPattern, pnlPattern, income1099Pattern, assetDepletionPattern, wvoePattern, fullDocPattern].filter((re) => re.test(t)).length;
+  const isGenuinelyAmbiguous = hedgePattern.test(t) && matchedCategoryCount >= 2;
+
+  if (isGenuinelyAmbiguous) {
+    // Leave incomeDocType unset entirely so the missing-Vital flow re-asks
+    // the user which method to use, rather than silently picking one side.
+  } else if (bankStatementPattern.test(t)) {
     x.incomeDocType = cap(IncomeDocType.BankStatement, "bank statements");
     const months = /\b(12|24)\s*months?\b/.exec(t);
     if (months) x.bankStatementMonths = parseInt(months[1] ?? "", 10) as 12 | 24;
     const kind = /\b(personal|business)\b/.exec(t);
     if (kind) x.bankStatementKind = (kind[1] ?? "") as "personal" | "business";
-  } else if (
-    /\bdscr\b|debt[\s-]?service|investor cash[\s-]?flow|rental income only|no[\s-]ratio|cash[\s-]?flow (?:only )?loan|rental cash[\s-]?flow|property('s)? cash[\s-]?flow|qualify(?:ing)? off (?:the )?(?:rent|property)|no income no employment/.test(t)
-  ) {
+  } else if (dscrPattern.test(t)) {
     x.incomeDocType = cap(IncomeDocType.Dscr, "DSCR");
-  } else if (/p\s*&\s*l|p and l|\bpnl\b|profit and loss|cpa[\s-]prepared statement|accountant[\s-]prepared statement/.test(t)) {
+  } else if (pnlPattern.test(t)) {
     x.incomeDocType = cap(IncomeDocType.ProfitAndLoss, "P&L");
-  } else if (/\b1099s?\b|independent contractor income|contractor income only/.test(t)) {
+  } else if (income1099Pattern.test(t)) {
     x.incomeDocType = cap(IncomeDocType.Income1099, "1099");
-  } else if (/asset (?:depletion|utilization|based|qualifier)|qualify(?:ing)? off (?:their |his |her )?assets\b|using (?:their |his |her )?assets to qualify\b|no income at all\s*,?\s*just using (?:their |his |her )?(?:investment )?accounts\b|qualifying off (?:their |his |her )?(?:investment )?(?:accounts|portfolio)\b/.test(t)) {
+  } else if (assetDepletionPattern.test(t)) {
     x.incomeDocType = cap(IncomeDocType.AssetDepletion, "asset depletion");
-  } else if (/\bwvoe\b|written voe|written verification of employment|verbal (?:verification|voe)|employer letter only/.test(t)) {
-    x.incomeDocType = cap(IncomeDocType.WvoeOnly, "WVOE");
-  } else if (/full[\s-]?doc(?:umentation)?|\bw-?2s?\b|tax returns?|paystubs?|traditional income doc(?:umentation)?/.test(t)) {
+  } else if (wvoePattern.test(t)) {
+    x.incomeDocType = cap(IncomeDocType.WvoeOnly, "Written Verification of Employment (WVOE)");
+  } else if (fullDocPattern.test(t)) {
     x.incomeDocType = cap(IncomeDocType.FullDoc, "full documentation");
+  }
+
+  // Employment type — a separate classification from incomeDocType (see
+  // slots.ts). Concept-based, not exclusive to Full Doc: a borrower can be
+  // self-employed on a DSCR, bank-statement, or P&L file just as easily as
+  // on Full Doc, so this is captured independently whenever the
+  // transcript supports it, never inferred FROM incomeDocType.
+  if (/self[\s-]?employed|owns? (?:a |his |her |their )?(?:own )?business|business owner|1099 income|independent contractor|personal and business tax returns?|business tax returns?/.test(t)) {
+    x.employmentType = cap("self_employed", "self-employed");
+  } else if (/\bw-?2s?\b|salaried|salary income|wage income|hourly (?:employee|worker|wages?)|pay ?stubs?|payroll income|employment income|works? for (?:an? )?employer/.test(t)) {
+    x.employmentType = cap("salaried_w2", "W-2/salaried");
   }
 
   // ---- Borrower extras ----------------------------------------------------

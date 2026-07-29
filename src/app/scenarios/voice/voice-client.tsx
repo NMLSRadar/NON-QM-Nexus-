@@ -155,7 +155,7 @@ const DOC_TYPES: Array<[IncomeDocType, string]> = [
   ["pnl_only", "P&L only"],
   ["1099", "1099"],
   ["asset_depletion", "Asset depletion"],
-  ["wvoe_only", "WVOE only"],
+  ["wvoe_only", "Written Verification of Employment (WVOE)"],
 ];
 const INVESTOR_EXPERIENCE_OPTIONS: Array<[InvestorExperience, string]> = [
   ["first_time_investor", "First-time investor"],

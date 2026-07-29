@@ -130,6 +130,13 @@ export interface VoiceExtraction {
   incomeDocType?: Captured<IncomeDocType>;
   bankStatementMonths?: 12 | 24;
   bankStatementKind?: "personal" | "business";
+  /** Employment type — a SEPARATE classification from incomeDocType (2026-07-29
+   * Full-Documentation Income Detection update). A borrower's Full Doc
+   * qualification method doesn't by itself say whether they're salaried or
+   * self-employed; both should be captured independently whenever the
+   * transcript supports it. Purely informational (never blocks
+   * readyToAnalyze) — surfaced in the dialog summary alongside doc type. */
+  employmentType?: Captured<"self_employed" | "salaried_w2">;
   requestedCashOut?: Captured<number>;
   /** Refinance-only: what the borrower currently owes on the subject
    * property (distinct from loanAmount, the NEW requested loan). */

@@ -200,6 +200,7 @@ export function assess(x: VoiceExtraction): Assessment {
         ? `${x.bankStatementMonths ?? 12}-mo ${x.bankStatementKind ?? "business"} bank statements`
         : x.incomeDocType.source
     );
+  if (x.employmentType) filledSummary.push(x.employmentType.value === "self_employed" ? "self-employed" : "W-2/salaried");
   if (x.citizenship) filledSummary.push(citizenshipLabel(x.citizenship.value, x.citizenship.visaType));
   const citizenshipConfidenceNote =
     x.citizenship?.confidence === "medium" ? "Borrower classification interpreted as ITIN." : undefined;
