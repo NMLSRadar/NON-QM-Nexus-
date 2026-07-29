@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCurrentOrganizationId, getRepository, getLenderAccessInfo } from "@/lib/session";
 import { PageHeader, Card, Pill, SampleDataBadge, MetricTile, fmtUsd, fmtPct } from "@/components/ui";
 import { getWordmarkStyle } from "@/domain/lenderBrandStyle";
+import { ProgramCitation } from "./program-citation";
 
 export const dynamic = "force-dynamic";
 
@@ -120,10 +121,8 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
                         </Pill>
                       ))}
                     </div>
-                    {p.notes && <p className="mt-3 text-xs text-slate-400 whitespace-pre-line">{p.notes}</p>}
-                    <p className="mt-2 text-xs text-slate-400">
-                      Source: <span className="italic">{p.sourceCitation}</span>
-                    </p>
+                    <ProgramCitation notes={p.notes} sourceCitation={p.sourceCitation} />
+
                   </div>
                 ))}
               </div>
