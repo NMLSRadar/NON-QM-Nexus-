@@ -8,8 +8,32 @@ export const LoanPurpose = {
   Purchase: "purchase",
   RateAndTermRefinance: "rate_term_refinance",
   CashOutRefinance: "cash_out_refinance",
+  /** Home Equity Line of Credit — a revolving second-position lien, the
+   * existing first mortgage is left untouched. Added 2026-07-29: several
+   * catalog lenders' guidelines document standalone HELOC programs. Spoken
+   * "HELOC" is pronounced /ˈhiːlɒk/ ("HEE-lock") and speech-to-text
+   * commonly renders it as "he lock" / "he-lock" / "helock" rather than the
+   * acronym itself — normalizeTranscript folds all of those (plus
+   * "home equity line (of credit)") back to the literal token "heloc"
+   * before classifyLoanPurpose runs (see extract.ts). */
+  Heloc: "heloc",
+  /** A closed-end (fixed) subordinate/second lien behind an untouched first
+   * mortgage — "second lien", "second mortgage", "junior lien", "piggyback
+   * loan", "silent second". Distinct from HELOC (revolving) and from
+   * cash_out_refinance (which replaces the first lien entirely). Added
+   * 2026-07-29 alongside Heloc. */
+  SecondLien: "second_lien",
 } as const;
 export type LoanPurpose = (typeof LoanPurpose)[keyof typeof LoanPurpose];
+
+/** Display labels for LoanPurpose, shared across the UI and voice dialog. */
+export const LOAN_PURPOSE_LABELS: Record<LoanPurpose, string> = {
+  purchase: "Purchase",
+  rate_term_refinance: "Rate-and-term refinance",
+  cash_out_refinance: "Cash-out refinance",
+  heloc: "HELOC (home equity line of credit)",
+  second_lien: "Second lien / second mortgage",
+};
 
 export const Occupancy = {
   Primary: "primary",

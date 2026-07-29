@@ -37,14 +37,13 @@ function channelIcon(name: string) {
   return FileText;
 }
 
-/** Dark-variant purpose badge — outlined pill, color-coded by loan purpose.
- * Only the 3 real LoanPurpose values this schema has exist as options;
- * DSCR/Bank Statement are income-documentation types, not loan purposes,
- * so they're never a value here (see docs/voice-vitals.md). */
+/** Dark-variant purpose badge — outlined pill, color-coded by loan purpose. */
 const PURPOSE_BADGE: Record<LoanPurpose, { label: string; className: string }> = {
   purchase: { label: "Purchase", className: "border-amber-400/50 text-amber-300 bg-amber-400/5" },
   rate_term_refinance: { label: "Refinance", className: "border-sky-400/50 text-sky-300 bg-sky-400/5" },
   cash_out_refinance: { label: "Cash-Out", className: "border-purple-400/50 text-purple-300 bg-purple-400/5" },
+  heloc: { label: "HELOC", className: "border-emerald-400/50 text-emerald-300 bg-emerald-400/5" },
+  second_lien: { label: "Second Lien", className: "border-rose-400/50 text-rose-300 bg-rose-400/5" },
 };
 
 function DarkPurposeBadge({ purpose }: { purpose: LoanPurpose | undefined }) {
@@ -180,6 +179,8 @@ function purposeSubtitle(purpose: LoanPurpose | undefined): string {
   if (!purpose) return "Scenario";
   if (purpose === "purchase") return "Purchase scenario";
   if (purpose === "cash_out_refinance") return "Cash-Out Refinance";
+  if (purpose === "heloc") return "HELOC";
+  if (purpose === "second_lien") return "Second Lien";
   return "Refinancing Scenario";
 }
 

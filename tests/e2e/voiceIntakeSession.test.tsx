@@ -49,12 +49,13 @@ async function typeTranscript(text: string) {
 }
 
 function purposeTile() {
-  // Locate the Vitals tile by its exact label text ("Purchase or refinance"),
-  // which is unique — the manual-correction dropdown below uses different
-  // wording ("Purchase / refi") so there's no ambiguity. The premium redesign
-  // wraps the label+value in an inner flex column alongside an icon badge, so
-  // the bordered/colored tile itself is now two ancestors up, not one.
-  const label = screen.getByText("Purchase or refinance");
+  // Locate the Vitals tile by its exact label text ("Purchase, refinance,
+  // HELOC, or second lien"), which is unique — the manual-correction
+  // dropdown below uses different wording ("Purchase / refi") so there's no
+  // ambiguity. The premium redesign wraps the label+value in an inner flex
+  // column alongside an icon badge, so the bordered/colored tile itself is
+  // now two ancestors up, not one.
+  const label = screen.getByText("Purchase, refinance, HELOC, or second lien");
   return (label.closest("div")!.parentElement as HTMLElement) ?? label.closest("div")!;
 }
 

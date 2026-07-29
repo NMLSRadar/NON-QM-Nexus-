@@ -214,6 +214,8 @@ export function ScenarioForm() {
             <option value="purchase">Purchase</option>
             <option value="rate_term_refinance">Rate/term refinance</option>
             <option value="cash_out_refinance">Cash-out refinance</option>
+            <option value="heloc">HELOC (home equity line of credit)</option>
+            <option value="second_lien">Second lien / second mortgage</option>
           </select>
         </Field>
         <Field name="occupancy" title="Occupancy">

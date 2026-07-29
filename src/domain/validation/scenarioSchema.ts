@@ -102,7 +102,7 @@ export const scenarioInputSchema = z
   .object({
     name: z.string().min(1).max(200),
     borrowerReference: z.string().max(120).optional(),
-    loanPurpose: z.enum(["purchase", "rate_term_refinance", "cash_out_refinance"]).optional(),
+    loanPurpose: z.enum(["purchase", "rate_term_refinance", "cash_out_refinance", "heloc", "second_lien"]).optional(),
     occupancy: z.enum(["primary", "second_home", "investment"]).optional(),
     propertyType: z
       .enum(["single_family", "condo", "non_warrantable_condo", "townhome", "2_4_unit", "5_plus_unit", "pud", "manufactured", "rural", "condotel"])
@@ -204,7 +204,7 @@ export function hasValidCreditProfile(input: {
  * generic "Please correct the highlighted fields." */
 const FIELD_LABELS: Record<string, string> = {
   name: "scenario name",
-  loanPurpose: "purchase or refinance",
+  loanPurpose: "purchase, refinance, HELOC, or second lien",
   occupancy: "occupancy",
   propertyType: "property type",
   estimatedValue: "estimated property value",
@@ -245,7 +245,7 @@ export function friendlyValidationMessage(issues: z.ZodIssue[]): string {
     return "Please provide the requested loan amount.";
   }
   if (field === "loanPurpose") {
-    return "Please confirm whether this is a purchase or refinance.";
+    return "Please confirm whether this is a purchase, refinance, HELOC, or second lien.";
   }
   if (first.code === "invalid_type" || first.code === "invalid_enum_value") {
     return `Please provide the ${label}.`;
