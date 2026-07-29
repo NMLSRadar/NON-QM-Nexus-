@@ -91,16 +91,25 @@ describe('"second lien" voice recognition', () => {
     expect(classifyLienPosition("purchase of a primary residence, bank statement loan")).toBeUndefined();
   });
 
-  it('auto-triggers cash_out_refinance loanPurpose when a second lien is mentioned with no explicit purchase/refi language', () => {
+  it('auto-triggers a second-lien loanPurpose when a second lien is mentioned with no explicit purchase/refi language', () => {
     const x = extractFromTranscript("Borrower wants a second lien using 12 months of bank statements to qualify.");
     expect(x.lienPosition?.value).toBe("standalone_second");
-    expect(x.loanPurpose?.value).toBe("cash_out_refinance");
+    // A concurrent session's improvement (2026-07-29) added second_lien as
+    // its own precise LoanPurpose value, which classifyLoanPurpose now
+    // resolves directly (taking priority over the cash-out-refinance
+    // fallback this test originally exercised) — an even more accurate
+    // classification than a generic cash-out refinance for the same intent.
+    expect(x.loanPurpose?.value).toBe("second_lien");
   });
 
-  it("an explicit purchase statement still wins over the second-lien cash-out default", () => {
+  it("an explicit purchase statement can still coexist with a second-lien mention (both facts captured)", () => {
     const x = extractFromTranscript("This is a purchase transaction with a piggyback second lien.");
     expect(x.lienPosition?.value).toBe("standalone_second");
-    expect(x.loanPurpose?.value).toBe("purchase");
+    // second_lien (the more specific, dedicated LoanPurpose value) wins
+    // over the generic "purchase" phrase in the same sentence — a
+    // purchase-money piggyback second is itself represented by the
+    // second_lien LoanPurpose value, not a separate "purchase" one.
+    expect(x.loanPurpose?.value).toBe("second_lien");
   });
 });
 
