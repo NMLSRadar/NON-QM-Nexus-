@@ -502,6 +502,8 @@ body:has(.gold-page) {
 /* Each scenario card-row. Hover lifts, brightens the border, and deepens
    the gold glow — 250ms ease, transform + box-shadow + border-color only. */
 .gold-scenario-card {
+  position: relative;
+  z-index: 0;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 60%), #101012;
   border-color: rgba(212, 175, 55, 0.16);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset, 0 10px 20px -14px rgba(0, 0, 0, 0.7);
@@ -513,6 +515,13 @@ body:has(.gold-page) {
   transform: translateY(-2px);
   border-color: rgba(212, 175, 55, 0.55);
   box-shadow: 0 0 28px -6px rgba(212, 175, 55, 0.4), 0 16px 28px -16px rgba(0, 0, 0, 0.75);
+}
+/* Each card-row's `will-change: transform` (and the hover/focus transform
+   above) gives every row its own stacking context, so a later row always
+   painted over an earlier row's open 3-dot dropdown no matter its z-index.
+   Bump the whole row above its siblings while its menu is rendered. */
+.gold-scenario-card:has([role="menu"]) {
+  z-index: 30;
 }
 
 /* Circular icon badge (mic / document / upload / spark) — thin gold ring
