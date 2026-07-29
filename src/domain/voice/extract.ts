@@ -1133,9 +1133,26 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
 
   // ---- Property type ------------------------------------------------------
   const unitMatch = /\b(\d{1,2})\s*(?:to\s*4\s*)?units?\b/.exec(t);
-  if (/non[\s-]?warrantable/.test(t)) x.propertyType = cap(PropertyType.NonWarrantableCondo, "non-warrantable condo");
-  else if (/condo[\s-]?tel|\bpudtel\b/.test(t)) x.propertyType = cap(PropertyType.Condotel, "condotel");
-  else if (/condo(?:minium)?s?\b/.test(t)) x.propertyType = cap(PropertyType.Condo, "condo");
+  // Warrantability matters for real LTV eligibility (see propertyTypeLtvCaps
+  // in program.ts) — a bare "condo"/"condominium" with no warrantable/
+  // non-warrantable qualifier must NOT be silently assumed as warrantable.
+  // `explicitWarrantable` recognizes a standalone "warrantable" (not part of
+  // "non-warrantable") so a follow-up answer like "it's warrantable" alone
+  // (without repeating the word "condo") still resolves the pending flag,
+  // mirroring how a bare "cash-out" alone resolves refinancePendingSubtype.
+  const explicitWarrantable = /\bwarrantable\b/.test(t) && !/non[\s-]?warrantable/.test(t);
+  if (/non[\s-]?warrantable/.test(t)) {
+    x.propertyType = cap(PropertyType.NonWarrantableCondo, "non-warrantable condo");
+    x.condoPendingWarrantability = false;
+  } else if (/condo[\s-]?tel|\bpudtel\b/.test(t)) {
+    x.propertyType = cap(PropertyType.Condotel, "condotel");
+  } else if (explicitWarrantable) {
+    x.propertyType = cap(PropertyType.Condo, "warrantable condo");
+    x.condoPendingWarrantability = false;
+  } else if (/condo(?:minium)?s?\b/.test(t)) {
+    x.propertyType = cap(PropertyType.Condo, "condo (warrantability not yet specified)");
+    x.condoPendingWarrantability = true;
+  }
   else if (/town\s?(?:home|house)/.test(t)) x.propertyType = cap(PropertyType.Townhome, "townhome");
   else if (/\bduplex\b/.test(t)) { x.propertyType = cap(PropertyType.TwoToFourUnit, "duplex"); x.units = 2; }
   else if (/\btriplex\b/.test(t)) { x.propertyType = cap(PropertyType.TwoToFourUnit, "triplex"); x.units = 3; }

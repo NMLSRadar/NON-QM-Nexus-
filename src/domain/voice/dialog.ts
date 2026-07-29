@@ -162,7 +162,7 @@ export function assess(x: VoiceExtraction): Assessment {
   const has: Record<VitalKey, boolean> = {
     loanPurpose: x.loanPurpose !== undefined && !x.refinancePendingSubtype,
     occupancy: x.occupancy !== undefined,
-    propertyType: x.propertyType !== undefined,
+    propertyType: x.propertyType !== undefined && !x.condoPendingWarrantability,
     propertyValue: value !== undefined,
     loanAmount: loan !== undefined,
     ltv: derived.ltv !== undefined,
@@ -178,13 +178,17 @@ export function assess(x: VoiceExtraction): Assessment {
   const askable = missing.filter((k) => k !== "ltv" || (!has.propertyValue && !has.loanAmount && stated === undefined));
 
   const questions = askable.map((k) =>
-    k === "loanPurpose" && x.refinancePendingSubtype ? "Is the refinance rate-and-term or cash-out?" : VITAL_QUESTIONS[k]
+    k === "loanPurpose" && x.refinancePendingSubtype
+      ? "Is the refinance rate-and-term or cash-out?"
+      : k === "propertyType" && x.condoPendingWarrantability
+        ? "Is the condo warrantable or non-warrantable? (Warrantable condos are generally capped at 85% LTV; non-warrantable condos are generally capped at 80% LTV.)"
+        : VITAL_QUESTIONS[k]
   );
 
   const filledSummary: string[] = [];
   if (has.loanPurpose && x.loanPurpose) filledSummary.push(purposeLabel(x.loanPurpose.value));
   if (x.occupancy) filledSummary.push(x.occupancy.source);
-  if (x.propertyType) filledSummary.push(x.propertyType.source);
+  if (has.propertyType && x.propertyType) filledSummary.push(x.propertyType.source);
   if (value !== undefined) filledSummary.push(`${usd(value)} value`);
   if (loan !== undefined)
     filledSummary.push(`${usd(loan)} loan${derived.ltv !== undefined ? ` (${derived.ltv}% LTV)` : ""}`);

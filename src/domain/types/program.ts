@@ -133,6 +133,23 @@ export interface Program {
    * products" with no separate LTV language) — do not default it to the
    * base cap, which would misrepresent an undocumented figure as verified. */
   citizenshipLtvCaps?: Partial<Record<Citizenship, number>>;
+  /** Per-property-type maximum LTV override — real guidelines routinely cap
+   * condos below a program's general baseMaxLtv/ltvMatrix ceiling (e.g. a
+   * program that otherwise goes to 90% LTV may cap a Fannie/Freddie
+   * warrantable condo at 85% LTV and a non-warrantable condo at 80% LTV).
+   * Applied as an ADDITIONAL cap in deriveMaxLtv, same "only ever tightens,
+   * never loosens" rule as citizenshipLtvCaps: the more restrictive of this
+   * and the base/matrix/citizenship-derived cap wins. Keyed by PropertyType
+   * (e.g. "condo", "non_warrantable_condo", "condotel") — omit a property
+   * type entirely when the guideline documents no distinct cap for it; do
+   * NOT default it to the base cap, which would misrepresent an
+   * undocumented figure as verified. Added 2026-07-29 after a real
+   * data-integrity bug: a lender's condo/non-warrantable-condo LTV
+   * restriction was undocumented in the engine, so scenarios were matched
+   * against that lender's full baseMaxLtv (e.g. 90%) even though the
+   * lender's own guidelines cap a warrantable condo at 85% LTV and a
+   * non-warrantable condo at 80% LTV. */
+  propertyTypeLtvCaps?: Partial<Record<PropertyType, number>>;
   /**
    * No-FICO / nonnumeric-credit-profile policy — per the F-1 visa / no-FICO
    * fix (2026-07-28). A borrower legitimately without a numeric U.S. FICO
