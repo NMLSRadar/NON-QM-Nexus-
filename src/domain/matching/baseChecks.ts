@@ -32,6 +32,12 @@ export function deriveMaxLtv(scenario: Scenario, program: Program): number {
   // for this specific citizenship classification.
   const citizenshipCap = scenario.citizenship ? program.citizenshipLtvCaps?.[scenario.citizenship] : undefined;
   if (citizenshipCap != null) cap = Math.min(cap, citizenshipCap);
+  // A property-type-specific cap (e.g. a lender that caps a warrantable
+  // condo at 85% LTV and a non-warrantable condo at 80% LTV even though the
+  // program's general ceiling is higher) — same "only ever tightens, never
+  // loosens" rule as the citizenship cap above. See propertyTypeLtvCaps.
+  const propertyTypeCap = scenario.propertyType ? program.propertyTypeLtvCaps?.[scenario.propertyType] : undefined;
+  if (propertyTypeCap != null) cap = Math.min(cap, propertyTypeCap);
   // A no-FICO / nonnumeric-credit-profile LTV cap (F-1 visa / no-FICO fix,
   // 2026-07-28) applies the same "only ever tightens" rule — never loosens
   // the base/matrix/citizenship-derived cap, and only when this scenario

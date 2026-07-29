@@ -103,6 +103,19 @@ export interface VoiceExtraction {
   refinancePendingSubtype?: boolean;
   occupancy?: Captured<Occupancy>;
   propertyType?: Captured<PropertyType>;
+  /** Set when the borrower said a bare "condo"/"condominium" with no
+   * warrantable/non-warrantable qualifier — `propertyType` is provisionally
+   * set to Condo (the presumptive case) but the LTV consequence is real
+   * (warrantable condos generally cap at 85% LTV, non-warrantable at 80%
+   * under this catalog) and must never be silently assumed. Mirrors
+   * `refinancePendingSubtype`: blocks the propertyType Vital from resolving
+   * until the assistant explicitly asks and the borrower/broker answers
+   * warrantable vs. non-warrantable (see classifyPropertyType in
+   * extract.ts and the propertyType handling in dialog.ts). Added
+   * 2026-07-29 after a real bug: a generic condo scenario was matched
+   * against lenders whose real guidelines cap condo LTV well below their
+   * general ceiling. */
+  condoPendingWarrantability?: boolean;
   units?: number;
   propertyValue?: Captured<number>;
   loanAmount?: Captured<number>;

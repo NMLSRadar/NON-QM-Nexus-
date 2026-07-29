@@ -65,7 +65,12 @@ describe("voice extraction: phrasing coverage", () => {
   });
   it("maps property-type variants (non-warrantable beats condo; duplex sets units)", () => {
     expect(extractFromTranscript("a non-warrantable condo").propertyType?.value).toBe("non_warrantable_condo");
-    expect(extractFromTranscript("a condo downtown").propertyType?.value).toBe("condo");
+    const genericCondo = extractFromTranscript("a condo downtown");
+    expect(genericCondo.propertyType?.value).toBe("condo");
+    expect(genericCondo.condoPendingWarrantability).toBe(true);
+    const warrantable = extractFromTranscript("a warrantable condo downtown");
+    expect(warrantable.propertyType?.value).toBe("condo");
+    expect(warrantable.condoPendingWarrantability).toBe(false);
     const dup = extractFromTranscript("a duplex rental");
     expect(dup.propertyType?.value).toBe("2_4_unit");
     expect(dup.units).toBe(2);
@@ -112,12 +117,29 @@ describe("voice dialog: intuitive prompting when details are missing", () => {
   });
   it("derives the loan amount from value + stated LTV", () => {
     const x = extractFromTranscript(
-      "rate and term refinance, condo investment property, 600000 appraised value, 75 percent ltv, 720 score, dscr, U.S. citizen"
+      "rate and term refinance, warrantable condo investment property, 600000 appraised value, 75 percent ltv, 720 score, dscr, U.S. citizen"
     );
     const a = assess(x);
     expect(a.derived.loanAmount).toBe(450_000);
     expect(a.complete).toBe(true);
     expect(a.readyToAnalyze).toBe(true);
+  });
+  it("holds a generic condo as pending until warrantability is specified, then resolves on merge", () => {
+    const first = extractFromTranscript(
+      "purchase, condo primary residence, value 500000, loan 400000, 720 fico, full doc, U.S. citizen"
+    );
+    expect(first.condoPendingWarrantability).toBe(true);
+    const a1 = assess(first);
+    expect(a1.complete).toBe(false);
+    expect(a1.missing).toContain("propertyType");
+    expect(a1.questions).toContain(
+      "Is the condo warrantable or non-warrantable? (Warrantable condos are generally capped at 85% LTV; non-warrantable condos are generally capped at 80% LTV.)"
+    );
+    const merged = mergeExtractions(first, extractFromTranscript("it's non-warrantable"));
+    expect(merged.propertyType?.value).toBe("non_warrantable_condo");
+    expect(merged.condoPendingWarrantability).toBe(false);
+    const a2 = assess(merged);
+    expect(a2.complete).toBe(true);
   });
   it("flags an LTV that contradicts value/loan and holds auto-analysis", () => {
     const a = assess(extractFromTranscript("purchase primary sfr, value 500000, loan amount 450000, 80% ltv, 720 fico, full doc, U.S. citizen"));
@@ -160,7 +182,7 @@ describe("voice → scenario: schema round-trip and full pipeline", () => {
 
   it("produces a schema-valid payload for a DSCR refinance with derived loan amount", () => {
     const x = extractFromTranscript(
-      "rate and term refinance, condo investment property, 600000 appraised value, 75 percent ltv, 720 score, dscr, U.S. citizen"
+      "rate and term refinance, warrantable condo investment property, 600000 appraised value, 75 percent ltv, 720 score, dscr, U.S. citizen"
     );
     const input = buildScenarioInput(x, assess(x));
     expect(scenarioInputSchema.safeParse(input).success).toBe(true);

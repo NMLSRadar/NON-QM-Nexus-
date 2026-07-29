@@ -93,7 +93,10 @@ function applyOverrides(base: VoiceExtraction, o: Overrides): VoiceExtraction {
     x.refinancePendingSubtype = false;
   }
   if (o.occupancy !== undefined) x.occupancy = manual(o.occupancy);
-  if (o.propertyType !== undefined) x.propertyType = manual(o.propertyType);
+  if (o.propertyType !== undefined) {
+    x.propertyType = manual(o.propertyType);
+    x.condoPendingWarrantability = false;
+  }
   if (o.incomeDocType !== undefined) x.incomeDocType = manual(o.incomeDocType);
   if (o.propertyValue !== undefined) x.propertyValue = manual(o.propertyValue);
   if (o.loanAmount !== undefined) x.loanAmount = manual(o.loanAmount);
@@ -430,7 +433,10 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         ? { text: "Refinance — subtype needed", source: effective.loanPurpose.source, inferred: true, filled: true, pending: true }
         : cell(effective.loanPurpose ? { ...effective.loanPurpose, value: label(PURPOSES, effective.loanPurpose.value) } : undefined),
     occupancy: cell(effective.occupancy && { ...effective.occupancy, value: label(OCCUPANCIES, effective.occupancy.value) }),
-    propertyType: cell(effective.propertyType && { ...effective.propertyType, value: label(PROPERTY_TYPES, effective.propertyType.value) }),
+    propertyType:
+      effective.propertyType && effective.condoPendingWarrantability
+        ? { text: "Condo — warrantable or non-warrantable?", source: effective.propertyType.source, inferred: true, filled: true, pending: true }
+        : cell(effective.propertyType ? { ...effective.propertyType, value: label(PROPERTY_TYPES, effective.propertyType.value) } : undefined),
     propertyValue: cell(
       effective.propertyValue
         ? { ...effective.propertyValue, value: usd(effective.propertyValue.value) }
