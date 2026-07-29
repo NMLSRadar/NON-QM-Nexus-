@@ -1,4 +1,4 @@
-import type { Citizenship, CreditProfileType, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
+import type { Citizenship, CreditProfileType, IncomeDocType, InvestorExperience, LienPosition, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
 
 /**
  * Voice-intake vital slots.
@@ -101,6 +101,15 @@ export interface VoiceExtraction {
   loanPurpose?: Captured<LoanPurpose>;
   /** "refinance" was said without rate-term vs cash-out — subtype must be clarified. */
   refinancePendingSubtype?: boolean;
+  /** Lien position — see LienPosition in enums.ts. undefined = first-lien
+   * (the default, not captured explicitly). Populated when the transcript
+   * names a standalone second mortgage/HELOAN/junior lien/piggyback —
+   * fundamentally different from an ordinary cash-out refinance of the
+   * first lien. When set, loanPurpose is auto-defaulted to
+   * cash_out_refinance (see extract.ts) unless the transcript already
+   * stated purchase/rate-term explicitly (a purchase-money piggyback
+   * second is real but rarer; an explicit statement always wins). */
+  lienPosition?: Captured<LienPosition>;
   occupancy?: Captured<Occupancy>;
   propertyType?: Captured<PropertyType>;
   /** Set when the borrower said a bare "condo"/"condominium" with no

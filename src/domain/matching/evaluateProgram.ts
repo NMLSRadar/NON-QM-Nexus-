@@ -86,6 +86,7 @@ export function evaluateProgram(
       scenario.citizenship === "itin" &&
       scenario.incomeDocType === "dscr" &&
       ((program.minDscr === 0 || program.minDscr == null) ? program.itinNoRatioEligible === true : program.itinDscrEligible === true),
+    lienPosition: program.lienPosition,
     interestOnlyAvailable: program.interestOnlyAvailable,
     ruleResults,
     failedRules: ruleResults.filter((r) => r.outcome === RuleOutcome.Fail),

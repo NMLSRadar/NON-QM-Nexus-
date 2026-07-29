@@ -229,6 +229,34 @@ export function classifyLoanPurpose(t: string): LoanPurposeClassification | unde
 }
 
 // ---------------------------------------------------------------------------
+// Lien position classifier — added 2026-07-29 after a real bug: a
+// standalone second mortgage / HELOAN request was matching against every
+// ordinary first-lien cash-out-refinance-eligible program in the catalog,
+// because nothing distinguished "a subordinate second lien behind an
+// UNCHANGED first mortgage" from "a cash-out refinance OF the first
+// mortgage" — two fundamentally different products that are colloquially
+// both "getting cash out of the house."
+// ---------------------------------------------------------------------------
+const STANDALONE_SECOND_PHRASES =
+  /\bsecond[\s-]?lien\b|\bsecond mortgage\b|standalone second\b|\bjunior lien\b|subordinate lien\b|\bpiggy[\s-]?back\b|\bheloan\b|closed[\s-]?end second\b|\bces\b(?!\s*(?:approval|underwriting))|home equity loan\b/;
+
+export interface LienPositionClassification {
+  value: "first_lien" | "standalone_second";
+  source: string;
+}
+
+/** Classifies free text for a standalone second-lien/HELOAN request. Only
+ * ever returns "standalone_second" (an explicit signal) — never
+ * "first_lien" as a classification result, since that's simply the
+ * absence of a second-lien mention (the default everywhere this is
+ * consumed), not something worth flagging as a "match". */
+export function classifyLienPosition(t: string): LienPositionClassification | undefined {
+  const match = STANDALONE_SECOND_PHRASES.exec(t);
+  if (match) return { value: "standalone_second", source: match[0].trim() };
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
 // First-time homebuyer classifier — tri-state (true/false/undefined=unknown).
 // ---------------------------------------------------------------------------
 
@@ -1080,10 +1108,32 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   // "one shared extraction and normalization layer" requirement). Priority
   // when multiple signals appear: cash-out > rate-and-term > generic refi
   // pending subtype > purchase.
+  //
+  // Lien position is classified FIRST (2026-07-29 fix) so an explicit
+  // standalone-second/HELOAN mention can drive the loan-purpose default
+  // below when no purchase/refinance language was separately stated — a
+  // standalone second mortgage is virtually always a cash-out-style
+  // transaction in real practice, so the user should never have to
+  // separately state "cash-out" too. An explicit purchase/rate-term/
+  // cash-out statement elsewhere in the same transcript always still wins
+  // (classifyLoanPurpose is checked first, below).
+  const lienResult = classifyLienPosition(t);
+  if (lienResult) {
+    x.lienPosition = cap(lienResult.value, lienResult.source);
+  }
+
   const purposeResult = classifyLoanPurpose(t);
   if (purposeResult) {
     x.loanPurpose = cap(purposeResult.value, purposeResult.source, purposeResult.inferred);
     if (purposeResult.pendingSubtype) x.refinancePendingSubtype = true;
+  } else if (x.lienPosition?.value === "standalone_second") {
+    // No explicit purchase/refinance language was stated, but a standalone
+    // second lien/HELOAN was — real-world standalone seconds are
+    // overwhelmingly cash-out-style transactions (accessing equity while
+    // keeping the existing first mortgage in place), so this auto-resolves
+    // the loan-purpose Vital rather than making the user separately state
+    // "cash-out" on top of "second lien".
+    x.loanPurpose = cap(LoanPurpose.CashOutRefinance, `inferred from a stated standalone second-lien/HELOAN request ("${lienResult!.source}") — a standalone second is virtually always a cash-out-style transaction`, true);
   } else if (x.requestedCashOut) {
     // A real requested cash-out dollar amount was captured — receiving
     // cash proceeds on a refinance IS a cash-out refinance by definition,

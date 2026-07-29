@@ -201,6 +201,7 @@ export function assess(x: VoiceExtraction): Assessment {
         : x.incomeDocType.source
     );
   if (x.employmentType) filledSummary.push(x.employmentType.value === "self_employed" ? "self-employed" : "W-2/salaried");
+  if (x.lienPosition?.value === "standalone_second") filledSummary.push("standalone second lien / HELOAN");
   if (x.citizenship) filledSummary.push(citizenshipLabel(x.citizenship.value, x.citizenship.visaType));
   const citizenshipConfidenceNote =
     x.citizenship?.confidence === "medium" ? "Borrower classification interpreted as ITIN." : undefined;
@@ -380,6 +381,7 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
   return {
     name: `Voice scenario — ${new Date().toISOString().slice(0, 10)}`,
     loanPurpose: x.loanPurpose.value,
+    ...(x.lienPosition ? { lienPosition: x.lienPosition.value } : {}),
     occupancy: x.occupancy.value,
     propertyType: x.propertyType.value,
     ...(x.units !== undefined ? { units: x.units } : {}),

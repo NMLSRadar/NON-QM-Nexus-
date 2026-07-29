@@ -103,6 +103,39 @@ export function baseProgramChecks(
     const ok = program.citizenshipEligible.includes(scenario.citizenship);
     out.push(result(`${p}:cit`, "Citizenship / residency", "borrower", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
       ok ? `${scenario.citizenship} borrowers are eligible.` : `${scenario.citizenship} borrowers are not eligible for this program.`));
+
+    // Per-citizenship income-documentation restriction — a program can
+    // bundle several doc types under one row while only actually
+    // extending a specific citizenship to a SUBSET of them (see
+    // Program.citizenshipDocTypeRestrictions). Only evaluated when the
+    // citizenship check above already passed (this only ever TIGHTENS an
+    // already-eligible citizenship, never substitutes for the base check)
+    // and the scenario specifies which doc type it wants.
+    if (ok && scenario.incomeDocType) {
+      const restriction = program.citizenshipDocTypeRestrictions?.[scenario.citizenship];
+      if (restriction && !restriction.includes(scenario.incomeDocType)) {
+        out.push(result(`${p}:citdoc`, "Citizenship-specific documentation eligibility", "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
+          `${scenario.citizenship} borrowers are eligible for this program generally, but this lender's current guideline does not extend that eligibility to ${scenario.incomeDocType.replace(/_/g, " ")} qualification specifically (only: ${restriction.join(", ").replace(/_/g, " ")}).`));
+      }
+    }
+  }
+
+  // Lien position — a standalone second mortgage (HELOAN/junior lien/
+  // piggyback) is a fundamentally different product from an ordinary
+  // first-lien program, even one that also supports cash-out refinance.
+  // undefined on either side defaults to first_lien (see LienPosition in
+  // enums.ts) — this hard-excludes a first-lien program from a standalone-
+  // second request, and (just as importantly) excludes a standalone-
+  // second product from an ordinary first-lien request.
+  {
+    const scenarioLien = scenario.lienPosition ?? "first_lien";
+    const programLien = program.lienPosition ?? "first_lien";
+    if (scenarioLien !== programLien) {
+      out.push(result(`${p}:lien`, "Lien position", "eligibility", RuleOutcome.Fail, RuleSeverity.Hard,
+        scenarioLien === "standalone_second"
+          ? "This is a standalone second-mortgage/HELOAN request, but this program is a first-lien product."
+          : "This program is a standalone second-mortgage/HELOAN product, not a first-lien program."));
+    }
   }
 
   // ITIN + DSCR / No-Ratio combination — per the 2026-07-29 ITIN DSCR

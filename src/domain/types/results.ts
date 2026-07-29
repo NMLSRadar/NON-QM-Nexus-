@@ -77,6 +77,12 @@ export interface ProgramEvaluation {
    * DSCR Eligible" card label (never a generic "DSCR" label that could
    * cause the user to assume ITIN eligibility). */
   itinDscrConfirmed: boolean;
+  /** Lien position — see LienPosition in enums.ts. Passed straight through
+   * from Program.lienPosition (undefined/"first_lien" is the ordinary
+   * default); drives the distinct "Standalone Second Lien" card badge so
+   * a second-mortgage/HELOAN result is never confused with an ordinary
+   * first-lien cash-out refinance. */
+  lienPosition?: import("./enums").LienPosition;
   interestOnlyAvailable: boolean;
   ruleResults: RuleEvaluationResult[];
   failedRules: RuleEvaluationResult[];

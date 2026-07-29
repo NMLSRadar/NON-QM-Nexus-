@@ -53,6 +53,27 @@ export const Citizenship = {
 export type Citizenship = (typeof Citizenship)[keyof typeof Citizenship];
 
 /**
+ * Lien position — added 2026-07-29 after a real bug: a "second lien" /
+ * "standalone second mortgage" / "HELOAN" voice request was matching
+ * against every ordinary FIRST-LIEN cash-out-refinance-eligible program in
+ * the catalog, because loanPurpose (purchase / rate-term / cash-out) has
+ * no dimension for lien POSITION at all — a standalone second mortgage is
+ * a fundamentally different product (a subordinate lien behind an
+ * unchanged first mortgage) from a cash-out refinance of the first lien
+ * itself, even though both are colloquially "getting cash out."
+ * undefined/FirstLien is the default for every ordinary program (no
+ * migration needed for the vast majority of the catalog); only the
+ * handful of REAL standalone-second products (FundLoans Aspire/Aspire X,
+ * GreenBox CES, Verus Closed End Second, etc.) are tagged StandaloneSecond.
+ * See baseChecks.ts's hard lien-position check.
+ */
+export const LienPosition = {
+  FirstLien: "first_lien",
+  StandaloneSecond: "standalone_second",
+} as const;
+export type LienPosition = (typeof LienPosition)[keyof typeof LienPosition];
+
+/**
  * Credit-profile Vital — added 2026-07-28 (F-1 visa / no-FICO fix). Real
  * Non-QM scenarios routinely have NO numeric U.S. FICO at all (a foreign
  * national or a recently-arrived F-1 visa holder who has simply never

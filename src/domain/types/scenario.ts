@@ -3,6 +3,7 @@ import type {
   CreditProfileType,
   IncomeDocType,
   InvestorExperience,
+  LienPosition,
   LoanPurpose,
   Occupancy,
   PropertyType,
@@ -114,6 +115,15 @@ export interface Scenario {
 
   // Loan
   loanPurpose?: LoanPurpose;
+  /** Lien position — undefined/FirstLien is the default (an ordinary first
+   * mortgage or a cash-out refinance OF the first mortgage). StandaloneSecond
+   * means the borrower wants a subordinate second lien behind an EXISTING,
+   * unchanged first mortgage (a HELOAN/standalone second/junior lien/
+   * piggyback) — a fundamentally different product a first-lien program
+   * cannot fulfill even if that program also supports cash-out refinance.
+   * See LienPosition in enums.ts and baseChecks.ts's hard lien-position
+   * check. */
+  lienPosition?: LienPosition;
   occupancy?: Occupancy;
   propertyType?: PropertyType;
   units?: number;

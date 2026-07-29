@@ -1,6 +1,7 @@
 import type {
   Citizenship,
   IncomeDocType,
+  LienPosition,
   LoanPurpose,
   Occupancy,
   PropertyType,
@@ -133,6 +134,37 @@ export interface Program {
    * products" with no separate LTV language) — do not default it to the
    * base cap, which would misrepresent an undocumented figure as verified. */
   citizenshipLtvCaps?: Partial<Record<Citizenship, number>>;
+  /**
+   * Per-citizenship income-documentation RESTRICTION — added 2026-07-29
+   * after a real bug: a program bundling several income doc types under
+   * one row (common for real multi-doc ITIN/Foreign-National products)
+   * would let a citizenship class match EVERY bundled doc type, even when
+   * the lender's real guideline only actually extends that citizenship to
+   * a SUBSET of them (e.g. a program's general incomeDocTypes includes
+   * bank_statement/full_doc/1099/asset_depletion, but its real ITIN
+   * eligibility is documented only for bank_statement and full_doc, not
+   * the other two). When set for a citizenship key, ONLY the listed doc
+   * types are eligible for that citizenship on this program — this
+   * TIGHTENS beyond the program's general incomeDocTypes, never loosens
+   * it. Omit a citizenship key entirely when the guideline draws no such
+   * distinction (citizenship eligibility then applies across the
+   * program's full incomeDocTypes list, the existing default behavior) —
+   * never default it to "all doc types" OR "no doc types", either of
+   * which would misrepresent an undocumented restriction. See
+   * baseChecks.ts's citizenship-doc-type-restriction check.
+   */
+  citizenshipDocTypeRestrictions?: Partial<Record<Citizenship, IncomeDocType[]>>;
+  /**
+   * Lien position — added 2026-07-29 (see LienPosition in enums.ts).
+   * undefined = FirstLien (the default for every ordinary program — no
+   * migration needed). Only set to StandaloneSecond for a REAL, distinct
+   * standalone second-mortgage/HELOAN product (FundLoans Aspire/Aspire X,
+   * GreenBox CES, Verus Closed End Second, etc.) — never used to mean
+   * "also allows cash-out," which is a separate, existing concept
+   * (loanPurposes including cash_out_refinance) that a FIRST-LIEN program
+   * already expresses on its own.
+   */
+  lienPosition?: LienPosition;
   /** Per-property-type maximum LTV override — real guidelines routinely cap
    * condos below a program's general baseMaxLtv/ltvMatrix ceiling (e.g. a
    * program that otherwise goes to 90% LTV may cap a Fannie/Freddie
