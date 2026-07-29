@@ -53,14 +53,24 @@ describe.skipIf(!hasCredentials)("Deep guideline intelligence — 4-lender corre
   }, 15_000);
 
   it("Cake Mortgage's still-unconfirmed programs were NOT marked verified just because qualitative notes were added — no fabricated verification", async () => {
+    // Note: as of 2026-07-29 these deliberately-incomplete programs carry a
+    // 'draft' guideline_versions row (see
+    // scripts/fix_pending_review_programs_draft_status.mjs and
+    // tests/integration/programGuidelineVerificationCoverage.test.ts, which
+    // requires every active program to have SOME row). The invariant this
+    // test guards is narrower and still holds: never human_verified.
     const stillUnconfirmedIds = ["5d89a0e1-159b-4bcf-b179-ffc1a8359799", "882393ff-f42f-4f91-8473-1da6bce6527d"];
-    const { data: gvs } = await admin.from("guideline_versions").select("program_id").in("program_id", stillUnconfirmedIds);
-    expect(gvs ?? []).toHaveLength(0); // no guideline_versions row at all — still correctly unverified/quarantined
+    const { data: gvs } = await admin.from("guideline_versions").select("program_id, verification_status").in("program_id", stillUnconfirmedIds);
+    for (const gv of gvs ?? []) {
+      expect(gv.verification_status).not.toBe("human_verified");
+    }
   }, 15_000);
 
   it("American Heritage Lending's Asset Qualifier and Bank Statement programs also remain unverified — numeric matrix genuinely wasn't provided", async () => {
     const stillUnconfirmedIds = ["75a28282-5deb-4952-8ea0-0020191d0730", "2168eed2-8606-4605-94c7-acbe2f4e6b1b"];
-    const { data: gvs } = await admin.from("guideline_versions").select("program_id").in("program_id", stillUnconfirmedIds);
-    expect(gvs ?? []).toHaveLength(0);
+    const { data: gvs } = await admin.from("guideline_versions").select("program_id, verification_status").in("program_id", stillUnconfirmedIds);
+    for (const gv of gvs ?? []) {
+      expect(gv.verification_status).not.toBe("human_verified");
+    }
   }, 15_000);
 });
