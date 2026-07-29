@@ -78,6 +78,11 @@ export function normalizeTranscript(raw: string): string {
   s = s.replace(/\bl[\s-]*t[\s-]*v\b/g, "ltv");
   s = s.replace(/\bd[\s-]*t[\s-]*i\b/g, "dti");
   s = s.replace(/\bhe[\s-]*lock\b/g, "heloc");
+  // "Lien" (/liːn/) is a homophone of "lean" — speech-to-text routinely
+  // transcribes "second lien"/"junior lien" as "second lean"/"junior lean".
+  // Folded to the real term BEFORE the loan-purpose classifier runs so
+  // \bsecond lien\b / \bjunior lien\b below still match either surface form.
+  s = s.replace(/\b(second|junior|subordinate|2nd)[\s-]+lean\b/g, "$1 lien");
   s = s.replace(/\bfye[\s-]*co\b/g, "fico");
   s = s.replace(/\bten[\s-]+ninety[\s-]*nine\b/g, "1099");
   // Mid-speech self-corrections ("actually...", "excuse me...", "I mean...",
@@ -177,9 +182,27 @@ function cap<T>(value: T, source: string, inferred = false): Captured<T> {
 // ---------------------------------------------------------------------------
 // Loan purpose classifier — shared, independently testable, exported so
 // other callers (or tests) can use the exact same phrase-to-enum mapping
-// the voice extractor uses. Priority: cash-out > rate-and-term > generic
-// refinance (pending subtype) > purchase.
+// the voice extractor uses. Priority: HELOC / second lien (a distinct
+// subordinate-lien product, never confused with a first-lien refinance) >
+// cash-out > rate-and-term > generic refinance (pending subtype) > purchase.
 // ---------------------------------------------------------------------------
+
+// HELOC (Home Equity Line of Credit) — pronounced "HEE-lock". Speech-to-text
+// renders it as "he lock"/"he-lock"/"helock" far more often than the literal
+// acronym; normalizeTranscript above folds every one of those surface forms
+// to the token "heloc" before this ever runs, so \bhelocs?\b alone covers
+// them. The remaining patterns catch the fully-spoken (non-acronym) phrasing
+// a borrower or broker may use instead of the acronym at all.
+const HELOC_PHRASES =
+  /\bhelocs?\b|\bhome equity line(?: of credit)?\b|\bequity line of credit\b|\brevolving (?:home )?equity line\b|\bline of credit (?:against|secured by|on) (?:the |their |his |her )?(?:home|house|property|equity)\b/;
+
+// Second lien / second mortgage — a closed-end subordinate loan behind an
+// untouched first mortgage. "Lien" is a homophone of "lean"
+// (normalizeTranscript folds "second/junior/subordinate/2nd lean" back to
+// "lien" above), and mortgage brokers commonly say "second mortgage",
+// "junior lien", "piggyback (loan)", or "silent second" for the same thing.
+const SECOND_LIEN_PHRASES =
+  /\bsecond lien\b|\bsecond mortgage\b|\bjunior lien\b|\bsubordinate lien\b|\bpiggy[\s-]?back(?: loan)?\b|\bclosed[\s-]?end second\b|\bstand[\s-]?alone second\b|\b2nd lien\b|\bsecond position\b|\bsilent second\b|\bsimultaneous second\b/;
 
 const CASH_OUT_PHRASES =
   /cash[\s-]?outs?\b|cash[\s-]?out refi(?:nance)?\b|take (?:some |the )?cash out\b|pull(?:ing)? cash out\b|pull(?:ing)?[^.!?]{0,25}\bout\b|pull(?:ing)? (?:money|funds)( out)?\b|pull(?:ing)? equity\b|access(?:ing)? (?:equity|cash)\b|tap(?:ping)? (?:into )?(?:the )?equity\b|use (?:the )?equity\b|leverag(?:e|ing) (?:the )?equity\b|borrow(?:ing)? against (?:the )?equity\b|equity (?:take[\s-]?out|withdrawal)\b|refi(?:nance)? for cash\b|refinanc\w*[^.!?]{0,25}\bfor cash\b|refinanc\w*[^.!?]{0,25}\breceiv\w* cash\b|refinanc\w*[^.!?]{0,25}\ba larger loan\b|refinanc\w*[^.!?]{0,25}\baccess (?:to )?equity\b|refinanc\w*[^.!?]{0,25}\btake money out\b|refinanc\w*[^.!?]{0,25}\bwalk away with cash\b|refinanc\w*[^.!?]{0,25}\breceive proceeds\b|receiv(?:e|ing) proceeds\b|consolidat\w* debt with equity\b|pay(?:ing)? off debt using the property\b|refinanc\w*.{0,20}receiv\w* cash back\b|cash[\s-]?back refinance\b|cash equity refinance\b|equity refinance\b/;
@@ -206,12 +229,20 @@ export interface LoanPurposeClassification {
   pendingSubtype?: boolean;
 }
 
-/** Classifies free text into a normalized LoanPurpose. Cash-out language
- * always wins when both cash-out and generic-refinance/rate-term language
- * are present (per the required priority order); a bare "refi"/"refinance"
- * with no subtype language returns pendingSubtype so the caller can ask one
- * concise follow-up rather than guessing or leaving the field blank. */
+/** Classifies free text into a normalized LoanPurpose. HELOC / second-lien
+ * language always wins first (a distinct subordinate-lien product, never a
+ * refinance of the first mortgage); cash-out language then wins when both
+ * cash-out and generic-refinance/rate-term language are present (per the
+ * required priority order); a bare "refi"/"refinance" with no subtype
+ * language returns pendingSubtype so the caller can ask one concise
+ * follow-up rather than guessing or leaving the field blank. */
 export function classifyLoanPurpose(t: string): LoanPurposeClassification | undefined {
+  const helocMatch = HELOC_PHRASES.exec(t);
+  if (helocMatch) return { value: LoanPurpose.Heloc, source: helocMatch[0].trim() };
+
+  const secondLienMatch = SECOND_LIEN_PHRASES.exec(t);
+  if (secondLienMatch) return { value: LoanPurpose.SecondLien, source: secondLienMatch[0].trim() };
+
   const cashOutMatch = !NEGATED_CASH_OUT_PHRASES.test(t) ? CASH_OUT_PHRASES.exec(t) : null;
   if (cashOutMatch) return { value: LoanPurpose.CashOutRefinance, source: cashOutMatch[0].trim() };
 

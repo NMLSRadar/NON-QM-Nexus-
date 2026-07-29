@@ -281,7 +281,15 @@ export function assess(x: VoiceExtraction): Assessment {
 }
 
 function purposeLabel(p: LoanPurpose): string {
-  return p === "purchase" ? "purchase" : p === "cash_out_refinance" ? "cash-out refinance" : "rate-and-term refinance";
+  return p === "purchase"
+    ? "purchase"
+    : p === "cash_out_refinance"
+      ? "cash-out refinance"
+      : p === "rate_term_refinance"
+        ? "rate-and-term refinance"
+        : p === "heloc"
+          ? "HELOC"
+          : "second lien";
 }
 
 function investorExperienceLabel(v: "first_time_investor" | "experienced_investor" | "not_applicable"): string {

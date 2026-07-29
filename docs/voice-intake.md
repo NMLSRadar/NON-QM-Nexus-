@@ -12,8 +12,9 @@ page, best option first.
 Analysis requires all eight to resolve (a caller typically states 6–8 details;
 the rest derive):
 
-1. Purchase or refinance (a bare "refinance" triggers a rate-and-term vs.
-   cash-out clarifying question)
+1. Purchase, refinance, HELOC, or second lien (a bare "refinance" triggers a
+   rate-and-term vs. cash-out clarifying question; HELOC and second lien are
+   each resolved directly from their own spoken keywords — see below)
 2. Occupancy (primary / second home / investment)
 3. Property type
 4. Property value
@@ -27,6 +28,32 @@ Any one of **{value, loan amount, LTV}** derives from the other two. If all
 three are stated and disagree by more than one point, the assistant flags the
 conflict, shows the computed figure, and holds auto-analysis until the user
 confirms or corrects a number.
+
+## HELOC and second-lien recognition
+
+Added 2026-07-29: several catalog lenders' guidelines document standalone
+HELOC and closed-end second-lien programs, so both are first-class
+`loanPurpose` values (`heloc`, `second_lien`), never mistaken for a first-lien
+refinance.
+
+- **HELOC** is pronounced "HEE-lock." Speech-to-text overwhelmingly renders it
+  as "he lock" / "he-lock" / "helock" rather than the literal acronym.
+  `normalizeTranscript` folds every one of those surface forms — plus the
+  fully-spoken "home equity line (of credit)" / "equity line of credit" — back
+  to the recognized token before classification runs, so the assistant
+  understands "he lock", "he-lock", "helock", and "HELOC" identically.
+- **Second lien** ("second mortgage", "junior lien", "piggyback loan",
+  "silent second", "2nd lien") is recognized the same way. "Lien" is a
+  homophone of "lean," and speech-to-text commonly mishears "second lien" as
+  "second lean" — that mishearing is normalized back to "lien" before
+  classification too.
+- Both take priority over generic cash-out/refinance language in the
+  classifier (a HELOC or second lien is a *new* subordinate loan behind an
+  untouched first mortgage, not a refinance of it), and both show the Current
+  Loan Balance tab (their CLTV math needs the existing first-lien balance)
+  exactly like a refinance does.
+- See `tests/domain/helocSecondLien.test.ts` for the full set of recognized
+  phrasings.
 
 ## Flow
 

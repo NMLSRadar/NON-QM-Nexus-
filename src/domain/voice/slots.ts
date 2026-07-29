@@ -35,7 +35,7 @@ export const VITAL_KEYS = [
 export type VitalKey = (typeof VITAL_KEYS)[number];
 
 export const VITAL_LABELS: Record<VitalKey, string> = {
-  loanPurpose: "Purchase or refinance",
+  loanPurpose: "Purchase, refinance, HELOC, or second lien",
   occupancy: "Occupancy",
   propertyType: "Property type",
   propertyValue: "Property value",
@@ -47,7 +47,7 @@ export const VITAL_LABELS: Record<VitalKey, string> = {
 };
 
 export const VITAL_QUESTIONS: Record<VitalKey, string> = {
-  loanPurpose: "Is this a purchase or a refinance?",
+  loanPurpose: "Is this a purchase, a refinance, a HELOC, or a second lien?",
   occupancy: "How is it occupied — primary residence, second home, or investment?",
   propertyType: "What's the property type (single-family, condo, townhome, 2–4 unit, rural…)?",
   propertyValue: "What's the property value or purchase price?",

@@ -73,7 +73,7 @@ Rules you must always follow:
 2. If a field genuinely isn't in the document for a given program, omit it (for optional fields) rather than inventing a value.
 3. Use ONLY these exact enum values (nothing else) for the relevant fields:
    - incomeDocTypes: full_doc, bank_statement, pnl_only, dscr, asset_depletion, 1099, wvoe_only
-   - loanPurposes: purchase, rate_term_refinance, cash_out_refinance
+   - loanPurposes: purchase, rate_term_refinance, cash_out_refinance, heloc, second_lien
    - occupancies: primary, second_home, investment
    - propertyTypes: single_family, condo, non_warrantable_condo, townhome, 2_4_unit, 5_plus_unit, pud, manufactured, rural, condotel
    - citizenshipEligible: us_citizen, permanent_resident, non_permanent_resident, itin, foreign_national

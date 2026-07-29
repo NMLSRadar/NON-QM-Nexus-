@@ -130,6 +130,8 @@ const PURPOSES: Array<[LoanPurpose, string]> = [
   ["purchase", "Purchase"],
   ["rate_term_refinance", "Rate/term refi"],
   ["cash_out_refinance", "Cash-out refi"],
+  ["heloc", "HELOC"],
+  ["second_lien", "Second lien"],
 ];
 const OCCUPANCIES: Array<[Occupancy, string]> = [
   ["primary", "Primary"],
@@ -288,9 +290,17 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   }, [liveCatalog, liveScenario]);
 
   const canAnalyze = assessment.readyToAnalyze || (assessment.complete && conflictConfirmed);
-  // The Current Loan Balance tab only applies to refinances — hidden and
-  // never required for a purchase.
-  const isRefinance = effective.loanPurpose?.value === "rate_term_refinance" || effective.loanPurpose?.value === "cash_out_refinance";
+  // The Current Loan Balance tab applies to any product that sits behind an
+  // existing first mortgage — a rate/term or cash-out refinance replaces
+  // that first lien, while a HELOC or second lien is a NEW subordinate lien
+  // added behind it; either way the existing balance drives the current-LTV
+  // / CLTV math, so it's shown (never required) for all four, and hidden
+  // only for a purchase (which has no existing lien at all).
+  const isRefinance =
+    effective.loanPurpose?.value === "rate_term_refinance" ||
+    effective.loanPurpose?.value === "cash_out_refinance" ||
+    effective.loanPurpose?.value === "heloc" ||
+    effective.loanPurpose?.value === "second_lien";
 
   /* -------- speech capture -------- */
   function micErrorMessage(code: string): string {
