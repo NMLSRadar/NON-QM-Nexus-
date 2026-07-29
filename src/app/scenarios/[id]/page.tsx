@@ -95,8 +95,14 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
               <MetricTile label="Purchase price" value={fmtUsd(scenario.purchasePrice)} />
               <MetricTile label="Estimated value" value={fmtUsd(scenario.estimatedValue)} />
               <MetricTile label="Loan amount" value={fmtUsd(scenario.requestedLoanAmount)} />
-              <MetricTile label="FICO" value={scenario.fico ?? "—"} />
-              <MetricTile label="Citizenship" value={scenario.citizenship?.replace(/_/g, " ") ?? "—"} />
+              <MetricTile
+                label="Credit profile"
+                value={scenario.fico ?? (scenario.creditProfileType ? scenario.creditProfileType.replace(/_/g, " ") : "—")}
+              />
+              <MetricTile
+                label="Citizenship"
+                value={`${scenario.citizenship?.replace(/_/g, " ") ?? "—"}${scenario.visaType ? ` (${scenario.visaType} visa)` : ""}`}
+              />
               <MetricTile label="Income doc" value={scenario.incomeDocType ?? "—"} />
               <MetricTile label="Housing payment" value={fmtUsd(scenario.monthlyHousingPayment)} />
               <MetricTile label="Other liabilities" value={fmtUsd(scenario.monthlyLiabilities)} />
@@ -157,6 +163,22 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
                 <p className="mt-1 text-xs text-brand-800/80">
                   Only programs whose current, verified guidelines list ITIN as an eligible citizenship classification are
                   ranked below — a lender is never shown just because it&apos;s generally known for ITIN lending.
+                </p>
+              </div>
+            ) : null}
+            {scenario.fico == null && scenario.creditProfileType && scenario.creditProfileType !== "us_fico_score" ? (
+              <div className="mb-4 rounded-control border border-brand-200 bg-brand-50/60 p-3.5">
+                <p className="text-sm font-semibold text-brand-900">
+                  {scenario.visaType === "F-1"
+                    ? `The borrower has been classified as a foreign national based on the stated F-1 visa. `
+                    : ""}
+                  Credit profile: {scenario.creditProfileType.replace(/_/g, " ")} — no numeric U.S. FICO score was
+                  provided, and that is a valid, resolved answer, not missing data.
+                </p>
+                <p className="mt-1 text-xs text-brand-800/80">
+                  Non-QM Nexus prioritizes lenders that permit no-FICO or foreign-national borrowers, foreign credit, or
+                  alternative credit documentation below. Maximum LTV and eligibility may depend on occupancy, housing
+                  history, reserves, loan amount, and whether foreign or alternative credit can be documented.
                 </p>
               </div>
             ) : null}

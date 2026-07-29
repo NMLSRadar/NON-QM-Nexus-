@@ -117,7 +117,17 @@ export const scenarioInputSchema = z
     existingLienBalance: optionalUsd,
     currentLoanBalance: optionalUsd,
     fico: z.number().int().min(300).max(850).optional(),
+    /** Nonnumeric credit-profile status — resolves the credit-profile
+     * Vital in place of `fico` when the borrower legitimately has no
+     * numeric U.S. FICO (F-1 visa / no-FICO fix, 2026-07-28). A `fico`
+     * present alongside `us_fico_score` (or omitted entirely) is the
+     * ordinary case; any OTHER value here is valid with `fico` absent —
+     * see hasValidCreditProfile below. */
+    creditProfileType: z.enum(["us_fico_score", "no_fico", "no_us_credit", "foreign_credit", "insufficient_credit_history", "unknown"]).optional(),
     citizenship: z.enum(["us_citizen", "permanent_resident", "non_permanent_resident", "itin", "foreign_national"]).optional(),
+    /** Stated visa/immigration category (e.g. "F-1"), preserved separately
+     * from `citizenship` for lender-guideline visa-specific matching. */
+    visaType: z.string().max(40).optional(),
     vesting: z.enum(["individual", "joint_tenants", "llc", "corporation", "trust"]).optional(),
     firstTimeHomebuyer: z.boolean().optional(),
     firstTimeInvestor: z.boolean().optional(),
@@ -161,6 +171,34 @@ export const scenarioInputSchema = z
 
 export type ScenarioInput = z.infer<typeof scenarioInputSchema>;
 
+/**
+ * Corrected credit-profile validation (F-1 visa / no-FICO fix, 2026-07-28).
+ * The credit-profile Vital is satisfied when EITHER a numeric FICO is
+ * present OR a recognized nonnumeric credit-profile status was captured —
+ * a null/absent `ficoScore` is a legitimate, resolved answer when
+ * `creditProfileType` is one of the nonnumeric statuses, NOT a validation
+ * failure. Never show "Please correct highlighted fields" for a
+ * legitimately-captured no-FICO borrower.
+ */
+export const NONNUMERIC_CREDIT_PROFILE_TYPES = [
+  "no_fico",
+  "no_us_credit",
+  "foreign_credit",
+  "insufficient_credit_history",
+  "unknown",
+] as const;
+
+export function hasValidCreditProfile(input: {
+  fico?: number | null;
+  creditProfileType?: string | null;
+}): boolean {
+  return (
+    typeof input.fico === "number" ||
+    (input.creditProfileType != null &&
+      (NONNUMERIC_CREDIT_PROFILE_TYPES as readonly string[]).includes(input.creditProfileType))
+  );
+}
+
 /** Plain-language label for each top-level scenario field a validation
  * issue might point at — used to build a specific message instead of the
  * generic "Please correct the highlighted fields." */
@@ -176,8 +214,10 @@ const FIELD_LABELS: Record<string, string> = {
   existingLienBalance: "existing subordinate lien balance",
   currentLoanBalance: "current loan balance",
   fico: "credit score",
+  creditProfileType: "credit profile",
   incomeDocType: "income documentation type",
   citizenship: "citizenship/residency status",
+  visaType: "visa type",
   vesting: "title vesting",
 };
 

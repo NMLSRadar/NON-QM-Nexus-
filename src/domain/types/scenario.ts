@@ -1,5 +1,6 @@
 import type {
   Citizenship,
+  CreditProfileType,
   IncomeDocType,
   InvestorExperience,
   LoanPurpose,
@@ -137,8 +138,26 @@ export interface Scenario {
   currentLoanBalance?: number;
 
   // Borrower
+  /** Numeric U.S. FICO score — populated ONLY for the numeric case. A
+   * borrower legitimately without a U.S. credit score (e.g. an F-1 visa
+   * holder who never established U.S. credit) leaves this undefined/null
+   * while `creditProfileType` carries the nonnumeric status instead; that
+   * is a VALID, resolved credit-profile Vital, not missing data. */
   fico?: number;
+  /** Credit-profile Vital — always resolves the credit-profile Vital
+   * together with `fico`: `us_fico_score` when a number is present, or one
+   * of the nonnumeric statuses (No FICO, No U.S. Credit, Foreign Credit,
+   * Insufficient Credit History, Unknown) when it legitimately isn't.
+   * See CreditProfileType in src/domain/types/enums.ts. */
+  creditProfileType?: CreditProfileType;
   citizenship?: Citizenship;
+  /** The borrower's stated visa/immigration category as spoken (e.g.
+   * "F-1", "H-1B", "EAD"), preserved SEPARATELY from `citizenship` so
+   * lender matching can search guidelines for both general
+   * citizenship-classification eligibility AND any lender-specific visa
+   * restriction (e.g. an F-1-specific overlay distinct from the general
+   * Foreign National rule). Never discarded once citizenship is resolved. */
+  visaType?: string;
   vesting?: Vesting;
   firstTimeHomebuyer?: boolean;
   firstTimeInvestor?: boolean;

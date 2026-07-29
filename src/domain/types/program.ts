@@ -133,6 +133,37 @@ export interface Program {
    * products" with no separate LTV language) — do not default it to the
    * base cap, which would misrepresent an undocumented figure as verified. */
   citizenshipLtvCaps?: Partial<Record<Citizenship, number>>;
+  /**
+   * No-FICO / nonnumeric-credit-profile policy — per the F-1 visa / no-FICO
+   * fix (2026-07-28). A borrower legitimately without a numeric U.S. FICO
+   * (e.g. a foreign national, or an F-1 visa holder who never established
+   * U.S. credit) must NEVER be auto-rejected just because `minFico` can't
+   * be evaluated numerically — but the platform must also never INVENT an
+   * eligibility answer the uploaded guideline doesn't actually state.
+   * undefined = "guidelines do not specify" (never evaluated as a pass OR
+   * a fail — surfaced as a manual-review item asking the user to confirm
+   * with the lender's AE), matching the "no restriction documented yet"
+   * pattern used by the other optional eligibility flags on this type.
+   *  - "eligible": this program explicitly accepts a no-FICO borrower with
+   *    no additional alternative-credit documentation required.
+   *  - "eligible_with_alternative_credit": accepted, but the guideline
+   *    requires alternative credit documentation (foreign credit report,
+   *    international credit-reference letters, housing/rental history,
+   *    bank or utility payment history, additional reserves, etc.).
+   *  - "requires_foreign_credit": the guideline specifically requires a
+   *    foreign credit report/reference (not just any alternative credit).
+   *  - "requires_us_fico": this program requires a numeric U.S. FICO score
+   *    and does NOT accept a no-FICO borrower at all.
+   */
+  noFicoPolicy?: "eligible" | "eligible_with_alternative_credit" | "requires_foreign_credit" | "requires_us_fico";
+  /** Per-guideline maximum LTV override applied ONLY to a no-FICO /
+   * nonnumeric-credit-profile borrower — real guidelines commonly cap a
+   * no-FICO or foreign-credit-only borrower below the program's general
+   * baseMaxLtv (parallel to citizenshipLtvCaps above). Applied as an
+   * ADDITIONAL cap in deriveMaxLtv (the more restrictive of this and any
+   * other applicable cap wins). Omit when the guideline documents no
+   * distinct no-FICO LTV cap — never default it to the base cap. */
+  noFicoMaxLtv?: number;
   /** Editorial flag, admin-set: this program is curated as a specialist
    * Foreign National lender (broad guidelines, consistent execution) —
    * per user direction 2026-07-28. This NEVER overrides real eligibility

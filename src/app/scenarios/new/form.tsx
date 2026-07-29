@@ -55,6 +55,7 @@ export function ScenarioForm() {
   const router = useRouter();
   const [incomeDocType, setIncomeDocType] = useState<string>("bank_statement");
   const [citizenship, setCitizenship] = useState<string>("us_citizen");
+  const [creditProfileType, setCreditProfileType] = useState<string>("us_fico_score");
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [message, setMessage] = useState<string>();
   const [pending, startTransition] = useTransition();
@@ -75,8 +76,10 @@ export function ScenarioForm() {
       requestedLoanAmount: num(f.get("requestedLoanAmount")),
       requestedCashOut: num(f.get("requestedCashOut")),
       existingLienBalance: num(f.get("existingLienBalance")),
-      fico: num(f.get("fico")),
+      fico: creditProfileType === "us_fico_score" ? num(f.get("fico")) : undefined,
+      creditProfileType: creditProfileType === "us_fico_score" ? undefined : (creditProfileType as ScenarioInput["creditProfileType"]),
       citizenship: citizenship as ScenarioInput["citizenship"],
+      visaType: str(f.get("visaType")),
       vesting: str(f.get("vesting")) as ScenarioInput["vesting"],
       firstTimeHomebuyer: bool(f.get("firstTimeHomebuyer")),
       firstTimeInvestor: bool(f.get("firstTimeInvestor")),
@@ -257,9 +260,27 @@ export function ScenarioForm() {
 
       <fieldset className="gold-card rounded-2xl p-5 grid sm:grid-cols-3 gap-4">
         <SectionLegend icon={<User className="h-4 w-4 text-amber-300" />} title="Borrower" />
-        <Field name="fico" title="FICO">
-          <input id="fico" name="fico" type="number" min="300" max="850" className={field} />
+        <Field name="creditProfileType" title="Credit profile type">
+          <select
+            id="creditProfileType"
+            name="creditProfileType"
+            className={field}
+            value={creditProfileType}
+            onChange={(e) => setCreditProfileType(e.target.value)}
+          >
+            <option value="us_fico_score">U.S. FICO Score</option>
+            <option value="no_fico">No FICO</option>
+            <option value="no_us_credit">No U.S. Credit</option>
+            <option value="foreign_credit">Foreign Credit Report</option>
+            <option value="insufficient_credit_history">Insufficient Credit History</option>
+            <option value="unknown">Unknown</option>
+          </select>
         </Field>
+        {creditProfileType === "us_fico_score" && (
+          <Field name="fico" title="FICO">
+            <input id="fico" name="fico" type="number" min="300" max="850" className={field} />
+          </Field>
+        )}
         <Field name="citizenship" title="Citizenship / residency">
           <select id="citizenship" name="citizenship" className={field} value={citizenship} onChange={(e) => setCitizenship(e.target.value)}>
             <option value="us_citizen">U.S. citizen</option>
@@ -269,6 +290,11 @@ export function ScenarioForm() {
             <option value="foreign_national">Foreign national</option>
           </select>
         </Field>
+        {(citizenship === "foreign_national" || citizenship === "non_permanent_resident") && (
+          <Field name="visaType" title="Visa type (e.g. F-1, H-1B, EAD)">
+            <input id="visaType" name="visaType" type="text" maxLength={40} placeholder="F-1" className={field} />
+          </Field>
+        )}
         <Field name="vesting" title="Vesting">
           <select id="vesting" name="vesting" className={field} defaultValue="individual">
             <option value="individual">Individual</option>

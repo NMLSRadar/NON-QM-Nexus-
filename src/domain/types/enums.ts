@@ -52,6 +52,48 @@ export const Citizenship = {
 } as const;
 export type Citizenship = (typeof Citizenship)[keyof typeof Citizenship];
 
+/**
+ * Credit-profile Vital — added 2026-07-28 (F-1 visa / no-FICO fix). Real
+ * Non-QM scenarios routinely have NO numeric U.S. FICO at all (a foreign
+ * national or a recently-arrived F-1 visa holder who has simply never
+ * established U.S. credit) — that is a legitimate, resolvable answer, not
+ * missing data. `UsFicoScore` is the ordinary numeric case (the actual
+ * number is carried separately in Scenario.fico / VoiceExtraction.fico);
+ * every OTHER value here is a valid NONNUMERIC credit-profile status the
+ * Vital can resolve to instead of a number. See classifyCreditProfile in
+ * src/domain/voice/extract.ts and hasValidCreditProfile in
+ * src/domain/validation/scenarioSchema.ts.
+ */
+export const CreditProfileType = {
+  UsFicoScore: "us_fico_score",
+  NoFico: "no_fico",
+  NoUsCredit: "no_us_credit",
+  ForeignCredit: "foreign_credit",
+  InsufficientCreditHistory: "insufficient_credit_history",
+  Unknown: "unknown",
+} as const;
+export type CreditProfileType = (typeof CreditProfileType)[keyof typeof CreditProfileType];
+
+/** Display labels matching the Vital Section wording in the spec. */
+export const CREDIT_PROFILE_TYPE_LABELS: Record<CreditProfileType, string> = {
+  us_fico_score: "U.S. FICO Score",
+  no_fico: "No FICO",
+  no_us_credit: "No U.S. Credit",
+  foreign_credit: "Foreign Credit Report",
+  insufficient_credit_history: "Insufficient Credit History",
+  unknown: "Unknown",
+};
+
+/** Nonnumeric credit-profile values that satisfy the credit-profile Vital
+ * WITHOUT a numeric FICO score (see hasValidCreditProfile). */
+export const NONNUMERIC_CREDIT_PROFILE_TYPES = [
+  CreditProfileType.NoFico,
+  CreditProfileType.NoUsCredit,
+  CreditProfileType.ForeignCredit,
+  CreditProfileType.InsufficientCreditHistory,
+  CreditProfileType.Unknown,
+] as const;
+
 export const Vesting = {
   Individual: "individual",
   JointTenants: "joint_tenants",

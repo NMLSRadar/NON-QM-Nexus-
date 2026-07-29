@@ -112,6 +112,20 @@ export function generateNeedsList(scenario: Scenario): NeedsListItem[] {
     items.push(item("residency", "Valid visa or EAD (work authorization)", "Non-permanent-resident eligibility."));
   }
 
+  // No-FICO / nonnumeric-credit-profile borrower (F-1 visa / no-FICO fix,
+  // 2026-07-28) — conditional documentation the assistant should look for
+  // or request, per the platform spec. Non-required (false) so a
+  // preliminary result can still display before every item is answered.
+  if (scenario.fico == null && scenario.creditProfileType && scenario.creditProfileType !== "us_fico_score") {
+    items.push(
+      item("credit", "Foreign credit report or international credit reference letters", "Alternative credit depth for a borrower without a U.S. FICO score.", false),
+      item("credit", "Foreign mortgage or housing-payment history", "Demonstrates payment history in lieu of a U.S. credit score.", false),
+      item("credit", "Documented U.S. or foreign rental/housing history", "Housing-history verification in lieu of a U.S. credit score.", false),
+      item("credit", "U.S. alternative tradelines (utility, insurance, rent) if available", "Alternative U.S. credit depth, if any exists.", false),
+      item("identity", "SSN or ITIN documentation, if any", "Clarifies whether the borrower has any U.S. taxpayer identification.", false),
+    );
+  }
+
   const ce = scenario.creditEvents;
   if (ce?.bankruptcyMonthsSinceDischarge != null) {
     items.push(item("credit", "Bankruptcy discharge papers and full schedule", "Seasoning measured from discharge date."));
