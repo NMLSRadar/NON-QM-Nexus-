@@ -1,4 +1,4 @@
-import type { Citizenship, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
+import type { Citizenship, CreditProfileType, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
 
 /**
  * Voice-intake vital slots.
@@ -41,7 +41,7 @@ export const VITAL_LABELS: Record<VitalKey, string> = {
   propertyValue: "Property value",
   loanAmount: "Loan amount",
   ltv: "LTV",
-  fico: "Credit score",
+  fico: "Credit profile",
   incomeDocType: "Income documentation",
   citizenship: "Citizenship classification",
 };
@@ -53,7 +53,7 @@ export const VITAL_QUESTIONS: Record<VitalKey, string> = {
   propertyValue: "What's the property value or purchase price?",
   loanAmount: "What loan amount are you targeting?",
   ltv: "What LTV are you targeting (or give me the loan amount and value)?",
-  fico: "What's the credit score?",
+  fico: "What's the credit score — or say if there's no FICO, no U.S. credit, or only foreign credit?",
   incomeDocType: "How is income documented — bank statements, DSCR, full doc, P&L, 1099, or asset depletion?",
   citizenship: "What's the borrower's citizenship — U.S. citizen, permanent resident, non-permanent resident, ITIN borrower, or foreign national?",
 };
@@ -108,6 +108,12 @@ export interface VoiceExtraction {
   loanAmount?: Captured<number>;
   statedLtv?: Captured<number>;
   fico?: Captured<number>;
+  /** Nonnumeric credit-profile status — resolves the same credit-profile
+   * Vital as `fico` when the borrower legitimately has no numeric U.S.
+   * FICO (F-1 visa / no-FICO fix, 2026-07-28). Populated ONLY when the
+   * deterministic FICO extractor found no number; see
+   * classifyCreditProfile in extract.ts. */
+  creditProfileType?: Captured<CreditProfileType>;
   incomeDocType?: Captured<IncomeDocType>;
   bankStatementMonths?: 12 | 24;
   bankStatementKind?: "personal" | "business";
@@ -119,7 +125,7 @@ export interface VoiceExtraction {
    * "medium" only for the ambiguous "I-10"/"I ten"/"eye ten" ITIN surface
    * form, resolved solely because nearby mortgage-borrower context
    * anchored it (see classifyCitizenship in extract.ts). */
-  citizenship?: Captured<Citizenship> & { confidence?: "high" | "medium" };
+  citizenship?: Captured<Citizenship> & { confidence?: "high" | "medium"; visaType?: string };
   /** Legacy simple flag — still populated for backward compatibility; prefer investorExperience. */
   firstTimeInvestor?: boolean;
   firstTimeHomebuyer?: Captured<boolean>;

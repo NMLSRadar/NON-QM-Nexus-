@@ -32,6 +32,13 @@ export function deriveMaxLtv(scenario: Scenario, program: Program): number {
   // for this specific citizenship classification.
   const citizenshipCap = scenario.citizenship ? program.citizenshipLtvCaps?.[scenario.citizenship] : undefined;
   if (citizenshipCap != null) cap = Math.min(cap, citizenshipCap);
+  // A no-FICO / nonnumeric-credit-profile LTV cap (F-1 visa / no-FICO fix,
+  // 2026-07-28) applies the same "only ever tightens" rule — never loosens
+  // the base/matrix/citizenship-derived cap, and only when this scenario
+  // actually has no numeric FICO (a numeric-FICO borrower is unaffected).
+  if (scenario.fico == null && scenario.creditProfileType && scenario.creditProfileType !== "us_fico_score" && program.noFicoMaxLtv != null) {
+    cap = Math.min(cap, program.noFicoMaxLtv);
+  }
   return cap;
 }
 
@@ -158,6 +165,35 @@ export function baseProgramChecks(
     const ok = scenario.fico >= program.minFico;
     out.push(result(`${p}:fico`, "Minimum FICO", "fico", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
       ok ? `FICO ${scenario.fico} ≥ minimum ${program.minFico}.` : `FICO ${scenario.fico} is below the minimum ${program.minFico}.`));
+  } else if (scenario.creditProfileType && scenario.creditProfileType !== "us_fico_score") {
+    // No numeric FICO — F-1 visa / no-FICO fix (2026-07-28). Never
+    // auto-reject just because `minFico` can't be evaluated numerically,
+    // and never invent an eligibility answer the guideline doesn't
+    // actually state — the outcome depends entirely on the program's
+    // documented `noFicoPolicy` (undefined = guidelines do not specify).
+    const label = { no_fico: "No FICO", no_us_credit: "No U.S. Credit", foreign_credit: "Foreign Credit Report", insufficient_credit_history: "Insufficient Credit History", unknown: "Credit Score Unknown" }[scenario.creditProfileType];
+    switch (program.noFicoPolicy) {
+      case "eligible":
+        out.push(result(`${p}:nofico`, "No-FICO credit profile", "fico", RuleOutcome.Pass, RuleSeverity.Info,
+          `${label} borrowers are explicitly eligible per this program's guidelines — no numeric FICO required.`));
+        break;
+      case "eligible_with_alternative_credit":
+        out.push(result(`${p}:nofico`, "No-FICO credit profile", "fico", RuleOutcome.ManualReview, RuleSeverity.Soft,
+          `${label} may be eligible with alternative credit documentation (foreign credit report, credit-reference letters, housing/mortgage payment history, or additional reserves) — confirm the specific documentation required with the lender's AE.`));
+        break;
+      case "requires_foreign_credit":
+        out.push(result(`${p}:nofico`, "No-FICO credit profile", "fico", RuleOutcome.ManualReview, RuleSeverity.Soft,
+          `This program requires a foreign credit report/reference for a ${label} borrower — confirm the borrower can provide one.`));
+        break;
+      case "requires_us_fico":
+        out.push(result(`${p}:nofico`, "No-FICO credit profile", "fico", RuleOutcome.Fail, RuleSeverity.Hard,
+          `This program requires a numeric U.S. FICO score; a ${label} borrower is not eligible.`));
+        break;
+      default:
+        out.push(result(`${p}:nofico`, "No-FICO credit profile", "fico", RuleOutcome.ManualReview, RuleSeverity.Soft,
+          `This program's guidelines do not specify ${label} eligibility yet — confirm with the lender's AE before assuming approval or denial.`));
+        break;
+    }
   }
 
   // LTV vs derived max

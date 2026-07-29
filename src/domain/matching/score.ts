@@ -41,6 +41,27 @@ export function computeScore(
     const buffer = scenario.fico - program.minFico;
     const pts = buffer < 0 ? 0 : Math.min(20, 12 + Math.min(8, buffer / 5));
     breakdown.push({ factor: "FICO fit", points: round(pts), maxPoints: 20, note: `FICO ${scenario.fico} vs min ${program.minFico}.` });
+  } else if (scenario.creditProfileType && scenario.creditProfileType !== "us_fico_score") {
+    // No-FICO / nonnumeric-credit-profile fit (F-1 visa / no-FICO fix,
+    // 2026-07-28) — replaces the ordinary FICO-fit factor entirely (it's
+    // the same underlying dimension, just resolved to a documented policy
+    // instead of a number) rather than silently omitting the factor.
+    const pts = program.noFicoPolicy === "eligible" ? 18 : program.noFicoPolicy === "eligible_with_alternative_credit" || program.noFicoPolicy === "requires_foreign_credit" ? 10 : 0;
+    breakdown.push({
+      factor: "No-FICO credit profile fit",
+      points: pts,
+      maxPoints: 20,
+      note:
+        program.noFicoPolicy === "eligible"
+          ? "Program explicitly accepts a no-FICO borrower."
+          : program.noFicoPolicy === "eligible_with_alternative_credit"
+            ? "Program accepts a no-FICO borrower with alternative credit documentation."
+            : program.noFicoPolicy === "requires_foreign_credit"
+              ? "Program requires a foreign credit report for a no-FICO borrower."
+              : program.noFicoPolicy === "requires_us_fico"
+                ? "Program requires a numeric U.S. FICO score."
+                : "Program's guidelines do not specify no-FICO eligibility.",
+    });
   }
 
   // 3. DTI fit (15)

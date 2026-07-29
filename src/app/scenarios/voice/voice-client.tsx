@@ -11,7 +11,8 @@ import type { Scenario } from "@/domain/types/scenario";
 import { extractFromTranscript } from "@/domain/voice/extract";
 import { assess } from "@/domain/voice/dialog";
 import { VITAL_KEYS, VITAL_LABELS, EXTRA_VITAL_KEYS, EXTRA_VITAL_LABELS, REFI_VITAL_LABEL, type Captured, type VitalKey, type ExtraVitalKey, type VoiceExtraction } from "@/domain/voice/slots";
-import type { Citizenship, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
+import type { Citizenship, CreditProfileType, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
+import { CREDIT_PROFILE_TYPE_LABELS } from "@/domain/types/enums";
 import { createScenarioFromVoice, getVoiceCatalog } from "./actions";
 
 /** Per-vital icon, matching the mockup's gold-ringed icon badges. */
@@ -69,6 +70,8 @@ interface Overrides {
   loanAmount?: number;
   ltv?: number;
   fico?: number;
+  creditProfileType?: CreditProfileType;
+  visaType?: string;
   bankStatementMonths?: 12 | 24;
   bankStatementKind?: "personal" | "business";
   firstTimeHomebuyer?: boolean;
@@ -95,7 +98,14 @@ function applyOverrides(base: VoiceExtraction, o: Overrides): VoiceExtraction {
   if (o.propertyValue !== undefined) x.propertyValue = manual(o.propertyValue);
   if (o.loanAmount !== undefined) x.loanAmount = manual(o.loanAmount);
   if (o.ltv !== undefined) x.statedLtv = manual(o.ltv);
-  if (o.fico !== undefined) x.fico = manual(o.fico);
+  if (o.fico !== undefined) {
+    x.fico = manual(o.fico);
+    x.creditProfileType = undefined;
+  }
+  if (o.creditProfileType !== undefined) {
+    x.creditProfileType = manual(o.creditProfileType);
+    x.fico = undefined;
+  }
   if (o.bankStatementMonths !== undefined) x.bankStatementMonths = o.bankStatementMonths;
   if (o.bankStatementKind !== undefined) x.bankStatementKind = o.bankStatementKind;
   if (o.firstTimeHomebuyer !== undefined) x.firstTimeHomebuyer = manual(o.firstTimeHomebuyer);
@@ -105,7 +115,7 @@ function applyOverrides(base: VoiceExtraction, o: Overrides): VoiceExtraction {
   }
   if (o.vesting !== undefined) x.vesting = manual(o.vesting);
   if (o.existingLienBalance !== undefined) x.existingLienBalance = manual(o.existingLienBalance);
-  if (o.citizenship !== undefined) x.citizenship = manual(o.citizenship);
+  if (o.citizenship !== undefined) x.citizenship = { ...manual(o.citizenship), ...(o.visaType ? { visaType: o.visaType } : {}) };
   if (o.state !== undefined) x.state = manual(o.state);
   return x;
 }
@@ -436,7 +446,13 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
           : undefined,
     ),
     ltv: cell(assessment.derived.ltv !== undefined ? { value: `${assessment.derived.ltv}%`, source: effective.statedLtv ? effective.statedLtv.source : "derived from value + loan" } : undefined),
-    fico: cell(effective.fico && { ...effective.fico, value: String(effective.fico.value) }),
+    fico: cell(
+      effective.fico
+        ? { ...effective.fico, value: String(effective.fico.value) }
+        : effective.creditProfileType
+          ? { ...effective.creditProfileType, value: CREDIT_PROFILE_TYPE_LABELS[effective.creditProfileType.value] }
+          : undefined,
+    ),
     incomeDocType: cell(
       effective.incomeDocType && {
         ...effective.incomeDocType,
@@ -446,7 +462,12 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
             : label(DOC_TYPES, effective.incomeDocType.value),
       },
     ),
-    citizenship: cell(effective.citizenship && { ...effective.citizenship, value: label(CITIZENSHIP_OPTIONS, effective.citizenship.value) }),
+    citizenship: cell(
+      effective.citizenship && {
+        ...effective.citizenship,
+        value: label(CITIZENSHIP_OPTIONS, effective.citizenship.value) + (effective.citizenship.visaType ? ` (${effective.citizenship.visaType} visa)` : ""),
+      },
+    ),
   };
 
   const extraVitalDisplay: Record<ExtraVitalKey, { text: string; source?: string; inferred?: boolean; filled: boolean }> = {

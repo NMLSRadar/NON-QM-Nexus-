@@ -1,4 +1,4 @@
-import { Citizenship, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
+import { Citizenship, CreditProfileType, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
 import { Captured, VoiceExtraction, emptyExtraction } from "./slots";
 
 /**
@@ -335,7 +335,7 @@ const CITIZENSHIP_RE = new RegExp(
     // each dot), or "non-U.S. citizen" would fail this stricter pattern and
     // fall through to matching the plain "U.S. citizen" alternative later
     // in the same phrase instead — silently losing the "non-" negation.
-    String.raw`(?<foreignNational>\bforeign national\b|\bfn borrower\b|\bforeign investor\b|\bforeign buyer\b|non[\s-]?u\s*\.?\s*s\s*\.?\s*citizen\b|\binternational borrower\b|\binternational buyer\b|\boverseas (?:buyer|borrower|investor)\b)`,
+    String.raw`(?<foreignNational>\bforeign[\s-]national\b|\bfn borrower\b|\bforeign investor\b|\bforeign buyer\b|non[\s-]?u\s*\.?\s*s\s*\.?\s*citizen\b|\binternational borrower\b|\binternational buyer\b|\boverseas (?:buyer|borrower|investor)\b)`,
     // Non-Permanent Resident — "EAD" is a mortgage-specific abbreviation
     // rare enough outside this domain to match bare (not just "EAD
     // holder"), since real phrasing varies freely: "EAD card", "on an
@@ -353,6 +353,22 @@ const CITIZENSHIP_RE = new RegExp(
     // ungated (bare) since they're rare enough outside this domain that
     // the existing bare "c09"/"ead" precedent already accepts that risk.
     String.raw`(?<nonPermanentResident>\bnon[\s-]*perm(?:anent)?(?:\s+resident)?\b|\bwork visa\b|\bemployment authorization\b|\bead\b|\btemporary resident\b|\bvisa holder\b|\bc[\s-]?09\b|\bh[\s-]?1[\s-]?b?\b|\bh[\s-]?2[\s-]?b?\b|\bh[\s-]?4\b|\bl[\s-]?1[ab]?\b|\bl[\s-]?2\b|\be[\s-]?1\b|\be[\s-]?2\b|\be[\s-]?3\b|\bo[\s-]?1\b|\bo[\s-]?2\b|\bdaca\b|\btps\b|\btemporary protected status\b|\basylee\b|\basylum\b|\brefugee\b|\bnato\b|\bstem opt\b|\bf[\s-]?1 opt\b|\bon (?:an?|the) opt\b|\bopt visa\b|\bon (?:an?|the) tn\b|\btn visa\b|\bon (?:an?|the) r[\s-]?1\b|\br[\s-]?1 visa\b)`,
+    // F-1 visa / international student — F-1 Visa Classification fix
+    // (2026-07-28). Per current Non-QM Nexus business rules, an F-1 (student)
+    // visa holder is classified as FOREIGN NATIONAL, distinct from the
+    // Non-Permanent Resident / EAD category above — an EAD holder lives and
+    // works IN the U.S. on employment authorization, while an F-1 student
+    // has no such employment-based status. Matched BELOW (later in this
+    // alternation) than the f-1-OPT-specific patterns already inside
+    // nonPermanentResident above, so "F-1 OPT"/"STEM OPT"/"on the OPT" (a
+    // real employment-authorization extension) keeps classifying as
+    // Non-Permanent Resident exactly as before — this group only ever wins
+    // when none of those more specific OPT patterns matched first. The bare
+    // \bf[\s-]?1\b form accepts the same risk already taken for H-1B/L-1/O-1
+    // above (rare enough outside this domain); every other alternative here
+    // covers the plain-language ways a broker actually says "international
+    // student" without ever using the literal code "F-1".
+    String.raw`(?<f1Visa>\bf[\s-]?1\b|\bf[\s-]?one\b|\bstudent visa\b|\binternational student(?:'?s)?\s+visa\b|\bforeign student\b|\binternational student\b|\bnon[\s-]?u\s*\.?\s*s\s*\.?\s*\.?\s*student\b|\bstudying in (?:the united states|america)\b(?=(?:(?!\.).){0,60}\bvisa\b)|\bhere (?:temporarily )?for school\b|\bdoes not have permanent residency\b(?=(?:(?!\.).){0,60}\bf[\s-]?1\b))`,
     // Permanent Resident (green card) — a real, distinct category already
     // used by real lender program data (citizenshipEligible), even though
     // it wasn't one of the four requested UI options; kept recognizable so
@@ -384,6 +400,11 @@ export interface CitizenshipMatch {
    * ("Borrower classification interpreted as ITIN.") rather than treated as
    * definitively confirmed the way an explicit "ITIN" statement is. */
   confidence: "high" | "medium";
+  /** Preserved SEPARATELY from `value` (F-1 visa fix, 2026-07-28) — set
+   * only when an explicit visa/immigration code was recognized (currently
+   * "F-1"), so lender matching can search guidelines for both the general
+   * citizenship classification AND any lender-specific visa restriction. */
+  visaType?: string;
 }
 
 export function classifyCitizenship(t: string): CitizenshipMatch | undefined {
@@ -419,14 +440,88 @@ export function classifyCitizenship(t: string): CitizenshipMatch | undefined {
       ? Citizenship.Itin
       : g.foreignNational
         ? Citizenship.ForeignNational
-        : g.nonPermanentResident
-          ? Citizenship.NonPermanentResident
-          : g.permanentResident
-            ? Citizenship.PermanentResident
-            : g.usCitizen
-              ? Citizenship.UsCitizen
+        : g.f1Visa
+          ? Citizenship.ForeignNational
+          : g.nonPermanentResident
+            ? Citizenship.NonPermanentResident
+            : g.permanentResident
+              ? Citizenship.PermanentResident
+              : g.usCitizen
+                ? Citizenship.UsCitizen
+                : undefined;
+    if (value) {
+      // The explicitly stated visa type overrides a missing/ambiguous
+      // citizenship description — visaType is preserved ONLY when the
+      // literal "F-1" code was actually stated (g.f1Code), never inferred
+      // from descriptive-only phrasing ("international student") that
+      // implies but doesn't confirm the exact visa category. Attached via
+      // an INDEPENDENT flag (see f1CodeSeenAnywhere below) rather than only
+      // when this exact winning match happened to carry it — a later
+      // descriptive match ("student visa") winning the last-match-wins
+      // race must never silently drop an EARLIER literal "F-1" mention in
+      // the same sentence ("F1 student visa").
+      winner = { value, source: m[0].trim(), confidence: "high" };
+    }
+  }
+  if (winner?.value === Citizenship.ForeignNational) {
+    const f1Re = /\bf[\s-]?1\b|\bf[\s-]?one\b/i;
+    if (f1Re.test(t)) winner = { ...winner, visaType: "F-1" };
+  }
+  return winner;
+}
+
+// ---------------------------------------------------------------------------
+// Credit-profile classifier — F-1 visa / no-FICO fix (2026-07-28).
+//
+// A borrower can legitimately have NO numeric U.S. FICO score at all (a
+// foreign national, or an F-1 visa holder who never established U.S.
+// credit) — that is a valid, resolvable answer to the credit-profile Vital,
+// never treated as missing data. This runs ONLY when the numeric FICO
+// extractor (see `fico` below) found nothing, and recognizes the real
+// semantic variations a broker actually says instead of a number.
+// Last-match-wins, same self-correction semantics used throughout this file.
+// ---------------------------------------------------------------------------
+
+const CREDIT_PROFILE_RE = new RegExp(
+  [
+    // Foreign Credit — the borrower has a credit history, just not a U.S. one.
+    String.raw`(?<foreignCredit>\bforeign credit(?:\s+(?:only|report))?\b|\binternational credit report\b|\bhas foreign credit\b)`,
+    // No U.S. Credit — explicitly scoped to the U.S./domestic dimension.
+    String.raw`(?<noUsCredit>\bno u\s*\.?\s*s\s*\.?\s* credit(?:\s+score)?\b|\bno domestic credit history\b|\bnever (?:used|established) credit in the united states\b|\bno u\s*\.?\s*s\s*\.?\s* credit history\b|\b(?:never|has not|have not|hasn['o]?t|haven['o]?t) established (?:any )?u\s*\.?\s*s\s*\.?\s*\.?\s* credit\b)`,
+    // Insufficient Credit History — some credit exists, but not enough depth.
+    String.raw`(?<insufficientCreditHistory>\bhas not established credit\b|\bnot established (?:any )?credit\b|\bnever established (?:any )?credit\b|\bno established tradelines\b|\binsufficient credit history\b|\bthin(?:\s+or\s+no)? credit (?:file|history)\b)`,
+    // Credit Score Unknown — genuinely undetermined, not asserted as absent.
+    String.raw`(?<creditUnknown>\bcredit (?:score|profile) (?:is )?unknown\b|\bcredit status (?:is )?unknown\b)`,
+    // No FICO — the general/default case; also the fallback the spec's own
+    // worked example expects for "does not have a FICO score".
+    String.raw`(?<noFico>\bno fico\b|\bno credit score\b|\bn\s*\/?\s*a\s+fico\b|\bfico\s+(?:is\s+)?not applicable\b|\bfico\s+n\s*\/?\s*a\b|\bcredit score (?:is\s+)?unavailable\b|\bdoes\s?n['o]?t\s+have\s+a\s+fico\b|\bdoes not have a (?:u\s*\.?\s*s\s*\.?\s* )?credit score\b|\bhas no fico\b|\bwithout a fico\b|\bdoes not have a social security[\s-]based credit profile\b|\bno social security[\s-]based credit\b|\brecently arrived.{0,60}no fico\b)`,
+  ].join("|"),
+  "gi"
+);
+
+export interface CreditProfileMatch {
+  value: Exclude<CreditProfileType, "us_fico_score">;
+  source: string;
+}
+
+export function classifyCreditProfile(t: string): CreditProfileMatch | undefined {
+  const re = new RegExp(CREDIT_PROFILE_RE.source, CREDIT_PROFILE_RE.flags);
+  let m: RegExpExecArray | null;
+  let winner: CreditProfileMatch | undefined;
+  while ((m = re.exec(t)) !== null) {
+    const g = m.groups ?? {};
+    const value: CreditProfileMatch["value"] | undefined = g.foreignCredit
+      ? CreditProfileType.ForeignCredit
+      : g.noUsCredit
+        ? CreditProfileType.NoUsCredit
+        : g.insufficientCreditHistory
+          ? CreditProfileType.InsufficientCreditHistory
+          : g.creditUnknown
+            ? CreditProfileType.Unknown
+            : g.noFico
+              ? CreditProfileType.NoFico
               : undefined;
-    if (value) winner = { value, source: m[0].trim(), confidence: "high" }; // last valid match wins (self-corrections)
+    if (value) winner = { value, source: m[0].trim() }; // last valid match wins (self-corrections)
   }
   return winner;
 }
@@ -942,6 +1037,14 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
     (n) => n >= 300 && n <= 850
   );
   if (fico) x.fico = cap(Math.round(fico.num), fico.source);
+  // No numeric FICO found — check for a valid NONNUMERIC credit-profile
+  // statement (F-1 visa / no-FICO fix, 2026-07-28) rather than leaving the
+  // credit-profile Vital blank. A stated "no FICO"/"no U.S. credit"/etc. is
+  // a legitimate, resolved answer, never treated as missing data.
+  if (!x.fico) {
+    const creditProfile = classifyCreditProfile(t);
+    if (creditProfile) x.creditProfileType = cap(creditProfile.value, creditProfile.source);
+  }
 
   // ---- Property value, loan amount, LTV, cash-out (semantic, not proximity)
   // See classifyMortgageAmounts() above — replaces the old fixed-order,

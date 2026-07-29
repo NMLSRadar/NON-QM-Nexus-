@@ -39,6 +39,15 @@ export interface Assessment {
    * explicit "ITIN"/"eye-tin"/"individual taxpayer ID" mention needs no
    * such caveat. */
   citizenshipConfidenceNote?: string;
+  /** Set when the citizenship classification came from an explicit visa
+   * code (currently only F-1) — explains the auto-classification per the
+   * F-1 visa / no-FICO fix (2026-07-28). */
+  visaClassificationNote?: string;
+  /** Set when a nonnumeric credit-profile status (No FICO, No U.S.
+   * Credit, Foreign Credit, Insufficient Credit History, Credit Score
+   * Unknown) was captured in place of a numeric FICO — explains how this
+   * affects lender matching per the F-1 visa / no-FICO fix (2026-07-28). */
+  noFicoNote?: string;
   /** Refinance-only figures — present whenever propertyValue and
    * existingLienBalance are both known, regardless of whether the 8 core
    * vitals are complete yet (so they update live as soon as they can). */
@@ -157,7 +166,7 @@ export function assess(x: VoiceExtraction): Assessment {
     propertyValue: value !== undefined,
     loanAmount: loan !== undefined,
     ltv: derived.ltv !== undefined,
-    fico: x.fico !== undefined,
+    fico: x.fico !== undefined || x.creditProfileType !== undefined,
     incomeDocType: x.incomeDocType !== undefined,
     citizenship: x.citizenship !== undefined,
   };
@@ -180,15 +189,29 @@ export function assess(x: VoiceExtraction): Assessment {
   if (loan !== undefined)
     filledSummary.push(`${usd(loan)} loan${derived.ltv !== undefined ? ` (${derived.ltv}% LTV)` : ""}`);
   if (x.fico) filledSummary.push(`FICO ${x.fico.value}`);
+  else if (x.creditProfileType) filledSummary.push(creditProfileLabel(x.creditProfileType.value));
   if (x.incomeDocType)
     filledSummary.push(
       x.incomeDocType.value === "bank_statement"
         ? `${x.bankStatementMonths ?? 12}-mo ${x.bankStatementKind ?? "business"} bank statements`
         : x.incomeDocType.source
     );
-  if (x.citizenship) filledSummary.push(citizenshipLabel(x.citizenship.value));
+  if (x.citizenship) filledSummary.push(citizenshipLabel(x.citizenship.value, x.citizenship.visaType));
   const citizenshipConfidenceNote =
     x.citizenship?.confidence === "medium" ? "Borrower classification interpreted as ITIN." : undefined;
+  // F-1 visa / no-FICO fix (2026-07-28): when the citizenship classification
+  // came from an explicit visa code (currently only F-1), and/or a
+  // nonnumeric credit-profile status was captured instead of a numeric
+  // FICO, surface a plain-language explanation of what was auto-populated
+  // and how it affects lender matching — mirrors the spec's worked example
+  // response (never silently absorbed into the generic summary line).
+  const visaClassificationNote =
+    x.citizenship?.visaType === "F-1"
+      ? `The borrower has been classified as a foreign national based on the stated F-1 visa.`
+      : undefined;
+  const noFicoNote = x.creditProfileType
+    ? `The borrower has also been marked as having ${creditProfileLabel(x.creditProfileType.value).toLowerCase()} — Non-QM Nexus will prioritize lenders that permit no-FICO or foreign-national borrowers, foreign credit, or alternative credit documentation; maximum LTV and eligibility may depend on occupancy, housing history, reserves, loan amount, and whether foreign or alternative credit can be documented.`
+    : undefined;
   // Extra (non-blocking) vitals — included in the summary whenever captured
   // so the assistant's spoken response and the Vitals tiles never disagree.
   if (x.firstTimeHomebuyer) filledSummary.push(x.firstTimeHomebuyer.value ? "first-time homebuyer" : "not a first-time homebuyer");
@@ -223,13 +246,13 @@ export function assess(x: VoiceExtraction): Assessment {
   } else if (complete) {
     prompt = `All set — ${vitalsFilled} of ${VITAL_KEYS.length} vitals captured: ${filledSummary.join(", ")}.${
       citizenshipConfidenceNote ? ` ${citizenshipConfidenceNote}` : ""
-    }${assumedDownPaymentNote ? ` ${assumedDownPaymentNote}` : ""} Analyzing your scenario and ranking matching lenders now.`;
+    }${visaClassificationNote ? ` ${visaClassificationNote}` : ""}${noFicoNote ? ` ${noFicoNote}` : ""}${assumedDownPaymentNote ? ` ${assumedDownPaymentNote}` : ""} Analyzing your scenario and ranking matching lenders now.`;
   } else if (filledSummary.length === 0) {
     prompt = `Tell me the full scenario in one go — I need ${listNaturally(askable.map((k) => VITAL_LABELS[k].toLowerCase()))}.`;
   } else {
     prompt = `Got ${filledSummary.join(", ")}.${
       citizenshipConfidenceNote ? ` ${citizenshipConfidenceNote}` : ""
-    } I still need ${listNaturally(askable.map((k) => VITAL_LABELS[k].toLowerCase()))}. ${questions.slice(0, 3).join(" ")}`;
+    }${visaClassificationNote ? ` ${visaClassificationNote}` : ""}${noFicoNote ? ` ${noFicoNote}` : ""} I still need ${listNaturally(askable.map((k) => VITAL_LABELS[k].toLowerCase()))}. ${questions.slice(0, 3).join(" ")}`;
   }
 
   return {
@@ -245,6 +268,8 @@ export function assess(x: VoiceExtraction): Assessment {
     conflicts,
     assumedDownPaymentNote,
     citizenshipConfidenceNote,
+    visaClassificationNote,
+    noFicoNote,
     refinanceCalc,
   };
 }
@@ -261,18 +286,38 @@ function vestingLabel(v: "individual" | "joint_tenants" | "llc" | "corporation" 
   return v === "joint_tenants" ? "joint tenants" : v;
 }
 
-function citizenshipLabel(v: "us_citizen" | "permanent_resident" | "non_permanent_resident" | "itin" | "foreign_national"): string {
+function citizenshipLabel(v: "us_citizen" | "permanent_resident" | "non_permanent_resident" | "itin" | "foreign_national", visaType?: string): string {
+  const base = (() => {
+    switch (v) {
+      case "us_citizen":
+        return "U.S. citizen";
+      case "permanent_resident":
+        return "permanent resident";
+      case "non_permanent_resident":
+        return "non-permanent resident";
+      case "itin":
+        return "ITIN borrower";
+      case "foreign_national":
+        return "foreign national";
+    }
+  })();
+  return visaType ? `${base} (${visaType} visa)` : base;
+}
+
+function creditProfileLabel(v: "us_fico_score" | "no_fico" | "no_us_credit" | "foreign_credit" | "insufficient_credit_history" | "unknown"): string {
   switch (v) {
-    case "us_citizen":
-      return "U.S. citizen";
-    case "permanent_resident":
-      return "permanent resident";
-    case "non_permanent_resident":
-      return "non-permanent resident";
-    case "itin":
-      return "ITIN borrower";
-    case "foreign_national":
-      return "foreign national";
+    case "us_fico_score":
+      return "U.S. FICO score";
+    case "no_fico":
+      return "No FICO";
+    case "no_us_credit":
+      return "No U.S. Credit";
+    case "foreign_credit":
+      return "Foreign Credit Report";
+    case "insufficient_credit_history":
+      return "Insufficient Credit History";
+    case "unknown":
+      return "Credit Score Unknown";
   }
 }
 
@@ -290,7 +335,7 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
   if (!a.complete) throw new Error("buildScenarioInput requires a complete assessment");
   const value = x.propertyValue?.value ?? a.derived.propertyValue;
   const loan = x.loanAmount?.value ?? a.derived.loanAmount;
-  if (value === undefined || loan === undefined || !x.loanPurpose || !x.occupancy || !x.propertyType || !x.fico || !x.incomeDocType || !x.citizenship) {
+  if (value === undefined || loan === undefined || !x.loanPurpose || !x.occupancy || !x.propertyType || (!x.fico && !x.creditProfileType) || !x.incomeDocType || !x.citizenship) {
     throw new Error("buildScenarioInput: assessment reported complete but a vital is missing");
   }
 
@@ -319,8 +364,10 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
     x.propertyValue ? `value ← "${x.propertyValue.source}"` : `value ← derived from LTV`,
     x.loanAmount ? `loan ← "${x.loanAmount.source}"` : `loan ← derived from LTV`,
     x.fico && `FICO ← "${x.fico.source}"`,
+    !x.fico && x.creditProfileType && `credit profile ← "${x.creditProfileType.source}"`,
     x.incomeDocType && `income doc ← "${x.incomeDocType.source}"`,
     x.citizenship && `citizenship ← "${x.citizenship.source}"`,
+    x.citizenship?.visaType && `visa type ← "${x.citizenship.visaType}"`,
   ]
     .filter(Boolean)
     .join("; ");
@@ -336,9 +383,11 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
     requestedLoanAmount: loan,
     ...(x.requestedCashOut ? { requestedCashOut: x.requestedCashOut.value } : {}),
     ...(x.existingLienBalance ? { currentLoanBalance: x.existingLienBalance.value } : {}),
-    fico: x.fico.value,
+    ...(x.fico ? { fico: x.fico.value } : {}),
+    ...(!x.fico && x.creditProfileType ? { creditProfileType: x.creditProfileType.value } : {}),
     incomeDocType: doc,
     citizenship: x.citizenship.value,
+    ...(x.citizenship.visaType ? { visaType: x.citizenship.visaType } : {}),
     ...(x.state ? { state: x.state.value } : {}),
     ...(x.firstTimeInvestor !== undefined ? { firstTimeInvestor: x.firstTimeInvestor } : {}),
     ...(x.investorExperience ? { investorExperience: x.investorExperience.value } : {}),
