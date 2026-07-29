@@ -199,6 +199,42 @@ export interface Program {
    * high complexity, or manual-review-recommended; never for a clean
    * file. */
   bankStatementFlexible?: boolean;
+  /**
+   * ITIN + DSCR combination fields — added 2026-07-29 per the "Lender
+   * Program Expansion and ITIN DSCR Update" spec. A program can
+   * independently list `itin` in citizenshipEligible AND `dscr` in
+   * incomeDocTypes without its guideline actually permitting the SAME
+   * borrower to combine both — many lenders sell ITIN and DSCR as
+   * entirely separate product lines with different underwriting. These
+   * fields are deliberately NEVER inferred from citizenshipEligible/
+   * incomeDocTypes membership; each is its own explicit fact that must
+   * trace to the lender's current matrix. undefined = not yet confirmed
+   * (evaluated as a manual-review "guideline confirmation required" item
+   * in baseProgramChecks, never silently assumed eligible OR ineligible);
+   * true = the current matrix expressly confirms the combination; false =
+   * the current matrix expressly DENIES it (e.g. NQM Funding's own Flex
+   * guidelines state ITIN borrowers are ineligible for its Investor DSCR
+   * program) — modeled as a hard fail, distinct from "not yet confirmed".
+   */
+  itinDscrEligible?: boolean;
+  /** Same pattern, for ITIN + NO-RATIO (DSCR-family qualification with no
+   * minimum DSCR ratio requirement) specifically. */
+  itinNoRatioEligible?: boolean;
+  /** Same pattern, for FOREIGN NATIONAL + DSCR combination specifically —
+   * independent of citizenshipEligible including foreign_national and
+   * incomeDocTypes including dscr both being true on their own. */
+  foreignNationalDscrEligible?: boolean;
+  /** Explicit confirmation that this program's ITIN eligibility extends to
+   * OWNER-OCCUPIED (primary residence) transactions specifically. Some
+   * lenders' ITIN programs are investment-only (or vice versa) — omit
+   * when the guideline doesn't distinguish by occupancy (citizenshipEligible
+   * + occupancies already govern eligibility with no further restriction).
+   * Only meaningful when false: it then hard-fails an ITIN + primary-
+   * occupancy scenario even though the program otherwise lists itin in
+   * citizenshipEligible and primary in occupancies. */
+  ownerOccupiedItinEligible?: boolean;
+  /** Same pattern, for INVESTMENT-property ITIN eligibility specifically. */
+  investmentItinEligible?: boolean;
   guidelineVersionId: string;
   guidelineVersionLabel: string;
   effectiveDate: string;

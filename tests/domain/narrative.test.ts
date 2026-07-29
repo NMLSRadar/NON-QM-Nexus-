@@ -29,6 +29,7 @@ function makeEvaluation(overrides: Partial<ProgramEvaluation> = {}): ProgramEval
     itinSpecialist: false,
     bankStatementCleanExecution: false,
     bankStatementFlexible: false,
+    itinDscrConfirmed: false,
     interestOnlyAvailable: false,
     ruleResults: [],
     failedRules: [],

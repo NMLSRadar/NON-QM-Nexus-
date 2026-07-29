@@ -82,6 +82,10 @@ export function evaluateProgram(
     itinSpecialist: program.itinSpecialist ?? false,
     bankStatementCleanExecution: program.bankStatementCleanExecution ?? false,
     bankStatementFlexible: program.bankStatementFlexible ?? false,
+    itinDscrConfirmed:
+      scenario.citizenship === "itin" &&
+      scenario.incomeDocType === "dscr" &&
+      ((program.minDscr === 0 || program.minDscr == null) ? program.itinNoRatioEligible === true : program.itinDscrEligible === true),
     interestOnlyAvailable: program.interestOnlyAvailable,
     ruleResults,
     failedRules: ruleResults.filter((r) => r.outcome === RuleOutcome.Fail),

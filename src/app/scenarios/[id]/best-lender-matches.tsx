@@ -208,6 +208,7 @@ function LenderCard({
         {e.loanPurposes.includes("cash_out_refinance") && <Pill tone="sky">Cash-Out Eligible</Pill>}
         {e.citizenshipEligible.includes("itin") && <Pill tone="gold">ITIN Eligible</Pill>}
         {e.itinSpecialist && <Pill tone="gold">ITIN Specialist</Pill>}
+        {e.itinDscrConfirmed && <Pill tone="gold">ITIN DSCR Eligible</Pill>}
         {e.citizenshipEligible.includes("foreign_national") && <Pill tone="sky">Foreign National</Pill>}
         {e.foreignNationalSpecialist && <Pill tone="gold">Foreign National Specialist</Pill>}
         {e.bankStatementCleanExecution && <Pill tone="gold">Clean-File Execution</Pill>}

@@ -50,6 +50,16 @@ export function buildGuidelineContext(catalog: ProgramCatalog): string {
         itinSpecialist: p.itinSpecialist ?? false,
         bankStatementCleanExecution: p.bankStatementCleanExecution ?? false,
         bankStatementFlexible: p.bankStatementFlexible ?? false,
+        // ITIN/Foreign-National + DSCR combination fields (2026-07-29 ITIN
+        // DSCR Update) — deliberately separate from citizenshipEligible/
+        // incomeDocTypes membership; null means "not yet confirmed by the
+        // current matrix", never inferred from the other two arrays. See
+        // rules 24-27 below for how the assistant must use these.
+        itinDscrEligible: p.itinDscrEligible ?? null,
+        itinNoRatioEligible: p.itinNoRatioEligible ?? null,
+        foreignNationalDscrEligible: p.foreignNationalDscrEligible ?? null,
+        ownerOccupiedItinEligible: p.ownerOccupiedItinEligible ?? null,
+        investmentItinEligible: p.investmentItinEligible ?? null,
         guidelineVersion: p.guidelineVersionLabel,
         effectiveDate: p.effectiveDate,
         lastVerifiedDate: p.lastVerifiedDate ?? null,
@@ -129,4 +139,10 @@ VISA/CITIZENSHIP DEEP KNOWLEDGE (per real uploaded guideline documents, 2026-07-
 
 F-1 VISA / NO-FICO BORROWERS (fix applied 2026-07-28):
 22. An F-1 (student) visa — including "F1 visa", "F-one visa", "international student", "foreign student", or "here on a student visa" — is classified as FOREIGN NATIONAL under current Non-QM Nexus business rules, distinct from Non-Permanent Resident/EAD (rule 20 above still applies: never conflate the two). Never state that an F-1 borrower is ineligible, a U.S. citizen, a permanent resident, or an ITIN borrower.
-23. A borrower can legitimately have NO numeric U.S. FICO score — "no FICO", "no U.S. credit", "foreign credit only", "credit score unknown", etc. are all VALID, resolved credit-profile answers, never missing data and never grounds for automatic rejection. When discussing a no-FICO scenario, check each program's "noFicoPolicy" field in the catalog: "eligible" means the program explicitly accepts a no-FICO borrower; "eligible_with_alternative_credit" or "requires_foreign_credit" means alternative/foreign credit documentation is required; "requires_us_fico" means the program is NOT available to a no-FICO borrower; and null/missing means the guideline does not yet document a no-FICO policy — say so plainly rather than guessing an answer either way. Also check "noFicoMaxLtv" — a documented lower LTV ceiling that applies specifically to a no-FICO borrower, tighter than the program's general maxLtv.`;
+23. A borrower can legitimately have NO numeric U.S. FICO score — "no FICO", "no U.S. credit", "foreign credit only", "credit score unknown", etc. are all VALID, resolved credit-profile answers, never missing data and never grounds for automatic rejection. When discussing a no-FICO scenario, check each program's "noFicoPolicy" field in the catalog: "eligible" means the program explicitly accepts a no-FICO borrower; "eligible_with_alternative_credit" or "requires_foreign_credit" means alternative/foreign credit documentation is required; "requires_us_fico" means the program is NOT available to a no-FICO borrower; and null/missing means the guideline does not yet document a no-FICO policy — say so plainly rather than guessing an answer either way. Also check "noFicoMaxLtv" — a documented lower LTV ceiling that applies specifically to a no-FICO borrower, tighter than the program's general maxLtv.
+
+ITIN + DSCR COMBINATION (2026-07-29 ITIN DSCR Update) — never assume a lender that separately offers ITIN eligibility and a DSCR program lets the SAME borrower combine both; check the dedicated itinDscrEligible/itinNoRatioEligible/foreignNationalDscrEligible fields, which are independent facts never inferred from citizenshipEligible/incomeDocTypes membership:
+24. When asked "who offers ITIN DSCR loans" or equivalent, name every lender in the catalog whose program has "itinDscrEligible": true or "itinNoRatioEligible": true — respond with something substantially similar to: "[Lender A], [Lender B] and [Lender C] offer ITIN DSCR options. Eligibility still depends on the lender's ITIN-specific LTV, credit, loan amount, property, reserve and transaction requirements." Never state that every DSCR lender accepts ITIN borrowers, and never list a lender here just because it separately has "itin" in citizenshipEligible and "dscr" in incomeDocTypes without the dedicated field being true.
+25. If a program's itinDscrEligible/itinNoRatioEligible field is null (not yet confirmed) even though it lists itin and dscr separately, say plainly that ITIN+DSCR combination eligibility for that specific lender/program has not yet been verified against its current matrix — never guess yes or no.
+26. If a program's itinDscrEligible/itinNoRatioEligible field is explicitly false (a real, current matrix denies the combination — e.g. NQM Funding's own Non-QM Flex Guidelines state ITIN borrowers are ineligible for its Investor DSCR program even though NQM separately has other ITIN doc types), say so directly rather than treating the lender as a DSCR+ITIN option.
+27. ownerOccupiedItinEligible/investmentItinEligible are separate occupancy-scoped facts — when a program's ITIN eligibility is confirmed only for investment properties (or only for owner-occupied), say so rather than treating ITIN eligibility as occupancy-agnostic; e.g. never imply a lender's ITIN DSCR program (which is virtually always investment-property-only, since DSCR itself is an investment-property qualification method) also covers an ITIN borrower's primary residence purchase.`;

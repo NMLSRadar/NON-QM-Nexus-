@@ -99,6 +99,58 @@ export function baseProgramChecks(
       ok ? `${scenario.citizenship} borrowers are eligible.` : `${scenario.citizenship} borrowers are not eligible for this program.`));
   }
 
+  // ITIN + DSCR / No-Ratio combination — per the 2026-07-29 ITIN DSCR
+  // Update spec, a program listing BOTH itin in citizenshipEligible AND
+  // dscr in incomeDocTypes must NEVER be assumed to let the same borrower
+  // combine both — the current matrix must expressly confirm it via the
+  // dedicated itinDscrEligible/itinNoRatioEligible fields (never inferred
+  // from the other two arrays). Only evaluated for an ITIN borrower
+  // requesting DSCR-family qualification.
+  if (scenario.citizenship === "itin" && scenario.incomeDocType === "dscr") {
+    const isNoRatio = program.minDscr === 0 || program.minDscr == null;
+    const combinationField = isNoRatio ? program.itinNoRatioEligible : program.itinDscrEligible;
+    const combinationLabel = isNoRatio ? "ITIN + No-Ratio DSCR" : "ITIN + DSCR";
+    if (combinationField === true) {
+      out.push(result(`${p}:itindscr`, `${combinationLabel} combination`, "borrower", RuleOutcome.Pass, RuleSeverity.Hard,
+        `This program's current matrix expressly confirms ITIN borrowers may qualify via ${isNoRatio ? "no-ratio DSCR" : "DSCR"}.`));
+    } else if (combinationField === false) {
+      out.push(result(`${p}:itindscr`, `${combinationLabel} combination`, "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
+        `This program's current matrix expressly denies combining ITIN classification with ${isNoRatio ? "no-ratio DSCR" : "DSCR"} qualification — ITIN and DSCR are separate product lines here.`));
+    } else {
+      out.push(result(`${p}:itindscr`, `${combinationLabel} combination`, "borrower", RuleOutcome.ManualReview, RuleSeverity.Soft,
+        `Guideline confirmation required: this program has not yet had ITIN + ${isNoRatio ? "no-ratio DSCR" : "DSCR"} combination eligibility confirmed against its current matrix — never assume it just because ITIN and DSCR each appear separately.`));
+    }
+  }
+
+  // Foreign National + DSCR combination — same "never infer from the two
+  // base arrays" pattern.
+  if (scenario.citizenship === "foreign_national" && scenario.incomeDocType === "dscr") {
+    if (program.foreignNationalDscrEligible === true) {
+      out.push(result(`${p}:fndscr`, "Foreign National + DSCR combination", "borrower", RuleOutcome.Pass, RuleSeverity.Hard,
+        "This program's current matrix expressly confirms Foreign National borrowers may qualify via DSCR."));
+    } else if (program.foreignNationalDscrEligible === false) {
+      out.push(result(`${p}:fndscr`, "Foreign National + DSCR combination", "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
+        "This program's current matrix expressly denies combining Foreign National classification with DSCR qualification."));
+    } else {
+      out.push(result(`${p}:fndscr`, "Foreign National + DSCR combination", "borrower", RuleOutcome.ManualReview, RuleSeverity.Soft,
+        "Guideline confirmation required: Foreign National + DSCR combination eligibility has not yet been confirmed against this program's current matrix."));
+    }
+  }
+
+  // ITIN occupancy-specific restriction — only enforced when the program
+  // has EXPLICITLY documented a false for this occupancy (undefined means
+  // the guideline doesn't distinguish by occupancy for ITIN borrowers, so
+  // the program's general occupancies/citizenshipEligible checks above
+  // already fully govern eligibility with no further restriction here).
+  if (scenario.citizenship === "itin" && scenario.occupancy === "primary" && program.ownerOccupiedItinEligible === false) {
+    out.push(result(`${p}:itinocc`, "ITIN owner-occupied eligibility", "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
+      "This program's ITIN eligibility does not extend to owner-occupied/primary-residence transactions per its current matrix."));
+  }
+  if (scenario.citizenship === "itin" && scenario.occupancy === "investment" && program.investmentItinEligible === false) {
+    out.push(result(`${p}:itinocc`, "ITIN investment-property eligibility", "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
+      "This program's ITIN eligibility does not extend to investment-property transactions per its current matrix."));
+  }
+
   // Title vesting
   if (scenario.vesting) {
     const ok = program.vestingEligible.includes(scenario.vesting);

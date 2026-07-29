@@ -69,6 +69,14 @@ export interface ProgramEvaluation {
   itinSpecialist: boolean;
   bankStatementCleanExecution: boolean;
   bankStatementFlexible: boolean;
+  /** True only when this evaluation is for an ITIN borrower requesting
+   * DSCR/no-ratio qualification AND the program's current matrix
+   * expressly confirms the combination (Program.itinDscrEligible /
+   * itinNoRatioEligible === true) — never true merely because the
+   * program independently lists itin + dscr. Drives the distinct "ITIN
+   * DSCR Eligible" card label (never a generic "DSCR" label that could
+   * cause the user to assume ITIN eligibility). */
+  itinDscrConfirmed: boolean;
   interestOnlyAvailable: boolean;
   ruleResults: RuleEvaluationResult[];
   failedRules: RuleEvaluationResult[];
