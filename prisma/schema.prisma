@@ -176,6 +176,10 @@ model Lender {
   // Top 12 / Top 25 lists (see docs/membership.md).
   tierLevel      Int     @default(3) @map("tier_level")
   createdBy      String? @map("created_by") @db.Uuid
+  // AE Directory (2026-07-30, supabase/ae-directory.sql) — admin-maintained
+  // verified email domain, used ONLY to auto-approve an AE claim when
+  // their verified auth email matches. Never eligibility-related.
+  emailDomain    String? @map("email_domain")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
@@ -183,6 +187,7 @@ model Lender {
   organization Organization @relation(fields: [organizationId], references: [id])
   programs     Program[]
   documents    Document[]
+  aeProfiles   AeProfile[]
 
   @@map("lenders")
 }
@@ -278,6 +283,16 @@ model UserSubscription {
   // comped/admin-assigned plan, which has no real interval). Written by the
   // Stripe webhook from the subscription's own price, never guessed.
   billingInterval    String    @default("monthly") @map("billing_interval")
+
+  // 14-Day Loan Officer Testing Access trial state (2026-07-28,
+  // supabase/trial-access.sql) — a trial IS a subscription row (pointed at
+  // Enterprise) rather than a separate concept, so getEffectivePlan() stays
+  // the single source of truth for tier resolution. trialExpiresAt is the
+  // SOLE, server-computed source of truth for expiration (see
+  // src/lib/repository/membership.ts) — never derived from client input.
+  isTrial            Boolean   @default(false) @map("is_trial")
+  trialActivatedAt   DateTime? @map("trial_activated_at")
+  trialExpiresAt     DateTime? @map("trial_expires_at")
 
   user     User            @relation(fields: [userId], references: [id])
   plan     MembershipPlan? @relation(fields: [planId], references: [id])
@@ -527,4 +542,179 @@ model FeatureFlag {
 
   @@unique([organizationId, key])
   @@map("feature_flags")
+}
+
+// ---------------------------------------------------------------------------
+// 14-Day Loan Officer Testing Access — trial campaigns (2026-07-28, see
+// supabase/trial-access.sql / trial-email-tracking.sql for the full spec).
+// Platform-wide (not organization-scoped) — a trial campaign is a
+// promotional link, not tenant data.
+// ---------------------------------------------------------------------------
+model TrialCampaign {
+  id                            String    @id @default(uuid()) @db.Uuid
+  name                          String
+  description                   String?
+  slug                          String    @unique
+  isActive                      Boolean   @default(true) @map("is_active")
+  trialDurationDays             Int       @default(14) @map("trial_duration_days")
+  maxRedemptions                Int?      @map("max_redemptions")
+  startsAt                      DateTime? @map("starts_at")
+  endsAt                        DateTime? @map("ends_at")
+  allowedEmailDomains           String[]  @map("allowed_email_domains")
+  requireOneRedemptionPerEmail  Boolean   @default(true) @map("require_one_redemption_per_email")
+  requireNmlsNumber             Boolean   @default(false) @map("require_nmls_number")
+  requireCompanyName            Boolean   @default(false) @map("require_company_name")
+  createdBy                     String?   @map("created_by") @db.Uuid
+  createdAt                     DateTime  @default(now()) @map("created_at")
+  updatedAt                     DateTime  @updatedAt @map("updated_at")
+
+  @@map("trial_campaigns")
+}
+
+/// One row per user who activated a trial. campaignId has no Prisma
+/// @relation (matches this schema's existing convention for created_by/
+/// reviewed_by-style FK columns — see Lender.createdBy etc.) since it's
+/// only ever queried directly, never joined through Prisma Client.
+model TrialRedemption {
+  id                          String    @id @default(uuid()) @db.Uuid
+  campaignId                  String    @map("campaign_id") @db.Uuid
+  userId                      String    @unique @map("user_id") @db.Uuid
+  email                       String
+  normalizedEmail             String    @map("normalized_email")
+  firstName                   String?   @map("first_name")
+  lastName                    String?   @map("last_name")
+  companyName                 String?   @map("company_name")
+  nmlsNumber                  String?   @map("nmls_number")
+  state                       String?
+  activatedAt                 DateTime  @default(now()) @map("activated_at")
+  expiresAt                   DateTime  @map("expires_at")
+  revokedAt                   DateTime? @map("revoked_at")
+  extendedBy                  String?   @map("extended_by") @db.Uuid
+  extensionCount              Int       @default(0) @map("extension_count")
+  convertedAt                 DateTime? @map("converted_at")
+  convertedPlanKey            String?   @map("converted_plan_key")
+  lastLoginAt                 DateTime? @map("last_login_at")
+  scenariosSubmittedCount     Int       @default(0) @map("scenarios_submitted_count")
+  lenderComparisonsCount      Int       @default(0) @map("lender_comparisons_count")
+  voiceScenariosSubmittedCount Int      @default(0) @map("voice_scenarios_submitted_count")
+  // Email idempotency tracking (supabase/trial-email-tracking.sql) — one
+  // timestamp per email type, so the scheduled sweep never double-sends.
+  activationEmailSentAt       DateTime? @map("activation_email_sent_at")
+  midTrialEmailSentAt         DateTime? @map("mid_trial_email_sent_at")
+  expirationReminderSentAt    DateTime? @map("expiration_reminder_sent_at")
+  expirationEmailSentAt       DateTime? @map("expiration_email_sent_at")
+  createdAt                   DateTime  @default(now()) @map("created_at")
+  updatedAt                   DateTime  @updatedAt @map("updated_at")
+
+  @@map("trial_redemptions")
+}
+
+// ---------------------------------------------------------------------------
+// Citation-link monitoring (see supabase/citation-link-checks.sql) —
+// operational state for the weekly citation-check cron, not tenant data.
+// ---------------------------------------------------------------------------
+model CitationLinkCheck {
+  url            String    @id
+  lastStatus     Int?      @map("last_status")
+  lastCheckedAt  DateTime  @default(now()) @map("last_checked_at")
+  isBroken       Boolean   @default(false) @map("is_broken")
+  firstBrokenAt  DateTime? @map("first_broken_at")
+  lastError      String?   @map("last_error")
+
+  @@map("citation_link_checks")
+}
+
+// ---------------------------------------------------------------------------
+// AE Directory, Sponsored Placement & Outreach System (2026-07-30, see
+// supabase/ae-directory.sql). RESPA Section 8 conservative design — flat
+// monthly subscription for placement only, never read by the matching
+// engine. Platform-wide (lender-scoped, not organization-scoped).
+// ---------------------------------------------------------------------------
+model AeProfile {
+  id               String   @id @default(uuid()) @db.Uuid
+  lenderId         String   @map("lender_id") @db.Uuid
+  name             String
+  title            String?
+  email            String
+  phone            String?
+  nmlsId           String?  @map("nmls_id")
+  states           String[] @default([])
+  photoUrl         String?  @map("photo_url")
+  claimedByUserId  String?  @map("claimed_by_user_id") @db.Uuid
+  status           String   @default("unclaimed") // unclaimed | claimed | hidden
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  lender     Lender      @relation(fields: [lenderId], references: [id])
+  events     AeProfileEvent[]
+  placement  AePlacement?
+
+  @@map("ae_profiles")
+}
+
+model AeProfileEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  aeProfileId String   @map("ae_profile_id") @db.Uuid
+  event       String // view | click_phone | click_email
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  aeProfile AeProfile @relation(fields: [aeProfileId], references: [id])
+
+  @@map("ae_profile_events")
+}
+
+model AePlacement {
+  id                   String    @id @default(uuid()) @db.Uuid
+  aeProfileId          String    @unique @map("ae_profile_id") @db.Uuid
+  status               String    @default("none") // none | active | canceled
+  source               String? // stripe | comped
+  stripeCustomerId     String?   @map("stripe_customer_id")
+  stripeSubscriptionId String?   @map("stripe_subscription_id")
+  startedAt            DateTime? @map("started_at")
+  canceledAt           DateTime? @map("canceled_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  aeProfile AeProfile @relation(fields: [aeProfileId], references: [id])
+
+  @@map("ae_placements")
+}
+
+model OutreachContact {
+  id               String    @id @default(uuid()) @db.Uuid
+  aeProfileId      String?   @map("ae_profile_id") @db.Uuid
+  name             String
+  email            String
+  lenderName       String    @map("lender_name")
+  sourceNote       String?   @map("source_note")
+  status           String    @default("prospect") // prospect | invited | claimed | subscribed | unsubscribed
+  lastContactedAt  DateTime? @map("last_contacted_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  sends OutreachSend[]
+
+  @@map("outreach_contacts")
+}
+
+model EmailSuppression {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  reason    String   @default("unsubscribed")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("email_suppressions")
+}
+
+model OutreachSend {
+  id                String   @id @default(uuid()) @db.Uuid
+  outreachContactId String?  @map("outreach_contact_id") @db.Uuid
+  template          String
+  recipientEmail    String   @map("recipient_email")
+  triggeredBy       String?  @map("triggered_by") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  outreachContact OutreachContact? @relation(fields: [outreachContactId], references: [id])
+
+  @@map("outreach_sends")
 }

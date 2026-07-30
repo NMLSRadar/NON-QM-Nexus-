@@ -22,3 +22,20 @@ alter table reports                alter column id set default gen_random_uuid()
 alter table rules                 alter column id set default gen_random_uuid();
 alter table scenarios             alter column id set default gen_random_uuid();
 alter table shared_links          alter column id set default gen_random_uuid();
+
+-- Tables added via raw SQL (trial system, citation monitoring, AE
+-- directory) whose DB-level id defaults get reset by every `prisma db
+-- push` the same way as everything above, now that they're represented in
+-- prisma/schema.prisma (see the 2026-07-30 incident writeup in
+-- docs/team-membership.md's "Deployment status" — a stale schema.prisma
+-- caused a prior push to DROP these tables entirely; they're restored and
+-- now tracked in schema.prisma so this can't recur silently).
+alter table trial_campaigns       alter column id set default gen_random_uuid();
+alter table trial_redemptions     alter column id set default gen_random_uuid();
+alter table ae_profiles           alter column id set default gen_random_uuid();
+alter table ae_profile_events     alter column id set default gen_random_uuid();
+alter table ae_placements         alter column id set default gen_random_uuid();
+alter table outreach_contacts     alter column id set default gen_random_uuid();
+alter table email_suppressions    alter column id set default gen_random_uuid();
+alter table outreach_sends        alter column id set default gen_random_uuid();
+

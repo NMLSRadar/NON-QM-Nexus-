@@ -5,52 +5,89 @@ one bill. Built additively on top of the existing per-user
 `MembershipPlan` / `UserSubscription` billing (docs/billing.md,
 docs/membership.md) — personal and org subscriptions coexist.
 
-## Deployment status (IMPORTANT — read before touching this feature)
+## Deployment status — LIVE (schema deployed 2026-07-30)
 
-This feature's schema (`OrgSubscription`, `OrgInvite`,
-`Membership.coveredByOrgPlan`, `MembershipPlan.stripeTeamPriceId` /
-`stripeTeamAnnualPriceId`) is written in `prisma/schema.prisma` and the
-matching `supabase/team-membership-*.sql` files, but **has NOT been pushed
-to the live database yet** — `prisma db push` requires `DATABASE_URL`,
-which was blank in `.env.local` (short-lived credential, cleared between
-sessions) when this was built and the user did not supply a fresh one when
-asked. All application code degrades gracefully in the meantime (see
-"Graceful pre-migration behavior" below) — nothing existing broke, but the
-feature itself does nothing useful until deployed. **To finish
-deployment:**
+The schema is pushed to the live database and the resolver, invite flow,
+`/account/team` UI, and pricing page are all live. **Stripe team billing is
+NOT yet set up** — `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` /
+`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are all blank in `.env.local` (cleared
+between sessions, same as `DATABASE_URL` was). Comped org subscriptions
+(`/admin/teams`, no Stripe needed) work today. To finish Stripe:
 
 ```
-# 1. Get a real DATABASE_URL: Supabase dashboard -> Project Settings ->
-#    Database -> Connection string (URI, Session pooler mode is fine),
-#    paste into .env.local as plain text (not a screenshot).
-npx prisma db push --accept-data-loss
-
-# 2. Re-apply DB-level defaults reset by db push (see HANDOFF.md's gotcha):
-psql "$DATABASE_URL" -f supabase/id-defaults.sql
-psql "$DATABASE_URL" -f supabase/updated-at-defaults.sql
-psql "$DATABASE_URL" -f supabase/membership-defaults.sql
-psql "$DATABASE_URL" -f supabase/team-membership-defaults.sql
-
-# 3. Apply the new schema/RLS/trigger, IN THIS ORDER:
-psql "$DATABASE_URL" -f supabase/team-membership-schema.sql
-psql "$DATABASE_URL" -f supabase/team-invite-signup.sql
-
-# 4. Set up Stripe team (per-seat) prices — needs a real STRIPE_SECRET_KEY:
+# Get a real STRIPE_SECRET_KEY (test mode) from
+# dashboard.stripe.com/test/apikeys, paste as plain text into .env.local,
+# then:
 node scripts/stripe-team-billing.js
 # Edit TEAM_VOLUME_BREAKPOINTS in that script with real discount
 # percentages first if the owner has supplied them (see "Volume breakpoint
-# constants" below) — it's safe to re-run after editing.
-
-# 5. Run this feature's integration tests for real (they self-skip until
-#    steps 1-3 are done — see "Tests" below):
-npm run test:integration
+# constants" below) — safe to re-run after editing.
+node scripts/stripe-register-webhook.js   # or reuse the existing personal-billing webhook if one's already registered
 ```
 
-Until step 3 is done, `getEffectivePlan()`'s org-coverage lookup silently
-returns "no org coverage" (catches the "column does not exist" error) so
-every existing tier-gated read keeps working exactly as before — this was
-verified against the full existing test suite (2601 passing, 0 regressions)
-before this was shipped.
+Then re-run `REQUIRE_INTEGRATION=1 npm run test:integration` — the
+Stripe-lifecycle tests self-skip (silently, by design — see the existing
+skip-without-credentials convention) until real Stripe keys are present;
+they'll actually assert once they are.
+
+### Incident note (2026-07-30) — read before ever running `prisma db push` again
+
+The first deployment attempt ran `prisma db push --accept-data-loss`
+against a **stale** `prisma/schema.prisma` that didn't reflect three other
+features that had been added to the live database via raw SQL only (the
+14-day trial system, citation-link monitoring, and the AE Directory
+system) — none of those were ever added to the Prisma schema file by the
+sessions that built them. `db push` syncs the DB to *exactly* match
+`schema.prisma`, so it **dropped** `trial_campaigns`, `trial_redemptions`,
+`citation_link_checks`, `ae_profiles`, `ae_placements`, `ae_profile_events`,
+`outreach_contacts`, `outreach_sends`, `email_suppressions`, and the
+`is_trial`/`trial_activated_at`/`trial_expires_at` columns on
+`user_subscriptions`, plus `lenders.email_domain`.
+
+**Table/column structure was restored immediately** (by re-running the
+original `supabase/trial-access.sql`, `trial-email-tracking.sql`,
+`citation-link-checks.sql`, and `ae-directory.sql` files) and **all nine
+of those models are now added to `prisma/schema.prisma`** (see
+`TrialCampaign`, `TrialRedemption`, `CitationLinkCheck`, `AeProfile`,
+`AeProfileEvent`, `AePlacement`, `OutreachContact`, `EmailSuppression`,
+`OutreachSend`, plus `Lender.emailDomain` and the three trial columns on
+`UserSubscription`) so this can never happen silently again — a
+`prisma migrate diff --from-url $DATABASE_URL --to-schema-datamodel
+prisma/schema.prisma --script` now shows zero destructive changes.
+
+**Actual data loss, confirmed by checking what the `db push` warning
+flagged as non-empty before dropping** (everything else was already empty
+— zero rows — at the time, so no other data existed to lose):
+- `user_subscriptions.is_trial` (and the two paired trial columns) — 230
+  non-null values, i.e. every currently-tracked trial user's activation/
+  expiration state.
+- `citation_link_checks` — 77 rows (operational monitoring state, cheaply
+  rebuilt by the next citation-check cron run — not user data).
+- `trial_campaigns` — 1 row (a campaign definition, not per-user data).
+
+**Recommended recovery**: check Supabase's Point-in-Time Recovery /
+backups (Project Settings → Database → Backups) for a restore point from
+just before this incident, if data recovery of the 230 trial states
+matters — the longer this waits, the smaller that window gets. The trial
+CAMPAIGN row and RLS policies can simply be recreated by hand if PITR isn't
+available (they're small, admin-facing config, not end-user data).
+
+A second, unrelated bug was found and fixed during verification: the
+invite-signup trigger's `digest()` call needed to be schema-qualified as
+`extensions.digest(...)` (pgcrypto lives in the `extensions` schema on
+Supabase, not `public`) — an unqualified call failed with `function
+digest(text, unknown) does not exist` (42883), which silently made every
+invited-signup attempt fall back to a normal signup (own org, not the
+invite's org) rather than erroring visibly. Fixed in
+`supabase/team-invite-signup.sql`, which now also wraps the whole invite
+branch in an exception handler as a permanent safety net (any future
+unexpected error there falls back to normal signup rather than failing
+account creation for every signup on this shared trigger). Verified live
+via `REQUIRE_INTEGRATION=1 npm test` — all Team Membership integration
+tests (entitlement matrix, invite security, isolation, comped grants +
+continuity) now genuinely pass against the live database, not skipped.
+
+
 
 ## Schema
 

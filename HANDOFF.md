@@ -246,19 +246,33 @@ per-organization model in that doc).
 
 ## IN PROGRESS — Team Membership (org subscriptions & seats), 2026-07-30
 
-One subscription, N seats, one bill for a whole brokerage — full spec and
-current status in `docs/team-membership.md`; read that before touching
-this feature. **Schema is written (Prisma + `supabase/team-membership-
-*.sql`) but NOT yet pushed to the live database** — blocked on a fresh
-`DATABASE_URL` (blank in `.env.local` when this was built; the user was
-asked and didn't supply one in this session). Everything else — resolver,
-invite flow (with the invited-signup auto-org fix), Stripe team pricing +
-checkout + webhook handling, `/account/team` UI, pricing page Teams panel,
-and a full test suite (all gated to skip cleanly until the schema is live)
-— is built and passing typecheck/lint/the existing test suite (2601
-passing, 0 regressions). `docs/team-membership.md`'s "Deployment status"
-section has the exact remaining commands to run once a real
-`DATABASE_URL` + Stripe secret key are available.
+One subscription, N seats, one bill for a whole brokerage — full spec,
+current status, and a critical incident writeup in
+`docs/team-membership.md`; **read the "Incident note" there before ever
+running `prisma db push` again.** Summary: the schema is now LIVE (pushed
+2026-07-30) and verified working end-to-end via
+`REQUIRE_INTEGRATION=1 npm test` (all Team Membership integration tests
+genuinely pass, not skipped). Two real problems were hit and fixed during
+this deployment:
+1. `prisma db push` initially ran against a stale `prisma/schema.prisma`
+   that didn't reflect the trial system / citation monitoring / AE
+   Directory tables (all added via raw SQL only, never added to Prisma's
+   schema file) — it dropped those tables/columns. Structure was restored
+   immediately and ALL of them are now added to `prisma/schema.prisma` so
+   this can't recur. Real data loss: 230 trial-user status values, 77
+   citation-check rows, 1 trial-campaign row — **Supabase Point-in-Time
+   Recovery should be checked if that data matters.**
+2. The invite-signup trigger's `digest()` call needed `extensions.digest()`
+   (pgcrypto lives in the `extensions` schema on Supabase) — fixed, plus a
+   permanent exception-handler safety net added.
+
+**Still needed to finish Stripe team billing**: `STRIPE_SECRET_KEY` /
+`STRIPE_WEBHOOK_SECRET` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are all
+blank in `.env.local` (same short-lived-credential pattern as
+`DATABASE_URL`) — comped (no-Stripe) org subscriptions work today via
+`/admin/teams`, but `node scripts/stripe-team-billing.js` (creating the
+per-seat Prices) hasn't run yet. See `docs/team-membership.md`'s
+"Deployment status" for the exact remaining commands.
 
 ## AE Directory, Sponsored Placement & Outreach System, 2026-07-30
 

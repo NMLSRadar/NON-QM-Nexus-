@@ -16,7 +16,16 @@
 --
 -- Hashing must match src/lib/invites.ts's hashInviteToken() exactly
 -- (SHA-256, lowercase hex) — pgcrypto's digest()/encode() here, Node's
--- node:crypto createHash("sha256") there.
+-- node:crypto createHash("sha256") there. pgcrypto lives in the
+-- `extensions` schema on Supabase (not `public`), so digest() must be
+-- schema-qualified here even though this function's search_path is
+-- `public` — an unqualified digest() call fails with "function digest(text,
+-- unknown) does not exist" (42883). Caught in testing (2026-07-30) via a
+-- temporary exception-logging build of this trigger, fixed here, AND the
+-- whole invite branch below is now wrapped in its own exception handler as
+-- a permanent safety net — any unexpected future error there falls through
+-- to a normal signup (their own org) rather than failing account creation
+-- outright for every single signup on this shared trigger.
 --
 -- Apply AFTER onboarding-trigger.sql and team-membership-schema.sql.
 
@@ -29,7 +38,7 @@ as $$
 declare
   new_org_id uuid;
   raw_token text;
-  token_hash text;
+  v_token_hash text;
   invite record;
   active_seat_count int;
   covered_count int;
@@ -38,12 +47,13 @@ begin
   raw_token := new.raw_user_meta_data ->> 'invite_token';
 
   if raw_token is not null and length(raw_token) > 0 then
-    token_hash := encode(digest(raw_token, 'sha256'), 'hex');
+   begin
+    v_token_hash := encode(extensions.digest(raw_token, 'sha256'), 'hex');
 
     select oi.id, oi.organization_id, oi.role, oi.expires_at, oi.accepted_at, oi.revoked_at, oi.email
       into invite
       from org_invites oi
-      where oi.token_hash = handle_new_user.token_hash;
+      where oi.token_hash = v_token_hash;
 
     if found
       and invite.accepted_at is null
@@ -79,6 +89,12 @@ begin
       -- auto-creation skipped entirely.
       return new;
     end if;
+   exception when others then
+    -- Safety net: any unexpected error validating/applying the invite
+    -- (should not happen in normal operation) falls through to the normal
+    -- signup path below rather than failing account creation entirely.
+    null;
+   end;
   end if;
 
   -- Normal signup (no invite token, or an invalid one) — original behavior,
