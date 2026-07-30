@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { assignSubscription, reactivateSubscription } from "./actions";
 import { CancelStripeSubscriptionButton } from "./cancel-stripe-subscription-button";
+import { ReactivateStripeSubscriptionButton } from "./reactivate-stripe-subscription-button";
 
 interface Plan {
   id: string;
@@ -69,14 +70,18 @@ export function SubscriptionRow({
           <span className="rounded-full bg-slate-200 text-slate-700 px-2 py-0.5">
             Canceled {new Date(canceledAt).toLocaleDateString()}
           </span>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => startTransition(() => reactivateSubscription(userId))}
-            className="text-brand-700 hover:underline disabled:opacity-60"
-          >
-            Reactivate
-          </button>
+          {isLiveStripeSubscription ? (
+            <ReactivateStripeSubscriptionButton userId={userId} userEmail={userEmail} />
+          ) : (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => startTransition(() => reactivateSubscription(userId))}
+              className="text-brand-700 hover:underline disabled:opacity-60"
+            >
+              Reactivate
+            </button>
+          )}
         </span>
       ) : currentPlanId ? (
         <span className="flex items-center gap-2">
