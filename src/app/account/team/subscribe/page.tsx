@@ -1,6 +1,7 @@
 import { requireOrgAdmin } from "@/lib/orgAdmin";
 import { Card } from "@/components/ui";
 import { startTeamCheckout } from "./actions";
+import { PlanSelect } from "./plan-select";
 
 export const dynamic = "force-dynamic";
 
@@ -45,18 +46,14 @@ export default async function TeamSubscribePage() {
             <label htmlFor="planId" className="block text-sm font-medium text-slate-300 mb-1">
               Plan
             </label>
-            <select
-              id="planId"
-              name="planId"
-              required
-              className="w-full rounded border border-white/10 bg-black/30 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-            >
-              {plans.map((p) => (
-                <option key={p.id} value={p.id} disabled={!p.stripe_team_price_id}>
-                  {p.name} — ${(p.monthly_price_cents / 100).toFixed(0)}/seat/mo{!p.stripe_team_price_id ? " (not yet configured)" : ""}
-                </option>
-              ))}
-            </select>
+            <PlanSelect
+              plans={plans.map((p) => ({
+                id: p.id,
+                name: p.name,
+                monthlyPriceCents: p.monthly_price_cents,
+                hasTeamPrice: Boolean(p.stripe_team_price_id),
+              }))}
+            />
           </div>
 
           <div>
