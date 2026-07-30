@@ -102,7 +102,18 @@ export async function resolveOrgCoverage(supabase: SupabaseClient, userId: strin
     .eq("user_id", userId)
     .eq("covered_by_org_plan", true)
     .is("deleted_at", null);
-  if (error) throw new Error(`Failed to resolve org coverage: ${error.message}`);
+  if (error) {
+    // Graceful degradation for the window between this code shipping and
+    // `prisma db push` + supabase/team-membership-*.sql actually being
+    // applied to the live database (see HANDOFF.md) — memberships.
+    // covered_by_org_plan / org_subscriptions not existing yet must NOT
+    // break every other caller of getEffectivePlan() (every tier-gated
+    // read in the app). Any other error still throws normally.
+    if (/column .*covered_by_org_plan.* does not exist|relation .*org_subscriptions.* does not exist/i.test(error.message)) {
+      return null;
+    }
+    throw new Error(`Failed to resolve org coverage: ${error.message}`);
+  }
   if (!coveredMemberships || coveredMemberships.length === 0) return null;
 
   let best: OrgCoverage | null = null;

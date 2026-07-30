@@ -7,6 +7,7 @@ import { generateInviteToken, hashInviteToken, inviteExpiresAt } from "@/lib/inv
 import { sendTransactionalEmail } from "@/lib/email";
 import { orgInviteEmail } from "@/lib/emailTemplates";
 import { getStripe } from "@/lib/stripe";
+import { checkLastAdminContinuity } from "@/lib/orgContinuity";
 
 const VALID_ROLES = ["broker", "account_executive", "processor", "underwriter", "org_admin"] as const;
 
@@ -184,24 +185,10 @@ export async function removeMember(membershipId: string): Promise<{ error?: stri
 
 /** Shared continuity check: refuses when `excludingMembershipId` is the
  * only remaining active org_admin AND the org has an active subscription
- * (Stripe or comped) — used by removeMember above. */
-export async function checkLastAdminContinuity(organizationId: string, excludingMembershipId: string): Promise<string | null> {
-  const service = createServiceRoleClient();
-  const { data: otherAdmins, error } = await service
-    .from("memberships")
-    .select("id")
-    .eq("organization_id", organizationId)
-    .eq("role", "org_admin")
-    .is("deleted_at", null)
-    .neq("id", excludingMembershipId);
-  if (error) throw new Error(error.message);
-  if ((otherAdmins ?? []).length > 0) return null;
-
-  const orgSub = await getActiveOrgSubscription(organizationId);
-  if (!orgSub) return null;
-
-  return "You are the only admin on this organization's active team subscription — promote another member to admin first, or cancel the subscription.";
-}
+ * (Stripe or comped) — used by removeMember above. Lives in
+ * src/lib/orgContinuity.ts (re-exported here for existing call sites) so
+ * it can be imported directly by tests without pulling in this "use
+ * server" file's next/cache dependency. */
 
 /** Updates seat count (org_admin only). For a Stripe-sourced subscription,
  * updates the Stripe subscription item's quantity — the webhook then
