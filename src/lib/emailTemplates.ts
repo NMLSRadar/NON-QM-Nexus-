@@ -194,3 +194,99 @@ export function trialExpiredEmail(params: { firstName: string | null; appUrl: st
     `,
   };
 }
+
+
+// ---------------------------------------------------------------------
+// AE Directory outreach templates (2026-07-30). Both are commercial email
+// to a NON-USER (a lender's AE contact) — every send goes through
+// src/lib/email/sendCommercial.ts, which enforces suppression and adds
+// the List-Unsubscribe header; the templates themselves carry the
+// one-click unsubscribe link and the business postal address per
+// CAN-SPAM, using the real OWNER_POSTAL_ADDRESS env var — never an
+// invented address.
+// ---------------------------------------------------------------------
+
+function commercialEmailFooter(unsubscribeUrl: string): string {
+  const postalAddress = process.env.OWNER_POSTAL_ADDRESS;
+  return `
+    <p style="font-size: 11px; color: #94a3b8; margin-top: 32px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+      NON-QM Nexus${postalAddress ? ` — ${postalAddress}` : ""}<br />
+      You're receiving this because your business contact information is listed as a lender Account Executive.
+      <a href="${unsubscribeUrl}" style="color: #64748b;">Unsubscribe</a> at any time — one click, no account needed.
+    </p>
+  `;
+}
+
+/** "Your AE profile on NON-QM Nexus" — the free-directory invite. No
+ * stats required; always safe to send regardless of activity. */
+export function claimInviteEmail(params: {
+  recipientName: string;
+  lenderName: string;
+  claimUrl: string;
+  unsubscribeUrl: string;
+}): { subject: string; html: string } {
+  return {
+    subject: "Your AE profile on NON-QM Nexus",
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; color: #1e293b;">
+        <h1 style="font-size: 20px; margin-bottom: 4px;">Your AE profile on NON-QM Nexus</h1>
+        <p style="color: #64748b; font-size: 14px; margin-top: 0;">NON-QM Nexus</p>
+        <p>Hi ${params.recipientName},</p>
+        <p>
+          ${params.lenderName} is live on NON-QM Nexus, a platform brokers use to compare Non-QM lender guidelines and find the
+          right program for a scenario. A profile with your name is ready for you to claim — it's free, and takes under a minute.
+        </p>
+        <p style="text-align: center; margin: 24px 0;">
+          <a href="${params.claimUrl}" style="background: #0f172a; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">Claim your free profile</a>
+        </p>
+        <p style="font-size: 14px; color: #475569;">
+          Once claimed, brokers browsing ${params.lenderName} on the platform can reach you directly by phone or email.
+        </p>
+        ${commercialEmailFooter(params.unsubscribeUrl)}
+      </div>
+    `,
+  };
+}
+
+/** "Brokers looked for you {count} times last month on NON-QM Nexus" —
+ * leads with the AE's REAL numbers. Returns null (never renders) when
+ * every metric is genuinely zero — the caller must fall back to
+ * claimInviteEmail, per the "never fabricate metrics" rule. */
+export function statsPitchEmail(params: {
+  recipientName: string;
+  lenderName: string;
+  stats: { views: number; phoneClicks: number; emailClicks: number; lenderScenarioMatches: number };
+  subscribeUrl: string;
+  unsubscribeUrl: string;
+}): { subject: string; html: string } | null {
+  const { views, phoneClicks, emailClicks, lenderScenarioMatches } = params.stats;
+  const totalActivity = views + phoneClicks + emailClicks + lenderScenarioMatches;
+  if (totalActivity === 0) return null;
+
+  const contactActions = phoneClicks + emailClicks;
+
+  return {
+    subject: `Brokers looked for you ${totalActivity} times last month on NON-QM Nexus`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; color: #1e293b;">
+        <h1 style="font-size: 20px; margin-bottom: 4px;">Brokers looked for you last month</h1>
+        <p style="color: #64748b; font-size: 14px; margin-top: 0;">NON-QM Nexus</p>
+        <p>Hi ${params.recipientName},</p>
+        <p>
+          Your AE profile got <strong>${views} profile view${views === 1 ? "" : "s"}</strong> last month, and
+          <strong>${lenderScenarioMatches} scenario${lenderScenarioMatches === 1 ? "" : "s"}</strong> matched ${params.lenderName}'s
+          programs${contactActions > 0 ? `, with ${contactActions} broker${contactActions === 1 ? "" : "s"} contacting you directly` : ""}.
+        </p>
+        <p style="font-size: 14px; color: #475569;">
+          Featured Placement puts your profile first in ${params.lenderName}'s AE list with a "Sponsored" badge, surfaces you in a
+          dedicated contact card on matching scenario results, and unlocks full stats — a flat monthly subscription for placement,
+          never tied to leads or referrals.
+        </p>
+        <p style="text-align: center; margin: 24px 0;">
+          <a href="${params.subscribeUrl}" style="background: #0f172a; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">See Featured Placement</a>
+        </p>
+        ${commercialEmailFooter(params.unsubscribeUrl)}
+      </div>
+    `,
+  };
+}

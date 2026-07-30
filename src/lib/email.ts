@@ -21,6 +21,7 @@ export async function sendTransactionalEmail(params: {
   to: string;
   subject: string;
   html: string;
+  headers?: Record<string, string>;
 }): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -40,6 +41,7 @@ export async function sendTransactionalEmail(params: {
         to: params.to,
         subject: params.subject,
         html: params.html,
+        ...(params.headers ? { headers: params.headers } : {}),
       }),
     });
 
