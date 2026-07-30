@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { PricingPlans, type PricingPlanRow } from "./pricing-plans";
+import { TeamsPanel } from "./teams-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,8 @@ export default async function PricingPage() {
       </div>
 
       <PricingPlans plans={plans} isSignedIn={Boolean(user)} highlightedKey={highlightedKey} />
+
+      <TeamsPanel isSignedIn={Boolean(user)} />
 
       <p className="text-center text-xs text-amber-300/80 max-w-2xl mx-auto">
         Subscriptions are currently activated by our team after signup — usually within one business day.
