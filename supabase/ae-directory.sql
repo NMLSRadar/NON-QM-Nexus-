@@ -107,24 +107,16 @@ create policy ae_placements_admin_write on public.ae_placements
     exists (select 1 from public.users u where u.id = auth.uid() and u.platform_admin = true)
   );
 
--- Generic admin audit log (comp actions, etc.) — minimal, reusable.
-create table if not exists public.audit_logs (
-  id uuid primary key default gen_random_uuid(),
-  actor_user_id uuid references public.users(id),
-  action text not null,
-  target_type text not null,
-  target_id text not null,
-  reason text,
-  created_at timestamptz not null default now()
-);
-alter table public.audit_logs enable row level security;
-drop policy if exists audit_logs_admin_only on public.audit_logs;
-create policy audit_logs_admin_only on public.audit_logs
-  for all using (
-    exists (select 1 from public.users u where u.id = auth.uid() and u.platform_admin = true)
-  ) with check (
-    exists (select 1 from public.users u where u.id = auth.uid() and u.platform_admin = true)
-  );
+-- Generic admin audit log — already exists in this database with its own
+-- real schema (organization_id, actor_user_id, action, entity_type,
+-- entity_id, metadata jsonb, created_at) from an earlier migration this
+-- session didn't originally know about. Discovered 2026-07-30 while
+-- testing the comp/revoke actions (a CREATE TABLE IF NOT EXISTS here was
+-- a harmless no-op against the real table). Application code
+-- (src/app/admin/ae-profiles/comp-actions.ts) writes to the REAL existing
+-- columns — reason goes in metadata jsonb, not a dedicated column.
+-- No DDL needed here; this comment exists so a future reader doesn't
+-- re-introduce a conflicting assumption about this table's shape.
 
 -- ---------------------------------------------------------------------
 -- 4. Outreach email system — admin-initiated, never auto-blasted.

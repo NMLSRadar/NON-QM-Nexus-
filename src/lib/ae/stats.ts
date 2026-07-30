@@ -1,4 +1,3 @@
-import "server-only";
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { SupabaseRepository, rowToScenario } from "@/lib/repository/supabaseRepository";
 import { PLATFORM_CATALOG_ORGANIZATION_ID } from "@/lib/platformCatalog";
