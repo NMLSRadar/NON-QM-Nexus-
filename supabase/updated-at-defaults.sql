@@ -14,3 +14,12 @@ alter table rules                alter column updated_at set default now();
 alter table scenarios             alter column updated_at set default now();
 alter table user_profiles        alter column updated_at set default now();
 alter table users                alter column updated_at set default now();
+
+-- Same reasoning as id-defaults.sql's tail — tables added via raw SQL,
+-- now tracked in prisma/schema.prisma.
+alter table trial_campaigns      alter column updated_at set default now();
+alter table trial_redemptions    alter column updated_at set default now();
+alter table ae_profiles          alter column updated_at set default now();
+alter table ae_placements        alter column updated_at set default now();
+alter table outreach_contacts    alter column updated_at set default now();
+
