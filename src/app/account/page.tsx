@@ -32,6 +32,16 @@ export default async function AccountPage() {
       </div>
 
       <Card title="Subscription" dark>
+        {plan.orgCoverage ? (
+          <div className="mb-3 rounded border border-amber-500/20 bg-amber-500/5 p-3">
+            <p className="text-sm text-white">
+              Covered by <strong>{plan.orgCoverage.organizationName}</strong>&apos;s <strong>{plan.orgCoverage.planName}</strong> plan
+            </p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Your access comes from your organization&apos;s team subscription — no billing action needed on your part.
+            </p>
+          </div>
+        ) : null}
         {plan.planName ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -77,7 +87,7 @@ export default async function AccountPage() {
               {plan.source === "stripe" ? <ManageBillingForm /> : null}
             </div>
           </div>
-        ) : (
+        ) : plan.orgCoverage ? null : (
           <p className="text-sm text-slate-400">
             You don&apos;t have an active plan yet. Visit{" "}
             <a href="/pricing" className="text-amber-400 underline">
