@@ -21,7 +21,7 @@ export function TeamsPanel({ isSignedIn }: { isSignedIn: boolean }) {
         <div>
           <h2 className="text-lg font-semibold text-white">Teams</h2>
           <p className="mt-1 text-sm text-slate-400 max-w-md">
-            One subscription, N seats, one bill. Your brokerage picks a plan and a seat count — invite teammates and
+            One subscription, any number of seats, one bill. Your brokerage picks a plan and a seat count — invite teammates and
             each covered seat gets full access at that tier, no separate billing per person.
           </p>
         </div>

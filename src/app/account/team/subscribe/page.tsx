@@ -30,7 +30,7 @@ export default async function TeamSubscribePage() {
       <div>
         <h1 className="text-2xl font-semibold text-white">Subscribe your team</h1>
         <p className="text-sm text-slate-400">
-          One subscription, N seats, one bill — pick a plan and how many teammates you want covered. Add or invite
+          One subscription, any number of seats, one bill — pick a plan and how many teammates you want covered. Add or invite
           people to it afterward from{" "}
           <a href="/account/team" className="text-amber-400 underline">
             Team management
