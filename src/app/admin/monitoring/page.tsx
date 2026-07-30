@@ -31,9 +31,9 @@ export default async function AdminMonitoringPage() {
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Guideline monitoring</h2>
         <p className="text-sm text-slate-500">
-          Every approved guideline&apos;s public source URL is re-checked automatically on the 1st and 15th of each
-          month (a hash of the page/PDF content is compared to the last check). A change never edits the program
-          automatically — it only flags it here (and emails the admin) for a human to re-review and re-approve.
+          Every approved guideline&apos;s public source URL is re-checked automatically every 6 weeks (a hash of the
+          page/PDF content is compared to the last check). A change never edits the program automatically — it only
+          flags it here (and emails the admin) for a human to re-review and re-approve.
         </p>
         {changedCount > 0 ? (
           <p className="mt-2 text-sm font-medium text-amber-700">

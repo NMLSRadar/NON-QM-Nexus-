@@ -7,9 +7,15 @@ export const maxDuration = 60;
 
 /**
  * Scheduled re-check of every approved, live guideline's public source URL
- * (see docs/guideline-monitoring.md). Runs on Vercel Cron per vercel.json's
- * schedule (1st and 15th of each month). Fetches each source, hashes the
- * content, and compares against the hash stored at approval/last-check time:
+ * (see docs/guideline-monitoring.md). Vercel Cron triggers this weekly (see
+ * vercel.json), but the actual re-check cadence per guideline is 6 weeks —
+ * standard cron syntax has no "every N weeks" field and 6 weeks doesn't
+ * divide evenly into calendar months, so the interval is enforced here: a
+ * guideline is only re-fetched if it has never been checked, or its
+ * last_checked_at is at least RECHECK_INTERVAL_DAYS (42) days old. Rows not
+ * yet due are skipped (status "not_due") and don't count against fetch
+ * quotas. Fetches each due source, hashes the content, and compares against
+ * the hash stored at approval/last-check time:
  *   - unchanged  -> just update last_checked_at
  *   - changed    -> set change_detected = true, update the hash, and email
  *                   the platform admin so a human re-reviews the guideline
@@ -24,6 +30,8 @@ export const maxDuration = 60;
  * this automatically when CRON_SECRET is set as a project env var; this also
  * lets an admin trigger a check manually with the same header.
  */
+const RECHECK_INTERVAL_DAYS = 42; // 6 weeks
+
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
   const expected = process.env.CRON_SECRET;
@@ -38,12 +46,15 @@ export async function GET(request: Request) {
 
   const { data: versions, error } = await supabase
     .from("guideline_versions")
-    .select("id, label, source_url, content_hash, program_id, programs(name, lender_id, lenders(name))")
+    .select("id, label, source_url, content_hash, last_checked_at, program_id, programs(name, lender_id, lenders(name))")
     .not("source_url", "is", null)
     .eq("verification_status", "human_verified");
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
+
+  const now = Date.now();
+  const intervalMs = RECHECK_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
 
   const results: Array<{ label: string; lender?: string; program?: string; status: string; detail?: string }> = [];
   const changedForEmail: Array<{ lender: string; program: string; label: string; sourceUrl: string }> = [];
@@ -62,6 +73,12 @@ export async function GET(request: Request) {
     const label = v.label as string;
     const lenderName = lender?.name;
     const programName = program?.name;
+
+    const lastCheckedAt = v.last_checked_at as string | null;
+    if (lastCheckedAt && now - new Date(lastCheckedAt).getTime() < intervalMs) {
+      results.push({ label, lender: lenderName, program: programName, status: "not_due" });
+      continue;
+    }
 
     try {
       const res = await fetch(v.source_url as string, { headers: { "user-agent": "NON-QM-Nexus-GuidelineMonitor/1.0" } });

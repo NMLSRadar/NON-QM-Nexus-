@@ -43,8 +43,10 @@ not a commitment (see `src/app/terms/page.tsx` for the exact legal framing).
 - **Email:** Resend verified domain, custom SMTP wired into Supabase Auth
   config via the Management API (fixes both sender domain and a
   project-level `rate_limit_email_sent` setting that was capped at 2/hour).
-- **Cron:** Vercel Cron hits `/api/cron/recheck-guidelines` on the 1st and
-  15th of each month (`vercel.json`), auth'd via `CRON_SECRET`.
+- **Cron:** Vercel Cron hits `/api/cron/recheck-guidelines` weekly
+  (`vercel.json`), auth'd via `CRON_SECRET`; the route itself only actually
+  re-fetches a guideline once its `last_checked_at` is 6+ weeks old (42-day
+  `RECHECK_INTERVAL_DAYS`), so the effective cadence per guideline is 6 weeks.
 
 ## Known operational gotcha (important — will bite you)
 
@@ -127,9 +129,11 @@ multiple times already.
    **American Heritage Lending excluded** — no public guideline source
    exists (broker-portal only); would need user-supplied PDFs.
 10. **Automated guideline re-check monitoring** —
-    `src/app/api/cron/recheck-guidelines/route.ts`: on the 1st/15th monthly,
-    fetches each `human_verified` guideline's `source_url`, SHA-256-hashes
-    the content, compares to the stored `content_hash`. Unchanged just
+    `src/app/api/cron/recheck-guidelines/route.ts`: Vercel Cron triggers it
+    weekly, but each guideline is only actually re-fetched once its
+    `last_checked_at` is 6+ weeks old (42-day `RECHECK_INTERVAL_DAYS`
+    constant in the route) — SHA-256-hashes the content, compares to the
+    stored `content_hash`. Unchanged just
     updates `last_checked_at`; a real change sets `change_detected=true` and
     emails the admin via Resend — **never edits program data automatically**.
     New admin page `/admin/monitoring` (`src/app/admin/monitoring/page.tsx`)

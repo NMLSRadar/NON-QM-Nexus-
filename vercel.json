@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/cron/recheck-guidelines",
-      "schedule": "0 6 1,15 * *"
+      "schedule": "0 6 * * 1"
     },
     {
       "path": "/api/cron/check-citations",
