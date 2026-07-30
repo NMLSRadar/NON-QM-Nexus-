@@ -4,6 +4,7 @@ import { getCurrentOrganizationId, getRepository, getLenderAccessInfo } from "@/
 import { PageHeader, Card, Pill, SampleDataBadge, MetricTile, fmtUsd, fmtPct } from "@/components/ui";
 import { getWordmarkStyle } from "@/domain/lenderBrandStyle";
 import { ProgramCitation } from "./program-citation";
+import { AeSection } from "./ae-section";
 
 export const dynamic = "force-dynamic";
 
@@ -127,6 +128,10 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
                 ))}
               </div>
             )}
+          </Card>
+
+          <Card title={`Account Executives`} dark>
+            <AeSection lenderId={lender.id} />
           </Card>
         </>
       )}

@@ -123,7 +123,7 @@ interface ScenarioRow {
   updated_at: string;
 }
 
-function rowToScenario(row: ScenarioRow): Scenario {
+export function rowToScenario(row: ScenarioRow): Scenario {
   return {
     ...row.data,
     id: row.id,
