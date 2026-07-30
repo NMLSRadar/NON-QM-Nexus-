@@ -1,5 +1,6 @@
 import { requirePlatformAdmin } from "@/lib/admin";
 import { createAeProfile, updateAeProfileStatus, deleteAeProfile, setLenderEmailDomain } from "./actions";
+import { compAePlacement, revokeAePlacement } from "./comp-actions";
 import { AeImportForm } from "./import-form";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,8 @@ export default async function AdminAeProfilesPage() {
     .from("ae_profiles")
     .select("id, lender_id, name, title, email, phone, states, status, claimed_by_user_id")
     .order("created_at", { ascending: false });
+  const { data: placements } = await supabase.from("ae_placements").select("ae_profile_id, status, source");
+  const placementByProfile = new Map((placements ?? []).map((p) => [p.ae_profile_id as string, p]));
 
   const lenderById = new Map((lenders ?? []).map((l) => [l.id as string, l]));
 
@@ -95,6 +98,11 @@ export default async function AdminAeProfilesPage() {
                 <p className="text-xs text-slate-500">
                   {p.email as string} {p.phone ? `· ${p.phone as string}` : ""} · status: {p.status as string}
                   {p.claimed_by_user_id ? " (claimed)" : ""}
+                  {placementByProfile.get(p.id as string)?.status === "active" ? (
+                    <span className="text-amber-300"> · Sponsored ({placementByProfile.get(p.id as string)?.source})</span>
+                  ) : (
+                    ""
+                  )}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -124,6 +132,29 @@ export default async function AdminAeProfilesPage() {
                     Delete
                   </button>
                 </form>
+                {placementByProfile.get(p.id as string)?.status === "active" ? (
+                  <form
+                    action={async () => {
+                      "use server";
+                      await revokeAePlacement(p.id as string, "Admin revoke via /admin/ae-profiles");
+                    }}
+                  >
+                    <button type="submit" className="text-xs text-rose-400 underline">
+                      Revoke placement
+                    </button>
+                  </form>
+                ) : (
+                  <form
+                    action={async () => {
+                      "use server";
+                      await compAePlacement(p.id as string, "Pilot comp via /admin/ae-profiles");
+                    }}
+                  >
+                    <button type="submit" className="text-xs text-amber-300 underline">
+                      Comp placement
+                    </button>
+                  </form>
+                )}
               </div>
             </div>
           ))}

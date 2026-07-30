@@ -8,6 +8,7 @@ import type { MatchStatus } from "@/domain/types/enums";
 import { BestLenderMatches } from "./best-lender-matches";
 import { DocumentNeeds } from "./document-needs";
 import { ScenarioActivity } from "./scenario-activity";
+import { SponsoredAeContacts } from "./sponsored-ae-contacts";
 
 export const dynamic = "force-dynamic";
 
@@ -148,6 +149,8 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
               <BestLenderMatches evaluations={analysis.evaluations} tierLevel={access.tierLevel} />
             </div>
           </Card>
+
+          <SponsoredAeContacts evaluatedLenderIds={[...new Set(analysis.evaluations.map((e) => e.lenderId))]} />
 
           <Card className="p-6">
             <SectionHeading title="How to make this work — restructuring options" />

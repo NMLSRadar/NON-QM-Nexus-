@@ -46,8 +46,36 @@ const c = new Client({ connectionString: env.DATABASE_URL, ssl: { rejectUnauthor
     console.log(`[ok] ${plan.name} -> product ${product.id}, price ${price.id} ($${(plan.monthly_price_cents / 100).toFixed(2)}/mo)`);
   }
 
+  // AE Featured Placement — a single flat-fee monthly advertising-placement
+  // product (RESPA Section 8 conservative design: flat subscription only,
+  // never per-lead/per-click/per-referral). Price id is written to
+  // .env.local as AE_PLACEMENT_STRIPE_PRICE_ID for the app to read — there
+  // is no membership_plans-style table for this one product, so an env
+  // var is the simplest single source of truth, consistent with how
+  // STRIPE_WEBHOOK_SECRET etc. are already handled.
+  const AE_PLACEMENT_MONTHLY_PRICE_CENTS = 4900; // $49/mo flat — adjust before enabling AE_MONETIZATION_ENABLED
+  if (!env.AE_PLACEMENT_STRIPE_PRICE_ID) {
+    const aeProduct = await stripe.products.create({
+      name: "AE Featured Placement",
+      description: "Flat monthly subscription for featured advertising placement in the NON-QM Nexus AE contact directory. Advertising placement only — never tied to leads, clicks, referrals, or closed loans.",
+      metadata: { kind: "ae_placement" },
+    });
+    const aePrice = await stripe.prices.create({
+      product: aeProduct.id,
+      currency: "usd",
+      unit_amount: AE_PLACEMENT_MONTHLY_PRICE_CENTS,
+      recurring: { interval: "month" },
+      metadata: { kind: "ae_placement" },
+    });
+    console.log(`[ok] AE Featured Placement -> product ${aeProduct.id}, price ${aePrice.id} ($${(AE_PLACEMENT_MONTHLY_PRICE_CENTS / 100).toFixed(2)}/mo)`);
+    console.log(`\nAdd this to .env.local and Vercel:\n  AE_PLACEMENT_STRIPE_PRICE_ID=${aePrice.id}\n`);
+  } else {
+    console.log(`[skip] AE Featured Placement already configured (AE_PLACEMENT_STRIPE_PRICE_ID=${env.AE_PLACEMENT_STRIPE_PRICE_ID})`);
+  }
+
   await c.end();
 })().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

@@ -32,6 +32,30 @@ export async function POST(request: Request) {
 
   const supabase = createServiceRoleClient();
 
+  async function upsertAePlacementFromSubscription(subscription: Stripe.Subscription) {
+    const aeProfileId = subscription.metadata?.ae_profile_id;
+    if (!aeProfileId) {
+      console.error(`AE placement subscription ${subscription.id} has no ae_profile_id metadata — skipping.`);
+      return;
+    }
+    const isActive = subscription.status === "active" || subscription.status === "trialing";
+    const isCanceled = subscription.status === "canceled";
+
+    const { error } = await supabase.from("ae_placements").upsert(
+      {
+        ae_profile_id: aeProfileId,
+        status: isCanceled ? "canceled" : isActive ? "active" : "none",
+        source: "stripe",
+        stripe_customer_id: typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id,
+        stripe_subscription_id: subscription.id,
+        started_at: isActive ? new Date(subscription.start_date * 1000).toISOString() : undefined,
+        canceled_at: isCanceled ? new Date().toISOString() : null,
+      },
+      { onConflict: "ae_profile_id" }
+    );
+    if (error) console.error(`Failed to upsert AE placement for profile ${aeProfileId}:`, error.message);
+  }
+
   async function upsertFromSubscription(subscription: Stripe.Subscription) {
     const supabaseUserId = subscription.metadata?.supabase_user_id;
     if (!supabaseUserId) {
@@ -86,17 +110,37 @@ export async function POST(request: Request) {
         if (session.mode === "subscription" && session.subscription) {
           const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription.id;
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-          await upsertFromSubscription(subscription);
+          if (subscription.metadata?.kind === "ae_placement") {
+            await upsertAePlacementFromSubscription(subscription);
+          } else {
+            await upsertFromSubscription(subscription);
+          }
         }
         break;
       }
       case "customer.subscription.created":
       case "customer.subscription.updated": {
-        await upsertFromSubscription(event.data.object as Stripe.Subscription);
+        const subscription = event.data.object as Stripe.Subscription;
+        if (subscription.metadata?.kind === "ae_placement") {
+          await upsertAePlacementFromSubscription(subscription);
+        } else {
+          await upsertFromSubscription(subscription);
+        }
         break;
       }
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
+        if (subscription.metadata?.kind === "ae_placement") {
+          const aeProfileId = subscription.metadata?.ae_profile_id;
+          if (aeProfileId) {
+            const { error } = await supabase
+              .from("ae_placements")
+              .update({ status: "canceled", canceled_at: new Date().toISOString() })
+              .eq("stripe_subscription_id", subscription.id);
+            if (error) console.error(`Failed to mark AE placement canceled for profile ${aeProfileId}:`, error.message);
+          }
+          break;
+        }
         const supabaseUserId = subscription.metadata?.supabase_user_id;
         if (supabaseUserId) {
           const { error } = await supabase
