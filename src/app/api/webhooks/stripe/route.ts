@@ -56,6 +56,62 @@ export async function POST(request: Request) {
     if (error) console.error(`Failed to upsert AE placement for profile ${aeProfileId}:`, error.message);
   }
 
+  /**
+   * Team subscriptions (org_subscriptions) are distinguished from personal
+   * ones by `metadata.team === "true"` + `metadata.organization_id`, set on
+   * both the Checkout Session and the subscription itself by
+   * src/app/account/team/subscribe/actions.ts's startTeamCheckout(). This
+   * webhook remains the single writer of Stripe-sourced org_subscriptions
+   * state, same as it is for user_subscriptions — see
+   * src/app/account/team/actions.ts's updateSeatCount() for the one other
+   * legitimate writer (a direct Stripe API call whose result THIS webhook
+   * still confirms into the DB).
+   */
+  async function upsertOrgSubscription(subscription: Stripe.Subscription) {
+    const organizationId = subscription.metadata?.organization_id;
+    if (!organizationId) {
+      console.error(`Team Stripe subscription ${subscription.id} has no organization_id metadata — skipping.`);
+      return;
+    }
+
+    const item = subscription.items.data[0];
+    const priceId = item?.price?.id;
+    let planId: string | null = null;
+    if (priceId) {
+      const { data: plan } = await supabase
+        .from("membership_plans")
+        .select("id")
+        .or(`stripe_team_price_id.eq.${priceId},stripe_team_annual_price_id.eq.${priceId}`)
+        .maybeSingle();
+      planId = (plan?.id as string | undefined) ?? null;
+    }
+    if (!planId) {
+      console.error(`Team Stripe subscription ${subscription.id}: price ${priceId} doesn't match any plan's team price — skipping.`);
+      return;
+    }
+
+    const seatCount = item?.quantity ?? 1;
+    const currentPeriodEndUnix = item?.current_period_end;
+    const isCanceled = subscription.status === "canceled";
+
+    const { error } = await supabase.from("org_subscriptions").upsert(
+      {
+        organization_id: organizationId,
+        plan_id: planId,
+        seat_count: seatCount,
+        status: isCanceled ? "canceled" : "active",
+        source: "stripe",
+        stripe_subscription_id: subscription.id,
+        current_period_end: currentPeriodEndUnix ? new Date(currentPeriodEndUnix * 1000).toISOString() : null,
+        canceled_at: isCanceled ? new Date().toISOString() : null,
+      },
+      { onConflict: "stripe_subscription_id" }
+    );
+    if (error) {
+      console.error(`Failed to upsert org subscription for organization ${organizationId}:`, error.message);
+    }
+  }
+
   async function upsertFromSubscription(subscription: Stripe.Subscription) {
     const supabaseUserId = subscription.metadata?.supabase_user_id;
     if (!supabaseUserId) {
@@ -112,6 +168,8 @@ export async function POST(request: Request) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
           if (subscription.metadata?.kind === "ae_placement") {
             await upsertAePlacementFromSubscription(subscription);
+          } else if (subscription.metadata?.team === "true") {
+            await upsertOrgSubscription(subscription);
           } else {
             await upsertFromSubscription(subscription);
           }
@@ -123,6 +181,8 @@ export async function POST(request: Request) {
         const subscription = event.data.object as Stripe.Subscription;
         if (subscription.metadata?.kind === "ae_placement") {
           await upsertAePlacementFromSubscription(subscription);
+        } else if (subscription.metadata?.team === "true") {
+          await upsertOrgSubscription(subscription);
         } else {
           await upsertFromSubscription(subscription);
         }
@@ -139,6 +199,14 @@ export async function POST(request: Request) {
               .eq("stripe_subscription_id", subscription.id);
             if (error) console.error(`Failed to mark AE placement canceled for profile ${aeProfileId}:`, error.message);
           }
+          break;
+        }
+        if (subscription.metadata?.team === "true") {
+          const { error } = await supabase
+            .from("org_subscriptions")
+            .update({ status: "canceled", canceled_at: new Date().toISOString() })
+            .eq("stripe_subscription_id", subscription.id);
+          if (error) console.error(`Failed to mark org subscription ${subscription.id} canceled:`, error.message);
           break;
         }
         const supabaseUserId = subscription.metadata?.supabase_user_id;
@@ -158,6 +226,11 @@ export async function POST(request: Request) {
             ? (invoice as { subscription?: string }).subscription
             : (invoice as { subscription?: Stripe.Subscription | null }).subscription?.id;
         if (subscriptionId) {
+          // A team (org_subscriptions) invoice failure isn't tracked with
+          // its own past_due status column (out of this spec's schema) —
+          // only personal user_subscriptions rows get this update; this is
+          // a harmless no-op update for a team subscription id (matches no
+          // row there).
           const { error } = await supabase
             .from("user_subscriptions")
             .update({ stripe_status: "past_due" })

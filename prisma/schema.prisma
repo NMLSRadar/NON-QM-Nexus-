@@ -214,6 +214,13 @@ model MembershipPlan {
   // the monthly*12 equivalent, by convention — see scripts/stripe-annual-
   // billing.js). Null until an annual price has been created for this plan.
   stripeAnnualPriceId String? @unique @map("stripe_annual_price_id")
+  // Per-seat (licensed quantity billing) team Price ids for
+  // org_subscriptions checkout — Stripe's native tiered pricing handles
+  // volume discounts on these, so there's exactly one Price id per
+  // interval (see scripts/stripe-team-billing.js). Null until team billing
+  // has been set up for this plan.
+  stripeTeamPriceId       String? @unique @map("stripe_team_price_id")
+  stripeTeamAnnualPriceId String? @unique @map("stripe_team_annual_price_id")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
