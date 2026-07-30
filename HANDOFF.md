@@ -260,6 +260,64 @@ passing, 0 regressions). `docs/team-membership.md`'s "Deployment status"
 section has the exact remaining commands to run once a real
 `DATABASE_URL` + Stripe secret key are available.
 
+## AE Directory, Sponsored Placement & Outreach System, 2026-07-30
+
+A second revenue line: lender-side Account Executives (AEs) pay a flat
+monthly subscription for featured placement in the platform's AE contact
+directory. Full compliance shape is RESPA Section 8 conservative
+(advertising-placement pricing only — never per-lead/click/referral/
+closed-loan; sponsorship never touches lender/program matching,
+eligibility, or ranking — see `tests/domain/aeSponsorshipIsolation.test.ts`).
+
+**Schema** (`supabase/ae-directory.sql`, applied live via
+`scripts/apply-sql.mjs` — this environment has no `psql` binary):
+`ae_profiles` (lender_id, name, title, email, phone, nmls_id, states,
+photo_url, claimed_by_user_id, status: unclaimed/claimed/hidden),
+`ae_profile_events` (view/click_phone/click_email — counts only, NEVER a
+stored viewer identity), `ae_placements` (status: none/active/canceled,
+source: stripe/comped), `outreach_contacts`, `email_suppressions`
+(global — checked by every commercial send), `outreach_sends`.
+`lenders.email_domain` added for claim auto-approval. **Note:**
+`audit_logs` already existed in this database with its own real schema
+(`organization_id`, `actor_user_id`, `action`, `entity_type`,
+`entity_id`, `metadata` jsonb) — the comp/revoke actions write to that
+real shape (reason lives in `metadata`), not an invented one.
+
+**Feature flag:** `AE_MONETIZATION_ENABLED` (env var, default `false`,
+set on Vercel). When false, `/ae/subscribe` shows "coming soon" and no
+checkout is reachable — flip it once subscriber volume justifies it.
+
+**New env vars (set on `.env.local` + Vercel production this session):**
+`OWNER_POSTAL_ADDRESS` (CAN-SPAM — real business address, requested from
+the user), `AE_PLACEMENT_STRIPE_PRICE_ID` (from
+`scripts/stripe-setup-products.js`, extended to create the "AE Featured
+Placement" $49/mo test-mode product), `AE_MONETIZATION_ENABLED`,
+`EMAIL_UNSUBSCRIBE_SECRET` (generated — HMAC key for signed, no-login
+one-click unsubscribe tokens).
+
+**Pages:** `/ae/claim` (existing-user claim flow, auto-approves on
+matching email domain), `/ae/dashboard` (self-edit + last-3-months
+stats), `/ae/subscribe` (Stripe Checkout, test mode), lender detail
+pages' new "Account Executives" section, `/admin/ae-profiles` (CRUD +
+CSV import + email-domain management + comp/revoke placement),
+`/admin/outreach` (prospect list, live-stats email preview, rate-limited
+send — admin-triggered only, no cron).
+
+**Two real bugs found and fixed while writing the required tests** (see
+`tests/integration/aeClaimSecurity.test.ts` and
+`aePlacementLifecycle.test.ts` for the exact repro): the claim action's
+write initially ran through the RLS-subject client and silently no-op'd
+(fixed — now uses the service-role client, gated by the function's own
+application-level authorization logic); and the comp/revoke actions
+initially assumed a wrong `audit_logs` shape (fixed — adapted to the
+real pre-existing table).
+
+**Not done (flagged for owner input):** the RESPA Section 8 attorney
+review and CAN-SPAM postal-address confirmation this feature needs
+before `AE_MONETIZATION_ENABLED` is ever flipped to `true` — added to
+`docs/legal-agenda.md`. A monthly stats email cron for claimed AEs was
+explicitly deferred (spec said not to build it this pass).
+
 ## Other known outstanding items (not started)
 
 - **OpenAI billing** — the `OPENAI_API_KEY` configured for

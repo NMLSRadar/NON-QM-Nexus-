@@ -87,7 +87,8 @@ export default function PrivacyPage() {
         <li>
           <strong>Marketing email:</strong> transactional emails (password resets, subscription confirmations,
           guideline-change alerts) are necessary to the Service and cannot be opted out of while your account is
-          active; we do not currently send separate marketing email.
+          active. Separately, business contact outreach to lender Account Executives (see Section 10 below) is
+          commercial email you can unsubscribe from at any time with one click, no account required.
         </li>
       </ul>
 
@@ -113,6 +114,42 @@ export default function PrivacyPage() {
         Questions about this Privacy Policy, or to make a data access/deletion request:{" "}
         <a href="mailto:legal@nonqmnexus.com">legal@nonqmnexus.com</a>.
       </p>
+
+      <h2>10. AE Directory &amp; Business Contact Outreach</h2>
+      <p>
+        The Service maintains a directory of lender Account Executive (AE) business contact information — name,
+        title, business email, business phone, licensed states, and NMLS ID where applicable. Sources for this
+        information include: the AE&apos;s own free-form claim of their listing, admin-entered records compiled
+        from a lender&apos;s own public wholesale/website materials, and, in limited cases, business contact
+        information sourced from third-party business-contact research for the purpose of inviting an AE to claim
+        their free listing.
+      </p>
+      <ul>
+        <li>
+          <strong>Directory visibility:</strong> a non-hidden AE profile&apos;s name, title, licensed states, and
+          contact methods are visible to any user browsing the corresponding lender&apos;s page. We record
+          aggregate, anonymous view/click counts on AE profiles (never who viewed or clicked) to power the AE&apos;s
+          own stats dashboard.
+        </li>
+        <li>
+          <strong>Sponsored placement:</strong> an AE may pay a flat monthly subscription for featured placement.
+          This is advertising placement only — it never influences, and has zero effect on, any lender or program
+          matching, eligibility determination, or ranking shown to a broker.
+        </li>
+        <li>
+          <strong>Commercial email to AE contacts:</strong> we may email a lender AE contact (whether or not they
+          have created an account) inviting them to claim their free directory listing, or, once claimed, sharing
+          their own real usage statistics and the option of paid featured placement. Every such email includes a
+          working one-click unsubscribe link and our business postal address, consistent with the CAN-SPAM Act.
+          An unsubscribed address is permanently suppressed from all future commercial email from us.
+        </li>
+        <li>
+          <strong>Removal on request:</strong> any AE (or someone acting on their behalf) may request removal of
+          their business contact information from the directory, or correction of any inaccurate detail, at any
+          time by emailing <a href="mailto:legal@nonqmnexus.com">legal@nonqmnexus.com</a> or clicking the
+          unsubscribe link in any email we&apos;ve sent them.
+        </li>
+      </ul>
 
       <p className="text-xs text-slate-400">
         This policy is a working draft appropriate for the Service&apos;s current scope (no consumer PII, no live
