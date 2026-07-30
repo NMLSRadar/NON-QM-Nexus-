@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { assignSubscription, reactivateSubscription } from "./actions";
+import { CancelStripeSubscriptionButton } from "./cancel-stripe-subscription-button";
 
 interface Plan {
   id: string;
@@ -14,16 +15,20 @@ interface Discount {
 
 export function SubscriptionRow({
   userId,
+  userEmail,
   currentPlanId,
   currentDiscountId,
   canceledAt,
+  isLiveStripeSubscription,
   plans,
   discounts,
 }: {
   userId: string;
+  userEmail: string;
   currentPlanId: string | null;
   currentDiscountId: string | null;
   canceledAt: string | null;
+  isLiveStripeSubscription: boolean;
   plans: Plan[];
   discounts: Discount[];
 }) {
@@ -74,7 +79,10 @@ export function SubscriptionRow({
           </button>
         </span>
       ) : currentPlanId ? (
-        <span className="text-xs rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5">Active</span>
+        <span className="flex items-center gap-2">
+          <span className="text-xs rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5">Active</span>
+          {isLiveStripeSubscription ? <CancelStripeSubscriptionButton userId={userId} userEmail={userEmail} /> : null}
+        </span>
       ) : null}
     </div>
   );

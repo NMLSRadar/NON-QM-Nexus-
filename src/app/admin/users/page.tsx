@@ -18,7 +18,7 @@ export default async function AdminUsersPage() {
       supabase.from("users").select("id, email, platform_admin").is("deleted_at", null).order("created_at"),
       supabase.from("membership_plans").select("id, name, monthly_price_cents").eq("is_active", true).order("sort_order"),
       supabase.from("discounts").select("id, name").eq("is_active", true).order("percent_off"),
-      supabase.from("user_subscriptions").select("user_id, plan_id, discount_id, canceled_at"),
+      supabase.from("user_subscriptions").select("user_id, plan_id, discount_id, canceled_at, source, stripe_subscription_id"),
     ]);
 
   if (usersError) throw new Error(usersError.message);
@@ -62,9 +62,11 @@ export default async function AdminUsersPage() {
                   <td className="py-2">
                     <SubscriptionRow
                       userId={u.id}
+                      userEmail={u.email}
                       currentPlanId={(sub?.plan_id as string) ?? null}
                       currentDiscountId={(sub?.discount_id as string) ?? null}
                       canceledAt={(sub?.canceled_at as string) ?? null}
+                      isLiveStripeSubscription={sub?.source === "stripe" && Boolean(sub?.stripe_subscription_id)}
                       plans={plans ?? []}
                       discounts={discounts ?? []}
                     />
