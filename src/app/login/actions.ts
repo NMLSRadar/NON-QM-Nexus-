@@ -39,12 +39,23 @@ export async function signUp(_prevState: AuthActionState, formData: FormData): P
     return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
 
+  // Invited signups (Team Membership spec, 2026-07-30): a raw invite token
+  // from /signup?invite=<token> rides along as Supabase Auth user metadata,
+  // where supabase/team-invite-signup.sql's handle_new_user() trigger reads
+  // it and — if it resolves to a real, still-valid invite — adds the new
+  // user to the INVITING org instead of auto-creating one of their own.
+  // Never trusted here beyond passing it through: the trigger re-validates
+  // it server-side (hash match, unaccepted, unrevoked, unexpired, matching
+  // email) before acting on it.
+  const inviteToken = formData.get("inviteToken");
+
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
       emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/login`,
+      data: typeof inviteToken === "string" && inviteToken ? { invite_token: inviteToken } : undefined,
     },
   });
   if (error) {

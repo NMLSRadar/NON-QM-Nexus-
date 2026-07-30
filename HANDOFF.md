@@ -244,6 +244,22 @@ per-organization model in that doc).
 10. Add tests: webhook signature rejection, checkout → entitlement sync,
     cancel → entitlement revoked, comped access unaffected by any of this.
 
+## IN PROGRESS — Team Membership (org subscriptions & seats), 2026-07-30
+
+One subscription, N seats, one bill for a whole brokerage — full spec and
+current status in `docs/team-membership.md`; read that before touching
+this feature. **Schema is written (Prisma + `supabase/team-membership-
+*.sql`) but NOT yet pushed to the live database** — blocked on a fresh
+`DATABASE_URL` (blank in `.env.local` when this was built; the user was
+asked and didn't supply one in this session). Everything else — resolver,
+invite flow (with the invited-signup auto-org fix), Stripe team pricing +
+checkout + webhook handling, `/account/team` UI, pricing page Teams panel,
+and a full test suite (all gated to skip cleanly until the schema is live)
+— is built and passing typecheck/lint/the existing test suite (2601
+passing, 0 regressions). `docs/team-membership.md`'s "Deployment status"
+section has the exact remaining commands to run once a real
+`DATABASE_URL` + Stripe secret key are available.
+
 ## Other known outstanding items (not started)
 
 - **OpenAI billing** — the `OPENAI_API_KEY` configured for

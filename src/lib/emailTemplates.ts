@@ -195,7 +195,6 @@ export function trialExpiredEmail(params: { firstName: string | null; appUrl: st
   };
 }
 
-
 // ---------------------------------------------------------------------
 // AE Directory outreach templates (2026-07-30). Both are commercial email
 // to a NON-USER (a lender's AE contact) — every send goes through
@@ -286,6 +285,38 @@ export function statsPitchEmail(params: {
           <a href="${params.subscribeUrl}" style="background: #0f172a; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">See Featured Placement</a>
         </p>
         ${commercialEmailFooter(params.unsubscribeUrl)}
+      </div>
+    `,
+  };
+}
+
+/** Sent when an org_admin invites someone to join their team (Team
+ * Membership spec, 2026-07-30) — tokenized accept link, expiry stated
+ * plainly since the raw token only ever exists in this email. */
+export function orgInviteEmail(params: {
+  organizationName: string;
+  role: string;
+  inviterEmail: string;
+  acceptUrl: string;
+  expiresAtIso: string;
+}): { subject: string; html: string } {
+  const expiresDate = new Date(params.expiresAtIso).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" });
+  const roleLabel = params.role.replace(/_/g, " ");
+
+  return {
+    subject: `${params.inviterEmail} invited you to join ${params.organizationName} on NON-QM Nexus`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; color: #1e293b;">
+        <h1 style="font-size: 20px; margin-bottom: 4px;">You've been invited to a team</h1>
+        <p style="color: #64748b; font-size: 14px; margin-top: 0;">NON-QM Nexus</p>
+        <p><strong>${params.inviterEmail}</strong> invited you to join <strong>${params.organizationName}</strong> as a <strong>${roleLabel}</strong> — your seat is covered by their team subscription, no billing setup needed on your end.</p>
+        <p style="text-align: center; margin: 24px 0;">
+          <a href="${params.acceptUrl}" style="background: #0f172a; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">Accept invitation</a>
+        </p>
+        <p style="font-size: 13px; color: #64748b;">This link expires on ${expiresDate}. If you weren't expecting this invitation, you can safely ignore this email.</p>
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 32px;">
+          NON-QM Nexus — this is an automated invitation email.
+        </p>
       </div>
     `,
   };
