@@ -35,6 +35,8 @@ model Organization {
   auditLogs     AuditLog[]
   aiRequests    AiRequest[]
   featureFlags  FeatureFlag[]
+  orgSubscriptions OrgSubscription[]
+  orgInvites       OrgInvite[]
 
   @@map("organizations")
 }
@@ -90,6 +92,13 @@ model Membership {
   organizationId String   @map("organization_id") @db.Uuid
   userId         String   @map("user_id") @db.Uuid
   role           String // broker | account_executive | processor | underwriter | org_admin | platform_admin
+  // True when this member's tier access is covered by the org's team
+  // subscription (org_subscriptions) rather than a personal one — see
+  // src/lib/repository/membership.ts's getEffectivePlan() resolver and
+  // docs/team-membership.md. Toggled by an org_admin, capped by the org
+  // subscription's seat_count (enforced both at toggle-time and re-checked
+  // in the resolver, oldest-membership-first — see docs/team-membership.md).
+  coveredByOrgPlan Boolean @default(false) @map("covered_by_org_plan")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
@@ -99,6 +108,57 @@ model Membership {
 
   @@unique([organizationId, userId])
   @@map("memberships")
+}
+
+/// One row per organization's team subscription — a single Stripe (or
+/// admin-comped) subscription covering N seats. At most one ACTIVE row per
+/// organization (enforced by a partial unique index in
+/// supabase/team-membership-schema.sql, since Prisma's schema language has
+/// no partial-index syntax) — a canceled row is kept for history when a new
+/// one starts. `source` distinguishes a real Stripe subscription from an
+/// admin-granted comp (pilot teams — no Stripe object involved), mirroring
+/// UserSubscription's own source field. Stripe webhooks are the only writer
+/// of Stripe-sourced fields; comped writes go through admin actions with
+/// audit_logs entries — see docs/team-membership.md.
+model OrgSubscription {
+  id                   String    @id @default(uuid()) @db.Uuid
+  organizationId       String    @map("organization_id") @db.Uuid
+  planId               String    @map("plan_id") @db.Uuid
+  seatCount            Int       @map("seat_count")
+  status               String    @default("active") // active | canceled
+  source               String    @default("comped") // stripe | comped
+  stripeSubscriptionId String?   @unique @map("stripe_subscription_id")
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  canceledAt           DateTime? @map("canceled_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  organization Organization    @relation(fields: [organizationId], references: [id])
+  plan         MembershipPlan  @relation(fields: [planId], references: [id])
+
+  @@map("org_subscriptions")
+}
+
+/// A pending (or resolved) invitation for a user to join an organization's
+/// team. Only the SHA-256 hash of the raw token is ever stored — the raw
+/// token exists exactly once, in the invite email/link — same convention as
+/// SharedLink.tokenHash. Single-use: accepted_at or revoked_at, once set,
+/// permanently retires the invite (see docs/team-membership.md).
+model OrgInvite {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  email          String
+  role           String
+  tokenHash      String    @unique @map("token_hash")
+  expiresAt      DateTime  @map("expires_at")
+  acceptedAt     DateTime? @map("accepted_at")
+  revokedAt      DateTime? @map("revoked_at")
+  invitedBy      String    @map("invited_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("org_invites")
 }
 
 model Lender {
@@ -158,6 +218,7 @@ model MembershipPlan {
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   subscriptions UserSubscription[]
+  orgSubscriptions OrgSubscription[]
 
   @@map("membership_plans")
 }

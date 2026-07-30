@@ -6,11 +6,12 @@ import { signUp, type AuthActionState } from "../login/actions";
 
 const initialState: AuthActionState = { error: null };
 
-export function SignupForm() {
+export function SignupForm({ inviteToken }: { inviteToken?: string }) {
   const [state, formAction, pending] = useActionState(signUp, initialState);
 
   return (
     <form action={formAction} className="space-y-4">
+      {inviteToken ? <input type="hidden" name="inviteToken" value={inviteToken} /> : null}
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
           Email

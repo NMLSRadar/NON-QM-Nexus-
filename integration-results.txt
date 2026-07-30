@@ -1,0 +1,90 @@
+
+> non-qm-navigator@0.1.0 test:integration
+> vitest run tests/integration
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.1.9 /home/work/NON-QM-Nexus-
+
+ ✓ tests/integration/membershipTiers.test.ts (5 tests) 15096ms
+   ✓ Membership tiers (live database) > a user with no subscription sees zero lenders (tier 0) 631ms
+   ✓ Membership tiers (live database) > assigning the Essential plan reveals only tier-1 lenders, including our tier-1 fixture 1050ms
+   ✓ Membership tiers (live database) > a 50% discount halves the effective price without changing tier access 1476ms
+   ✓ Membership tiers (live database) > upgrading to Enterprise reveals every lender, including future ones 1933ms
+   ✓ Membership tiers (live database) > a second, unrelated user in a DIFFERENT organization sees the SAME shared platform catalog at the same tier 3278ms
+ ✓ tests/integration/bulkImportAndDocuments.test.ts (4 tests) 12369ms
+   ✓ Bulk import + lender documents (live database) > creates a lender + program + guideline_version, reusing the lender by name on a second row 1204ms
+   ✓ Bulk import + lender documents (live database) > lender-documents Storage bucket: admin can upload and read; a non-admin cannot 3258ms
+   ✓ Bulk import + lender documents (live database) > lender-linked documents are admin-only — a regular org member in the same org cannot see them 1122ms
+ ✓ tests/integration/supabaseRepository.test.ts (5 tests) 9656ms
+   ✓ SupabaseRepository (live database) > getCatalog() returns the shared platform catalog immediately — no per-organization seeding step 1724ms
+   ✓ SupabaseRepository (live database) > getCatalog() is stable across repeated calls 2363ms
+   ✓ SupabaseRepository (live database) > saves a scenario and reads it back scoped to this organization 637ms
+   ✓ SupabaseRepository (live database) > enforces RLS: a second user cannot see the first user's organization data 2113ms
+ ✓ tests/integration/lenderVisibility.test.ts (3 tests) 8657ms
+   ✓ Lender visibility vs. guideline access (live database) > a user with NO subscription sees ALL 3 tiers of lenders via listAllLenders, but zero programs via listPrograms 1115ms
+   ✓ Lender visibility vs. guideline access (live database) > a Tier 1 subscriber still sees all 3 tiers of lenders, but only Tier 1 programs 1302ms
+   ✓ Lender visibility vs. guideline access (live database) > a Tier 2 subscriber still sees all 3 tiers of lenders, but only Tier 1+2 programs (not Tier 3) 1503ms
+ ✓ tests/integration/pendingReviewLenderPrograms.test.ts (4 tests) 9786ms
+   ✓ Pending-review lender programs (live database) > surfaces a real pending-review lender/program the caller's tier can reach, with only name + doc types 1215ms
+   ✓ Pending-review lender programs (live database) > never surfaces an inactive lender even if it has no verified guideline 1213ms
+   ✓ Pending-review lender programs (live database) > the same pending lender never appears via the verified-only listLenders/listPrograms 1954ms
+   ✓ Pending-review lender programs (live database) > the real Brokers First Funding lender (added 2026-07-28) is itself surfaced as pending review with 4 programs 1188ms
+ ✓ tests/integration/unverifiedLenderQuarantine.test.ts (4 tests) 6977ms
+   ✓ Unverified lender quarantine (live database) > a fully-subscribed Enterprise account never sees an unverified lender (no guideline_versions row) via listLenders 843ms
+   ✓ Unverified lender quarantine (live database) > a fully-subscribed Enterprise account never sees a PENDING-REVIEW lender via listLenders 849ms
+   ✓ Unverified lender quarantine (live database) > neither the unverified nor the pending-review program ever evaluates via listPrograms 1176ms
+ ✓ tests/integration/subscriptionCancellation.test.ts (6 tests) 9727ms
+   ✓ Subscription cancellation (live database) > an active subscription grants tier access before cancellation 1123ms
+   ✓ Subscription cancellation (live database) > self-serve cancel_own_subscription() revokes access but keeps plan history 869ms
+   ✓ Subscription cancellation (live database) > a canceled user cannot use the RPC to cancel someone else's subscription 422ms
+   ✓ Subscription cancellation (live database) > admin reactivation (clearing canceled_at) restores tier access 1316ms
+   ✓ Subscription cancellation (live database) > self-serve reactivate_own_subscription() restores tier access after a self-serve cancel 1724ms
+   ✓ Subscription cancellation (live database) > reactivate_own_subscription() on an already-active subscription is a safe no-op 432ms
+ ✓ tests/integration/adminOnlyUploadAudit.test.ts (8 tests) 6441ms
+   ✓ Admin-only upload audit (live database) > a regular user cannot upload to the lender-documents Storage bucket 853ms
+   ✓ Admin-only upload audit (live database) > an unauthenticated (anon) request cannot upload to the lender-documents Storage bucket either 725ms
+   ✓ Admin-only upload audit (live database) > getCatalog() reads the shared platform catalog directly — no per-organization self-seeding step anymore 948ms
+ ✓ tests/integration/trialCampaignDeactivation.test.ts (3 tests) 5447ms
+   ✓ Trial campaign deactivation + admin override (live database) > item 20: an existing trial redeemed while the campaign was active keeps working normally after the campaign is later deactivated 974ms
+   ✓ Trial campaign deactivation + admin override (live database) > item 19: deactivating the campaign refuses a brand-new activation against it 567ms
+   ✓ Trial campaign deactivation + admin override (live database) > item 18: an admin override grants a trial to the second user via the SAME writes adminOverrideActivateTrial performs, even though the campaign is inactive is irrelevant here — it directly inserts rather than calling the gated RPC 1497ms
+ ✓ tests/integration/trialAdminActions.test.ts (3 tests) 5263ms
+   ✓ Trial admin actions — extend/revoke/convert (live database) > extend: pushes expires_at forward on BOTH trial_redemptions and user_subscriptions, and increments extension_count 1050ms
+   ✓ Trial admin actions — extend/revoke/convert (live database) > revoke: sets revoked_at and immediately expires access on user_subscriptions (never deletes the account or its data) 1041ms
+   ✓ Trial admin actions — extend/revoke/convert (live database) > convert: assigns a REAL plan, clears is_trial, and records the conversion on trial_redemptions 852ms
+ ↓ tests/integration/trialEmailCron.test.ts (4 tests | 4 skipped)
+ ✓ tests/integration/adminAutoProvision.test.ts (3 tests) 4894ms
+   ✓ Platform-admin auto-provisioning guard (live database) > a platform admin with no subscription row is auto-assigned comped Enterprise (tier 3), using their own RLS-scoped session 1088ms
+   ✓ Platform-admin auto-provisioning guard (live database) > re-resolving the same admin's plan is idempotent (no duplicate row, same result) 630ms
+   ✓ Platform-admin auto-provisioning guard (live database) > a REGULAR (non-admin) user with no subscription row still resolves to tier 0 — the guard never over-grants 752ms
+ ✓ tests/integration/voiceIntakeRecord.test.ts (4 tests) 3199ms
+   ✓ Voice intake session: stored scenario record (live database) > Purchase: persists loanPurpose="purchase" in the stored scenario record 474ms
+   ✓ Voice intake session: stored scenario record (live database) > Cash-Out Refinance: persists loanPurpose="cash_out_refinance" in the stored scenario record 442ms
+   ✓ Voice intake session: stored scenario record (live database) > Rate-and-Term Refinance: persists loanPurpose="rate_term_refinance" in the stored scenario record 440ms
+ ✓ tests/integration/trialExpiration.test.ts (3 tests) 3718ms
+   ✓ 14-day trial expiration (live database) > an active (future-expiring) trial resolves to tier 3 with isTrial=true 473ms
+   ✓ 14-day trial expiration (live database) > the SAME account automatically resolves to tier 0 the instant trial_expires_at is in the past — no admin action required 417ms
+   ✓ 14-day trial expiration (live database) > expires exactly at the boundary — one second past expiry is already expired, one second before is still active 855ms
+ ↓ tests/integration/stripeWebhook.test.ts (3 tests | 3 skipped)
+ ✓ tests/integration/programGuidelineVerificationCoverage.test.ts (2 tests) 968ms
+   ✓ Program guideline-version verification coverage (live database) > no active, non-sample platform-catalog program is missing every guideline_versions row 524ms
+   ✓ Program guideline-version verification coverage (live database) > every active, non-sample program that HAS a guideline_versions row has at least one human_verified or pending-review entry (not e.g. only 'archived'/'superseded') 444ms
+ ✓ tests/integration/trialActivation.test.ts (2 tests) 3530ms
+   ✓ Trial activation RPC (live database) > activates a real trial: creates a redemption row and grants tier-3 access with a server-computed 14-day expiration 686ms
+ ✓ tests/integration/deepGuidelineIntelligence4Lenders.test.ts (5 tests) 1533ms
+   ✓ Deep guideline intelligence — 4-lender corrections (live database) > BluePoint Asset Utilization's baseMaxLtv was corrected from the previously-recorded 90% down to the real 80% ceiling, and is now human_verified 572ms
+ ✓ tests/integration/noFabricatedVerificationSweep.test.ts (1 test) 1197ms
+   ✓ No fabricated verification — whole-catalog sweep (live database) > no active, non-sample program with human_verified status has a genuinely unconfirmed (minFico=0 AND baseMaxLtv=0) config 1196ms
+
+ Test Files  17 passed | 2 skipped (19)
+      Tests  65 passed | 7 skipped (72)
+   Start at  02:53:10
+   Duration  116.09s (transform 416ms, setup 0ms, collect 2.11s, tests 108.46s, environment 3ms, prepare 1.80s)
+
+npm notice
+npm notice New major version of npm available! 10.9.8 -> 12.0.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.1
+npm notice To update run: npm install -g npm@12.0.1
+npm notice
+EXIT_CODE:0
