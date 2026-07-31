@@ -3,9 +3,11 @@ import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { Card } from "@/components/ui";
 import { ManageBillingForm } from "@/app/account/manage-billing-form";
 import { InviteForm } from "./invite-form";
+import { BulkInviteForm } from "./bulk-invite-form";
 import { MembersList, type MemberRow } from "./members-list";
 import { InvitesList, type InviteRow } from "./invites-list";
 import { SeatsForm } from "./seats-form";
+import { BULK_PLAN_KEY, formatCents } from "@/lib/bulkMembership";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +39,9 @@ export default async function TeamPage() {
       .order("created_at", { ascending: false }),
     service
       .from("org_subscriptions")
-      .select("id, seat_count, status, source, current_period_end, canceled_at, plan:membership_plans(name)")
+      .select(
+        "id, seat_count, status, source, current_period_end, canceled_at, billing_mode, custom_price_per_seat_cents, plan:membership_plans(name, key)"
+      )
       .eq("organization_id", organizationId)
       .eq("status", "active")
       .maybeSingle(),
@@ -68,6 +72,8 @@ export default async function TeamPage() {
   const seatsUsed = members.filter((m) => m.covered).length;
   const seatsTotal = (orgSub?.seat_count as number | undefined) ?? 0;
   const plan = orgSub ? (Array.isArray(orgSub.plan) ? orgSub.plan[0] : orgSub.plan) : null;
+  const isBulk = (plan as { key?: string } | null)?.key === BULK_PLAN_KEY;
+  const customPricePerSeatCents = orgSub?.custom_price_per_seat_cents as number | null | undefined;
 
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl max-w-3xl space-y-6">
@@ -86,12 +92,15 @@ export default async function TeamPage() {
                   <span className="ml-2 text-xs rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5">Active</span>
                   {orgSub.source === "comped" ? (
                     <span className="ml-2 text-xs rounded-full bg-white/10 text-slate-300 px-2 py-0.5">Comped</span>
+                  ) : orgSub.source === "invoiced" ? (
+                    <span className="ml-2 text-xs rounded-full bg-white/10 text-slate-300 px-2 py-0.5">Invoiced (NET-30)</span>
                   ) : (
                     <span className="ml-2 text-xs rounded-full bg-white/10 text-slate-300 px-2 py-0.5">Billed via Stripe</span>
                   )}
                 </p>
                 <p className="text-sm text-slate-400">
                   {seatsUsed} of {seatsTotal} seats covered
+                  {isBulk && customPricePerSeatCents ? ` · ${formatCents(customPricePerSeatCents)}/seat/mo` : ""}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -117,6 +126,10 @@ export default async function TeamPage() {
 
       <Card title="Invite a teammate" dark>
         <InviteForm />
+      </Card>
+
+      <Card title="Bulk invite" dark>
+        <BulkInviteForm />
       </Card>
 
       {invitesList.length > 0 ? (

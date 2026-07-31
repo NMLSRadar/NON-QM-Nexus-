@@ -66,6 +66,14 @@ export async function POST(request: Request) {
    * src/app/account/team/actions.ts's updateSeatCount() for the one other
    * legitimate writer (a direct Stripe API call whose result THIS webhook
    * still confirms into the DB).
+   *
+   * Bulk Membership (docs/bulk-membership.md) card-billed deals also route
+   * here (metadata.team === "true" too — same subscription-based billing),
+   * but their Price is created dynamically per deal
+   * (src/app/admin/bulk-memberships/actions.ts) rather than living on a
+   * plan's stripe_team_price_id column, so the price->plan lookup below
+   * falls back to metadata.bulk_plan_id when the price doesn't match any
+   * plan's standard team price.
    */
   async function upsertOrgSubscription(subscription: Stripe.Subscription) {
     const organizationId = subscription.metadata?.organization_id;
@@ -85,6 +93,10 @@ export async function POST(request: Request) {
         .maybeSingle();
       planId = (plan?.id as string | undefined) ?? null;
     }
+    const isBulk = subscription.metadata?.bulk === "true";
+    if (!planId && isBulk && subscription.metadata?.bulk_plan_id) {
+      planId = subscription.metadata.bulk_plan_id;
+    }
     if (!planId) {
       console.error(`Team Stripe subscription ${subscription.id}: price ${priceId} doesn't match any plan's team price — skipping.`);
       return;
@@ -93,6 +105,8 @@ export async function POST(request: Request) {
     const seatCount = item?.quantity ?? 1;
     const currentPeriodEndUnix = item?.current_period_end;
     const isCanceled = subscription.status === "canceled";
+    const pricePerSeatCentsRaw = subscription.metadata?.price_per_seat_cents;
+    const customPricePerSeatCents = isBulk && pricePerSeatCentsRaw ? Number(pricePerSeatCentsRaw) : null;
 
     const { error } = await supabase.from("org_subscriptions").upsert(
       {
@@ -104,6 +118,8 @@ export async function POST(request: Request) {
         stripe_subscription_id: subscription.id,
         current_period_end: currentPeriodEndUnix ? new Date(currentPeriodEndUnix * 1000).toISOString() : null,
         canceled_at: isCanceled ? new Date().toISOString() : null,
+        billing_mode: isBulk ? "custom_stripe" : "standard",
+        custom_price_per_seat_cents: customPricePerSeatCents,
       },
       { onConflict: "stripe_subscription_id" }
     );

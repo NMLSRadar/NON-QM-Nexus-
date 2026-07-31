@@ -321,3 +321,99 @@ export function orgInviteEmail(params: {
     `,
   };
 }
+
+// ---------------------------------------------------------------------
+// Bulk Membership (2026-07-31, docs/bulk-membership.md) — internal ops
+// notification for a new inbound quote request, plus the two customer-
+// facing emails an admin action triggers once a deal is set up.
+// ---------------------------------------------------------------------
+
+/** Internal-only — sent to the ops/notify inbox when a new Bulk Membership
+ * request lands (never sent to the requester). */
+export function bulkMembershipRequestNotifyEmail(params: {
+  companyName: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string | null;
+  seatCountRequested: number;
+  notes: string | null;
+  appUrl: string;
+}): { subject: string; html: string } {
+  return {
+    subject: `New Bulk Membership request — ${params.companyName} (${params.seatCountRequested} seats)`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; color: #1e293b;">
+        <h1 style="font-size: 20px; margin-bottom: 4px;">New Bulk Membership request</h1>
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;">
+          <tr><td style="padding: 4px 0; color: #64748b;">Company</td><td style="text-align: right; font-weight: 600;">${params.companyName}</td></tr>
+          <tr><td style="padding: 4px 0; color: #64748b;">Contact</td><td style="text-align: right;">${params.contactName} — ${params.contactEmail}</td></tr>
+          <tr><td style="padding: 4px 0; color: #64748b;">Phone</td><td style="text-align: right;">${params.contactPhone ?? "—"}</td></tr>
+          <tr><td style="padding: 4px 0; color: #64748b;">Seats requested</td><td style="text-align: right; font-weight: 600;">${params.seatCountRequested}</td></tr>
+        </table>
+        ${params.notes ? `<p style="font-size: 13px; color: #475569;"><strong>Notes:</strong> ${params.notes}</p>` : ""}
+        <p style="text-align: center; margin: 24px 0;">
+          <a href="${params.appUrl}/admin/bulk-memberships" style="background: #0f172a; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">Review in admin</a>
+        </p>
+      </div>
+    `,
+  };
+}
+
+/** Sent to the customer contact once ops has negotiated card-billed
+ * pricing and generated a Stripe Checkout link for their seat count. */
+export function bulkMembershipCheckoutLinkEmail(params: {
+  companyName: string;
+  seatCount: number;
+  pricePerSeatCents: number;
+  checkoutUrl: string;
+}): { subject: string; html: string } {
+  const priceLabel = formatCentsForEmail(params.pricePerSeatCents);
+  return {
+    subject: `Your NON-QM Nexus Bulk Membership for ${params.companyName} is ready`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; color: #1e293b;">
+        <h1 style="font-size: 20px; margin-bottom: 4px;">Your Bulk Membership is ready</h1>
+        <p style="color: #64748b; font-size: 14px; margin-top: 0;">NON-QM Nexus</p>
+        <p>Your negotiated Bulk Membership for <strong>${params.companyName}</strong> is set up: <strong>${params.seatCount} seats</strong> at <strong>${priceLabel}/seat/month</strong>.</p>
+        <p style="text-align: center; margin: 24px 0;">
+          <a href="${params.checkoutUrl}" style="background: #0f172a; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">Complete checkout</a>
+        </p>
+        <p style="font-size: 14px; color: #475569;">
+          Once payment is confirmed, you'll be able to invite your entire team — up to ${params.seatCount} loan officers — in one bulk upload from your account's Team page.
+        </p>
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 32px;">NON-QM Nexus — this is an automated email about your Bulk Membership.</p>
+      </div>
+    `,
+  };
+}
+
+/** Sent to the customer contact once ops has sent a NET-30 invoice for
+ * their Bulk Membership. */
+export function bulkMembershipInvoiceSentEmail(params: {
+  companyName: string;
+  seatCount: number;
+  totalCents: number;
+  invoiceUrl: string;
+  dueDate: string;
+}): { subject: string; html: string } {
+  const totalLabel = formatCentsForEmail(params.totalCents);
+  return {
+    subject: `Your NON-QM Nexus Bulk Membership invoice for ${params.companyName}`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; color: #1e293b;">
+        <h1 style="font-size: 20px; margin-bottom: 4px;">Your Bulk Membership invoice</h1>
+        <p style="color: #64748b; font-size: 14px; margin-top: 0;">NON-QM Nexus</p>
+        <p>An invoice for <strong>${params.companyName}</strong>'s Bulk Membership (${params.seatCount} seats, ${totalLabel} total) is ready, due ${params.dueDate}.</p>
+        <p style="text-align: center; margin: 24px 0;">
+          <a href="${params.invoiceUrl}" style="background: #0f172a; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">View & pay invoice</a>
+        </p>
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 32px;">NON-QM Nexus — this is an automated email about your Bulk Membership.</p>
+      </div>
+    `,
+  };
+}
+
+function formatCentsForEmail(cents: number): string {
+  const dollars = cents / 100;
+  return `$${dollars % 1 === 0 ? dollars.toLocaleString("en-US") : dollars.toFixed(2)}`;
+}

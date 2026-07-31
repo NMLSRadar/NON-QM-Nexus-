@@ -278,6 +278,29 @@ blank in `.env.local` (same short-lived-credential pattern as
 per-seat Prices) hasn't run yet. See `docs/team-membership.md`'s
 "Deployment status" for the exact remaining commands.
 
+## IN PROGRESS — Bulk Membership, 2026-07-31
+
+A single unified system for a brokerage to buy 1-500 loan officer seats
+in one deal at a **custom-negotiated price** (not a public tier) — built
+additively on top of Team Membership above, reusing its organizations /
+memberships / org_subscriptions / org_invites tables and coverage
+resolver rather than a parallel system. Full design, deployment steps,
+and file list in `docs/bulk-membership.md`. Explicitly does NOT touch the
+existing 3-tier self-serve system (pricing, feature gating, or code) —
+confirmed by request from the owner.
+
+**Status: code complete, not yet deployed.** This session had no
+`DATABASE_URL`/Stripe keys (cleared between sessions), so
+`prisma/schema.prisma`'s new fields and `supabase/bulk-membership-
+schema.sql` have not been pushed to the live DB. `npx prisma validate`
+passes, `tsc --noEmit` and `next lint` are clean, and all 2486 existing
+domain tests still pass unchanged. See `docs/bulk-membership.md`'s
+"Deployment status" for the exact commands to finish (db push + rerun
+the defaults scripts per the gotcha above + the new SQL file + real
+Stripe keys for card/invoiced billing modes — comped works with no
+Stripe keys at all).
+
+
 ## AE Directory, Sponsored Placement & Outreach System, 2026-07-30
 
 A second revenue line: lender-side Account Executives (AEs) pay a flat
