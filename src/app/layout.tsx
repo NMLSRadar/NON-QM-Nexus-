@@ -7,6 +7,7 @@ import { AuthStatus } from "@/components/auth-status";
 import { AdminNavLink } from "@/components/admin-nav-link";
 import { TeamNavLink } from "@/components/team-nav-link";
 import { PwaRegister } from "@/components/pwa-register";
+import { InstallAppButton } from "@/components/install-app-button";
 import { BuildVersionGuard } from "@/components/build-version-guard";
 import { PrimaryNav } from "@/components/primary-nav";
 import { GlobalAmbientEngine } from "@/components/global-ambient-engine";
@@ -63,6 +64,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <PrimaryNav />
             </div>
             <div className="flex items-center gap-3 shrink-0">
+              <InstallAppButton />
               <TeamNavLink />
               <AdminNavLink />
               <AuthStatus />
