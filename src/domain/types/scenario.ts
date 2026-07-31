@@ -5,9 +5,11 @@ import type {
   InvestorExperience,
   LienPosition,
   LoanPurpose,
+  MortgageLatesCategory,
   Occupancy,
   PropertyType,
   Vesting,
+  YesNoUnknown,
 } from "./enums";
 
 /**
@@ -59,6 +61,18 @@ export interface DscrDetails {
   interestOnlyPayment?: number;
   principalAndInterest?: number; // full PITIA P&I component
   shortTermRental?: boolean;
+  /** Tri-state, secondary-vital version of shortTermRental — added
+   * 2026-07-31 (Secondary Voice Vitals Expansion). Distinct from the
+   * legacy boolean above ONLY in that it can also resolve to "unknown"
+   * (never asked / broker doesn't know yet) rather than defaulting to a
+   * false-shaped absence. Voice/manual intake set BOTH fields together
+   * (shortTermRental = strIncomeUsed === "yes") for backward
+   * compatibility with calc/dscr.ts's existing narrative note; matching
+   * (baseChecks.ts/score.ts) reads ONLY this tri-state field, since a
+   * ranking/eligibility consequence must never fire off of a legacy
+   * `undefined` that could mean either "not asked" or "no". DSCR-program
+   * scoped only, per spec — never surfaced for a non-DSCR income doc type. */
+  strIncomeUsed?: YesNoUnknown;
   firstTimeInvestor?: boolean;
   financedProperties?: number;
 }
@@ -103,6 +117,16 @@ export interface CreditEvents {
   mortgageLates60x12?: number;
   mortgageLates90x12?: number;
   housingHistoryMonths?: number; // documented months of housing history
+  /** Friendlier single-select housing-lates category — see
+   * MortgageLatesCategory in enums.ts. Added 2026-07-31 (Secondary Voice
+   * Vitals Expansion). Voice/manual intake ALSO translate this into the
+   * legacy numeric mortgageLates30x12 count (1 when the category is
+   * late_30 or more severe, 0 for none) so the existing 30x12-based
+   * baseChecks.ts check keeps working against already-populated real
+   * lender data without requiring every lender to be re-tagged with the
+   * new category field first; the category itself additionally powers a
+   * dedicated 60/90/multiple-aware check via Program.maxMortgageLatesCategory. */
+  mortgageLatesCategory?: MortgageLatesCategory;
 }
 
 export interface Scenario {
@@ -178,6 +202,16 @@ export interface Scenario {
   investorExperience?: InvestorExperience;
   employmentStatus?: "self_employed" | "wage_earner" | "retired" | "other";
   selfEmploymentMonths?: number;
+  /** Secondary vital (added 2026-07-31, Secondary Voice Vitals Expansion)
+   * — whether the borrower qualifies under a lender's ONE-YEAR
+   * self-employment allowance (as opposed to the standard two-year
+   * requirement most Non-QM guidelines otherwise default to). Distinct
+   * from `selfEmploymentMonths` (a raw number, rarely volunteered
+   * unprompted) — this is the friendlier yes/no/unknown the borrower/
+   * broker actually states in conversation. "unknown" is a legitimate,
+   * non-penalized answer; only "yes" (only 12 months in business) or
+   * "no" (2+ years, the ordinary case) carries any matching consequence. */
+  oneYearSelfEmployed?: YesNoUnknown;
   businessOwnershipPercent?: number;
   incomeDocType?: IncomeDocType;
   /** Documented monthly income for full-doc / 1099 / WVOE methods. */
@@ -192,6 +226,12 @@ export interface Scenario {
   retirementAssets?: number;
   otherEligibleAssets?: number;
   reserveAmountMonthsRequested?: number;
+  /** Secondary vital (added 2026-07-31, Secondary Voice Vitals Expansion)
+   * — whether the borrower is using gift funds toward the down payment,
+   * closing costs, or reserves. "unknown" is a legitimate, non-penalized
+   * answer (never asked); only "yes" carries a matching/ranking
+   * consequence (see baseChecks.ts/score.ts's gift-funds handling). */
+  giftFundsUsed?: YesNoUnknown;
 
   // Options
   interestOnlyRequested?: boolean;

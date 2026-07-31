@@ -1,4 +1,4 @@
-import { RuleOutcome, RuleSeverity } from "../types/enums";
+import { RuleOutcome, RuleSeverity, MORTGAGE_LATES_SEVERITY, MORTGAGE_LATES_CATEGORY_LABELS } from "../types/enums";
 import type { Program } from "../types/program";
 import type { Scenario } from "../types/scenario";
 import type { CalculationSummary, RuleEvaluationResult } from "../types/results";
@@ -238,6 +238,83 @@ export function baseProgramChecks(
     } else {
       out.push(result(`${p}:lates`, "Mortgage/housing history (30-day lates)", "credit", RuleOutcome.Pass, RuleSeverity.Soft,
         `${lates}x30 in the last 12 months is within this program's housing-history requirement (max ${max}x30x12).`));
+    }
+  }
+
+  // Mortgage/housing-lates CATEGORY (Secondary Voice Vitals Expansion,
+  // 2026-07-31) — a richer, 60/90/multiple-aware sibling to the 30x12
+  // check above. Only evaluated when BOTH the scenario stated a real
+  // category (never "unknown" — that's a legitimate non-answer, never
+  // compared) AND the program has a documented maxMortgageLatesCategory.
+  // Exceeding the program's tolerated severity is a hard fail; landing
+  // exactly at it is a soft warning (an LLPA/pricing adjustment commonly
+  // applies at the ceiling), same shape as the 30x12 check.
+  if (
+    scenario.creditEvents?.mortgageLatesCategory &&
+    scenario.creditEvents.mortgageLatesCategory !== "unknown" &&
+    program.maxMortgageLatesCategory &&
+    program.maxMortgageLatesCategory !== "unknown"
+  ) {
+    const scenarioSeverity = MORTGAGE_LATES_SEVERITY[scenario.creditEvents.mortgageLatesCategory];
+    const maxSeverity = MORTGAGE_LATES_SEVERITY[program.maxMortgageLatesCategory];
+    const scenarioLabel = MORTGAGE_LATES_CATEGORY_LABELS[scenario.creditEvents.mortgageLatesCategory];
+    const maxLabel = MORTGAGE_LATES_CATEGORY_LABELS[program.maxMortgageLatesCategory];
+    if (scenarioSeverity > maxSeverity) {
+      out.push(result(`${p}:latescat`, "Mortgage/housing history (lates category)", "credit", RuleOutcome.Fail, RuleSeverity.Hard,
+        `${scenarioLabel} exceeds this program's documented housing-history tolerance (max ${maxLabel}).`));
+    } else if (scenarioSeverity === maxSeverity && maxSeverity > 0) {
+      out.push(result(`${p}:latescat`, "Mortgage/housing history (lates category)", "credit", RuleOutcome.Warning, RuleSeverity.Soft,
+        `${scenarioLabel} is at this program's housing-history ceiling (${maxLabel}) — typically allowed only with an LLPA/pricing adjustment; confirm final pricing.`));
+    } else {
+      out.push(result(`${p}:latescat`, "Mortgage/housing history (lates category)", "credit", RuleOutcome.Pass, RuleSeverity.Soft,
+        `${scenarioLabel} is within this program's housing-history tolerance (max ${maxLabel}).`));
+    }
+  }
+
+  // Gift funds (Secondary Voice Vitals Expansion, 2026-07-31) — never a
+  // hard eligibility gate (a real restriction usually just means the
+  // borrower needs a different funds source, not that the whole program
+  // is off the table), but a genuine, real restriction is surfaced as a
+  // warning rather than silently ignored. Only evaluated when the
+  // borrower actually said they're using gift funds; "no"/"unknown" never
+  // triggers anything here.
+  if (scenario.giftFundsUsed === "yes") {
+    if (program.giftFundsAllowed === false) {
+      out.push(result(`${p}:gift`, "Gift funds", "assets", RuleOutcome.Warning, RuleSeverity.Soft,
+        "This program's current guideline does not allow gift funds — the borrower will need an alternative funds source for this program specifically."));
+    } else if (program.giftFundsAllowed === true) {
+      out.push(result(`${p}:gift`, "Gift funds", "assets", RuleOutcome.Pass, RuleSeverity.Info,
+        program.giftFundsNotes ? `Gift funds are explicitly allowed. ${program.giftFundsNotes}` : "Gift funds are explicitly allowed on this program."));
+    }
+  }
+
+  // DSCR short-term-rental (STR) income (Secondary Voice Vitals
+  // Expansion, 2026-07-31) — DSCR programs only, mirrors the gift-funds
+  // pattern: a real, documented disallowance is a soft warning (not a
+  // hard fail, since the transaction may still qualify on long-term
+  // market rent alone), while an explicit allowance is a positive,
+  // disclosed note.
+  if (scenario.incomeDocType === "dscr" && scenario.dscr?.strIncomeUsed === "yes") {
+    if (program.strIncomeEligible === false) {
+      out.push(result(`${p}:str`, "DSCR short-term-rental income", "income", RuleOutcome.Warning, RuleSeverity.Soft,
+        "This program's current guideline does not allow Airbnb/VRBO/short-term-rental income for DSCR qualification — the property will need to qualify on long-term market rent instead."));
+    } else if (program.strIncomeEligible === true) {
+      out.push(result(`${p}:str`, "DSCR short-term-rental income", "income", RuleOutcome.Pass, RuleSeverity.Info,
+        program.strIncomeNotes ? `Short-term-rental income is explicitly allowed for DSCR qualification. ${program.strIncomeNotes}` : "Short-term-rental (Airbnb/VRBO/AirDNA/Rentalizer-style) income is explicitly allowed for DSCR qualification."));
+    }
+  }
+
+  // One-year self-employment (Secondary Voice Vitals Expansion,
+  // 2026-07-31) — per spec, "suppress lenders requiring two years unless
+  // compensating factors exist": modeled as a soft warning (underwriting
+  // judgment/compensating factors can still apply), never a hard fail.
+  if (scenario.oneYearSelfEmployed === "yes" && program.minSelfEmploymentMonths != null) {
+    if (program.minSelfEmploymentMonths > 12) {
+      out.push(result(`${p}:1yrse`, "Self-employment history", "borrower", RuleOutcome.Warning, RuleSeverity.Soft,
+        `This program's current guideline requires ${program.minSelfEmploymentMonths} months of self-employment history — the borrower has only reached one year (12 months); may still be workable with compensating factors, confirm with the lender's AE.`));
+    } else {
+      out.push(result(`${p}:1yrse`, "Self-employment history", "borrower", RuleOutcome.Pass, RuleSeverity.Info,
+        "This program's current guideline explicitly permits a one-year self-employment history."));
     }
   }
 

@@ -161,6 +161,41 @@ export function computeScore(
     });
   }
 
+  // 12. Gift funds fit (5) — Secondary Voice Vitals Expansion (2026-07-31),
+  // the identical editorial/documentary-signal pattern used elsewhere in
+  // this scoring model: only a POSITIVE signal (an explicit real
+  // allowance), never a penalty here — a real restriction is already
+  // reflected via the warning-count factor above (#7).
+  if (scenario.giftFundsUsed === "yes" && program.giftFundsAllowed === true) {
+    breakdown.push({
+      factor: "Gift funds fit",
+      points: 5,
+      maxPoints: 5,
+      note: "This program's current guideline explicitly allows gift funds — a real, documented fit for this borrower's funding source.",
+    });
+  }
+
+  // 13. DSCR short-term-rental income fit (5) — DSCR only, same pattern.
+  if (scenario.incomeDocType === "dscr" && scenario.dscr?.strIncomeUsed === "yes" && program.strIncomeEligible === true) {
+    breakdown.push({
+      factor: "DSCR short-term-rental income fit",
+      points: 5,
+      maxPoints: 5,
+      note: "This program's current guideline explicitly allows Airbnb/VRBO/AirDNA/Rentalizer-style short-term-rental income for DSCR qualification.",
+    });
+  }
+
+  // 14. One-year self-employment fit (5) — per spec, "prioritize lenders
+  // that permit one-year self-employment."
+  if (scenario.oneYearSelfEmployed === "yes" && program.minSelfEmploymentMonths != null && program.minSelfEmploymentMonths <= 12) {
+    breakdown.push({
+      factor: "One-year self-employment fit",
+      points: 5,
+      maxPoints: 5,
+      note: "This program's current guideline explicitly permits a one-year (12-month) self-employment history, matching this borrower's current standing.",
+    });
+  }
+
   // Any hard fail zeroes the practical score for ranking purposes.
   const hardFail = ruleResults.some((r) => r.outcome === RuleOutcome.Fail && r.severity === RuleSeverity.Hard);
 

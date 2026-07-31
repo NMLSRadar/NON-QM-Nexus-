@@ -208,6 +208,66 @@ export const UserRole = {
 } as const;
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
+/**
+ * Mortgage/housing-lates CATEGORY — added 2026-07-31 (Secondary Voice
+ * Vitals Expansion). A friendlier, single-select representation of
+ * housing-payment history alongside the existing numeric CreditEvents
+ * counts (mortgageLates30x12/60x12/90x12), which real callers (voice and
+ * manual intake) capture more naturally as one of these six states than
+ * as separate numeric fields. `Unknown` is a legitimate, resolved answer
+ * (never captured, never guessed) — it must NEVER be treated as a
+ * restriction; only a real, stated category can affect eligibility. See
+ * MORTGAGE_LATES_SEVERITY below and baseChecks.ts's category-based check.
+ */
+export const MortgageLatesCategory = {
+  None: "none",
+  Late30: "late_30",
+  Late60: "late_60",
+  Late90: "late_90",
+  Multiple: "multiple",
+  Unknown: "unknown",
+} as const;
+export type MortgageLatesCategory = (typeof MortgageLatesCategory)[keyof typeof MortgageLatesCategory];
+
+export const MORTGAGE_LATES_CATEGORY_LABELS: Record<MortgageLatesCategory, string> = {
+  none: "None",
+  late_30: "30-Day Late",
+  late_60: "60-Day Late",
+  late_90: "90-Day Late",
+  multiple: "Multiple Lates",
+  unknown: "Mortgage Late Unknown",
+};
+
+/** Severity ranking used to compare a scenario's category against a
+ * program's documented maximum-tolerated category (maxMortgageLatesCategory
+ * on Program) — higher is more severe. `unknown` is deliberately EXCLUDED:
+ * it must never be compared/penalized, since the whole point of the
+ * option is "the broker doesn't know yet," not "the borrower has a
+ * severe late." */
+export const MORTGAGE_LATES_SEVERITY: Record<Exclude<MortgageLatesCategory, "unknown">, number> = {
+  none: 0,
+  late_30: 1,
+  late_60: 2,
+  late_90: 3,
+  multiple: 4,
+};
+
+/** A plain tri-state used for several optional secondary vitals (gift
+ * funds, DSCR short-term-rental income, one-year self-employment) —
+ * "unknown" is a legitimate resolved answer (the broker genuinely
+ * doesn't know / didn't ask), never a stand-in for "no" and never
+ * penalized as a restriction; only an explicit "yes"/"no" carries
+ * matching consequences. Kept a plain string-literal union (not an `as
+ * const` enum object) to match the existing lightweight convention for
+ * simple tri-states elsewhere in this schema (e.g. DscrDetails.preparer,
+ * ForeignNationalDetails.ofacScreeningStatus). */
+export type YesNoUnknown = "yes" | "no" | "unknown";
+export const YES_NO_UNKNOWN_LABELS: Record<YesNoUnknown, string> = {
+  yes: "Yes",
+  no: "No",
+  unknown: "Unknown",
+};
+
 export const DISCLAIMER =
   "Preliminary scenario analysis only. Final eligibility, pricing, underwriting, documentation, and approval are subject to lender review and the guidelines in effect at the time of submission. This result is not a loan approval, commitment to lend, or guarantee of eligibility.";
 

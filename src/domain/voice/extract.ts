@@ -1,4 +1,4 @@
-import { Citizenship, CreditProfileType, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
+import { Citizenship, CreditProfileType, IncomeDocType, InvestorExperience, LoanPurpose, MortgageLatesCategory, Occupancy, PropertyType, Vesting, YesNoUnknown } from "@/domain/types/enums";
 import { Captured, VoiceExtraction, emptyExtraction } from "./slots";
 
 /**
@@ -669,6 +669,159 @@ export function classifyVesting(t: string): { value: Vesting; source: string } |
     const m = re.exec(t);
     if (m) return { value, source: m[0].trim() };
   }
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// SECONDARY (optional) vitals — Secondary Voice Vitals Expansion, added
+// 2026-07-31. These four classifiers (mortgage lates category, gift
+// funds, DSCR short-term-rental income, one-year self-employment) power
+// the second-stage "Additional Scenario Details (Optional)" interview —
+// see OPTIONAL_VITAL_KEYS in slots.ts and the Confidence Engine notes on
+// VoiceExtraction's optional-vital fields there. Each classifier returns
+// undefined when nothing was said (never guessed) and, per the
+// Confidence Engine (spec Step 5), a genuinely LOW-confidence signal is
+// simply never returned at all — there is no "low" branch to populate,
+// by design: an ambiguous fragment is discarded at the source rather
+// than surfaced with a low-confidence tag the caller would have to
+// remember to check. Only "high" (an explicit, unambiguous statement)
+// and "medium" (a real but inferred/indirect statement — no follow-up
+// question is ever asked either way) are ever returned.
+// ---------------------------------------------------------------------------
+
+export interface MortgageLatesMatch {
+  value: MortgageLatesCategory;
+  source: string;
+  confidence: "high" | "medium";
+}
+
+// Explicit negations / clean-history statements — checked FIRST so "no
+// mortgage lates"/"never been late" never also trips the generic
+// late-mention patterns below (which don't have their own negation
+// guard). All high confidence — a clean-history statement is unambiguous.
+const MORTGAGE_LATES_NONE_PHRASES =
+  /\bno\s+mortgage\s+lates?\b|\bclean\s+housing\s+history\b|\bperfect\s+mortgage\s+history\b|\bhousing\s+history\s+is\s+clean\b|\bno\s+housing\s+lates?\b|\bno\s+mortgage\s+delinquenc(?:y|ies)\b|\b(?:borrower\s+has\s+)?never\s+been\s+late\b|\balways\s+(?:been\s+)?paid\s+(?:the\s+)?(?:current\s+)?mortgage\s+on\s+time\b|\bcurrent\s+mortgage\s+has\s+always\s+been\s+paid\s+on\s+time\b|\bperfect\s+payment\s+history\b|\bno\s+lates?\s+on\s+(?:the\s+)?(?:mortgage|housing)\b/i;
+
+// Multiple lates — explicit plural/quantity language, always high confidence.
+const MORTGAGE_LATES_MULTIPLE_PHRASES = /\bmultiple\s+(?:mortgage\s+|housing\s+)?lates?\b|\bseveral\s+(?:mortgage\s+|housing\s+)?lates?\b|\bmore\s+than\s+(?:one|1)\s+late\b|\bnumerous\s+lates?\b/i;
+
+// Explicit day-count mentions ("thirty day late", "30x1") — high
+// confidence, since the specific severity is stated outright rather than
+// inferred. Checked 90 -> 60 -> 30 so the more severe, more specific
+// match wins over a shorter, accidentally-overlapping fragment.
+const MORTGAGE_LATES_90_EXPLICIT = /\b(?:90|ninety)[\s-]?(?:day)?\s*(?:mortgage\s+)?late\b|\b90\s?x\s?1\b/i;
+const MORTGAGE_LATES_60_EXPLICIT = /\b(?:60|sixty)[\s-]?(?:day)?\s*(?:mortgage\s+)?late\b|\b60\s?x\s?1\b/i;
+const MORTGAGE_LATES_30_EXPLICIT = /\b(?:30|thirty)[\s-]?(?:day)?\s*(?:mortgage\s+)?late\b|\b30\s?x\s?1\b/i;
+
+// Generic, day-count-UNSPECIFIED late mentions — defaults to 30-Day Late
+// per spec Step 3 ("They had a mortgage late." -> 30-Day Late), but at
+// MEDIUM confidence since the specific severity is being inferred rather
+// than stated outright. "(?:one|1)" rather than a literal "one" — the
+// shared normalizeTranscript() converts spoken number words to digits
+// (wordsToDigits) BEFORE any classifier runs, so "one mortgage late"
+// arrives here as "1 mortgage late".
+const MORTGAGE_LATES_GENERIC =
+  /\b(?:one|1)\s+mortgage\s+late\b|\blate\s+mortgage\b|\bborrower\s+was\s+late\b|\b(?:one|1)\s+recent\s+late\b|\b(?:one|1)\s+housing\s+late\b|\b(?:one|1)\s+mortgage\s+payment\s+was\s+late\b|\bcurrent\s+mortgage\s+was\s+paid\s+late\b|\bmortgage\s+was\s+late\b|\b(?:had|has|paid)\s+(?:a|one|1)\s+(?:mortgage\s+)?(?:housing\s+)?late\b|\bthey\s+(?:had|paid)\s+(?:one|1)\s+(?:mortgage\s+)?payment\s+late\b/i;
+
+const MORTGAGE_LATES_UNKNOWN_PHRASES = /\bmortgage\s+late\s+unknown\b|\bnot\s+sure\s+(?:if|about)\s+(?:any\s+)?(?:mortgage\s+)?lates?\b|\bdon'?t\s+know\s+(?:about\s+)?(?:any\s+)?(?:mortgage\s+)?lates?\b/i;
+
+export function classifyMortgageLatesCategory(t: string): MortgageLatesMatch | undefined {
+  const none = MORTGAGE_LATES_NONE_PHRASES.exec(t);
+  if (none) return { value: "none", source: none[0].trim(), confidence: "high" };
+  const multiple = MORTGAGE_LATES_MULTIPLE_PHRASES.exec(t);
+  if (multiple) return { value: "multiple", source: multiple[0].trim(), confidence: "high" };
+  const late90 = MORTGAGE_LATES_90_EXPLICIT.exec(t);
+  if (late90) return { value: "late_90", source: late90[0].trim(), confidence: "high" };
+  const late60 = MORTGAGE_LATES_60_EXPLICIT.exec(t);
+  if (late60) return { value: "late_60", source: late60[0].trim(), confidence: "high" };
+  const late30 = MORTGAGE_LATES_30_EXPLICIT.exec(t);
+  if (late30) return { value: "late_30", source: late30[0].trim(), confidence: "high" };
+  const generic = MORTGAGE_LATES_GENERIC.exec(t);
+  if (generic) return { value: "late_30", source: generic[0].trim(), confidence: "medium" };
+  const unknown = MORTGAGE_LATES_UNKNOWN_PHRASES.exec(t);
+  if (unknown) return { value: "unknown", source: unknown[0].trim(), confidence: "high" };
+  return undefined;
+}
+
+export interface YesNoUnknownMatch {
+  value: YesNoUnknown;
+  source: string;
+  confidence: "high" | "medium";
+}
+
+// Gift funds — negation checked first. Literal "gift"-word phrases are
+// HIGH confidence (unambiguous); phrases that infer a gift from family-
+// assistance language without the literal word "gift" (per spec Step 3:
+// "My parents are helping.", "family assistance") are MEDIUM confidence
+// — a real, intended match, just an indirect one.
+const GIFT_FUNDS_NO_PHRASES =
+  /\bno\s+gift\s+funds?\b|\bnot\s+using\s+(?:any\s+)?gift(?:ed)?\s+(?:funds?|money)\b|\bno\s+family\s+(?:assistance|help)\b|\bfunding\s+(?:it|this)\s+(?:entirely\s+)?(?:themselves|on\s+their\s+own)\b|\bown\s+funds?\s+only\b|\bno\s+gifts?\s+involved\b/i;
+
+const GIFT_FUNDS_YES_EXPLICIT =
+  /\busing\s+gift(?:ed)?\s+funds?\b|\bgift\s+funds?\b|\bgift(?:ed)?\s+money\b|\bgift\s+for\s+(?:the\s+)?down\s?\s*payment\b|\bgift\s+toward(?:s)?\s+(?:the\s+)?(?:closing(?:\s+costs)?|down|purchase)\b|\bgift\s+for\s+(?:closing\s+costs|reserves)\b|\breceiving\s+gift\s+funds?\b|\bgift\s+from\s+(?:a\s+|his\s+|her\s+|their\s+)?(?:relative|family|parents?|mom|mother|dad|father|sibling|brother|sister|fianc[ée]e?|spouse|grandmother|grandfather)\b|\bentire\s+down\s?\s*payment\s+is\s+(?:a\s+)?gift(?:ed)?\b|\bpartial\s+gift\b|\bgift\s+covers?\s+closing\b|\b(?:has|have)\s+a\s+gift\s+letter\b|\busing\s+(?:a\s+|the\s+)?gift\s+letter\b|\bdown\s?\s*payment\s+is\s+gift(?:ed)?\b|\busing\s+gifted\s+(?:money|funds?)\b/i;
+
+const GIFT_FUNDS_YES_INFERRED =
+  /\bfamily\s+assistance\b|\b(?:family|parents?)\s+(?:is|are)\s+helping\b|\b(?:mom|mother|dad|father|parents?)\s+(?:is|are)\s+(?:giving|covering|assisting)\b|\bcovering\s+the\s+down\s?\s*payment\b|\bhelping\s+with\s+the\s+down\s?\s*payment\b/i;
+
+export function classifyGiftFunds(t: string): YesNoUnknownMatch | undefined {
+  const no = GIFT_FUNDS_NO_PHRASES.exec(t);
+  if (no) return { value: "no", source: no[0].trim(), confidence: "high" };
+  const explicit = GIFT_FUNDS_YES_EXPLICIT.exec(t);
+  if (explicit) return { value: "yes", source: explicit[0].trim(), confidence: "high" };
+  const inferred = GIFT_FUNDS_YES_INFERRED.exec(t);
+  if (inferred) return { value: "yes", source: inferred[0].trim(), confidence: "medium" };
+  return undefined;
+}
+
+// DSCR short-term-rental (STR) income — DSCR-only, per spec; the caller
+// (dialog.ts/extractFromTranscript) only attaches this when
+// incomeDocType resolves to "dscr". Brand/technical names (Airbnb, VRBO,
+// AirDNA, Rentalizer) and the literal phrase "short-term rental" are
+// unambiguous -> HIGH confidence; more generic phrasing (vacation
+// income, seasonal/transient/nightly rents) is inferred -> MEDIUM.
+const STR_INCOME_NO_PHRASES = /\bno\s+short[\s-]?term\s+rentals?\b|\blong[\s-]?term\s+rent\s+only\b|\bnot\s+using\s+airbnb\b|\blong[\s-]?term\s+lease\s+only\b/i;
+
+const STR_INCOME_YES_EXPLICIT =
+  /\bshort[\s-]?term\s+rentals?\b|\bshort[\s-]?term\s+rent\b|\bairbnb\b|\bvrbo\b|\brentalizer\b|\bairdna\b|\busing\s+(?:the\s+)?str\s+income\b|\bstr\s+(?:income|analysis|appraisal)\b|\bshort[\s-]?term\s+rental\s+(?:analysis|appraisal)\b|\bprojected\s+(?:short[\s-]?term\s+rental|airbnb|str)\s+income\b|\busing\s+airbnb\s+(?:income|revenue|to\s+qualify)\b|\busing\s+(?:projected\s+)?vrbo\s+income\b|\busing\s+market\s+rents?\s+from\s+airdna\b/i;
+
+const STR_INCOME_YES_INFERRED =
+  /\bvacation\s+rentals?\b|\bvacation\s+income\b|\bvacation\s+home\s+income\b|\bvacation\s+rental\s+qualifies\b|\bseasonal\s+rents?\b|\btransient\s+rents?\b|\bfurnished\s+rental\s+income\b|\bnightly\s+rents?\b|\busing\s+seasonal\s+rents?\b|\busing\s+transient\s+rents?\b|\busing\s+furnished\s+rental\s+income\b|\busing\s+nightly\s+rents?\b/i;
+
+export function classifyStrIncome(t: string): YesNoUnknownMatch | undefined {
+  const no = STR_INCOME_NO_PHRASES.exec(t);
+  if (no) return { value: "no", source: no[0].trim(), confidence: "high" };
+  const explicit = STR_INCOME_YES_EXPLICIT.exec(t);
+  if (explicit) return { value: "yes", source: explicit[0].trim(), confidence: "high" };
+  const inferred = STR_INCOME_YES_INFERRED.exec(t);
+  if (inferred) return { value: "yes", source: inferred[0].trim(), confidence: "medium" };
+  return undefined;
+}
+
+// One-year self-employment — explicit "one year"/"twelve months" counts
+// are HIGH confidence; a temporal inference ("business started last
+// year", "recently became self-employed") is MEDIUM (a real, intended
+// signal per spec Step 3, just indirect). A stated 2+-year tenure is
+// explicitly "no" (the ordinary/default case), never left undefined —
+// distinguishing "confirmed 2-year+" from "never asked." "(?:one|1)"/
+// "(?:two|2)"/"(?:twelve|12)" rather than plain number words — the
+// shared normalizeTranscript() converts spoken number words to digits
+// (wordsToDigits) BEFORE any classifier runs.
+const ONE_YEAR_SE_NO_PHRASES =
+  /\b(?:two|2)\s+years?\s+self[\s-]?employed\b|\bself[\s-]?employed\s+(?:for\s+)?(?:two|2)\s+years?\b|\b(?:two|2)\s+years?\s+in\s+business\b|\blong[\s-]?standing\s+business\b|\bseveral\s+years?\s+(?:in\s+business|self[\s-]?employed)\b|\bmany\s+years?\s+self[\s-]?employed\b/i;
+
+const ONE_YEAR_SE_YES_EXPLICIT =
+  /\b(?:one|1)\s+year\s+self[\s-]?employed\b|\bonly\s+self[\s-]?employed\s+(?:one|1)\s+year\b|\bonly\s+been\s+self[\s-]?employed\s+for\s+(?:one|1)\s+year\b|\bself[\s-]?employed\s+for\s+(?:one|1)\s+year\b|\bbusiness\s+open\s+(?:one|1)\s+year\b|\b(?:one|1)\s+year\s+in\s+business\b|\bbeen\s+self[\s-]?employed\s+for\s+(?:twelve|12)\s+months\b|\bonly\s+(?:twelve|12)\s+months\b|\bborrower\s+has\s+(?:one|1)\s+year\s+self[\s-]?employment\b|\b(?:one|1)\s+year\s+tax\s+returns?\b|\bbusiness\s+is\s+(?:one|1)\s+year\s+old\b|\bborrower\s+has\s+owned\s+business\s+(?:one|1)\s+year\b|\b(?:one|1)\s+year\s+schedule\s+c\b|\b(?:one|1)\s+year\s+llc\b|\bbusiness\s+started\s+(?:twelve|12)\s+months\s+ago\b|\bbusiness\s+just\s+reached\s+(?:one|1)\s+year\b/i;
+
+const ONE_YEAR_SE_YES_INFERRED =
+  /\bbusiness\s+started\s+last\s+year\b|\bbusiness\s+formed\s+last\s+year\b|\bself[\s-]?employed\s+since\s+last\s+year\b|\brecently\s+became\s+self[\s-]?employed\b|\bborrower\s+just\s+became\s+self[\s-]?employed\b|\brecently\s+started\s+the\s+business\b/i;
+
+export function classifyOneYearSelfEmployed(t: string): YesNoUnknownMatch | undefined {
+  const no = ONE_YEAR_SE_NO_PHRASES.exec(t);
+  if (no) return { value: "no", source: no[0].trim(), confidence: "high" };
+  const explicit = ONE_YEAR_SE_YES_EXPLICIT.exec(t);
+  if (explicit) return { value: "yes", source: explicit[0].trim(), confidence: "high" };
+  const inferred = ONE_YEAR_SE_YES_INFERRED.exec(t);
+  if (inferred) return { value: "yes", source: inferred[0].trim(), confidence: "medium" };
   return undefined;
 }
 
@@ -1415,6 +1568,39 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
 
   const vesting = classifyVesting(t);
   if (vesting) x.vesting = cap(vesting.value, vesting.source);
+
+  // ---- SECONDARY (optional) vitals — Secondary Voice Vitals Expansion,
+  // 2026-07-31. Run unconditionally against the whole transcript (the
+  // dialog/UI layer decides WHEN to surface them — see slots.ts's
+  // OPTIONAL_VITAL_KEYS doc comment — this extractor simply captures
+  // whatever was said, exactly like every other classifier above, so a
+  // borrower who volunteers these details early is never penalized for
+  // "speaking too soon"). Multiple optional vitals mentioned in a single
+  // sentence are all captured independently in one pass (spec Step 4) —
+  // each classifier scans the same transcript on its own.
+  const mortgageLates = classifyMortgageLatesCategory(t);
+  if (mortgageLates) {
+    x.mortgageLatesCategory = { value: mortgageLates.value, source: mortgageLates.source, confidence: mortgageLates.confidence, ...(mortgageLates.confidence === "medium" ? { flagged: true } : {}) };
+  }
+  const giftFunds = classifyGiftFunds(t);
+  if (giftFunds) {
+    x.giftFundsUsed = { value: giftFunds.value, source: giftFunds.source, confidence: giftFunds.confidence, ...(giftFunds.confidence === "medium" ? { flagged: true } : {}) };
+  }
+  // DSCR-only per spec — only attach when this transcript resolved to a
+  // DSCR income doc type (never surfaced/stored for any other doc type).
+  if (x.incomeDocType?.value === "dscr") {
+    const strIncome = classifyStrIncome(t);
+    if (strIncome) {
+      x.strIncomeUsed = { value: strIncome.value, source: strIncome.source, confidence: strIncome.confidence, ...(strIncome.confidence === "medium" ? { flagged: true } : {}) };
+      // Keep the legacy boolean in sync for calc/dscr.ts's existing
+      // narrative note (backward compatibility — see slots.ts).
+      x.shortTermRental = strIncome.value === "yes";
+    }
+  }
+  const oneYearSe = classifyOneYearSelfEmployed(t);
+  if (oneYearSe) {
+    x.oneYearSelfEmployed = { value: oneYearSe.value, source: oneYearSe.source, confidence: oneYearSe.confidence, ...(oneYearSe.confidence === "medium" ? { flagged: true } : {}) };
+  }
 
   return x;
 }

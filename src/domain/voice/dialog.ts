@@ -1,4 +1,4 @@
-import { IncomeDocType, LoanPurpose } from "@/domain/types/enums";
+import { IncomeDocType, LoanPurpose, MORTGAGE_LATES_CATEGORY_LABELS, MortgageLatesCategory } from "@/domain/types/enums";
 import type { ScenarioInput } from "@/domain/validation/scenarioSchema";
 import { VITAL_KEYS, VITAL_LABELS, VITAL_QUESTIONS, VitalKey, VoiceExtraction } from "./slots";
 
@@ -203,6 +203,17 @@ export function assess(x: VoiceExtraction): Assessment {
   if (x.employmentType) filledSummary.push(x.employmentType.value === "self_employed" ? "self-employed" : "W-2/salaried");
   if (x.lienPosition?.value === "standalone_second") filledSummary.push("standalone second lien / HELOAN");
   if (x.citizenship) filledSummary.push(citizenshipLabel(x.citizenship.value, x.citizenship.visaType));
+  // Secondary (optional) vitals — Secondary Voice Vitals Expansion,
+  // 2026-07-31. Included in the summary whenever captured (regardless of
+  // whether the second-stage interview window is still open or has
+  // already elapsed — the UI's own countdown state decides WHEN to show
+  // the "Additional Scenario Details" prompt, but once something is
+  // actually captured it belongs in the ordinary summary like any other
+  // vital). Never blocks readyToAnalyze below.
+  if (x.mortgageLatesCategory) filledSummary.push(mortgageLatesCategoryLabel(x.mortgageLatesCategory.value));
+  if (x.giftFundsUsed && x.giftFundsUsed.value !== "unknown") filledSummary.push(x.giftFundsUsed.value === "yes" ? "using gift funds" : "no gift funds");
+  if (x.strIncomeUsed && x.strIncomeUsed.value !== "unknown") filledSummary.push(x.strIncomeUsed.value === "yes" ? "using short-term-rental income" : "no short-term-rental income");
+  if (x.oneYearSelfEmployed && x.oneYearSelfEmployed.value !== "unknown") filledSummary.push(x.oneYearSelfEmployed.value === "yes" ? "one-year self-employed" : "2+ years self-employed");
   const citizenshipConfidenceNote =
     x.citizenship?.confidence === "medium" ? "Borrower classification interpreted as ITIN." : undefined;
   // F-1 visa / no-FICO fix (2026-07-28): when the citizenship classification
@@ -318,6 +329,10 @@ function citizenshipLabel(v: "us_citizen" | "permanent_resident" | "non_permanen
   return visaType ? `${base} (${visaType} visa)` : base;
 }
 
+function mortgageLatesCategoryLabel(v: MortgageLatesCategory): string {
+  return `mortgage lates: ${MORTGAGE_LATES_CATEGORY_LABELS[v].toLowerCase()}`;
+}
+
 function creditProfileLabel(v: "us_fico_score" | "no_fico" | "no_us_credit" | "foreign_credit" | "insufficient_credit_history" | "unknown"): string {
   switch (v) {
     case "us_fico_score":
@@ -368,6 +383,7 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
     doc === "dscr"
       ? {
           ...(x.shortTermRental !== undefined ? { shortTermRental: x.shortTermRental } : {}),
+          ...(x.strIncomeUsed ? { strIncomeUsed: x.strIncomeUsed.value } : {}),
           ...(x.firstTimeInvestor !== undefined ? { firstTimeInvestor: x.firstTimeInvestor } : {}),
         }
       : undefined;
@@ -408,6 +424,26 @@ export function buildScenarioInput(x: VoiceExtraction, a: Assessment): ScenarioI
     ...(x.investorExperience ? { investorExperience: x.investorExperience.value } : {}),
     ...(x.firstTimeHomebuyer ? { firstTimeHomebuyer: x.firstTimeHomebuyer.value } : {}),
     ...(x.vesting ? { vesting: x.vesting.value } : {}),
+    // Secondary (optional) vitals — Secondary Voice Vitals Expansion,
+    // 2026-07-31. Never gate readiness (see the assessment above); simply
+    // pass through whatever was captured.
+    ...(x.giftFundsUsed ? { giftFundsUsed: x.giftFundsUsed.value } : {}),
+    ...(x.oneYearSelfEmployed ? { oneYearSelfEmployed: x.oneYearSelfEmployed.value } : {}),
+    ...(x.mortgageLatesCategory
+      ? {
+          creditEvents: {
+            mortgageLatesCategory: x.mortgageLatesCategory.value,
+            // Bridge to the existing numeric 30x12 check (baseChecks.ts)
+            // so already-populated real lender data keeps working
+            // immediately without every lender needing the new category
+            // field backfilled first — see CreditEvents.mortgageLatesCategory's
+            // doc comment in scenario.ts.
+            ...(x.mortgageLatesCategory.value !== "unknown"
+              ? { mortgageLates30x12: x.mortgageLatesCategory.value === "none" ? 0 : 1 }
+              : {}),
+          },
+        }
+      : {}),
     ...(bankStatement ? { bankStatement } : {}),
     ...(pnl ? { pnl } : {}),
     ...(dscr ? { dscr } : {}),

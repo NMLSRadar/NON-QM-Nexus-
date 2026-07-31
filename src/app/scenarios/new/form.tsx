@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ClipboardList, Home, User, CreditCard, FolderOpen, Flag } from "lucide-react";
+import { ClipboardList, Home, User, CreditCard, FolderOpen, Flag, Sparkles } from "lucide-react";
 import { createScenario } from "./actions";
 import type { ScenarioInput } from "@/domain/validation/scenarioSchema";
 
@@ -60,6 +60,37 @@ export function ScenarioForm() {
   const [message, setMessage] = useState<string>();
   const [pending, startTransition] = useTransition();
 
+  /** Manual Scenario synchronization (Secondary Voice Vitals Expansion,
+   * 2026-07-31) — the Voice Scenario flow only surfaces its "Additional
+   * Scenario Details (Optional)" second-stage interview once the 9
+   * required (core) vitals are captured; the Manual Scenario form has no
+   * natural staged-dialog moment (it's a single static form, not a
+   * conversation), so this mirrors the same "hidden until required
+   * fields are complete" behavior by watching the form's live values via
+   * a form-level input listener (see recomputeRequiredComplete below)
+   * rather than converting every field to controlled state. */
+  const formRef = useRef<HTMLFormElement>(null);
+  const [requiredVitalsComplete, setRequiredVitalsComplete] = useState(false);
+
+  function recomputeRequiredComplete() {
+    const f = formRef.current;
+    if (!f) return;
+    const fd = new FormData(f);
+    const value = num(fd.get("estimatedValue")) ?? num(fd.get("purchasePrice"));
+    const loanAmount = num(fd.get("requestedLoanAmount"));
+    const ficoOk = creditProfileType !== "us_fico_score" || num(fd.get("fico")) !== undefined;
+    setRequiredVitalsComplete(
+      Boolean(str(fd.get("loanPurpose")) && str(fd.get("occupancy")) && str(fd.get("propertyType")) && value !== undefined && loanAmount !== undefined && ficoOk && incomeDocType && citizenship)
+    );
+  }
+  // incomeDocType/citizenship/creditProfileType are tracked via useState
+  // (not plain uncontrolled inputs), so a change to any of them needs its
+  // own recompute pass in addition to the form's own onInput handler.
+  useEffect(() => {
+    recomputeRequiredComplete();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomeDocType, citizenship, creditProfileType]);
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -99,7 +130,26 @@ export function ScenarioForm() {
         bankruptcyMonthsSinceDischarge: num(f.get("bkMonths")) ?? null,
         housingHistoryMonths: num(f.get("housingHistoryMonths")),
         mortgageLates30x12: num(f.get("lates30")),
+        // Secondary Voice Vitals Expansion (2026-07-31) — friendlier
+        // single-select category sibling; also derives the legacy
+        // numeric mortgageLates30x12 (when not already stated directly
+        // above) so the existing 30x12-based matching check keeps
+        // working against already-populated real lender data.
+        ...(str(f.get("mortgageLatesCategory"))
+          ? {
+              mortgageLatesCategory: str(f.get("mortgageLatesCategory")) as "none" | "late_30" | "late_60" | "late_90" | "multiple" | "unknown",
+              ...(num(f.get("lates30")) === undefined && str(f.get("mortgageLatesCategory")) !== "unknown"
+                ? { mortgageLates30x12: str(f.get("mortgageLatesCategory")) === "none" ? 0 : 1 }
+                : {}),
+            }
+          : {}),
       },
+      // Secondary Voice Vitals Expansion (2026-07-31) — optional, never
+      // blocks the form; only sent when the borrower/broker picked an
+      // answer (an untouched select defaults to "" via the blank first
+      // option, which str() correctly treats as absent).
+      giftFundsUsed: str(f.get("giftFundsUsed")) as ScenarioInput["giftFundsUsed"],
+      oneYearSelfEmployed: str(f.get("oneYearSelfEmployed")) as ScenarioInput["oneYearSelfEmployed"],
     };
 
     if (incomeDocType === "bank_statement") {
@@ -135,6 +185,11 @@ export function ScenarioForm() {
         annualHazardInsurance: num(f.get("dscrHazard")),
         monthlyHoa: num(f.get("dscrHoa")),
         shortTermRental: bool(f.get("dscrStr")),
+        // Secondary Voice Vitals Expansion (2026-07-31) — tri-state
+        // sibling of the legacy checkbox above (which can't express
+        // "unknown"); kept in sync so calc/dscr.ts's existing narrative
+        // note still works off the legacy field.
+        strIncomeUsed: str(f.get("strIncomeUsed")) as "yes" | "no" | "unknown" | undefined,
         firstTimeInvestor: bool(f.get("firstTimeInvestor")),
         financedProperties: num(f.get("dscrFinanced")),
       };
@@ -177,7 +232,7 @@ export function ScenarioForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6" noValidate>
+    <form ref={formRef} onSubmit={onSubmit} onInput={recomputeRequiredComplete} className="space-y-6" noValidate>
       {message ? (
         <p role="alert" className="rounded-md bg-rose-950/40 border border-rose-500/40 text-rose-300 text-sm px-3 py-2">
           {message}
@@ -550,6 +605,52 @@ export function ScenarioForm() {
               <input type="checkbox" name="fnUsBank" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" /> U.S. bank account
             </label>
           </div>
+        </fieldset>
+      )}
+
+      {requiredVitalsComplete && (
+        <fieldset className="gold-card rounded-2xl p-5 grid sm:grid-cols-3 gap-4">
+          <SectionLegend icon={<Sparkles className="h-4 w-4 text-amber-300" />} title="Additional Scenario Details (Optional)" />
+          <p className="col-span-full text-xs text-slate-400 -mt-2">
+            Optional — improves lender matching and ranking when provided; leave blank to skip.
+          </p>
+          <Field name="mortgageLatesCategory" title="Mortgage lates">
+            <select id="mortgageLatesCategory" name="mortgageLatesCategory" className={field} defaultValue="">
+              <option value="">— Not specified —</option>
+              <option value="none">None</option>
+              <option value="late_30">30 Day Late</option>
+              <option value="late_60">60 Day Late</option>
+              <option value="late_90">90 Day Late</option>
+              <option value="multiple">Multiple Lates</option>
+              <option value="unknown">Mortgage Late Unknown</option>
+            </select>
+          </Field>
+          <Field name="giftFundsUsed" title="Gift funds">
+            <select id="giftFundsUsed" name="giftFundsUsed" className={field} defaultValue="">
+              <option value="">— Not specified —</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="unknown">Unknown</option>
+            </select>
+          </Field>
+          {incomeDocType === "dscr" && (
+            <Field name="strIncomeUsed" title="DSCR short-term-rental (STR) income">
+              <select id="strIncomeUsed" name="strIncomeUsed" className={field} defaultValue="">
+                <option value="">— Not specified —</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </Field>
+          )}
+          <Field name="oneYearSelfEmployed" title="One-year self-employed">
+            <select id="oneYearSelfEmployed" name="oneYearSelfEmployed" className={field} defaultValue="">
+              <option value="">— Not specified —</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="unknown">Unknown</option>
+            </select>
+          </Field>
         </fieldset>
       )}
 

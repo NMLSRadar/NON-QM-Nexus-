@@ -10,6 +10,10 @@ const usd = z.number().nonnegative().finite();
 const percent = z.number().min(0).max(100);
 const optionalUsd = usd.optional();
 const optionalPercent = percent.optional();
+/** Tri-state used by several optional secondary vitals (gift funds, DSCR
+ * short-term-rental income, one-year self-employment) — see YesNoUnknown
+ * in enums.ts. */
+const yesNoUnknown = z.enum(["yes", "no", "unknown"]).optional();
 
 export const bankStatementSchema = z.object({
   personalOrBusiness: z.enum(["personal", "business"]),
@@ -53,6 +57,9 @@ export const dscrSchema = z.object({
   interestOnlyPayment: optionalUsd,
   principalAndInterest: optionalUsd,
   shortTermRental: z.boolean().optional(),
+  /** Tri-state secondary-vital sibling of shortTermRental above — see
+   * Scenario.dscr.strIncomeUsed in scenario.ts. */
+  strIncomeUsed: yesNoUnknown,
   firstTimeInvestor: z.boolean().optional(),
   financedProperties: z.number().int().min(0).max(100).optional(),
 });
@@ -96,6 +103,9 @@ export const creditEventsSchema = z.object({
   mortgageLates60x12: z.number().int().min(0).max(12).optional(),
   mortgageLates90x12: z.number().int().min(0).max(12).optional(),
   housingHistoryMonths: z.number().int().min(0).max(600).optional(),
+  /** Friendlier single-select category sibling of the numeric counts
+   * above — see MortgageLatesCategory in enums.ts. */
+  mortgageLatesCategory: z.enum(["none", "late_30", "late_60", "late_90", "multiple", "unknown"]).optional(),
 });
 
 export const scenarioInputSchema = z
@@ -134,6 +144,8 @@ export const scenarioInputSchema = z
     investorExperience: z.enum(["first_time_investor", "experienced_investor", "not_applicable"]).optional(),
     employmentStatus: z.enum(["self_employed", "wage_earner", "retired", "other"]).optional(),
     selfEmploymentMonths: z.number().int().min(0).max(720).optional(),
+    /** Secondary vital — see Scenario.oneYearSelfEmployed in scenario.ts. */
+    oneYearSelfEmployed: yesNoUnknown,
     businessOwnershipPercent: optionalPercent,
     incomeDocType: z.enum(["full_doc", "bank_statement", "pnl_only", "dscr", "asset_depletion", "1099", "wvoe_only"]).optional(),
     documentedMonthlyIncome: optionalUsd,
@@ -143,6 +155,8 @@ export const scenarioInputSchema = z
     retirementAssets: optionalUsd,
     otherEligibleAssets: optionalUsd,
     reserveAmountMonthsRequested: z.number().min(0).max(120).optional(),
+    /** Secondary vital — see Scenario.giftFundsUsed in scenario.ts. */
+    giftFundsUsed: yesNoUnknown,
     interestOnlyRequested: z.boolean().optional(),
     prepaymentPenaltyAccepted: z.boolean().optional(),
     desiredClosingDate: z.string().optional(),

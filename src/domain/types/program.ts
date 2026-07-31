@@ -3,6 +3,7 @@ import type {
   IncomeDocType,
   LienPosition,
   LoanPurpose,
+  MortgageLatesCategory,
   Occupancy,
   PropertyType,
   RuleOutcome,
@@ -284,6 +285,47 @@ export interface Program {
   ownerOccupiedItinEligible?: boolean;
   /** Same pattern, for INVESTMENT-property ITIN eligibility specifically. */
   investmentItinEligible?: boolean;
+  /**
+   * Secondary Voice Vitals Expansion overlays (added 2026-07-31). Every
+   * field below is undefined by default = not yet confirmed for this
+   * lender — treated as "no additional restriction/benefit known" by
+   * matching (never a silent guess), exactly the same convention as
+   * maxMortgageLates30x12 and the ITIN DSCR combination fields above.
+   * Populate ONLY from a real, cited guideline fact — never fabricated.
+   */
+  /** Most severe housing-lates CATEGORY this program still tolerates
+   * (see MortgageLatesCategory/MORTGAGE_LATES_SEVERITY in enums.ts) — a
+   * richer, 60/90/multiple-aware sibling to the existing
+   * maxMortgageLates30x12 (which only models a 30-day count). Both fields
+   * can coexist; baseChecks.ts evaluates whichever ones are populated. */
+  maxMortgageLatesCategory?: MortgageLatesCategory;
+  /** false = a real, documented restriction against using gift funds
+   * (down payment/closing costs/reserves) on this program; true = gift
+   * funds are explicitly allowed; undefined = not yet confirmed. */
+  giftFundsAllowed?: boolean;
+  /** Real documentation/seasoning requirements for gift funds on this
+   * program (e.g. "requires a signed gift letter and 60-day sourcing of
+   * the donor's funds") — surfaced to the user alongside the match,
+   * never fabricated when no real citation exists. */
+  giftFundsNotes?: string;
+  /** DSCR programs only — true = this program's real, current guideline
+   * explicitly allows Airbnb/VRBO/AirDNA/Rentalizer-style short-term-
+   * rental income for DSCR qualification; false = explicitly disallowed
+   * (long-term/market-rent lease income only); undefined = not yet
+   * confirmed. Never inferred from the program simply offering DSCR. */
+  strIncomeEligible?: boolean;
+  /** Real STR-specific requirements (e.g. "requires a 12-month AirDNA/
+   * Rentalizer report and a documented STR operating history") —
+   * surfaced alongside the match. */
+  strIncomeNotes?: string;
+  /** Minimum months of self-employment this program's real, current
+   * guideline actually requires/allows — e.g. 12 for a genuine one-year
+   * self-employment allowance. undefined = not yet confirmed (the
+   * standard ~24-month Non-QM assumption is NOT auto-applied here; the
+   * field simply isn't evaluated until a real figure is on file). A
+   * confirmed value above 12 means this program does NOT support a
+   * one-year self-employed borrower without compensating factors. */
+  minSelfEmploymentMonths?: number;
   guidelineVersionId: string;
   guidelineVersionLabel: string;
   effectiveDate: string;

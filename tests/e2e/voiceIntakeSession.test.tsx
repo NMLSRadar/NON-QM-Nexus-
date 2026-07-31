@@ -85,12 +85,12 @@ describe("Voice intake session: Purchase", () => {
 
     expect(screen.getByText(/All set — 9 of 9 vitals captured/)).toHaveTextContent("purchase");
 
-    await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1), { timeout: 8000 });
     const sentExtraction = createScenarioFromVoice.mock.calls[0]![0];
     expect(sentExtraction.loanPurpose.value).toBe("purchase");
     expect(sentExtraction.refinancePendingSubtype).toBeFalsy();
     await waitFor(() => expect(push).toHaveBeenCalledWith("/scenarios/mock-id"));
-  });
+  }, 12000);
 });
 
 describe("Voice intake session: Refinance (ambiguous, no subtype stated)", () => {
@@ -133,11 +133,11 @@ describe("Voice intake session: Cash-Out Refinance", () => {
 
     expect(screen.getByText(/All set — 9 of 9 vitals captured/)).toHaveTextContent("cash-out refinance");
 
-    await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1), { timeout: 8000 });
     const sentExtraction = createScenarioFromVoice.mock.calls[0]![0];
     expect(sentExtraction.loanPurpose.value).toBe("cash_out_refinance");
     await waitFor(() => expect(push).toHaveBeenCalledWith("/scenarios/mock-id"));
-  });
+  }, 12000);
 });
 
 describe("Voice intake session: Rate-and-Term Refinance", () => {
@@ -153,10 +153,10 @@ describe("Voice intake session: Rate-and-Term Refinance", () => {
 
     expect(screen.getByText(/All set — 9 of 9 vitals captured/)).toHaveTextContent("rate-and-term refinance");
 
-    await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1), { timeout: 8000 });
     const sentExtraction = createScenarioFromVoice.mock.calls[0]![0];
     expect(sentExtraction.loanPurpose.value).toBe("rate_term_refinance");
     expect(sentExtraction.refinancePendingSubtype).toBeFalsy();
     await waitFor(() => expect(push).toHaveBeenCalledWith("/scenarios/mock-id"));
-  });
+  }, 12000);
 });

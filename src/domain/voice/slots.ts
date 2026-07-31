@@ -1,4 +1,4 @@
-import type { Citizenship, CreditProfileType, IncomeDocType, InvestorExperience, LienPosition, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
+import type { Citizenship, CreditProfileType, IncomeDocType, InvestorExperience, LienPosition, LoanPurpose, MortgageLatesCategory, Occupancy, PropertyType, Vesting, YesNoUnknown } from "@/domain/types/enums";
 
 /**
  * Voice-intake vital slots.
@@ -87,6 +87,32 @@ export const REFI_VITAL_KEY = "existingLienBalance" as const;
 export const REFI_VITAL_LABEL = "Current loan balance";
 export const REFI_VITAL_QUESTION = "About how much do they currently still owe on the property?";
 
+/**
+ * SECONDARY (optional) vitals — added 2026-07-31 (Secondary Voice Vitals
+ * Expansion spec). Distinct from EXTRA_VITAL_KEYS above in both PURPOSE
+ * and TIMING: EXTRA vitals are asked about opportunistically throughout
+ * the ordinary intake dialog exactly like a core vital's phrasing (just
+ * non-blocking), while these OPTIONAL vitals are deliberately surfaced
+ * only in a distinct SECOND PHASE that begins only after all 9 core
+ * vitals are already resolved — a short (~5s), non-blocking "Additional
+ * Scenario Details" interview the UI (voice-client.tsx) drives with a
+ * visible countdown, during which listening/extraction continue
+ * uninterrupted; silence auto-continues to matching exactly as before.
+ * Never gates `readyToAnalyze`, never asked with a follow-up question if
+ * missed (see the Confidence Engine note on each classifier in extract.ts
+ * — a low-confidence guess is discarded rather than confirmed). strIncomeUsed
+ * is DSCR-only; the UI hides that specific optional field for every other
+ * income doc type. */
+export const OPTIONAL_VITAL_KEYS = ["mortgageLatesCategory", "giftFundsUsed", "strIncomeUsed", "oneYearSelfEmployed"] as const;
+export type OptionalVitalKey = (typeof OPTIONAL_VITAL_KEYS)[number];
+
+export const OPTIONAL_VITAL_LABELS: Record<OptionalVitalKey, string> = {
+  mortgageLatesCategory: "Mortgage lates",
+  giftFundsUsed: "Gift funds",
+  strIncomeUsed: "DSCR short-term-rental (STR) income",
+  oneYearSelfEmployed: "One-year self-employed",
+};
+
 /** A value heard in (or derived from) the transcript, with provenance. */
 export interface Captured<T> {
   value: T;
@@ -166,6 +192,22 @@ export interface VoiceExtraction {
    * state of TX", "located in TX"), a spoken abbreviation. Used for the
    * real state-licensing eligibility check in baseChecks.ts. */
   state?: Captured<string>;
+  /**
+   * SECONDARY (optional) vitals — see OPTIONAL_VITAL_KEYS above. Each
+   * carries an explicit confidence tier from the Confidence Engine
+   * (extract.ts): "high" auto-populates immediately; "medium" also
+   * auto-populates (nothing here ever blocks/asks a follow-up question)
+   * but is flagged for the record via `flagged: true` so a downstream
+   * reviewer can see it was a softer match; "low"-confidence matches are
+   * never attached to the extraction at all (discarded at the source in
+   * extract.ts, never even reaching this object) — the borrower is never
+   * interrupted with a repetitive clarifying question for an optional field.
+   */
+  mortgageLatesCategory?: Captured<MortgageLatesCategory> & { confidence: "high" | "medium"; flagged?: boolean };
+  giftFundsUsed?: Captured<YesNoUnknown> & { confidence: "high" | "medium"; flagged?: boolean };
+  /** DSCR-only per spec — the UI/dialog only surface this when incomeDocType is dscr. */
+  strIncomeUsed?: Captured<YesNoUnknown> & { confidence: "high" | "medium"; flagged?: boolean };
+  oneYearSelfEmployed?: Captured<YesNoUnknown> & { confidence: "high" | "medium"; flagged?: boolean };
   /** Assumptions and notes accumulated during extraction, surfaced to the user. */
   notesFragments: string[];
 }

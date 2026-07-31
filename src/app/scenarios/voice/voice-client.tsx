@@ -12,7 +12,7 @@ import { extractFromTranscript } from "@/domain/voice/extract";
 import { assess } from "@/domain/voice/dialog";
 import { VITAL_KEYS, VITAL_LABELS, EXTRA_VITAL_KEYS, EXTRA_VITAL_LABELS, REFI_VITAL_LABEL, type Captured, type VitalKey, type ExtraVitalKey, type VoiceExtraction } from "@/domain/voice/slots";
 import type { Citizenship, CreditProfileType, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
-import { CREDIT_PROFILE_TYPE_LABELS } from "@/domain/types/enums";
+import { CREDIT_PROFILE_TYPE_LABELS, MORTGAGE_LATES_CATEGORY_LABELS } from "@/domain/types/enums";
 import { createScenarioFromVoice, getVoiceCatalog } from "./actions";
 
 /** Per-vital icon, matching the mockup's gold-ringed icon badges. */
@@ -214,6 +214,16 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   const hasFailedRef = useRef(false);
   const spokenRef = useRef("");
   const autoStartedRef = useRef(false);
+  /** Secondary Voice Vitals Expansion (2026-07-31) — once all required
+   * vitals resolve, a short optional window opens ("Additional Scenario
+   * Details") before matching actually runs; this counts seconds
+   * remaining (null = not currently counting down). secondaryDoneRef
+   * ensures the window opens exactly ONCE per scenario (not re-armed by
+   * every subsequent effective/canAnalyze change while it's ticking or
+   * after it's already elapsed). */
+  const [secondaryCountdown, setSecondaryCountdown] = useState<number | null>(null);
+  const secondaryDoneRef = useRef(false);
+  const SECONDARY_VITALS_WINDOW_SECONDS = 5;
 
   useEffect(() => {
     setSupported(getRecognitionCtor() !== undefined);
@@ -279,6 +289,23 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
       investorExperience: effective.investorExperience?.value,
       bankStatement: doc === "bank_statement" ? { personalOrBusiness: effective.bankStatementKind ?? "business", months: effective.bankStatementMonths ?? 12 } : undefined,
       pnl: doc === "pnl_only" ? { periodMonths: 12 } : undefined,
+      // Secondary (optional) vitals — Secondary Voice Vitals Expansion,
+      // 2026-07-31 — fed into the live-preview ranking so a mention
+      // during the "Additional Scenario Details" window is reflected
+      // live, exactly like every other vital already is here.
+      giftFundsUsed: effective.giftFundsUsed?.value,
+      oneYearSelfEmployed: effective.oneYearSelfEmployed?.value,
+      ...(effective.mortgageLatesCategory
+        ? {
+            creditEvents: {
+              mortgageLatesCategory: effective.mortgageLatesCategory.value,
+              ...(effective.mortgageLatesCategory.value !== "unknown"
+                ? { mortgageLates30x12: effective.mortgageLatesCategory.value === "none" ? 0 : 1 }
+                : {}),
+            },
+          }
+        : {}),
+      ...(doc === "dscr" && effective.strIncomeUsed ? { dscr: { strIncomeUsed: effective.strIncomeUsed.value } } : {}),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -391,7 +418,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
     window.speechSynthesis.speak(new SpeechSynthesisUtterance(assessment.prompt));
   }, [assessment.prompt, speakBack, listening]);
 
-  /* -------- auto-analyze the moment all 8 vitals resolve -------- */
+  /* -------- auto-analyze the moment all 9 vitals resolve -------- */
   useEffect(() => {
     if (!canAnalyze || isPending || inFlightRef.current) return;
     const signature = JSON.stringify(effective);
@@ -411,6 +438,21 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
     const neverAttempted = lastAttemptedRef.current === null;
     const changedSinceFailure = hasFailedRef.current && signature !== lastAttemptedRef.current;
     if (!neverAttempted && !changedSinceFailure) return;
+
+    // Secondary Voice Vitals Expansion (2026-07-31): the FIRST time this
+    // scenario becomes ready, open a short "Additional Scenario Details"
+    // window instead of submitting immediately — listening/extraction
+    // continue uninterrupted throughout (recognition is never stopped
+    // here), and a live-updating `effective` during the window is exactly
+    // how a mortgage-lates/gift-funds/STR-income/one-year-self-employment
+    // mention gets captured before matching runs. Silence for the full
+    // window auto-continues to matching below — no click, no confirmation.
+    if (secondaryCountdown === null && !secondaryDoneRef.current) {
+      setSecondaryCountdown(SECONDARY_VITALS_WINDOW_SECONDS);
+      return;
+    }
+    if (secondaryCountdown !== null) return; // still counting down
+
     inFlightRef.current = true;
     lastAttemptedRef.current = signature;
     hasFailedRef.current = false;
@@ -430,7 +472,19 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         hasFailedRef.current = true;
       }
     });
-  }, [effective, canAnalyze, isPending, router]);
+  }, [effective, canAnalyze, isPending, router, secondaryCountdown]);
+
+  /* -------- the Additional Scenario Details countdown itself -------- */
+  useEffect(() => {
+    if (secondaryCountdown === null) return;
+    if (secondaryCountdown <= 0) {
+      secondaryDoneRef.current = true;
+      setSecondaryCountdown(null); // hands control back to the analyze effect above, which now submits
+      return;
+    }
+    const timer = setTimeout(() => setSecondaryCountdown((s) => (s ?? 1) - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [secondaryCountdown]);
 
   function setOv<K extends keyof Overrides>(key: K, value: Overrides[K]) {
     setConflictConfirmed(false);
@@ -713,6 +767,39 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
           </div>
         </details>
       </Card>
+
+      {secondaryCountdown !== null && (
+        <Card dark title="Additional Scenario Details (Optional)">
+          <p className="text-sm text-slate-300 mb-3">
+            Tell me any additional details that may improve your lender matches. You have approximately{" "}
+            {secondaryCountdown} second{secondaryCountdown === 1 ? "" : "s"}.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {(
+              [
+                { key: "mortgageLatesCategory" as const, label: "Mortgage lates", value: effective.mortgageLatesCategory ? MORTGAGE_LATES_CATEGORY_LABELS[effective.mortgageLatesCategory.value] : undefined, source: effective.mortgageLatesCategory?.source },
+                { key: "giftFundsUsed" as const, label: "Gift funds", value: effective.giftFundsUsed && effective.giftFundsUsed.value !== "unknown" ? (effective.giftFundsUsed.value === "yes" ? "Yes" : "No") : undefined, source: effective.giftFundsUsed?.source },
+                ...(effective.incomeDocType?.value === "dscr"
+                  ? [{ key: "strIncomeUsed" as const, label: "DSCR short-term-rental income", value: effective.strIncomeUsed && effective.strIncomeUsed.value !== "unknown" ? (effective.strIncomeUsed.value === "yes" ? "Yes" : "No") : undefined, source: effective.strIncomeUsed?.source }]
+                  : []),
+                { key: "oneYearSelfEmployed" as const, label: "One-year self-employed", value: effective.oneYearSelfEmployed && effective.oneYearSelfEmployed.value !== "unknown" ? (effective.oneYearSelfEmployed.value === "yes" ? "Yes" : "No") : undefined, source: effective.oneYearSelfEmployed?.source },
+              ] as Array<{ key: string; label: string; value?: string; source?: string }>
+            ).map((v) => (
+              <div key={v.key} className={`flex items-start gap-2.5 rounded-lg border p-2.5 ${v.value ? "border-emerald-400/40 bg-emerald-500/10" : "border-white/10 bg-black/20"}`}>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-slate-400">{v.label}</p>
+                  <p className={`text-sm font-semibold ${v.value ? "text-white" : "text-slate-500"}`}>{v.value ?? "Listening…"}</p>
+                  {v.value && v.source && (
+                    <p className="text-[10px] text-slate-500 truncate" title={v.source}>
+                      “{v.source}”
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card dark title="Live Lender Rankings">
         <p className="text-xs text-slate-400 -mt-2 mb-3">
