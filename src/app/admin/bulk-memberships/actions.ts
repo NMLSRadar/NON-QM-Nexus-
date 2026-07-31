@@ -179,6 +179,13 @@ export async function createBulkMembership(formData: FormData): Promise<CreateBu
       metadata,
       success_url: `${appUrl}/admin/bulk-memberships?checkout=success`,
       cancel_url: `${appUrl}/admin/bulk-memberships?checkout=canceled`,
+      // This Stripe account has "Managed Payments" on by default, which
+      // requires every Checkout line item's product to carry an eligible
+      // tax_code — our dynamically-created Bulk Membership product has
+      // none. Disabling it here (verified live against this account,
+      // 2026-07-31) keeps Checkout working without maintaining a tax code
+      // for a product whose price changes per deal anyway.
+      managed_payments: { enabled: false },
     });
     if (!session.url) return { error: "Stripe did not return a checkout URL." };
     result.checkoutUrl = session.url;
