@@ -8,14 +8,79 @@ import { sendTransactionalEmail } from "@/lib/email";
 import { orgInviteEmail } from "@/lib/emailTemplates";
 import { getStripe } from "@/lib/stripe";
 import { checkLastAdminContinuity } from "@/lib/orgContinuity";
+import { BULK_PLAN_KEY, MAX_BULK_SEATS } from "@/lib/bulkMembership";
 
 const VALID_ROLES = ["broker", "account_executive", "processor", "underwriter", "org_admin"] as const;
+
+/** Shared core of a single invite send — used by both inviteMember (one at
+ * a time, /account/team's manual form) and bulkInviteMembers (CSV upload,
+ * up to MAX_BULK_SEATS at once — the mass-enrollment path for Bulk
+ * Membership orgs, docs/bulk-membership.md). Never exported directly as a
+ * server action; both callers have already run requireOrgAdmin(). */
+async function sendOneInvite(
+  organizationId: string,
+  inviterUserId: string,
+  email: string,
+  role: string
+): Promise<{ error?: string }> {
+  if (!email || !email.includes("@")) return { error: "Invalid email address." };
+  if (!(VALID_ROLES as readonly string[]).includes(role)) return { error: "Invalid role." };
+
+  const service = createServiceRoleClient();
+
+  const { data: existingMembership } = await service
+    .from("memberships")
+    .select("id, user:users(email)")
+    .eq("organization_id", organizationId)
+    .is("deleted_at", null);
+  const alreadyMember = (existingMembership ?? []).some((m) => {
+    const u = Array.isArray(m.user) ? m.user[0] : m.user;
+    return (u?.email as string | undefined)?.toLowerCase() === email;
+  });
+  if (alreadyMember) return { error: "Already a member of this organization." };
+
+  const rawToken = generateInviteToken();
+  const tokenHash = hashInviteToken(rawToken);
+  const expiresAt = inviteExpiresAt();
+
+  const { error: insertError } = await service.from("org_invites").insert({
+    organization_id: organizationId,
+    email,
+    role,
+    token_hash: tokenHash,
+    expires_at: expiresAt.toISOString(),
+    invited_by: inviterUserId,
+  });
+  if (insertError) return { error: insertError.message };
+
+  const { data: orgRow } = await service.from("organizations").select("name").eq("id", organizationId).maybeSingle();
+  const { data: inviterRow } = await service.from("users").select("email").eq("id", inviterUserId).maybeSingle();
+  const { data: existingUser } = await service.from("users").select("id").eq("email", email).maybeSingle();
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://nonqmnexus.com";
+  const acceptUrl = existingUser
+    ? `${appUrl}/invites/accept?invite=${rawToken}`
+    : `${appUrl}/signup?invite=${rawToken}`;
+
+  const { subject, html } = orgInviteEmail({
+    organizationName: (orgRow?.name as string | undefined) ?? "your team",
+    role,
+    inviterEmail: (inviterRow?.email as string | undefined) ?? "A teammate",
+    acceptUrl,
+    expiresAtIso: expiresAt.toISOString(),
+  });
+  const sendResult = await sendTransactionalEmail({ to: email, subject, html });
+  if (!sendResult.ok) {
+    return { error: `Invite saved, but the email failed to send: ${sendResult.error ?? "unknown error"}` };
+  }
+  return {};
+}
 
 async function getActiveOrgSubscription(organizationId: string) {
   const service = createServiceRoleClient();
   const { data, error } = await service
     .from("org_subscriptions")
-    .select("id, seat_count, status, source, stripe_subscription_id, current_period_end, plan:membership_plans(name)")
+    .select("id, seat_count, status, source, stripe_subscription_id, current_period_end, plan:membership_plans(name, key)")
     .eq("organization_id", organizationId)
     .eq("status", "active")
     .maybeSingle();
@@ -45,59 +110,67 @@ export async function inviteMember(formData: FormData): Promise<{ error?: string
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "broker");
-  if (!email || !email.includes("@")) return { error: "Enter a valid email address." };
-  if (!(VALID_ROLES as readonly string[]).includes(role)) return { error: "Invalid role." };
 
-  const service = createServiceRoleClient();
-
-  const { data: existingMembership } = await service
-    .from("memberships")
-    .select("id, user:users(email)")
-    .eq("organization_id", organizationId)
-    .is("deleted_at", null);
-  const alreadyMember = (existingMembership ?? []).some((m) => {
-    const u = Array.isArray(m.user) ? m.user[0] : m.user;
-    return (u?.email as string | undefined)?.toLowerCase() === email;
-  });
-  if (alreadyMember) return { error: "That person is already a member of this organization." };
-
-  const rawToken = generateInviteToken();
-  const tokenHash = hashInviteToken(rawToken);
-  const expiresAt = inviteExpiresAt();
-
-  const { error: insertError } = await service.from("org_invites").insert({
-    organization_id: organizationId,
-    email,
-    role,
-    token_hash: tokenHash,
-    expires_at: expiresAt.toISOString(),
-    invited_by: userId,
-  });
-  if (insertError) return { error: insertError.message };
-
-  const { data: orgRow } = await service.from("organizations").select("name").eq("id", organizationId).maybeSingle();
-  const { data: inviterRow } = await service.from("users").select("email").eq("id", userId).maybeSingle();
-  const { data: existingUser } = await service.from("users").select("id").eq("email", email).maybeSingle();
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://nonqmnexus.com";
-  const acceptUrl = existingUser
-    ? `${appUrl}/invites/accept?invite=${rawToken}`
-    : `${appUrl}/signup?invite=${rawToken}`;
-
-  const { subject, html } = orgInviteEmail({
-    organizationName: (orgRow?.name as string | undefined) ?? "your team",
-    role,
-    inviterEmail: (inviterRow?.email as string | undefined) ?? "A teammate",
-    acceptUrl,
-    expiresAtIso: expiresAt.toISOString(),
-  });
-  const sendResult = await sendTransactionalEmail({ to: email, subject, html });
-  if (!sendResult.ok) {
-    return { error: `Invite saved, but the email failed to send: ${sendResult.error ?? "unknown error"}` };
-  }
+  const result = await sendOneInvite(organizationId, userId, email, role);
+  if (result.error) return { error: result.error };
 
   revalidatePath("/account/team");
   return {};
+}
+
+export interface BulkInviteRow {
+  email: string;
+  role: string;
+}
+
+export interface BulkInviteResult {
+  email: string;
+  ok: boolean;
+  error?: string;
+}
+
+/** Bulk CSV/paste invite (org_admin only) — the mass-enrollment path: an
+ * org_admin (typically a Bulk Membership company's admin, docs/bulk-
+ * membership.md) uploads up to MAX_BULK_SEATS rows at once instead of
+ * inviting one loan officer at a time. Reuses the exact same org_invites /
+ * signup-trigger / accept flow as a single invite — this is purely a loop
+ * over sendOneInvite with a concurrency cap (so 500 rows don't fire 500
+ * simultaneous Resend calls) and per-row reporting so a partial failure
+ * (a bad email, a bounce) never silently drops rows. Duplicate emails
+ * within the same batch are de-duped before sending. */
+export async function bulkInviteMembers(rows: BulkInviteRow[]): Promise<{ error?: string; results?: BulkInviteResult[] }> {
+  const { userId, organizationId } = await requireOrgAdmin();
+
+  if (!Array.isArray(rows) || rows.length === 0) return { error: "No rows to invite." };
+  if (rows.length > MAX_BULK_SEATS) {
+    return { error: `A single bulk upload is capped at ${MAX_BULK_SEATS} rows — split larger lists into batches.` };
+  }
+
+  const seen = new Set<string>();
+  const deduped = rows
+    .map((r) => ({ email: String(r.email ?? "").trim().toLowerCase(), role: String(r.role ?? "broker") }))
+    .filter((r) => {
+      if (!r.email || seen.has(r.email)) return false;
+      seen.add(r.email);
+      return true;
+    });
+
+  const CONCURRENCY = 8;
+  const results: BulkInviteResult[] = new Array(deduped.length);
+  let cursor = 0;
+  async function worker() {
+    while (cursor < deduped.length) {
+      const i = cursor++;
+      const row = deduped[i];
+      if (!row) continue;
+      const outcome = await sendOneInvite(organizationId, userId, row.email, row.role);
+      results[i] = { email: row.email, ok: !outcome.error, error: outcome.error };
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, deduped.length) }, () => worker()));
+
+  revalidatePath("/account/team");
+  return { results };
 }
 
 /** Revokes a pending invite (org_admin only) — single-use, so a revoked
@@ -202,6 +275,11 @@ export async function updateSeatCount(newSeatCount: number): Promise<{ error?: s
   const service = createServiceRoleClient();
   const orgSub = await getActiveOrgSubscription(organizationId);
   if (!orgSub) return { error: "No active team subscription found." };
+
+  const planKey = (Array.isArray(orgSub.plan) ? orgSub.plan[0] : orgSub.plan)?.key as string | undefined;
+  if (planKey === BULK_PLAN_KEY && newSeatCount > MAX_BULK_SEATS) {
+    return { error: `Bulk Membership is capped at ${MAX_BULK_SEATS} seats — contact NON-QM Nexus to renegotiate above that.` };
+  }
 
   const coveredCount = await countCoveredMembers(organizationId);
   if (newSeatCount < coveredCount) {

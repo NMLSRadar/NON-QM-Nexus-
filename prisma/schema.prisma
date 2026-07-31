@@ -126,10 +126,38 @@ model OrgSubscription {
   planId               String    @map("plan_id") @db.Uuid
   seatCount            Int       @map("seat_count")
   status               String    @default("active") // active | canceled
-  source               String    @default("comped") // stripe | comped
+  // stripe | comped | invoiced — "invoiced" added for Bulk Membership
+  // (docs/bulk-membership.md): a NET-30 Stripe Invoice, not an ongoing
+  // Stripe Subscription object, so it isn't reconciled by the subscription
+  // webhooks the way "stripe" rows are — see billingMode/stripeInvoiceId.
+  source               String    @default("comped")
   stripeSubscriptionId String?   @unique @map("stripe_subscription_id")
   currentPeriodEnd     DateTime? @map("current_period_end")
   canceledAt           DateTime? @map("canceled_at")
+  // --- Bulk Membership fields (2026-07-31, docs/bulk-membership.md) ---
+  // All null/default for the 3 existing self-serve tiers' org subscriptions
+  // (billingMode stays "standard"). Set only when planId points at the
+  // "bulk_enterprise" plan, whose price is negotiated per deal rather than
+  // fixed on the plan row.
+  // "standard" (existing 3-tier team pricing) | "custom_stripe" (dynamic
+  // per-deal Stripe Price, real subscription, card-billed) | "invoiced"
+  // (NET-30 Stripe Invoice, no subscription object).
+  billingMode             String   @default("standard") @map("billing_mode")
+  // Negotiated $/seat/month in cents for this specific deal — informational
+  // once a custom_stripe Price is created (the Price itself is the source of
+  // truth for what's actually charged), and the ONLY source of truth for an
+  // "invoiced" row (used to compute each invoice's line-item amount).
+  customPricePerSeatCents Int?      @map("custom_price_per_seat_cents")
+  // Set only for billingMode = "invoiced". The most recently sent Stripe
+  // Invoice id, and when the NEXT one is due — there is no recurring Stripe
+  // object for an invoiced deal, so "renew" is a manual admin action
+  // (src/app/admin/bulk-memberships/actions.ts's sendNextBulkInvoice()).
+  stripeInvoiceId      String?   @map("stripe_invoice_id")
+  nextInvoiceDueAt     DateTime? @map("next_invoice_due_at")
+  // Who to bill / contact for this org's bulk deal — the negotiating
+  // contact, not necessarily any one covered member.
+  billingContactEmail  String?   @map("billing_contact_email")
+  billingContactName   String?   @map("billing_contact_name")
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")
 
@@ -137,6 +165,28 @@ model OrgSubscription {
   plan         MembershipPlan  @relation(fields: [planId], references: [id])
 
   @@map("org_subscriptions")
+}
+
+/// An inbound lead from the public "Request Bulk Membership" page
+/// (src/app/enterprise) — captured before any pricing is negotiated. An
+/// admin reviews it in /admin/bulk-memberships and either converts it into
+/// a real OrgSubscription (status -> "converted", convertedOrganizationId
+/// set) or declines it. Purely a sales-intake record — never grants access
+/// on its own.
+model BulkMembershipRequest {
+  id                     String    @id @default(uuid()) @db.Uuid
+  companyName            String    @map("company_name")
+  contactName            String    @map("contact_name")
+  contactEmail           String    @map("contact_email")
+  contactPhone           String?   @map("contact_phone")
+  seatCountRequested      Int      @map("seat_count_requested")
+  notes                  String?
+  status                 String    @default("new") // new | contacted | converted | declined
+  convertedOrganizationId String?  @map("converted_organization_id") @db.Uuid
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  @@map("bulk_membership_requests")
 }
 
 /// A pending (or resolved) invitation for a user to join an organization's
@@ -226,6 +276,12 @@ model MembershipPlan {
   // has been set up for this plan.
   stripeTeamPriceId       String? @unique @map("stripe_team_price_id")
   stripeTeamAnnualPriceId String? @unique @map("stripe_team_annual_price_id")
+  // Underlying Stripe Product id — the 3 self-serve tiers derive their
+  // product from their own stripePriceId (see scripts/stripe-team-billing.js),
+  // so this is null for them. Set only for the "bulk_enterprise" plan (see
+  // docs/bulk-membership.md), whose per-deal Prices are created dynamically
+  // at negotiation time and need a shared Product to attach to.
+  stripeProductId   String?  @map("stripe_product_id")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 

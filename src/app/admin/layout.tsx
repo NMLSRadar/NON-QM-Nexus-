@@ -12,6 +12,7 @@ const ADMIN_NAV = [
   { href: "/admin/discounts", label: "Discounts" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/teams", label: "Team Subscriptions" },
+  { href: "/admin/bulk-memberships", label: "Bulk Memberships" },
 ] as const;
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
