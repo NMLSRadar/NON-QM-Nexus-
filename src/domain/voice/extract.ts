@@ -151,8 +151,12 @@ export function normalizeTranscript(raw: string): string {
   // A trailing hyphenated non-number word ("six-hundred-thousand-dollar
   // range") otherwise invalidates the ENTIRE hyphen-joined token for
   // wordsToDigits below, since it splits on "-" and requires every part to
-  // be numeric — detach it so the numeric chain still converts.
-  s = s.replace(/-(dollars?|range|purchase|value|price|mark)\b/g, " $1");
+  // be numeric — detach it so the numeric chain still converts. Also
+  // covers "unit(s)"/"plex" (added 2026-08-01) so "five-unit"/"six-plex"
+  // become "five unit"/"six plex" and convert to "5 unit"/"6 plex" like
+  // their space-separated equivalents, instead of surviving as one
+  // unconverted token.
+  s = s.replace(/-(dollars?|range|purchase|value|price|mark|units?|plex)\b/g, " $1");
   // "one point two million" / "1 point 2 thousand" -> integer, BEFORE the word-number pass
   s = s.replace(
     new RegExp(`\\b(${UNIT_WORD}|\\d+)\\s+point\\s+(${UNIT_WORD}|\\d)\\s+(million|thousand)\\b`, "g"),
@@ -546,14 +550,20 @@ const CREDIT_PROFILE_RE = new RegExp(
     // Foreign Credit — the borrower has a credit history, just not a U.S. one.
     String.raw`(?<foreignCredit>\bforeign credit(?:\s+(?:only|report))?\b|\binternational credit report\b|\bhas foreign credit\b)`,
     // No U.S. Credit — explicitly scoped to the U.S./domestic dimension.
-    String.raw`(?<noUsCredit>\bno u\s*\.?\s*s\s*\.?\s* credit(?:\s+score)?\b|\bno domestic credit history\b|\bnever (?:used|established) credit in the united states\b|\bno u\s*\.?\s*s\s*\.?\s* credit history\b|\b(?:never|has not|have not|hasn['o]?t|haven['o]?t) established (?:any )?u\s*\.?\s*s\s*\.?\s*\.?\s* credit\b)`,
+    // Added 2026-08-01 (lender-audit/5-8-unit spec): "no established U.S.
+    // credit" and "no domestic credit score" as bare "no ..." phrasings
+    // (not just the "never/has not established ..." verb forms already
+    // covered), plus a standalone "no U.S. FICO" phrasing.
+    String.raw`(?<noUsCredit>\bno u\s*\.?\s*s\s*\.?\s* credit(?:\s+score)?\b|\bno u\s*\.?\s*s\s*\.?\s* fico\b|\bno domestic credit(?:\s+(?:score|history))?\b|\bnever (?:used|established) credit in the united states\b|\bno u\s*\.?\s*s\s*\.?\s* credit history\b|\bno established u\s*\.?\s*s\s*\.?\s* credit\b|\b(?:never|has not|have not|hasn['o]?t|haven['o]?t) established (?:any )?u\s*\.?\s*s\s*\.?\s*\.?\s* credit\b)`,
     // Insufficient Credit History — some credit exists, but not enough depth.
-    String.raw`(?<insufficientCreditHistory>\bhas not established credit\b|\bnot established (?:any )?credit\b|\bnever established (?:any )?credit\b|\bno established tradelines\b|\binsufficient credit history\b|\bthin(?:\s+or\s+no)? credit (?:file|history)\b)`,
+    String.raw`(?<insufficientCreditHistory>\bhas not established credit\b|\bnot established (?:any )?credit\b|\bnever established (?:any )?credit\b|\bno established (?:credit(?:\s+score)?|tradelines)\b|\binsufficient credit history\b|\bthin(?:\s+or\s+no)? credit (?:file|history)\b)`,
     // Credit Score Unknown — genuinely undetermined, not asserted as absent.
     String.raw`(?<creditUnknown>\bcredit (?:score|profile) (?:is )?unknown\b|\bcredit status (?:is )?unknown\b)`,
     // No FICO — the general/default case; also the fallback the spec's own
-    // worked example expects for "does not have a FICO score".
-    String.raw`(?<noFico>\bno fico\b|\bno credit score\b|\bn\s*\/?\s*a\s+fico\b|\bfico\s+(?:is\s+)?not applicable\b|\bfico\s+n\s*\/?\s*a\b|\bcredit score (?:is\s+)?unavailable\b|\bdoes\s?n['o]?t\s+have\s+a\s+fico\b|\bdoes not have a (?:u\s*\.?\s*s\s*\.?\s* )?credit score\b|\bhas no fico\b|\bwithout a fico\b|\bdoes not have a social security[\s-]based credit profile\b|\bno social security[\s-]based credit\b|\brecently arrived.{0,60}no fico\b)`,
+    // worked example expects for "does not have a FICO score". Extended
+    // 2026-08-01 with bare "no/without a score" phrasings, the "doesn't
+    // have a credit score" contraction, and "no reportable FICO".
+    String.raw`(?<noFico>\bno fico\b|\bno reportable fico\b|\bno credit score\b|\bn\s*\/?\s*a\s+fico\b|\bfico\s+(?:is\s+)?not applicable\b|\bfico\s+n\s*\/?\s*a\b|\bcredit score (?:is\s+)?unavailable\b|\b(?:don['o]?t|doesn['o]?t|do not|does not)\s+have\s+a\s+fico\b|\b(?:don['o]?t|doesn['o]?t|do not|does not)\s+have\s+a\s+(?:credit\s+)?score\b|\bhas no fico\b|\bhas no (?:credit\s+)?score\b|\bwithout a fico\b|\bwithout a (?:credit\s+)?score\b|\bthere is no score\b|\bno score\b|\bdoes not have a social security[\s-]based credit profile\b|\bno social security[\s-]based credit\b|\brecently arrived.{0,60}no fico\b)`,
   ].join("|"),
   "gi"
 );
@@ -1397,7 +1407,16 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   }
 
   // ---- Property type ------------------------------------------------------
-  const unitMatch = /\b(\d{1,2})\s*(?:to\s*4\s*)?units?\b/.exec(t);
+  const unitMatch = /\b(\d{1,2})[\s-]*(?:to\s*4\s*)?units?\b/.exec(t);
+  // 5-8 unit / small-multifamily recognition — added 2026-08-01 (Lender
+  // Database Audit & 5-8 Unit Expansion spec). Two extra shapes the plain
+  // unitMatch regex above doesn't cover: "N-plex" (five-plex through
+  // eight-plex — normalizeTranscript already folds the number word to a
+  // digit before this runs, so "five-plex" arrives as "5-plex"), and a
+  // stated RANGE with no single exact count ("5 to 8 units", "small
+  // multifamily") — the latter sets propertyType without guessing units.
+  const plexMatch = /\b([5-8])[\s-]?plex\b/.exec(t);
+  const fiveToEightRangeMatch = /\b5\s*(?:to|-)\s*8\s*units?\b|\bsmall multifamily\b/.test(t);
   // Warrantability matters for real LTV eligibility (see propertyTypeLtvCaps
   // in program.ts) — a bare "condo"/"condominium" with no warrantable/
   // non-warrantable qualifier must NOT be silently assumed as warrantable.
@@ -1422,9 +1441,20 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   else if (/\bduplex\b/.test(t)) { x.propertyType = cap(PropertyType.TwoToFourUnit, "duplex"); x.units = 2; }
   else if (/\btriplex\b/.test(t)) { x.propertyType = cap(PropertyType.TwoToFourUnit, "triplex"); x.units = 3; }
   else if (/\b(?:four|quad)[\s-]?plex\b/.test(t)) { x.propertyType = cap(PropertyType.TwoToFourUnit, "fourplex"); x.units = 4; }
+  else if (plexMatch) {
+    const n = parseInt(plexMatch[1] ?? "", 10);
+    x.propertyType = cap(PropertyType.FiveToEightUnit, plexMatch[0].trim());
+    x.units = n;
+  }
+  else if (fiveToEightRangeMatch) {
+    // A stated range ("5 to 8 units", "small multifamily") with no single
+    // exact count — set the property type without guessing a unit count.
+    x.propertyType = cap(PropertyType.FiveToEightUnit, /small multifamily/.test(t) ? "small multifamily" : "5 to 8 units");
+  }
   else if (unitMatch) {
     const n = parseInt(unitMatch[1] ?? "", 10);
-    if (n >= 5) { x.propertyType = cap(PropertyType.FivePlusUnit, unitMatch[0].trim()); x.units = n; }
+    if (n >= 9) { x.propertyType = cap(PropertyType.NinePlusUnit, unitMatch[0].trim()); x.units = n; }
+    else if (n >= 5) { x.propertyType = cap(PropertyType.FiveToEightUnit, unitMatch[0].trim()); x.units = n; }
     else if (n >= 2) { x.propertyType = cap(PropertyType.TwoToFourUnit, unitMatch[0].trim()); x.units = n; }
     else if (n === 1) { x.propertyType = cap(PropertyType.SingleFamily, unitMatch[0].trim()); x.units = 1; }
   } else if (/\bpud\b|planned unit development/.test(t)) x.propertyType = cap(PropertyType.Pud, "PUD");

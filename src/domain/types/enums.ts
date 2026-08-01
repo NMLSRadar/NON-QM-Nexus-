@@ -48,6 +48,36 @@ export const PropertyType = {
   NonWarrantableCondo: "non_warrantable_condo",
   Townhome: "townhome",
   TwoToFourUnit: "2_4_unit",
+  /** 5-8 unit residential/small-balance multifamily — added 2026-08-01
+   * (Lender Database Audit & 5-8 Unit Expansion spec). Deliberately
+   * distinct from both 2-4 unit and 9+ unit: many Non-QM/DSCR lenders
+   * treat 5-8 units as its own dedicated residential-multifamily product
+   * (different LTV grid, investor-experience requirement, and citizenship
+   * eligibility than the lender's ordinary 1-4 unit or true 9+/commercial
+   * multifamily products) — routing a 6-unit scenario through the 2-4
+   * unit DSCR matrix, or silently assuming any lender's general DSCR
+   * program covers it, would misrepresent real eligibility. See
+   * Scenario.units for the exact stated unit count (5/6/7/8) and
+   * Program.fiveToEightUnitLtvMatrix for the loan-amount/FICO/transaction-
+   * type-specific LTV grid. */
+  FiveToEightUnit: "5_8_unit",
+  /** 9+ unit / true commercial multifamily — added 2026-08-01 alongside
+   * FiveToEightUnit. The platform does not yet model dedicated 9+ unit
+   * guideline data (no lender program in the catalog documents this
+   * tier) — this value exists so the matching engine and voice/manual
+   * intake can correctly RECOGNIZE and preserve a 9+ unit statement
+   * (rather than misclassifying it as 5-8 unit or falling back to the
+   * legacy 5_plus_unit catch-all) even before any program claims
+   * eligibility for it; every real lender/program comparison against it
+   * will correctly find no verified match until real 9+ unit guideline
+   * data is ingested. */
+  NinePlusUnit: "9_plus_unit",
+  /** @deprecated Legacy catch-all for "5 or more units" predating the
+   * 2026-08-01 5-8-unit/9+-unit split above. No longer produced by voice/
+   * manual extraction (extract.ts now classifies every 5+ statement into
+   * FiveToEightUnit or NinePlusUnit) — kept only so already-stored
+   * Scenario/Program rows tagged "5_plus_unit" before this change keep
+   * deserializing and matching without a data migration. */
   FivePlusUnit: "5_plus_unit",
   Pud: "pud",
   Manufactured: "manufactured",

@@ -101,6 +101,7 @@ export function ScenarioForm() {
       loanPurpose: str(f.get("loanPurpose")) as ScenarioInput["loanPurpose"],
       occupancy: str(f.get("occupancy")) as ScenarioInput["occupancy"],
       propertyType: str(f.get("propertyType")) as ScenarioInput["propertyType"],
+      units: num(f.get("units")),
       state: str(f.get("state"))?.toUpperCase(),
       purchasePrice: num(f.get("purchasePrice")),
       estimatedValue: num(f.get("estimatedValue")),
@@ -287,11 +288,16 @@ export function ScenarioForm() {
             <option value="non_warrantable_condo">Non-warrantable condo</option>
             <option value="townhome">Townhome</option>
             <option value="2_4_unit">2-4 unit</option>
+            <option value="5_8_unit">5-8 unit (small multifamily)</option>
+            <option value="9_plus_unit">9+ unit / commercial</option>
             <option value="pud">PUD</option>
             <option value="rural">Rural</option>
             <option value="manufactured">Manufactured</option>
             <option value="condotel">Condotel</option>
           </select>
+        </Field>
+        <Field name="units" title="Unit count (5-8 or 9+ unit properties only)">
+          <input id="units" name="units" type="number" min="1" max="20" className={field} />
         </Field>
         <Field name="purchasePrice" title="Purchase price ($)">
           <input id="purchasePrice" name="purchasePrice" type="number" min="0" className={field} />

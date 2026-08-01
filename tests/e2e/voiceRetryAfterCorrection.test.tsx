@@ -70,7 +70,10 @@ describe("Voice retry after a correction (no canAnalyze toggle required)", () =>
     await waitFor(() => {
       expect(screen.getByText(/Vitals — 9 of 9 captured/)).toBeInTheDocument();
     });
-    await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1), { timeout: 8000 });
+    await waitFor(() => screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+
+    await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
     await waitFor(() => {
       expect(screen.getByText("The credit score must be between 300 and 850.")).toBeInTheDocument();
     });
@@ -103,7 +106,9 @@ describe("Voice retry after a correction (no canAnalyze toggle required)", () =>
     setTranscript(
       "Purchase of a single family primary residence worth $500,000, loan amount 400k, credit score 720, full doc income. Borrower is a U.S. citizen."
     );
-    await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1), { timeout: 8000 });
+    await waitFor(() => screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
 
     // A correction arrives WHILE the first request is still pending.
     createScenarioFromVoice.mockResolvedValueOnce({ redirectTo: "/scenarios/mock-id" });

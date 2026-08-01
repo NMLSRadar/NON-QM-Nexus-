@@ -144,7 +144,9 @@ const PROPERTY_TYPES: Array<[PropertyType, string]> = [
   ["non_warrantable_condo", "Non-warrantable condo"],
   ["townhome", "Townhome"],
   ["2_4_unit", "2–4 unit"],
-  ["5_plus_unit", "5+ unit"],
+  ["5_8_unit", "5–8 unit"],
+  ["9_plus_unit", "9+ unit / commercial"],
+  ["5_plus_unit", "5+ unit (legacy)"],
   ["pud", "PUD"],
   ["manufactured", "Manufactured"],
   ["rural", "Rural"],
@@ -214,16 +216,22 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   const hasFailedRef = useRef(false);
   const spokenRef = useRef("");
   const autoStartedRef = useRef(false);
-  /** Secondary Voice Vitals Expansion (2026-07-31) — once all required
-   * vitals resolve, a short optional window opens ("Additional Scenario
-   * Details") before matching actually runs; this counts seconds
-   * remaining (null = not currently counting down). secondaryDoneRef
-   * ensures the window opens exactly ONCE per scenario (not re-armed by
-   * every subsequent effective/canAnalyze change while it's ticking or
-   * after it's already elapsed). */
-  const [secondaryCountdown, setSecondaryCountdown] = useState<number | null>(null);
-  const secondaryDoneRef = useRef(false);
-  const SECONDARY_VITALS_WINDOW_SECONDS = 5;
+  /** Additional Info workflow — redesigned 2026-08-01 (Lender Database
+   * Audit & 5-8 Unit Expansion spec), REPLACING the prior 5-second
+   * auto-expiring countdown entirely. Once all 9 required vitals resolve,
+   * an "Additional Info" prompt appears with two explicit user actions —
+   * "Add Additional Info" or "Skip" — and NO timer of any kind: the panel
+   * never auto-collapses, never auto-submits, and the user is never
+   * trapped waiting on a clock. `additionalInfoPromptShown` renders the
+   * prompt the first time vitals complete; `additionalInfoExpanded` is
+   * true once the user clicks "Add Additional Info" (revealing the
+   * optional-vital tiles and voice/manual capture, plus a "Find Matching
+   * Lenders" button); `additionalInfoResolved` is true once the user
+   * picks Skip OR clicks "Find Matching Lenders" — ONLY THEN does the
+   * auto-analyze effect below actually submit. */
+  const [additionalInfoPromptShown, setAdditionalInfoPromptShown] = useState(false);
+  const [additionalInfoExpanded, setAdditionalInfoExpanded] = useState(false);
+  const [additionalInfoResolved, setAdditionalInfoResolved] = useState(false);
 
   useEffect(() => {
     setSupported(getRecognitionCtor() !== undefined);
@@ -439,19 +447,17 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
     const changedSinceFailure = hasFailedRef.current && signature !== lastAttemptedRef.current;
     if (!neverAttempted && !changedSinceFailure) return;
 
-    // Secondary Voice Vitals Expansion (2026-07-31): the FIRST time this
-    // scenario becomes ready, open a short "Additional Scenario Details"
-    // window instead of submitting immediately — listening/extraction
-    // continue uninterrupted throughout (recognition is never stopped
-    // here), and a live-updating `effective` during the window is exactly
-    // how a mortgage-lates/gift-funds/STR-income/one-year-self-employment
-    // mention gets captured before matching runs. Silence for the full
-    // window auto-continues to matching below — no click, no confirmation.
-    if (secondaryCountdown === null && !secondaryDoneRef.current) {
-      setSecondaryCountdown(SECONDARY_VITALS_WINDOW_SECONDS);
+    // Additional Info workflow (redesigned 2026-08-01, replacing the prior
+    // countdown): the FIRST time this scenario becomes ready, show the
+    // "Additional Info" prompt (Add Additional Info / Skip) instead of
+    // submitting immediately — listening/extraction continue uninterrupted
+    // throughout (recognition is never stopped here). Submission is held
+    // until the user explicitly resolves the prompt one way or the other;
+    // there is no timer and no auto-expiration.
+    if (!additionalInfoResolved) {
+      if (!additionalInfoPromptShown) setAdditionalInfoPromptShown(true);
       return;
     }
-    if (secondaryCountdown !== null) return; // still counting down
 
     inFlightRef.current = true;
     lastAttemptedRef.current = signature;
@@ -472,19 +478,17 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         hasFailedRef.current = true;
       }
     });
-  }, [effective, canAnalyze, isPending, router, secondaryCountdown]);
+  }, [effective, canAnalyze, isPending, router, additionalInfoResolved, additionalInfoPromptShown]);
 
-  /* -------- the Additional Scenario Details countdown itself -------- */
-  useEffect(() => {
-    if (secondaryCountdown === null) return;
-    if (secondaryCountdown <= 0) {
-      secondaryDoneRef.current = true;
-      setSecondaryCountdown(null); // hands control back to the analyze effect above, which now submits
-      return;
-    }
-    const timer = setTimeout(() => setSecondaryCountdown((s) => (s ?? 1) - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [secondaryCountdown]);
+  function handleAddAdditionalInfo() {
+    setAdditionalInfoExpanded(true);
+  }
+  function handleSkipAdditionalInfo() {
+    setAdditionalInfoResolved(true);
+  }
+  function handleFindMatchingLenders() {
+    setAdditionalInfoResolved(true);
+  }
 
   function setOv<K extends keyof Overrides>(key: K, value: Overrides[K]) {
     setConflictConfirmed(false);
@@ -768,36 +772,56 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         </details>
       </Card>
 
-      {secondaryCountdown !== null && (
-        <Card dark title="Additional Scenario Details (Optional)">
-          <p className="text-sm text-slate-300 mb-3">
-            Tell me any additional details that may improve your lender matches. You have approximately{" "}
-            {secondaryCountdown} second{secondaryCountdown === 1 ? "" : "s"}.
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {(
-              [
-                { key: "mortgageLatesCategory" as const, label: "Mortgage lates", value: effective.mortgageLatesCategory ? MORTGAGE_LATES_CATEGORY_LABELS[effective.mortgageLatesCategory.value] : undefined, source: effective.mortgageLatesCategory?.source },
-                { key: "giftFundsUsed" as const, label: "Gift funds", value: effective.giftFundsUsed && effective.giftFundsUsed.value !== "unknown" ? (effective.giftFundsUsed.value === "yes" ? "Yes" : "No") : undefined, source: effective.giftFundsUsed?.source },
-                ...(effective.incomeDocType?.value === "dscr"
-                  ? [{ key: "strIncomeUsed" as const, label: "DSCR short-term-rental income", value: effective.strIncomeUsed && effective.strIncomeUsed.value !== "unknown" ? (effective.strIncomeUsed.value === "yes" ? "Yes" : "No") : undefined, source: effective.strIncomeUsed?.source }]
-                  : []),
-                { key: "oneYearSelfEmployed" as const, label: "One-year self-employed", value: effective.oneYearSelfEmployed && effective.oneYearSelfEmployed.value !== "unknown" ? (effective.oneYearSelfEmployed.value === "yes" ? "Yes" : "No") : undefined, source: effective.oneYearSelfEmployed?.source },
-              ] as Array<{ key: string; label: string; value?: string; source?: string }>
-            ).map((v) => (
-              <div key={v.key} className={`flex items-start gap-2.5 rounded-lg border p-2.5 ${v.value ? "border-emerald-400/40 bg-emerald-500/10" : "border-white/10 bg-black/20"}`}>
-                <div className="min-w-0">
-                  <p className="text-[11px] text-slate-400">{v.label}</p>
-                  <p className={`text-sm font-semibold ${v.value ? "text-white" : "text-slate-500"}`}>{v.value ?? "Listening…"}</p>
-                  {v.value && v.source && (
-                    <p className="text-[10px] text-slate-500 truncate" title={v.source}>
-                      “{v.source}”
-                    </p>
-                  )}
-                </div>
+      {additionalInfoPromptShown && !additionalInfoResolved && (
+        <Card dark title="Additional Info">
+          {!additionalInfoExpanded ? (
+            <div>
+              <p className="text-sm text-slate-300 mb-3">
+                Would you like to add any additional scenario details — mortgage lates, gift funds, short-term-rental (DSCR) income, or one-year self-employment — that may improve your lender matches? This is entirely optional.
+              </p>
+              <div className="flex gap-2">
+                <button type="button" onClick={handleAddAdditionalInfo} className="gold-button rounded-md px-4 py-2 text-sm font-semibold">
+                  Add Additional Info
+                </button>
+                <button type="button" onClick={handleSkipAdditionalInfo} className="rounded-md border border-white/15 bg-black/30 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-black/50">
+                  Skip
+                </button>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-slate-300 mb-3">
+                Say or select any additional details, then continue to matching whenever you&apos;re ready.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {(
+                  [
+                    { key: "mortgageLatesCategory" as const, label: "Mortgage lates", value: effective.mortgageLatesCategory ? MORTGAGE_LATES_CATEGORY_LABELS[effective.mortgageLatesCategory.value] : undefined, source: effective.mortgageLatesCategory?.source },
+                    { key: "giftFundsUsed" as const, label: "Gift funds", value: effective.giftFundsUsed && effective.giftFundsUsed.value !== "unknown" ? (effective.giftFundsUsed.value === "yes" ? "Yes" : "No") : undefined, source: effective.giftFundsUsed?.source },
+                    ...(effective.incomeDocType?.value === "dscr"
+                      ? [{ key: "strIncomeUsed" as const, label: "DSCR short-term-rental income", value: effective.strIncomeUsed && effective.strIncomeUsed.value !== "unknown" ? (effective.strIncomeUsed.value === "yes" ? "Yes" : "No") : undefined, source: effective.strIncomeUsed?.source }]
+                      : []),
+                    { key: "oneYearSelfEmployed" as const, label: "One-year self-employed", value: effective.oneYearSelfEmployed && effective.oneYearSelfEmployed.value !== "unknown" ? (effective.oneYearSelfEmployed.value === "yes" ? "Yes" : "No") : undefined, source: effective.oneYearSelfEmployed?.source },
+                  ] as Array<{ key: string; label: string; value?: string; source?: string }>
+                ).map((v) => (
+                  <div key={v.key} className={`flex items-start gap-2.5 rounded-lg border p-2.5 ${v.value ? "border-emerald-400/40 bg-emerald-500/10" : "border-white/10 bg-black/20"}`}>
+                    <div className="min-w-0">
+                      <p className="text-[11px] text-slate-400">{v.label}</p>
+                      <p className={`text-sm font-semibold ${v.value ? "text-white" : "text-slate-500"}`}>{v.value ?? "Not mentioned yet"}</p>
+                      {v.value && v.source && (
+                        <p className="text-[10px] text-slate-500 truncate" title={v.source}>
+                          “{v.source}”
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={handleFindMatchingLenders} className="gold-button mt-3 rounded-md px-4 py-2 text-sm font-semibold">
+                Find Matching Lenders
+              </button>
+            </div>
+          )}
         </Card>
       )}
 

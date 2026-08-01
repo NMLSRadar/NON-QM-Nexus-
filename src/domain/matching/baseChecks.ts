@@ -1,5 +1,5 @@
 import { RuleOutcome, RuleSeverity, MORTGAGE_LATES_SEVERITY, MORTGAGE_LATES_CATEGORY_LABELS } from "../types/enums";
-import type { Program } from "../types/program";
+import type { Program, FiveToEightUnitLtvMatrixEntry } from "../types/program";
 import type { Scenario } from "../types/scenario";
 import type { CalculationSummary, RuleEvaluationResult } from "../types/results";
 
@@ -15,10 +15,53 @@ function result(
 }
 
 /**
+ * Look up the applicable 5-8 unit LTV/FICO/loan-amount tier for a scenario,
+ * per the lookup rule documented on FiveToEightUnitLtvMatrixEntry: the
+ * smallest loan-amount band that still covers the requested loan amount,
+ * then within that band the highest FICO tier the scenario's FICO clears.
+ * Returns undefined when the matrix doesn't cover this loan amount/FICO
+ * combination at all (e.g. FICO below every tier documented for the
+ * applicable band) — this is a real, meaningful "no match," never
+ * silently defaulted to the program's general 1-4 unit figures.
+ */
+function findFiveToEightUnitTier(scenario: Scenario, program: Program): FiveToEightUnitLtvMatrixEntry | undefined {
+  if (!program.fiveToEightUnitLtvMatrix || program.fiveToEightUnitLtvMatrix.length === 0) return undefined;
+  if (scenario.fico == null || scenario.requestedLoanAmount == null) return undefined;
+  const band = program.fiveToEightUnitLtvMatrix
+    .filter((e) => e.maxLoanAmount >= scenario.requestedLoanAmount!)
+    .sort((a, b) => a.maxLoanAmount - b.maxLoanAmount)[0];
+  if (!band) return undefined;
+  return program.fiveToEightUnitLtvMatrix
+    .filter((e) => e.maxLoanAmount === band.maxLoanAmount && e.minFico <= scenario.fico!)
+    .sort((a, b) => b.minFico - a.minFico)[0];
+}
+
+/**
  * Derive the applicable maximum LTV for a scenario under a program by combining
  * the base cap, the FICO/occupancy LTV matrix, and the most restrictive value.
  */
 export function deriveMaxLtv(scenario: Scenario, program: Program): number {
+  // 5-8 Unit Residential overlay — added 2026-08-01. Real 5-8 unit
+  // matrices vary max LTV by loan amount, FICO, AND transaction type
+  // simultaneously, a dimension the general ltvMatrix/baseMaxLtv path
+  // below cannot express — when a real matrix has been ingested for this
+  // property type, it is the AUTHORITATIVE source and takes over the
+  // whole derivation (never blended with the program's general 1-4 unit
+  // figures, which would misrepresent the lender's actual 5-8 unit grid).
+  if (scenario.propertyType === "5_8_unit") {
+    const tier = findFiveToEightUnitTier(scenario, program);
+    if (tier) {
+      return scenario.loanPurpose === "cash_out_refinance" ? tier.maxLtvCashOut
+        : scenario.loanPurpose === "rate_term_refinance" ? tier.maxLtvRateTerm
+        : tier.maxLtvPurchase; // default/purchase
+    }
+    // A real matrix exists but this scenario's loan amount/FICO combination
+    // falls outside every tier it documents (e.g. FICO below the lowest
+    // tier available at the applicable loan-amount band) — never fall
+    // through to the program's general 1-4 unit baseMaxLtv/ltvMatrix,
+    // which would misrepresent this specific product's real grid.
+    if (program.fiveToEightUnitLtvMatrix && program.fiveToEightUnitLtvMatrix.length > 0) return 0;
+  }
   let cap = program.baseMaxLtv;
   if (program.ltvMatrix && scenario.fico != null) {
     const applicable = program.ltvMatrix
@@ -215,6 +258,65 @@ export function baseProgramChecks(
   if (program.experiencedInvestorRequired === true && investorExperience && investorExperience !== "experienced_investor") {
     out.push(result(`${p}:expinv`, "Experienced investor required", "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
       "This program requires an experienced investor (prior investment-property ownership)."));
+  }
+
+  // ---- 5-8 Unit Residential / Small-Balance Multifamily overlay ---------
+  // Added 2026-08-01 (Lender Database Audit & 5-8 Unit Expansion spec).
+  // Only evaluated when the SCENARIO is actually a 5-8 unit property (a
+  // program listing 5_8_unit in propertyTypes but evaluated against a
+  // 1-4 unit or 9+ unit scenario is unaffected — these checks are scoped
+  // to the property type they document).
+  if (scenario.propertyType === "5_8_unit") {
+    // This program's 5-8 unit product may require a strictly EXPERIENCED
+    // investor even when its general 1-4 unit business does not.
+    if (program.fiveToEightUnitExperiencedInvestorRequired === true && investorExperience && investorExperience !== "experienced_investor") {
+      out.push(result(`${p}:58expinv`, "5-8 unit: experienced investor required", "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
+        "This lender's 5-8 unit residential program requires an experienced investor (documented history of owning and managing non-owner-occupied income-producing investment property) — first-time investors are not eligible for this specific property type."));
+    }
+    // A per-property-type citizenship restriction tighter than the
+    // program's general citizenshipEligible list (e.g. Foreign National/
+    // ITIN/DACA excluded from a lender's 5-8 unit product even though
+    // they're eligible on its 1-4 unit DSCR program).
+    if (scenario.citizenship && program.fiveToEightUnitCitizenshipEligible) {
+      const ok = program.fiveToEightUnitCitizenshipEligible.includes(scenario.citizenship);
+      out.push(result(`${p}:58citizenship`, "5-8 unit: citizenship eligibility", "borrower", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+        ok ? `${scenario.citizenship} is eligible for this lender's 5-8 unit residential program.`
+          : `This lender's 5-8 unit residential program does not extend to ${scenario.citizenship} borrowers, even though the general program may.`));
+    }
+    // A per-property-type DSCR minimum distinct from the program's general
+    // minDscr (e.g. a lender's 5-8 unit product requiring >=1.00 DSCR
+    // while its 1-4 unit DSCR product allows a lower/no-ratio minimum).
+    if (program.fiveToEightUnitMinDscr != null && calc.dscr?.value != null) {
+      const ok = calc.dscr.value >= program.fiveToEightUnitMinDscr;
+      out.push(result(`${p}:58dscr`, "5-8 unit: minimum DSCR", "dscr", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+        ok ? `DSCR ${calc.dscr.value} meets this lender's 5-8 unit minimum of ${program.fiveToEightUnitMinDscr}.`
+          : `DSCR ${calc.dscr.value} is below this lender's 5-8 unit minimum of ${program.fiveToEightUnitMinDscr}.`));
+    }
+    // STR income specifically on the 5-8 unit product — mirrors the
+    // general DSCR STR check below, but only applies when the lender has
+    // documented a property-type-specific answer (never inferred from the
+    // program's general strIncomeEligible, since several lenders draw
+    // this line differently for 5-8 unit vs. 1-4 unit).
+    if (scenario.incomeDocType === "dscr" && scenario.dscr?.strIncomeUsed === "yes" && program.fiveToEightUnitStrIncomeEligible === false) {
+      out.push(result(`${p}:58str`, "5-8 unit: short-term-rental income", "income", RuleOutcome.Warning, RuleSeverity.Soft,
+        "This lender's 5-8 unit residential guideline treats short-term-rental income as ineligible (the unit is underwritten as vacant, no income credited) — the property will need to qualify on long-term market rent instead."));
+    }
+    // Guideline-confirmation gap — Phase 16 of the spec: a program listing
+    // 5_8_unit as an eligible property type but with NO ingested LTV
+    // matrix must never have its general baseMaxLtv/ltvMatrix silently
+    // assumed to apply; flag it for manual confirmation instead of a
+    // fabricated pass.
+    if (!program.fiveToEightUnitLtvMatrix || program.fiveToEightUnitLtvMatrix.length === 0) {
+      out.push(result(`${p}:58matrix`, "5-8 unit: guideline confirmation required", "property", RuleOutcome.ManualReview, RuleSeverity.Soft,
+        "This lender lists 5-8 unit properties as eligible, but the specific loan-amount/FICO/LTV grid for this property type has not yet been ingested into the platform — confirm the exact LTV, FICO, and DSCR requirements with the lender's AE before relying on this match."));
+    } else if (scenario.fico != null && scenario.requestedLoanAmount != null && !findFiveToEightUnitTier(scenario, program)) {
+      // A real matrix IS on file, but this scenario's FICO/loan-amount
+      // combination doesn't land in any documented tier (e.g. FICO below
+      // the lowest tier available at the applicable loan-amount band) —
+      // a real, meaningful ineligibility, not a data gap.
+      out.push(result(`${p}:58tier`, "5-8 unit: FICO/loan-amount tier", "property", RuleOutcome.Fail, RuleSeverity.Hard,
+        `This lender's 5-8 unit residential grid does not have a documented FICO/LTV tier covering a $${scenario.requestedLoanAmount.toLocaleString()} loan at FICO ${scenario.fico} — the borrower may still qualify at a different loan amount or with a higher credit score.`));
+    }
   }
 
   // Mortgage / housing history (30-day lates in the trailing 12 months) —

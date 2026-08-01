@@ -54,12 +54,15 @@ describe("Test 1 & 3 (spec): the 9 required vitals alone are enough — investor
     expect(screen.getAllByText("Not mentioned").length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText(/investor experience/i, { selector: ".text-rose-700, .text-amber-800" })).not.toBeInTheDocument();
 
-    await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1), { timeout: 8000 });
+    await waitFor(() => screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+
+    await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/scenarios/mock-id"));
 
     // Never any generic/blocking validation message.
     expect(screen.queryByText("Please correct the highlighted fields.")).not.toBeInTheDocument();
-  }, 12000);
+  });
 
   it("the manual-correction dropdowns for investor experience and vesting default to unset, not an error", () => {
     render(<VoiceClient />);

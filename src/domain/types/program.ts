@@ -84,6 +84,27 @@ export interface LtvMatrixEntry {
   maxLoanAmount?: number;
 }
 
+/**
+ * A single loan-amount-band / FICO-tier row of a lender's 5-8 unit
+ * residential LTV grid — added 2026-08-01 (Lender Database Audit & 5-8
+ * Unit Expansion spec). Real 5-8 unit matrices (e.g. LoanStream's) vary
+ * maximum LTV by loan amount AND FICO AND transaction type at once, which
+ * plain LtvMatrixEntry cannot express. Lookup: pick the row with the
+ * SMALLEST `maxLoanAmount` that is >= the scenario's loan amount, and
+ * within that row's set of FICO tiers pick the tier with the LARGEST
+ * `minFico` that is <= the scenario's FICO; then read the LTV for the
+ * scenario's transaction type off that tier.
+ */
+export interface FiveToEightUnitLtvMatrixEntry {
+  /** This band's loan-amount ceiling (the matrix's own row header, e.g.
+   * $1,500,000 / $2,000,000 / $2,500,000 / $3,000,000). */
+  maxLoanAmount: number;
+  minFico: number;
+  maxLtvPurchase: number;
+  maxLtvRateTerm: number;
+  maxLtvCashOut: number;
+}
+
 export interface Program {
   id: string;
   lenderId: string;
@@ -326,6 +347,55 @@ export interface Program {
    * confirmed value above 12 means this program does NOT support a
    * one-year self-employed borrower without compensating factors. */
   minSelfEmploymentMonths?: number;
+  /**
+   * 5-8 Unit Residential / Small-Balance Multifamily overlay — added
+   * 2026-08-01 (Lender Database Audit & 5-8 Unit Expansion spec). This
+   * property type is architecturally distinct from the program's general
+   * baseMaxLtv/ltvMatrix: real lender matrices for 5-8 unit products vary
+   * maximum LTV by LOAN AMOUNT BAND, FICO, AND transaction type
+   * (purchase/rate-term/cash-out) simultaneously — a dimension the
+   * existing LtvMatrixEntry (FICO + occupancy only) cannot express. All
+   * fields below are undefined by default = this program has not (yet)
+   * had 5-8 unit guideline data ingested — even when `5_8_unit` is listed
+   * in `propertyTypes`, matching must NEVER assume a specific LTV/FICO/
+   * DSCR figure that isn't backed by `fiveToEightUnitLtvMatrix`; a
+   * 5-8-unit-eligible program with no matrix populated is surfaced as
+   * "guideline confirmation required," never a fabricated approval. Only
+   * ever populate from a real, cited lender matrix (never inferred from
+   * the program's general DSCR/1-4-unit terms).
+   */
+  fiveToEightUnitLtvMatrix?: FiveToEightUnitLtvMatrixEntry[];
+  /** Minimum DSCR specifically documented for this program's 5-8 unit
+   * product — may differ from the program's general `minDscr`. */
+  fiveToEightUnitMinDscr?: number;
+  /** true = the lender's 5-8 unit guideline requires an EXPERIENCED
+   * investor (first-time investors are ineligible for this specific
+   * property-type product, even if the program's general
+   * `experiencedInvestorRequired` is false/undefined for its 1-4 unit
+   * business). undefined = not yet confirmed for 5-8 unit specifically. */
+  fiveToEightUnitExperiencedInvestorRequired?: boolean;
+  /** Per-citizenship eligibility restriction specific to the 5-8 unit
+   * product — some lenders sell 5-8 unit DSCR only to U.S. Citizens/
+   * Permanent Resident Aliens/Non-Permanent Resident Aliens while
+   * excluding Foreign National/ITIN/DACA borrowers who ARE otherwise
+   * eligible on the lender's general 1-4 unit DSCR program. undefined =
+   * no distinct 5-8-unit-specific citizenship restriction documented (the
+   * program's general `citizenshipEligible` governs). */
+  fiveToEightUnitCitizenshipEligible?: Citizenship[];
+  /** Maximum number of vacant/unleased units this program's 5-8 unit
+   * guideline tolerates before treating additional vacancies as
+   * ineligible (real guidelines commonly cap this at 2). undefined = not
+   * yet confirmed. */
+  fiveToEightUnitMaxVacantUnits?: number;
+  /** true = the lender's 5-8 unit guideline explicitly permits
+   * short-term-rental (Airbnb/VRBO) income for qualification on THIS
+   * property type; false = explicitly excluded/treated as vacant with no
+   * income (a real, documented restriction distinct from the program's
+   * general DSCR strIncomeEligible, since several lenders' 5-8 unit
+   * products are long-term-lease-only even when their 1-4 unit DSCR
+   * product allows STR); undefined = not yet confirmed. */
+  fiveToEightUnitStrIncomeEligible?: boolean;
+
   guidelineVersionId: string;
   guidelineVersionLabel: string;
   effectiveDate: string;

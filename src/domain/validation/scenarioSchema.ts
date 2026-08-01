@@ -115,7 +115,7 @@ export const scenarioInputSchema = z
     loanPurpose: z.enum(["purchase", "rate_term_refinance", "cash_out_refinance", "heloc", "second_lien"]).optional(),
     occupancy: z.enum(["primary", "second_home", "investment"]).optional(),
     propertyType: z
-      .enum(["single_family", "condo", "non_warrantable_condo", "townhome", "2_4_unit", "5_plus_unit", "pud", "manufactured", "rural", "condotel"])
+      .enum(["single_family", "condo", "non_warrantable_condo", "townhome", "2_4_unit", "5_8_unit", "9_plus_unit", "5_plus_unit", "pud", "manufactured", "rural", "condotel"])
       .optional(),
     units: z.number().int().min(1).max(20).optional(),
     state: z.string().length(2).optional(),

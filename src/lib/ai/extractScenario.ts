@@ -22,7 +22,7 @@ const aiExtractionSchema = z.object({
   loanPurpose: z.enum(["purchase", "rate_term_refinance", "cash_out_refinance", "heloc", "second_lien"]).optional(),
   occupancy: z.enum(["primary", "second_home", "investment"]).optional(),
   propertyType: z
-    .enum(["single_family", "condo", "non_warrantable_condo", "townhome", "2_4_unit", "5_plus_unit", "pud", "manufactured", "rural", "condotel"])
+    .enum(["single_family", "condo", "non_warrantable_condo", "townhome", "2_4_unit", "5_8_unit", "9_plus_unit", "5_plus_unit", "pud", "manufactured", "rural", "condotel"])
     .optional(),
   propertyValue: z.number().min(25_000).optional(),
   loanAmount: z.number().min(10_000).optional(),
@@ -41,7 +41,7 @@ const TASK = `Extract NON-QM mortgage scenario vitals from the voice transcript 
 Reply with VALID JSON ONLY (no prose, no markdown) using exactly these optional keys:
 loanPurpose ("purchase" | "rate_term_refinance" | "cash_out_refinance" | "heloc" | "second_lien"),
 occupancy ("primary" | "second_home" | "investment"),
-propertyType ("single_family" | "condo" | "non_warrantable_condo" | "townhome" | "2_4_unit" | "5_plus_unit" | "pud" | "manufactured" | "rural"),
+propertyType ("single_family" | "condo" | "non_warrantable_condo" | "townhome" | "2_4_unit" | "5_8_unit" | "9_plus_unit" | "pud" | "manufactured" | "rural"),
 propertyValue (number, USD), loanAmount (number, USD), ltv (number, percent),
 fico (integer), incomeDocType ("full_doc" | "bank_statement" | "pnl_only" | "dscr" | "asset_depletion" | "1099" | "wvoe_only"),
 bankStatementMonths (12 | 24), bankStatementKind ("personal" | "business").
