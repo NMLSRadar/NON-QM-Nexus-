@@ -54,8 +54,8 @@ export function PublicLanding() {
           </span>
           <h3 className="mt-4 text-lg font-bold text-white">Guideline-first ranking</h3>
           <p className="mt-1.5 text-sm text-slate-400">
-            Every lender program is checked against the exact scenario&apos;s guideline requirements first — pricing and
-            technology are only ever secondary, transparent factors, never the deciding one.
+            Every lender program is checked against the exact scenario&apos;s guideline requirements — eligibility
+            decides the ranking. Pricing is never a factor of any kind.
           </p>
         </div>
         <div className="gold-scenario-card rounded-2xl border border-white/10 bg-[#0d0d0f] p-6">

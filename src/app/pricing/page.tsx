@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getVerifiedLenderCount } from "@/lib/repository/supabaseRepository";
 import { PricingPlans, type PricingPlanRow } from "./pricing-plans";
 import { TeamsPanel } from "./teams-panel";
 import { pageMetadata } from "@/lib/seo";
@@ -54,6 +55,12 @@ export default async function PricingPage() {
     stripeAnnualPriceId: r.stripe_annual_price_id,
   }));
 
+  // Copy-integrity fix (launch-hardening spec, Section 5): the "N currently
+  // verified lenders" bullet is derived live from the exact same
+  // verified-only query the quarantine logic uses (getVerifiedLenderCount),
+  // never a hand-typed number that can drift from reality.
+  const verifiedLenderCount = await getVerifiedLenderCount(supabase);
+
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-8">
       <div className="text-center max-w-2xl mx-auto space-y-2">
@@ -64,7 +71,7 @@ export default async function PricingPage() {
         </p>
       </div>
 
-      <PricingPlans plans={plans} isSignedIn={Boolean(user)} highlightedKey={highlightedKey} />
+      <PricingPlans plans={plans} isSignedIn={Boolean(user)} highlightedKey={highlightedKey} verifiedLenderCount={verifiedLenderCount} />
 
       <TeamsPanel isSignedIn={Boolean(user)} />
 

@@ -20,35 +20,40 @@ export interface PricingPlanRow {
 // Feature bullets keyed by tier_level — the admin portal (/admin/plans)
 // controls name, price, and tier_level live from the database; these
 // descriptive bullets are presentational copy, not billing logic.
-// Lender counts below are the real, verified count as of 2026-07-28 (a
-// lender that is active AND has at least one active program backed by a
-// human_verified guideline_version — see the external-audit fix and
-// src/lib/repository/supabaseRepository.ts's verified-only filtering).
-// Update these numbers only from a real query against production, never
-// a guess — see docs/pricing-lender-count.md if one exists, or re-run the
-// same query this fix used.
-const TIER_FEATURES: Record<number, string[]> = {
-  1: [
-    "Compare guidelines from 10 NON-QM Lenders",
-    "Deterministic eligibility matching",
-    "Saved scenarios",
-    "Email support",
-  ],
-  2: [
-    "Everything in Essential",
-    "Compare guidelines from 26 NON-QM Lenders",
-    "Voice scenario intake",
-    "Restructuring & needs-list generation",
-    "Priority email support",
-  ],
-  3: [
-    "Everything in Professional",
-    "Full access to all 38 currently verified Non-QM lenders in the platform",
-    "Automatically includes any future verified lenders added",
-    "No restrictions on guideline comparisons",
-    "Dedicated support",
-  ],
-};
+// Tier 1/2 lender counts (10, 26) are the fixed number of lenders available
+// AT that tier's own tier_level gate — a deliberate plan-feature limit set
+// in the catalog, not something that changes as more lenders get verified
+// above that gate. Tier 3 ("all currently verified lenders") is different:
+// it's a claim about the TOTAL live verified count across every tier, which
+// grows as lenders are onboarded — so it is passed in as `verifiedLenderCount`
+// (derived server-side from the exact same verified-only query the
+// quarantine logic uses — see getVerifiedLenderCount in
+// src/lib/repository/supabaseRepository.ts) instead of being hand-typed
+// here, so it can never drift from reality.
+function tierFeatures(verifiedLenderCount: number): Record<number, string[]> {
+  return {
+    1: [
+      "Compare guidelines from 10 NON-QM Lenders",
+      "Deterministic eligibility matching",
+      "Saved scenarios",
+      "Email support",
+    ],
+    2: [
+      "Everything in Essential",
+      "Compare guidelines from 26 NON-QM Lenders",
+      "Voice scenario intake",
+      "Restructuring & needs-list generation",
+      "Priority email support",
+    ],
+    3: [
+      "Everything in Professional",
+      `Full access to all ${verifiedLenderCount} currently verified Non-QM lenders in the platform`,
+      "Automatically includes any future verified lenders added",
+      "No restrictions on guideline comparisons",
+      "Dedicated support",
+    ],
+  };
+}
 
 function fmtDollars(cents: number): string {
   const dollars = cents / 100;
@@ -68,13 +73,16 @@ export function PricingPlans({
   plans,
   isSignedIn,
   highlightedKey,
+  verifiedLenderCount,
 }: {
   plans: PricingPlanRow[];
   isSignedIn: boolean;
   highlightedKey: string | undefined;
+  verifiedLenderCount: number;
 }) {
   const anyAnnual = plans.some((p) => p.annualPriceCents != null);
   const [interval, setInterval_] = useState<"monthly" | "annual">("monthly");
+  const featuresByTier = tierFeatures(verifiedLenderCount);
 
   return (
     <div className="space-y-8">
@@ -144,7 +152,7 @@ export function PricingPlans({
               <p className="mt-2 text-sm text-slate-400">{plan.description}</p>
 
               <ul className="mt-4 space-y-2 flex-1">
-                {(TIER_FEATURES[plan.tierLevel] ?? []).map((f) => (
+                {(featuresByTier[plan.tierLevel] ?? []).map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-slate-300">
                     <span aria-hidden className="mt-0.5 text-emerald-400">✓</span>
                     <span>{f}</span>
