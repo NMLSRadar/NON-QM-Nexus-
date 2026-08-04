@@ -14,6 +14,7 @@
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run tests/integration",
     "seed:check": "tsx scripts/seed-check.ts",
+    "check:email-dns": "node scripts/check-email-dns.mjs",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev"

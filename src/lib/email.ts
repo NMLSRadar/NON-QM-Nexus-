@@ -29,6 +29,14 @@ export async function sendTransactionalEmail(params: {
     return { ok: false, error: "Email is not configured." };
   }
 
+  // Every transactional send Reply-To's to the support inbox (SUPPORT_EMAIL)
+  // instead of the noreply@ sender above, so a customer who hits "reply" on
+  // any automated email reaches a real, monitored inbox rather than
+  // bouncing or vanishing. Sent whenever the env var is set; silently
+  // omitted (not a hard failure) if it isn't, so email keeps working before
+  // the owner configures it.
+  const replyTo = process.env.SUPPORT_EMAIL || undefined;
+
   try {
     const res = await fetch(RESEND_API_URL, {
       method: "POST",
@@ -41,6 +49,7 @@ export async function sendTransactionalEmail(params: {
         to: params.to,
         subject: params.subject,
         html: params.html,
+        ...(replyTo ? { reply_to: replyTo } : {}),
         ...(params.headers ? { headers: params.headers } : {}),
       }),
     });
