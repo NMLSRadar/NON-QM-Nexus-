@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/ui";
+import { SUPPORT_EMAIL } from "@/lib/support";
 
 /**
  * Presentational only — the volume breakpoints below must stay in sync with
@@ -50,7 +51,7 @@ export function TeamsPanel({ isSignedIn }: { isSignedIn: boolean }) {
 
       <p className="mt-4 text-xs text-slate-500">
         Need 10+ seats or a multi-year prepay?{" "}
-        <a href="mailto:legal@nonqmnexus.com?subject=Team%20pricing" className="text-amber-400 underline">
+        <a href={`mailto:${SUPPORT_EMAIL}?subject=Team%20pricing`} className="text-amber-400 underline">
           Contact us
         </a>{" "}
         — larger teams and multi-year prepay are handled directly, not through self-serve checkout.

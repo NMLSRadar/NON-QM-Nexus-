@@ -47,9 +47,9 @@ describe("sitemap.ts", () => {
     }
   });
 
-  it("every entry has a lastModified date", () => {
+  it("never sets lastModified (force-dynamic pages have no reliable content-change date — an always-now value trains Google to ignore it)", () => {
     for (const entry of entries) {
-      expect(entry.lastModified).toBeInstanceOf(Date);
+      expect(entry.lastModified).toBeUndefined();
     }
   });
 });
