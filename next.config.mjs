@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+import { withSentryConfig } from "@sentry/nextjs";
+
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -10,6 +12,12 @@ const nextConfig = {
   // of real bugs this caused before this guard existed).
   env: {
     NEXT_PUBLIC_BUILD_SHA: process.env.VERCEL_GIT_COMMIT_SHA || String(Date.now()),
+    // Single source of truth for the Sentry DSN: the owner sets ONE env var
+    // (SENTRY_DSN, server-side only in the Vercel dashboard) and this makes
+    // it available to the client bundle too under the NEXT_PUBLIC_ name
+    // Next.js requires for browser code. A DSN is not a secret (it can only
+    // submit events, never read data back), so this is safe to bake in.
+    NEXT_PUBLIC_SENTRY_DSN: process.env.SENTRY_DSN || "",
   },
   // The deterministic domain layer is framework-agnostic and lives under src/domain.
   // Keep server-only secrets out of the client bundle by never importing them into
@@ -29,4 +37,17 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Silences Sentry's build-time SDK logs (deploy logs stay readable);
+  // has no effect on runtime error capture.
+  silent: true,
+  // Only attempted when SENTRY_AUTH_TOKEN is set (a build-time secret the
+  // owner can add later in Vercel) — source-map upload is skipped cleanly
+  // without it, same "skip cleanly when unset" contract as SENTRY_DSN.
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  disableLogger: true,
+  telemetry: false,
+  widenClientFileUpload: false,
+});

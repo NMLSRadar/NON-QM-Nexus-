@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * Root error boundary for the App Router. Without this file, ANY uncaught
@@ -22,6 +23,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error("Unhandled client-side exception:", error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (

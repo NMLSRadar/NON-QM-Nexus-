@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@sentry/nextjs": "^10.69.0",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.8",
     "decimal.js": "^10.4.3",
