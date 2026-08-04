@@ -3,6 +3,7 @@ import { requirePlatformAdmin } from "@/lib/admin";
 
 const ADMIN_NAV = [
   { href: "/admin", label: "Overview" },
+  { href: "/admin/scenario-volume", label: "Scenario Volume" },
   { href: "/admin/plans", label: "Plans" },
   { href: "/admin/lenders", label: "Lender Tiers" },
   { href: "/admin/specialists", label: "ITIN / FN Specialists" },

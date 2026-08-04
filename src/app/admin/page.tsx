@@ -1,17 +1,19 @@
 import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/admin";
-import { Card } from "@/components/ui";
+import { Card, fmtUsd } from "@/components/ui";
+import { getScenarioVolumeStats } from "@/lib/admin/scenarioVolumeStats";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminOverviewPage() {
   const { supabase } = await requirePlatformAdmin();
 
-  const [plans, lenders, subs, discounts] = await Promise.all([
+  const [plans, lenders, subs, discounts, scenarioVolume] = await Promise.all([
     supabase.from("membership_plans").select("id", { count: "exact", head: true }),
     supabase.from("lenders").select("id", { count: "exact", head: true }).is("deleted_at", null),
     supabase.from("user_subscriptions").select("id", { count: "exact", head: true }).not("plan_id", "is", null),
     supabase.from("discounts").select("id", { count: "exact", head: true }),
+    getScenarioVolumeStats(),
   ]);
 
   return (
@@ -21,6 +23,12 @@ export default async function AdminOverviewPage() {
         subscriptions — no code changes needed.
       </p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Link href="/admin/scenario-volume">
+          <Card>
+            <p className="text-3xl font-semibold">{fmtUsd(scenarioVolume.totalLoanVolume)}</p>
+            <p className="text-sm text-slate-500">Total scenario loan volume</p>
+          </Card>
+        </Link>
         <Link href="/admin/plans">
           <Card>
             <p className="text-3xl font-semibold">{plans.count ?? 0}</p>
