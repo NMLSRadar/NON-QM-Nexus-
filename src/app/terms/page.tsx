@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/seo";
+import { SUPPORT_EMAIL } from "@/lib/support";
 
 export const metadata: Metadata = pageMetadata({
   title: "Terms of Service — NON-QM Nexus",
@@ -47,7 +48,7 @@ export default function TermsPage() {
       <p>
         You must provide accurate information when creating an account and keep your credentials confidential. You
         are responsible for all activity under your account. Notify us immediately at{" "}
-        <a href="mailto:legal@nonqmnexus.com">legal@nonqmnexus.com</a> if you suspect unauthorized access.
+        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> if you suspect unauthorized access.
       </p>
 
       <h2>3. Subscriptions and Billing</h2>
@@ -97,7 +98,7 @@ export default function TermsPage() {
       <h2>8. Termination</h2>
       <p>
         We may suspend or terminate your access if you violate these Terms. You may stop using the Service and
-        request account deletion at any time by contacting <a href="mailto:legal@nonqmnexus.com">legal@nonqmnexus.com</a>.
+        request account deletion at any time by contacting <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
       </p>
 
       <h2>9. Changes to These Terms</h2>
@@ -118,7 +119,7 @@ export default function TermsPage() {
 
       <h2>11. Contact</h2>
       <p>
-        Questions about these Terms: <a href="mailto:legal@nonqmnexus.com">legal@nonqmnexus.com</a>.
+        Questions about these Terms: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
       </p>
 
       <p className="text-xs text-slate-400">

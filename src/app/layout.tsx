@@ -16,6 +16,7 @@ import { TrialStatusBanner } from "@/components/trial-status-banner";
 import { createClient } from "@/lib/supabase/server";
 import { getLenderAccessInfo } from "@/lib/session";
 import { SITE_URL, SITE_NAME, OG_IMAGE_PATH } from "@/lib/seo";
+import { SUPPORT_EMAIL } from "@/lib/support";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -100,6 +101,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link href="/privacy" className="hover:text-slate-900 hover:underline">
                 Privacy Policy
               </Link>
+              <span>
+                Support: <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-slate-900 hover:underline">{SUPPORT_EMAIL}</a>
+              </span>
             </nav>
           </div>
         </footer>
