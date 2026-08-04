@@ -15,8 +15,10 @@ import { AiAssistantWidget } from "@/components/ai-assistant-widget";
 import { TrialStatusBanner } from "@/components/trial-status-banner";
 import { createClient } from "@/lib/supabase/server";
 import { getLenderAccessInfo } from "@/lib/session";
+import { SITE_URL, SITE_NAME, OG_IMAGE_PATH } from "@/lib/seo";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "NON-QM Nexus",
   description: "AI-assisted NON-QM scenario analysis and lender-matching decision-support platform.",
   manifest: "/manifest.json",
@@ -31,6 +33,17 @@ export const metadata: Metadata = {
       { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  // Sitewide default OpenGraph — every public page's own metadata (see
+  // src/lib/seo.ts's pageMetadata) overrides title/description/url with its
+  // own copy; this is just the fallback for anything that doesn't.
+  openGraph: {
+    title: "NON-QM Nexus",
+    description: "AI-assisted NON-QM scenario analysis and lender-matching decision-support platform.",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    images: [{ url: `${SITE_URL}${OG_IMAGE_PATH}` }],
+    type: "website",
   },
 };
 

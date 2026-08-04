@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy — NON-QM Nexus",
-};
+  description: "How NON-QM Nexus collects, uses, and protects your data as an underwriting-assistance and research platform.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

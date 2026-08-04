@@ -1,6 +1,15 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { Card } from "@/components/ui";
 import { LoginForm } from "./login-form";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Log In — NON-QM Nexus",
+  description: "Sign in to your NON-QM Nexus account to analyze Non-QM scenarios and match lenders.",
+  path: "/login",
+  noindex: true,
+});
 
 export default async function LoginPage({
   searchParams,

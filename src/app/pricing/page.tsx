@@ -1,8 +1,17 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { PricingPlans, type PricingPlanRow } from "./pricing-plans";
 import { TeamsPanel } from "./teams-panel";
+import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Pricing — NON-QM Nexus Lender Matching Plans",
+  description:
+    "Compare NON-QM Nexus plans: guideline-first Non-QM lender matching, voice scenario intake, and document checklists for every loan officer.",
+  path: "/pricing",
+});
 
 interface PlanRow {
   id: string;

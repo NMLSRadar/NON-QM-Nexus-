@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import { ClipboardCheck } from "lucide-react";
 import { buildDocumentChecklistSections } from "./sections";
 import { DocumentChecklistCard } from "./checklist-card";
+import { pageMetadata } from "@/lib/seo";
 
 // Matches every other page in this app: force-dynamic, never force-static.
 // The root layout renders auth-aware nav (Supabase-backed) on every page,
@@ -12,6 +14,13 @@ import { DocumentChecklistCard } from "./checklist-card";
 // real Vercel deploy target (configured project env vars), so the
 // production site was never actually affected — only CI's own build step.
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Non-QM Document Checklists — DSCR, Bank Statement, ITIN",
+  description:
+    "Reference checklists for every Non-QM loan type: DSCR, Bank Statement, P&L Only, Asset Depletion, ITIN, and Foreign National document requirements.",
+  path: "/document-checklists",
+});
 
 export default function DocumentChecklistsPage() {
   const sections = buildDocumentChecklistSections();

@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Terms of Service — NON-QM Nexus",
-};
+  description:
+    "The terms governing your use of NON-QM Nexus, an underwriting-assistance and research tool for Non-QM scenario analysis.",
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (
