@@ -5,6 +5,221 @@ import { requirePlatformAdmin } from "@/lib/admin";
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { getStripe } from "@/lib/stripe";
 import { PLATFORM_CATALOG_ORGANIZATION_ID } from "@/lib/platformCatalog";
+import { sendTransactionalEmail } from "@/lib/email";
+import { z } from "zod";
+
+export interface AdminMemberActionResult {
+  error?: string;
+  message?: string;
+}
+
+const adminEmailSchema = z.string().trim().email("Enter a valid email address.").transform((value) => value.toLowerCase());
+
+function appUrl(): string {
+  return (process.env.NEXT_PUBLIC_APP_URL ?? "https://nonqmnexus.com").replace(/\/$/, "");
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  })[character] ?? character);
+}
+
+async function writeAdminMemberAudit(params: {
+  actorUserId: string;
+  action: string;
+  targetUserId: string | null;
+  targetEmail: string;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  const service = createServiceRoleClient();
+  const { error } = await service.from("audit_logs").insert({
+    organization_id: PLATFORM_CATALOG_ORGANIZATION_ID,
+    actor_user_id: params.actorUserId,
+    action: params.action,
+    entity_type: "users",
+    entity_id: params.targetUserId,
+    metadata: { target_email: params.targetEmail, ...(params.metadata ?? {}) },
+  });
+  if (error) console.error(`Failed to write ${params.action} audit log:`, error.message);
+}
+
+async function sendAdminAccessEmail(email: string, actionLink: string): Promise<AdminMemberActionResult> {
+  const safeEmail = escapeHtml(email);
+  const safeLink = escapeHtml(actionLink);
+  const result = await sendTransactionalEmail({
+    to: email,
+    subject: "You’ve been invited to administer NON-QM Nexus",
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#171717">
+        <div style="background:#080808;border:1px solid #b88a2b;border-radius:16px;padding:28px">
+          <p style="margin:0 0 8px;color:#d7b45b;font-size:12px;letter-spacing:.12em;text-transform:uppercase">NON-QM Nexus</p>
+          <h1 style="margin:0 0 16px;color:#fff;font-size:24px">Administrator invitation</h1>
+          <p style="color:#ddd;line-height:1.6">An existing administrator invited <strong>${safeEmail}</strong> to become a platform administrator.</p>
+          <p style="color:#ddd;line-height:1.6">Use the secure link below to choose your password and activate access.</p>
+          <p style="margin:28px 0"><a href="${safeLink}" style="background:#d4af52;color:#080808;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:8px">Accept admin invitation</a></p>
+          <p style="color:#aaa;font-size:12px;line-height:1.5">If you were not expecting this invitation, do not open the link and contact the NON-QM Nexus owner.</p>
+        </div>
+      </div>`,
+  });
+  return result.ok ? {} : { error: `The account was prepared, but the invitation email could not be sent: ${result.error}` };
+}
+
+export async function invitePlatformAdmin(emailInput: string): Promise<AdminMemberActionResult> {
+  const { userId: actorUserId } = await requirePlatformAdmin();
+  const parsed = adminEmailSchema.safeParse(emailInput);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Enter a valid email address." };
+
+  const email = parsed.data;
+  const service = createServiceRoleClient();
+  const { data: existing, error: existingError } = await service
+    .from("users")
+    .select("id, platform_admin")
+    .ilike("email", email)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (existingError) return { error: existingError.message };
+
+  if (existing) {
+    if (existing.platform_admin) return { error: "This person is already a platform administrator." };
+    const { error } = await service.from("users").update({ platform_admin: true }).eq("id", existing.id as string);
+    if (error) return { error: error.message };
+    await writeAdminMemberAudit({
+      actorUserId,
+      action: "platform_admin.promoted",
+      targetUserId: existing.id as string,
+      targetEmail: email,
+      metadata: { source: "existing_user" },
+    });
+    revalidatePath("/admin/users");
+    return { message: `${email} now has platform administrator access.` };
+  }
+
+  const { data: linkData, error: linkError } = await service.auth.admin.generateLink({
+    type: "invite",
+    email,
+    options: { redirectTo: `${appUrl()}/reset-password` },
+  });
+  if (linkError || !linkData.user || !linkData.properties?.action_link) {
+    return { error: linkError?.message ?? "The secure invitation link could not be created." };
+  }
+
+  const { error: promoteError } = await service
+    .from("users")
+    .update({ platform_admin: true })
+    .eq("id", linkData.user.id);
+  if (promoteError) {
+    await service.auth.admin.deleteUser(linkData.user.id);
+    return { error: `The invitation was not created: ${promoteError.message}` };
+  }
+
+  const emailResult = await sendAdminAccessEmail(email, linkData.properties.action_link);
+  await writeAdminMemberAudit({
+    actorUserId,
+    action: "platform_admin.invited",
+    targetUserId: linkData.user.id,
+    targetEmail: email,
+    metadata: { email_sent: !emailResult.error },
+  });
+  revalidatePath("/admin/users");
+  return emailResult.error ? emailResult : { message: `Admin invitation sent to ${email}.` };
+}
+
+export async function resendPlatformAdminInvite(targetUserId: string): Promise<AdminMemberActionResult> {
+  const { userId: actorUserId } = await requirePlatformAdmin();
+  const service = createServiceRoleClient();
+  const [{ data: authData, error: authError }, { data: userRow, error: userError }] = await Promise.all([
+    service.auth.admin.getUserById(targetUserId),
+    service.from("users").select("email, platform_admin").eq("id", targetUserId).maybeSingle(),
+  ]);
+  if (authError || userError) return { error: authError?.message ?? userError?.message };
+  if (!authData.user || !userRow?.platform_admin) return { error: "Pending administrator invitation not found." };
+  if (authData.user.last_sign_in_at) return { error: "This administrator has already accepted the invitation." };
+
+  const email = String(userRow.email).toLowerCase();
+  const { data: linkData, error: linkError } = await service.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: { redirectTo: `${appUrl()}/reset-password` },
+  });
+  if (linkError || !linkData.properties?.action_link) return { error: linkError?.message ?? "A new access link could not be created." };
+
+  const emailResult = await sendAdminAccessEmail(email, linkData.properties.action_link);
+  await writeAdminMemberAudit({
+    actorUserId,
+    action: "platform_admin.invite_resent",
+    targetUserId,
+    targetEmail: email,
+    metadata: { email_sent: !emailResult.error },
+  });
+  return emailResult.error ? emailResult : { message: `A new invitation was sent to ${email}.` };
+}
+
+export async function revokePendingPlatformAdminInvite(targetUserId: string): Promise<AdminMemberActionResult> {
+  const { userId: actorUserId } = await requirePlatformAdmin();
+  const service = createServiceRoleClient();
+  const [{ data: authData, error: authError }, { data: userRow, error: userError }] = await Promise.all([
+    service.auth.admin.getUserById(targetUserId),
+    service.from("users").select("email, platform_admin").eq("id", targetUserId).maybeSingle(),
+  ]);
+  if (authError || userError) return { error: authError?.message ?? userError?.message };
+  if (!authData.user || !userRow?.platform_admin) return { error: "Pending administrator invitation not found." };
+  if (authData.user.last_sign_in_at) return { error: "Accepted administrator accounts must be demoted instead of revoked." };
+
+  const email = String(userRow.email).toLowerCase();
+  await writeAdminMemberAudit({
+    actorUserId,
+    action: "platform_admin.invite_revoked",
+    targetUserId,
+    targetEmail: email,
+  });
+  const { error } = await service.auth.admin.deleteUser(targetUserId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/users");
+  return { message: `The pending invitation for ${email} was revoked.` };
+}
+
+export async function setPlatformAdminRole(targetUserId: string, makeAdmin: boolean): Promise<AdminMemberActionResult> {
+  const { userId: actorUserId } = await requirePlatformAdmin();
+  if (!makeAdmin && targetUserId === actorUserId) return { error: "You cannot remove your own administrator access." };
+
+  const service = createServiceRoleClient();
+  const { data: target, error: targetError } = await service
+    .from("users")
+    .select("email, platform_admin")
+    .eq("id", targetUserId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (targetError) return { error: targetError.message };
+  if (!target) return { error: "User not found." };
+  if (Boolean(target.platform_admin) === makeAdmin) return { message: "No role change was needed." };
+
+  if (!makeAdmin) {
+    const { count, error: countError } = await service
+      .from("users")
+      .select("id", { count: "exact", head: true })
+      .eq("platform_admin", true)
+      .is("deleted_at", null);
+    if (countError) return { error: countError.message };
+    if ((count ?? 0) <= 1) return { error: "The final platform administrator cannot be removed." };
+  }
+
+  const { error } = await service.from("users").update({ platform_admin: makeAdmin }).eq("id", targetUserId);
+  if (error) return { error: error.message };
+  await writeAdminMemberAudit({
+    actorUserId,
+    action: makeAdmin ? "platform_admin.promoted" : "platform_admin.demoted",
+    targetUserId,
+    targetEmail: String(target.email),
+    metadata: { source: "role_control" },
+  });
+  revalidatePath("/admin/users");
+  return { message: `${String(target.email)} is now ${makeAdmin ? "a platform administrator" : "a standard user"}.` };
+}
 
 export async function assignSubscription(
   userId: string,
