@@ -2,7 +2,7 @@
 
 ## Managing lenders and programs
 
-Lenders and programs are org-scoped records. A program bundles: constraint configuration (doc types, purposes, occupancies, property types, states, citizenship, vesting, loan range, FICO/LTV matrix, DTI/DSCR limits, reserves, IO/PPP options) plus custom rules attached to a guideline version. In the demo build these are read-only views over sample data; the production builder writes to `programs.config` / `rules.definition` through the same domain types.
+Lenders and programs are org-scoped records. A program bundles: constraint configuration (doc types, purposes, occupancies, property types, states, citizenship, vesting, loan range, FICO/LTV matrix, DTI/DSCR limits, reserves, IO/PPP options) plus custom rules attached to a guideline version. Real, verified lender/program data is written and maintained via the same domain types (`programs.config` / `rules.definition`) as any sample record — the difference is only the `isSampleData` flag and human verification status, never a different code path; a full program builder UI is still designed-not-built (admin currently uses read views + one-off ingestion scripts for real data — see `docs/lender-data-import.md`).
 
 ## Guideline versioning workflow
 

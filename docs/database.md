@@ -1,6 +1,6 @@
 # Database
 
-Production target: PostgreSQL on Supabase, managed by Prisma migrations (`prisma/schema.prisma`), with RLS applied from `supabase/rls-policies.sql`. The demo build uses an in-memory repository with identical semantics behind the `Repository` interface (`src/lib/store.ts`).
+Production: PostgreSQL on Supabase, schema managed by committed Prisma migrations (`prisma/schema.prisma`, `prisma/migrations/` — see `HANDOFF.md`'s "Schema workflow" section for the mandatory process), with RLS applied from `supabase/rls-policies.sql` and related policy files. This is the live database — there is no in-memory mode; `src/lib/store.ts`'s `Repository` interface is implemented by `SupabaseRepository` (`src/lib/repository/supabaseRepository.ts`), backed by real Postgres, RLS-scoped per request.
 
 ## Conventions
 

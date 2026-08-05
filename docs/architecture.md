@@ -11,7 +11,7 @@ The repository started empty (no prior code, no commits). This is a greenfield b
 | Eligibility source of truth | Deterministic TypeScript domain layer | Auditable, testable, versionable; AI never invents numeric rules |
 | Money math | decimal.js everywhere in `src/domain` | No binary floating-point drift in financial results |
 | ORM | **Prisma** (over Drizzle) | Mature migration tooling, typed client, first-class Postgres/Supabase support, larger ecosystem; schema doubles as documentation. Drizzle's lighter runtime was not decisive because the domain layer is DB-free anyway. |
-| Persistence in demo | In-memory `Repository` seeded with labeled sample data | Whole workflow demoable with zero external services; interface identical to the production Prisma implementation |
+| Persistence | `SupabaseRepository` — real Postgres via Supabase, RLS-scoped per request | Same `Repository` interface a from-scratch in-memory or Python backend could implement without touching the UI; this app runs on the real Prisma-modeled schema, not an in-memory stand-in |
 | Rules engine semantics | Ternary (true / false / unknown) | Missing input can never silently pass a rule — it surfaces as manual review |
 | Rule activation | Only `human_verified` + inside effective/expiration window | AI-extracted or imported rules can never run without human review |
 | AI integration | Provider-agnostic adapter (Anthropic/OpenAI), env-configured | Vendor independence; safety rules enforced in one place |
@@ -72,7 +72,7 @@ erDiagram
     ORGANIZATIONS ||--o{ FEATURE_FLAGS : toggles
 ```
 
-The demo build persists scenario/program/rule payloads as typed JSON columns (`data`, `config`, `definition`) with hot fields projected to columns as query needs emerge — a deliberate trade for schema agility while the domain types (in `src/domain/types`) remain the single source of truth. `docs/database.md` covers the full normalization path (scenario_borrowers, scenario_assets, rule_conditions, etc.) for when relational querying of those substructures is required.
+The app persists scenario/program/rule payloads as typed JSON columns (`data`, `config`, `definition`) with hot fields projected to columns as query needs emerge — a deliberate trade for schema agility while the domain types (in `src/domain/types`) remain the single source of truth. `docs/database.md` covers the full normalization path (scenario_borrowers, scenario_assets, rule_conditions, etc.) for when relational querying of those substructures is required.
 
 ## Folder structure
 
@@ -86,9 +86,9 @@ src/
     rules/                 # context builder, operators, ternary evaluator, effective-date logic
     matching/              # base checks, scoring, program evaluator, restructuring, needs list
     validation/            # shared Zod schemas
-  data/                    # labeled fictional sample lenders/programs/rules/scenarios
+  data/                    # seed/sample lenders/programs/rules/scenarios (flagged isSampleData — see docs/sample-data-disclaimer.md; real verified lender data lives in the database, not here)
   lib/
-    store.ts               # Repository interface + in-memory demo implementation
+    store.ts               # Repository interface (implemented by SupabaseRepository, real Postgres)
     ai/                    # provider abstraction + explanation feature
   components/              # shared presentational components
   app/                     # Next.js App Router pages, server actions, API routes

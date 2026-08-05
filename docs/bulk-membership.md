@@ -10,14 +10,18 @@ existing 3-tier self-serve system (Essential/Professional/Enterprise,
 docs/membership.md) is completely untouched by this feature — no pricing,
 no feature gating, no code path there was modified.
 
-## Deployment status — CODE COMPLETE, NOT YET DEPLOYED
+## Deployment status — LIVE (verified 2026-08-05; originally shipped code-complete-pending-deploy)
 
 Schema changes are in `prisma/schema.prisma` (validated — `npx prisma
-validate` passes) and `supabase/bulk-membership-schema.sql`, but **have
-not been pushed to the live database** — this session had no
-`DATABASE_URL` (cleared between sessions, same convention noted in
-HANDOFF.md). All 2486 domain tests still pass; `next lint` and `tsc
---noEmit` are clean. To finish deployment:
+validate` passes) and `supabase/bulk-membership-schema.sql`. **Update
+(2026-08-05, verified live):** `bulk_membership_requests` and the rest of
+this feature's schema ARE now live in the database — the "not pushed yet"
+note below is historical (describes a specific earlier session that had
+no `DATABASE_URL`). All domain tests still pass (see `HANDOFF.md` for the
+current total — 2,751 across domain/e2e/integration); `next lint` and `tsc
+--noEmit` are clean. Historical "to finish deployment" steps that follow
+were already completed by the time of this update:
+
 
 ```
 # 1. Push the new schema (adds membership_plans.stripe_product_id,
