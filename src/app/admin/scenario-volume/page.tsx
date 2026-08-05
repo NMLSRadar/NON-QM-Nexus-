@@ -31,21 +31,25 @@ export default async function AdminScenarioVolumePage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <div className="gold-panel rounded-2xl p-5">
-          <p className="text-3xl font-semibold text-white">{fmtUsd(stats.totalLoanVolume)}</p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="gold-panel rounded-2xl p-5 sm:col-span-2 lg:col-span-1">
+          <p className="break-words text-3xl font-semibold leading-tight text-white sm:text-4xl lg:text-3xl">
+            {fmtUsd(stats.totalLoanVolume)}
+          </p>
           <p className="mt-1 text-sm text-slate-400">Total loan volume matched</p>
         </div>
         <div className="gold-panel rounded-2xl p-5">
-          <p className="text-3xl font-semibold text-white">{stats.totalScenarios.toLocaleString()}</p>
+          <p className="break-words text-3xl font-semibold leading-tight text-white">{stats.totalScenarios.toLocaleString()}</p>
           <p className="mt-1 text-sm text-slate-400">Scenarios saved (all orgs)</p>
         </div>
         <div className="gold-panel rounded-2xl p-5">
-          <p className="text-3xl font-semibold text-white">{fmtUsd(stats.averageLoanAmount)}</p>
+          <p className="break-words text-2xl font-semibold leading-tight text-white sm:text-3xl">{fmtUsd(stats.averageLoanAmount)}</p>
           <p className="mt-1 text-sm text-slate-400">Average loan amount</p>
         </div>
         <div className="gold-panel rounded-2xl p-5">
-          <p className="text-3xl font-semibold text-white">{fmtUsd(stats.totalPropertyValueAnalyzed)}</p>
+          <p className="break-words text-2xl font-semibold leading-tight text-white sm:text-3xl">
+            {fmtUsd(stats.totalPropertyValueAnalyzed)}
+          </p>
           <p className="mt-1 text-sm text-slate-400">Total property value analyzed</p>
         </div>
       </div>

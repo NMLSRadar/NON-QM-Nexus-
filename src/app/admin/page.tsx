@@ -22,10 +22,10 @@ export default async function AdminOverviewPage() {
         Manage membership plans, which lenders each tier can see, promotional discounts, and individual users&apos;
         subscriptions — no code changes needed.
       </p>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Link href="/admin/scenario-volume">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <Link href="/admin/scenario-volume" className="sm:col-span-2 md:col-span-1">
           <Card>
-            <p className="text-3xl font-semibold">{fmtUsd(scenarioVolume.totalLoanVolume)}</p>
+            <p className="break-words text-2xl font-semibold leading-tight sm:text-3xl">{fmtUsd(scenarioVolume.totalLoanVolume)}</p>
             <p className="text-sm text-slate-500">Total scenario loan volume</p>
           </Card>
         </Link>
