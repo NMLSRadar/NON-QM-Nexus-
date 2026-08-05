@@ -53,11 +53,11 @@ export default function TermsPage() {
 
       <h2>3. Subscriptions and Billing</h2>
       <p>
-        Access to certain lender/program data is gated by membership tier (Essential, Professional, Enterprise).
-        Subscriptions are currently assigned and managed by our team; where self-serve payment is enabled in the
-        future, separate billing terms (including refund and cancellation policy) will be presented at checkout
-        and incorporated into these Terms. You may cancel your own subscription at any time from your account
-        settings; cancellation takes effect at the end of the then-current billing period unless stated otherwise.
+        Access to certain lender/program data is gated by membership. Subscriptions are currently assigned and managed
+        by our team; where self-serve payment is enabled in the future, separate billing terms (including refund and
+        cancellation policy) will be presented at checkout and incorporated into these Terms. You may cancel your own
+        subscription at any time from your account settings; cancellation takes effect at the end of the then-current
+        billing period unless stated otherwise.
       </p>
 
       <h2>4. Acceptable Use</h2>

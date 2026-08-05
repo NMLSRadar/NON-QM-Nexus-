@@ -42,9 +42,9 @@ export function UploadForm({ lenders }: { lenders: { id: string; name: string }[
                   className="rounded border border-slate-300 text-sm px-2 py-1.5"
                 />
                 <select name="newLenderTier" defaultValue="3" className="rounded border border-slate-300 text-sm px-2 py-1.5">
-                  <option value="1">Tier 1 (Essential)</option>
-                  <option value="2">Tier 2 (Professional)</option>
-                  <option value="3">Tier 3 (Enterprise)</option>
+                  <option value="1">Tier 1</option>
+                  <option value="2">Tier 2</option>
+                  <option value="3">Tier 3</option>
                 </select>
               </>
             )}

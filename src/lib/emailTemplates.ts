@@ -161,12 +161,12 @@ export function trialExpirationReminderEmail(params: { firstName: string | null;
         <h1 style="font-size: 20px; margin-bottom: 4px;">Your trial ends soon</h1>
         <p style="color: #64748b; font-size: 14px; margin-top: 0;">NON-QM Nexus</p>
         <p>${greeting}</p>
-        <p>Your All Access trial ends on <strong>${expiresDate}</strong>. After that, lender guidelines, Voice Scenario, and the AI Assistant will require a paid membership tier.</p>
+        <p>Your All Access trial ends on <strong>${expiresDate}</strong>. After that, lender guidelines, Voice Scenario, and the AI Assistant will require a paid membership.</p>
         <p style="text-align: center; margin: 24px 0;">
-          <a href="${params.appUrl}/pricing" style="background: #0f172a; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">View membership tiers</a>
+          <a href="${params.appUrl}/pricing" style="background: #0f172a; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">View membership</a>
         </p>
         <p style="font-size: 14px; color: #475569;">
-          Choose Essential, Professional, or Enterprise on the pricing page to keep uninterrupted access — your saved scenarios carry over either way.
+          Choose the membership on the pricing page to keep uninterrupted access — your saved scenarios carry over either way.
         </p>
         ${TRIAL_EMAIL_FOOTER}
       </div>

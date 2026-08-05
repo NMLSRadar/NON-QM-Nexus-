@@ -8,7 +8,7 @@ import { AeSection } from "./ae-section";
 
 export const dynamic = "force-dynamic";
 
-const TIER_LABEL: Record<number, string> = { 1: "Tier 1 — Premium Access", 2: "Tier 2 — Expanded Access", 3: "Tier 3 — Enterprise Access" };
+const TIER_LABEL: Record<number, string> = { 1: "Verified Lender", 2: "Verified Lender", 3: "Verified Lender" };
 
 export default async function LenderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -67,15 +67,15 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
             >
               🔒
             </span>
-            <Pill tone="neutral">Tier {lender.tierLevel} Access Required</Pill>
+            <Pill tone="neutral">Membership required</Pill>
             <p className="max-w-md text-sm text-slate-400">
-              Upgrade your membership to access this lender’s complete guidelines and program details.
+              Subscribe to NON-QM Nexus to access this lender’s complete guidelines and program details.
             </p>
             <Link
               href="/pricing"
               className="gold-button inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold"
             >
-              👑 Upgrade to Unlock
+              👑 Unlock with Membership
             </Link>
           </div>
         </Card>

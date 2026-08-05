@@ -36,7 +36,7 @@ export function CancelSubscriptionForm({ isStripe = false }: { isStripe?: boolea
       <p className="text-sm text-slate-700">
         {isStripe
           ? "Are you sure? You'll keep access until the end of your current billing period, then it cancels — no further charges. You can resume any time before then."
-          : "Are you sure? You'll immediately lose access to lender comparisons beyond the Free tier. This can't be undone yourself — you'd need to contact us to reactivate."}
+          : "Are you sure? You'll immediately lose access to lender comparisons. This can't be undone yourself — you'd need to contact us to reactivate."}
       </p>
       {state.error ? <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">{state.error}</p> : null}
       <div className="flex gap-3">

@@ -17,42 +17,26 @@ export interface PricingPlanRow {
   stripeAnnualPriceId: string | null;
 }
 
-// Feature bullets keyed by tier_level — the admin portal (/admin/plans)
-// controls name, price, and tier_level live from the database; these
-// descriptive bullets are presentational copy, not billing logic.
-// Tier 1/2 lender counts (10, 26) are the fixed number of lenders available
-// AT that tier's own tier_level gate — a deliberate plan-feature limit set
-// in the catalog, not something that changes as more lenders get verified
-// above that gate. Tier 3 ("all currently verified lenders") is different:
-// it's a claim about the TOTAL live verified count across every tier, which
-// grows as lenders are onboarded — so it is passed in as `verifiedLenderCount`
-// (derived server-side from the exact same verified-only query the
-// quarantine logic uses — see getVerifiedLenderCount in
-// src/lib/repository/supabaseRepository.ts) instead of being hand-typed
-// here, so it can never drift from reality.
-function tierFeatures(verifiedLenderCount: number): Record<number, string[]> {
-  return {
-    1: [
-      "Compare guidelines from 10 NON-QM Lenders",
-      "Deterministic eligibility matching",
-      "Saved scenarios",
-      "Email support",
-    ],
-    2: [
-      "Everything in Essential",
-      "Compare guidelines from 26 NON-QM Lenders",
-      "Voice scenario intake",
-      "Restructuring & needs-list generation",
-      "Priority email support",
-    ],
-    3: [
-      "Everything in Professional",
-      `Full access to all ${verifiedLenderCount} currently verified Non-QM lenders in the platform`,
-      "Automatically includes any future verified lenders added",
-      "No restrictions on guideline comparisons",
-      "Dedicated support",
-    ],
-  };
+// Feature bullets for the single NON-QM Nexus membership. The admin portal
+// (/admin/plans) still controls name, price, and tier_level live from the
+// database; since the July 2026 repricing collapsed the three tiers into one
+// $150 membership, these descriptive bullets are a single presentational list,
+// no longer keyed by tier. The "N currently verified lenders" line is derived
+// live from the same verified-only query the quarantine logic uses
+// (getVerifiedLenderCount in src/lib/repository/supabaseRepository.ts), so it
+// can never drift from reality.
+function membershipFeatures(verifiedLenderCount: number): string[] {
+  return [
+    `Full access to all ${verifiedLenderCount} currently verified Non-QM lenders in the platform`,
+    "Automatically includes any future verified lenders added",
+    "No restrictions on guideline comparisons",
+    "Voice scenario intake",
+    "Restructuring & needs-list generation",
+    "Document checklists for every loan officer",
+    "Deterministic eligibility matching",
+    "Saved scenarios",
+    "Email support",
+  ];
 }
 
 function fmtDollars(cents: number): string {
@@ -60,9 +44,8 @@ function fmtDollars(cents: number): string {
   return dollars % 1 === 0 ? String(dollars) : dollars.toFixed(2);
 }
 
-/** Percent saved by annual vs. 12x monthly, for the "Save N%" badge —
- * computed from whatever the admin actually set for each price, not
- * assumed to always be exactly 20%. */
+/** Percent saved by annual vs. 12x monthly — computed from whatever the admin
+ * actually set, not assumed to always be exactly 20%. */
 function percentSaved(monthlyCents: number, annualCents: number): number {
   const equivalentMonthly = monthlyCents * 12;
   if (equivalentMonthly <= 0) return 0;
@@ -72,17 +55,15 @@ function percentSaved(monthlyCents: number, annualCents: number): number {
 export function PricingPlans({
   plans,
   isSignedIn,
-  highlightedKey,
   verifiedLenderCount,
 }: {
   plans: PricingPlanRow[];
   isSignedIn: boolean;
-  highlightedKey: string | undefined;
   verifiedLenderCount: number;
 }) {
   const anyAnnual = plans.some((p) => p.annualPriceCents != null);
   const [interval, setInterval_] = useState<"monthly" | "annual">("monthly");
-  const featuresByTier = tierFeatures(verifiedLenderCount);
+  const features = membershipFeatures(verifiedLenderCount);
 
   return (
     <div className="space-y-8">
@@ -114,9 +95,8 @@ export function PricingPlans({
         </div>
       )}
 
-      <div className="grid md:grid-cols-3 gap-6 items-stretch">
+      <div className="grid gap-6 justify-items-center">
         {plans.map((plan) => {
-          const highlighted = plan.key === highlightedKey;
           const hasAnnual = plan.annualPriceCents != null && plan.stripeAnnualPriceId != null;
           const useAnnual = interval === "annual" && hasAnnual;
           const priceCents = useAnnual ? plan.annualPriceCents! : plan.monthlyPriceCents;
@@ -124,16 +104,7 @@ export function PricingPlans({
           const saved = hasAnnual ? percentSaved(plan.monthlyPriceCents, plan.annualPriceCents!) : 0;
 
           return (
-            <Card
-              key={plan.id}
-              dark
-              className={`flex flex-col ${highlighted ? "ring-2 ring-amber-400 shadow-lg gold-shimmer-border" : ""}`}
-            >
-              {highlighted ? (
-                <span className="self-start mb-2 inline-block rounded-full bg-gradient-to-r from-amber-300 to-amber-600 text-black text-[11px] font-semibold px-2.5 py-0.5">
-                  Most popular
-                </span>
-              ) : null}
+            <Card dark key={plan.id} className={`flex flex-col w-full max-w-xl ring-2 ring-amber-400 shadow-lg gold-shimmer-border`}>
               <h2 className="text-lg font-semibold text-white">{plan.name}</h2>
               <p className="mt-1 flex items-baseline gap-1 flex-wrap">
                 <span className="text-3xl font-semibold text-white">${fmtDollars(priceCents)}</span>
@@ -152,7 +123,7 @@ export function PricingPlans({
               <p className="mt-2 text-sm text-slate-400">{plan.description}</p>
 
               <ul className="mt-4 space-y-2 flex-1">
-                {(featuresByTier[plan.tierLevel] ?? []).map((f) => (
+                {features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-slate-300">
                     <span aria-hidden className="mt-0.5 text-emerald-400">✓</span>
                     <span>{f}</span>
@@ -167,24 +138,20 @@ export function PricingPlans({
                     <input type="hidden" name="interval" value={useAnnual ? "annual" : "monthly"} />
                     <button
                       type="submit"
-                      className={`mt-6 w-full rounded-md text-sm font-medium px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                        highlighted ? "gold-button gold-cta-glow" : "bg-white/5 border border-amber-500/20 text-white hover:bg-white/10"
-                      }`}
+                      className="mt-6 w-full rounded-md text-sm font-medium px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 gold-button gold-cta-glow"
                     >
                       Subscribe
                     </button>
                   </form>
                 ) : (
                   <p className="mt-6 text-center text-xs text-slate-500">
-                    {useAnnual ? "Annual billing not yet configured for this plan" : "Billing not yet configured for this plan"}
+                    {useAnnual ? "Annual billing not yet configured" : "Billing not yet configured"}
                   </p>
                 )
               ) : (
                 <Link
                   href={`/signup?next=/pricing`}
-                  className={`mt-6 block text-center rounded-md text-sm font-medium px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                    highlighted ? "gold-button gold-cta-glow" : "bg-white/5 border border-amber-500/20 text-white hover:bg-white/10"
-                  }`}
+                  className="mt-6 block text-center rounded-md text-sm font-medium px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 gold-button gold-cta-glow"
                 >
                   Sign up to subscribe
                 </Link>

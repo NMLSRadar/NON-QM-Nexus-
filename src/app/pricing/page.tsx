@@ -8,9 +8,9 @@ import { pageMetadata } from "@/lib/seo";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Pricing — NON-QM Nexus Lender Matching Plans",
+  title: "Pricing — NON-QM Nexus Membership",
   description:
-    "Compare NON-QM Nexus plans: guideline-first Non-QM lender matching, voice scenario intake, and document checklists for every loan officer.",
+    "One NON-QM Nexus membership: guideline-first Non-QM lender matching, voice scenario intake, and document checklists for every loan officer.",
   path: "/pricing",
 });
 
@@ -41,7 +41,6 @@ export default async function PricingPage() {
 
   if (error) throw new Error(`Failed to load plans: ${error.message}`);
   const rows = (data ?? []) as PlanRow[];
-  const highlightedKey = rows[1]?.key; // the middle-priced active plan, if any
 
   const plans: PricingPlanRow[] = rows.map((r) => ({
     id: r.id,
@@ -66,12 +65,12 @@ export default async function PricingPage() {
       <div className="text-center max-w-2xl mx-auto space-y-2">
         <h1 className="text-3xl font-semibold text-white">Simple, transparent pricing</h1>
         <p className="text-slate-400">
-          Every plan includes the deterministic calculation and matching engine — no black-box AI eligibility
-          decisions, ever.
+          One membership. Full access to every verified lender, every guideline comparison, and the deterministic
+          calculation &amp; matching engine — no black-box AI eligibility decisions, ever.
         </p>
       </div>
 
-      <PricingPlans plans={plans} isSignedIn={Boolean(user)} highlightedKey={highlightedKey} verifiedLenderCount={verifiedLenderCount} />
+      <PricingPlans plans={plans} isSignedIn={Boolean(user)} verifiedLenderCount={verifiedLenderCount} />
 
       <TeamsPanel isSignedIn={Boolean(user)} />
 

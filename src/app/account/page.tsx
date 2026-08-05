@@ -93,7 +93,7 @@ export default async function AccountPage() {
             <a href="/pricing" className="text-amber-400 underline">
               pricing
             </a>{" "}
-            to see the available tiers and subscribe.
+            to subscribe to the membership.
           </p>
         )}
       </Card>

@@ -14,10 +14,9 @@ export default async function LendersPage() {
   // all — the lock is real, not just a CSS overlay. Sample/demo lenders are
   // excluded here — this production directory only ever lists real,
   // verified lender records.
-  const byLender = (tierLevel: number): DirectoryLender[] =>
-    allLenders
-      .filter((l) => l.tierLevel === tierLevel && l.active && !l.isSampleData)
-      .map((lender) => ({ lender, programs: programs.filter((p) => p.lenderId === lender.id && p.active) }));
+  const lenders: DirectoryLender[] = allLenders
+    .filter((l) => l.active && !l.isSampleData)
+    .map((lender) => ({ lender, programs: programs.filter((p) => p.lenderId === lender.id && p.active) }));
 
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
@@ -30,7 +29,7 @@ export default async function LendersPage() {
           </p>
         </div>
       </div>
-      <LenderDirectory tier1={byLender(1)} tier2={byLender(2)} tier3={byLender(3)} userTierLevel={access.tierLevel} />
+      <LenderDirectory lenders={lenders} isMember={access.tierLevel > 0} />
     </div>
   );
 }
