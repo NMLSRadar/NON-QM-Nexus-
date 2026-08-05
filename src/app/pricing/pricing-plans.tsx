@@ -111,7 +111,7 @@ export function PricingPlans({
               {/* ambient gold glow behind the card */}
               <div className="pointer-events-none absolute -top-28 left-1/2 h-56 w-[36rem] -translate-x-1/2 rounded-full bg-amber-500/20 blur-[90px]" />
 
-              <div className="relative p-8 sm:p-10">
+              <div className="relative p-6 sm:p-10">
                 <div className="flex items-center justify-center gap-2">
                   <Crown className="h-5 w-5 text-amber-400" strokeWidth={2.2} />
                   <span className="text-sm font-semibold uppercase tracking-[0.25em] text-amber-400">

@@ -63,7 +63,7 @@ export default async function PricingPage() {
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-8">
       <div className="text-center max-w-2xl mx-auto space-y-4">
-        <span className="inline-block rounded-full border border-amber-400/50 bg-amber-500/5 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-white">
+        <span className="inline-block whitespace-nowrap rounded-full border border-amber-400/50 bg-amber-500/5 px-4 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white sm:text-[11px] sm:tracking-[0.22em]">
           Simple. Powerful. Transparent.
         </span>
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
