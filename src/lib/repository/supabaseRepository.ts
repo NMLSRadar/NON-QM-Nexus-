@@ -397,3 +397,20 @@ export class SupabaseRepository implements Repository {
     return (data as unknown as RuleRow[]).map(rowToRule);
   }
 }
+
+/**
+ * The real, live count of verified Non-QM lenders in the platform catalog —
+ * copy-integrity fix (launch-hardening spec, Section 5): the pricing page's
+ * "N currently verified lenders" claim must never be a hand-maintained
+ * number that silently drifts from reality. Reuses listLenders's own
+ * verified-only filtering (getVerifiedLenderIds — "the quarantine") with
+ * MAX_TIER_LEVEL so it counts every verified lender regardless of tier, not
+ * just what one caller's own plan can see — the exact same code path
+ * getCatalogForMatching already relies on, so there is exactly one
+ * definition of "verified" anywhere in the app, never two that can drift.
+ */
+export async function getVerifiedLenderCount(supabase: SupabaseClient): Promise<number> {
+  const repo = new SupabaseRepository(supabase);
+  const lenders = await repo.listLenders(PLATFORM_CATALOG_ORGANIZATION_ID, MAX_TIER_LEVEL);
+  return lenders.length;
+}

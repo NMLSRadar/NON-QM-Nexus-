@@ -26,8 +26,11 @@ not a commitment (see `src/app/terms/page.tsx` for the exact legal framing).
 - **Email:** Resend, verified sending domain `nonqmnexus.com`.
 - **AI:** Anthropic or OpenAI (`AI_PROVIDER` env var selects provider) for
   PDF guideline extraction — see `src/lib/ai/provider.ts`.
-- **Tests:** Vitest — 139 tests passing (`tests/domain/*`, `tests/integration/*`,
-  the latter against the LIVE Supabase database, not a mock).
+- **Tests:** Vitest — 100 test files, 2,751 tests passing (`tests/domain/*`,
+  `tests/e2e/*`, `tests/integration/*` — the latter against the LIVE
+  Supabase database, not a mock). Run `REQUIRE_INTEGRATION=1 npm test` to
+  also fail the run if every integration test was silently skipped
+  (`tests/integration/requireIntegrationReporter.ts`).
 
 ## Infrastructure already live
 
@@ -48,7 +51,65 @@ not a commitment (see `src/app/terms/page.tsx` for the exact legal framing).
   re-fetches a guideline once its `last_checked_at` is 6+ weeks old (42-day
   `RECHECK_INTERVAL_DAYS`), so the effective cadence per guideline is 6 weeks.
 
-## Known operational gotcha (important — will bite you)
+## Schema workflow (mandatory, since 2026-08-05 — supersedes the gotcha below for NEW changes)
+
+Following the 2026-07-30 schema-drift data-loss incident (see
+`docs/incident-2026-07-30-schema-drift.md`, "Verification results"), raw
+`prisma db push --accept-data-loss` against the live database is retired
+for new work. Every table/column change from now on:
+1. Is modeled in `prisma/schema.prisma`.
+2. Ships as a real, committed migration file in `prisma/migrations/`
+   (created + applied via `prisma migrate`, e.g. `prisma migrate dev
+   --create-only` to author it, `prisma migrate deploy` to apply it —
+   `prisma migrate deploy` is the standing production path going forward).
+3. Never raw hand-run SQL for schema (DDL) changes — `supabase/*.sql`
+   remains the right place ONLY for policies, triggers, functions, and
+   seeds, never table/column definitions.
+4. One schema-writer at a time — confirm no other session is mutating the
+   database before any schema step.
+5. Any `--accept-data-loss` (or equivalent) prompt naming a NON-EMPTY
+   object is a full stop: abort and report, never confirm through it.
+
+The first migration committed under this workflow is
+`prisma/migrations/20260805033308_add_signup_trigger_errors` (the
+trigger-observability table, see the incident doc).
+
+## Standing rules (read before touching anything)
+
+- **Schema workflow** — see above; `prisma migrate deploy` is the
+  production path, never raw `db push --accept-data-loss`.
+- **One schema-writer at a time.** Before any migration/schema step,
+  confirm no other session (human or agent) is currently mutating this
+  database.
+- **Stripe stays in TEST MODE.** Production Vercel has no live Stripe
+  keys — see "Stripe billing status" below for what's actually configured
+  and the exact live-mode cutover checklist.
+- **Never commit ad-hoc report/analysis files** (incident write-ups,
+  review reports, one-off audits) to the repo — those are delivered to the
+  owner as chat text/files. Durable process docs belong in `docs/`.
+- **Real secrets never get hardcoded or committed** — `.env.local` only,
+  git-ignored; `.env.example` documents the full inventory (see below)
+  with empty values.
+
+## Environment variable inventory
+
+See `.env.example` for the authoritative, always-current list with
+context comments. Summary by purpose:
+
+| Purpose | Variables |
+|---|---|
+| App URL | `NEXT_PUBLIC_APP_URL` |
+| Supabase | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` |
+| AI | `AI_PROVIDER`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `OPENAI_API_KEY`, `OPENAI_MODEL` |
+| Error tracking | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` |
+| Email | `RESEND_API_KEY`, `SUPPORT_EMAIL`, `EMAIL_UNSUBSCRIBE_SECRET`, `OWNER_POSTAL_ADDRESS`, `GUIDELINE_MONITOR_ALERT_EMAIL`, `BULK_MEMBERSHIP_NOTIFY_EMAIL` |
+| Cron auth | `CRON_SECRET` |
+| Files / links | `FILE_MAX_SIZE_MB`, `SHARED_LINK_SECRET` |
+| Billing (Stripe, test mode) | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` |
+| AE Directory | `AE_PLACEMENT_STRIPE_PRICE_ID`, `AE_MONETIZATION_ENABLED` (must stay `false` until pricing is finalized) |
+| Build/deploy (Vercel-set, not user-configured) | `VERCEL_GIT_COMMIT_SHA`, `NEXT_PUBLIC_BUILD_SHA`, `NEXT_RUNTIME` |
+
+## Known operational gotcha (historical — applied to the old `db push` workflow)
 
 `npx prisma db push` resets manually-added DB-level defaults
 (`gen_random_uuid()`, `now()`, membership defaults) on tables it doesn't
@@ -59,7 +120,10 @@ supabase/updated-at-defaults.sql
 supabase/membership-defaults.sql
 ```
 This is documented in `docs/membership.md` and has bitten this project
-multiple times already.
+multiple times already. Not relevant going forward for schema changes made
+via the migration workflow above (a real migration doesn't reset defaults
+the way `db push` did) — kept here for historical context and in case
+`db push` is ever used again for local/throwaway experimentation only.
 
 ## Features built (in build order)
 
@@ -158,125 +222,84 @@ multiple times already.
     Routing — confirm this was actually completed by the user (it required
     manual Cloudflare dashboard steps I can't do myself).
 
-## IN PROGRESS — Stripe self-serve billing (NOT complete, currently blocked)
+## Stripe billing status (complete in test mode, 2026-08-05)
 
-Goal: replace admin-assigned `UserSubscription` rows with live Stripe
-Checkout + Billing, per the architecture this project's own `FINALIZE.md`
-Phase 7 sketched (adapted here to the *per-user* `MembershipPlan` /
-`UserSubscription` schema that actually exists, not the aspirational
-per-organization model in that doc).
+Self-serve Stripe Checkout + Billing is fully built and verified live in
+Stripe TEST MODE — the plan below (originally sketched as "IN PROGRESS")
+is done:
 
-**Done so far:**
-- `stripe` npm package installed.
-- Schema additions (already pushed to the live DB via `prisma db push
-  --accept-data-loss`, defaults re-applied per the gotcha above):
-  - `User.stripeCustomerId` (unique, nullable — created lazily on first
-    checkout).
-  - `MembershipPlan.stripePriceId` (unique, nullable — the Stripe recurring
-    Price id for that tier).
-  - `UserSubscription` gained: `source` (`"stripe"` | `"comped"`, defaults
-    `"comped"`), `stripeCustomerId`, `stripeSubscriptionId` (unique),
-    `stripeStatus`, `currentPeriodEnd`, `cancelAtPeriodEnd`.
-- `scripts/stripe-setup-products.js` written (NOT yet successfully run) —
-  one-off script that creates a Stripe Product + monthly recurring Price
-  per active `membership_plans` row and writes the price id back onto the
-  plan. Idempotent (skips a plan that already has `stripe_price_id`).
-- Test-mode Stripe keys obtained from the user (`dashboard.stripe.com/test/apikeys`,
-  confirmed test mode via a screenshot). Publishable key
-  (`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`) is in `.env.local` and looks
-  syntactically valid. **The secret key currently in `.env.local` as
-  `STRIPE_SECRET_KEY` is WRONG** — it was transcribed from a screenshot
-  (image OCR/manual read) rather than pasted as text, and Stripe rejected it
-  with `StripeAuthenticationError: Invalid API Key provided` (401) when
-  `scripts/stripe-setup-products.js` was run. The user was asked to
-  copy-paste the secret key directly instead of screenshotting it again, but
-  the conversation was interrupted before they answered.
+- All 3 `membership_plans` rows (Essential $99, Professional $125,
+  Enterprise $150) have a real test-mode `stripe_price_id` whose Stripe
+  amount matches the DB row exactly (verified live via the Stripe API).
+- Per-seat team pricing (`stripe_team_price_id` / `stripe_team_annual_price_id`)
+  is configured for every plan (`scripts/stripe-team-billing.js`).
+- Checkout (personal + team, `mode: "subscription"`), the webhook endpoint
+  (`/api/webhooks/stripe` — the single writer of Stripe-sourced
+  subscription/seat state, verified via `STRIPE_WEBHOOK_SECRET`), and the
+  Customer Portal are all wired.
+- Full end-to-end verified live against the real database
+  (`scripts/stripe-b4-full-e2e.ts`, run against a local `next dev` server):
+  real card 4242 (via Stripe's `pm_card_visa` test token) checkout →
+  real webhook event delivered → `user_subscriptions` row created → tier
+  access confirmed → cancel (portal-equivalent) → access revoked; team
+  checkout at quantity=3 → webhook-confirmed `seat_count` → seat update to
+  5 → webhook-confirmed again.
+- `stripeWebhook`, `trialEmailCron`, `teamStripeLifecycle`, and
+  `pricingLenderCountPin` integration suites all run live now (test
+  credentials in place) instead of self-skipping.
+- Comped (no-Stripe) subscriptions continue to work exactly as before —
+  admin sets `source: "comped"`, no Stripe object involved.
 
-**Next steps to actually finish this feature, in order:**
-1. **Get the correct `STRIPE_SECRET_KEY` from the user as pasted text** (not
-   an image) and update `.env.local` (and later, Vercel env vars via
-   `vercel env add STRIPE_SECRET_KEY production` — needs a fresh Vercel
-   token from the user, tokens are single-use/short-lived in this
-   environment).
-2. Run `node scripts/stripe-setup-products.js` to create the 3 Stripe
-   Products/Prices and populate `membership_plans.stripe_price_id`.
-3. Build a checkout server action/route: creates a Stripe Checkout Session
-   (`mode: "subscription"`) for the chosen plan's price id, using or
-   creating the user's `stripeCustomerId`, with `success_url`/`cancel_url`
-   back to the app, `allow_promotion_codes: true` (so Stripe's own
-   Promotion Codes feature covers the discount use case without extra
-   custom code — see `Discount` model's existing role for *comped*
-   access, which should remain separate/admin-only).
-4. Build the webhook endpoint (e.g. `/api/webhooks/stripe`) — **the single
-   writer of Stripe-sourced subscription state**, verifying
-   `STRIPE_WEBHOOK_SECRET`:
-   - `checkout.session.completed` → upsert `UserSubscription` with
-     `source: "stripe"`, the resolved `planId` (map from the Price id back
-     to `membership_plans.stripe_price_id`), `stripeCustomerId`,
-     `stripeSubscriptionId`, clear `canceledAt`.
-   - `customer.subscription.updated` → sync `stripeStatus`,
-     `currentPeriodEnd`, `cancelAtPeriodEnd`.
-   - `customer.subscription.deleted` → set `canceledAt = now()`.
-   - `invoice.payment_failed` → reflect `past_due` status, consider an
-     email alert to the user.
-   - The webhook endpoint can be registered via the Stripe API itself
-     (`POST /v1/webhook_endpoints`) once the app's public URL is known
-     (`https://nonqmnexus.com/api/webhooks/stripe`) — this returns the
-     signing secret directly, no manual dashboard step needed.
-5. Add a "Manage Billing" link using the Stripe Customer Portal
-   (`stripe.billingPortal.sessions.create`) so users can update payment
-   method, view invoices, and cancel without any custom UI.
-6. Update the existing self-serve cancel/reactivate flow (`/account`) so it
-   calls Stripe's API (cancel-at-period-end, or resume) for `source:
-   "stripe"` subscriptions, instead of just flipping the local `canceledAt`
-   flag — the local flag should end up as a *reflection* of Stripe's state
-   (via the webhook), not the thing that directly grants/revokes access for
-   paid subscribers. Comped subscriptions keep working exactly as today
-   (admin sets `source: "comped"`, no Stripe object involved).
-7. Update `/pricing` (and wherever plans are shown) with real
-   "Subscribe"/"Manage Billing" buttons instead of (or alongside) the
-   existing admin-assignment-only UI.
-8. **Test the full flow with Stripe test cards** (e.g. `4242 4242 4242
-   4242`) before ever touching live keys — checkout → webhook fires →
-   `UserSubscription` created correctly → tier access unlocked → cancel →
-   webhook fires → access revoked at period end.
-9. Only after full test-mode verification, swap in the user's live keys
-   (`pk_live_...` / `sk_live_...` — already provided once earlier in this
-   project's history; do not reuse them without re-confirming with the user
-   they still want to go live at that point) and re-register the
-   production webhook endpoint.
-10. Add tests: webhook signature rejection, checkout → entitlement sync,
-    cancel → entitlement revoked, comped access unaffected by any of this.
+**Production Vercel has NO Stripe keys configured — intentionally, per the
+launch gate.** Live-mode cutover (owner-executed only, when ready to accept
+real payments) needs, in order:
+1. Create the real live-mode Products/Prices in the Stripe dashboard (live
+   mode, not test) matching the same 3 plans + team per-seat prices.
+2. Re-point each `membership_plans` row's `stripe_price_id` /
+   `stripe_team_price_id` / `stripe_team_annual_price_id` at the new live
+   Price ids (a small one-off script, same shape as
+   `scripts/stripe-setup-products.js` but reading existing live Price ids
+   instead of creating test ones).
+3. Register a live-mode webhook endpoint
+   (`https://nonqmnexus.com/api/webhooks/stripe`) and get its live signing
+   secret.
+4. Set `STRIPE_SECRET_KEY` (live `sk_live_...`), `STRIPE_WEBHOOK_SECRET`
+   (the new live one), and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (live
+   `pk_live_...`) in Vercel's production environment variables.
+5. Roll/rotate the test-mode keys once live mode is confirmed working (old
+   test keys can stay valid for local dev — they're a different mode
+   entirely, no need to revoke).
 
-## IN PROGRESS — Team Membership (org subscriptions & seats), 2026-07-30
+## Team Membership (org subscriptions & seats) — schema live, Stripe billing complete
 
-One subscription, N seats, one bill for a whole brokerage — full spec,
-current status, and a critical incident writeup in
-`docs/team-membership.md`; **read the "Incident note" there before ever
-running `prisma db push` again.** Summary: the schema is now LIVE (pushed
-2026-07-30) and verified working end-to-end via
-`REQUIRE_INTEGRATION=1 npm test` (all Team Membership integration tests
-genuinely pass, not skipped). Two real problems were hit and fixed during
-this deployment:
+One subscription, N seats, one bill for a whole brokerage — full spec and
+incident writeup in `docs/team-membership.md`, and the full incident
+closure/verification in `docs/incident-2026-07-30-schema-drift.md`.
+Summary: the schema is live, the 2026-07-30 schema-drift incident is
+closed (lost `trial_campaigns` row recreated, trigger-observability
+hardening added — see the incident doc's "Verification results"), and
+`REQUIRE_INTEGRATION=1 npm test` passes fully live (0 skips). Two real
+problems were hit and fixed during the original deployment:
 1. `prisma db push` initially ran against a stale `prisma/schema.prisma`
    that didn't reflect the trial system / citation monitoring / AE
    Directory tables (all added via raw SQL only, never added to Prisma's
    schema file) — it dropped those tables/columns. Structure was restored
-   immediately and ALL of them are now added to `prisma/schema.prisma` so
-   this can't recur. Real data loss: 230 trial-user status values, 77
-   citation-check rows, 1 trial-campaign row — **Supabase Point-in-Time
-   Recovery should be checked if that data matters.**
+   immediately and ALL of them are now added to `prisma/schema.prisma`,
+   and (2026-08-05) `prisma db push` is retired in favor of the committed
+   migration workflow above, so this class of incident can't recur. Real
+   data loss: 230 trial-user status values (Supabase PITR was not run /
+   not available — unrecovered; new trial activations work normally), 77
+   citation-check rows (self-repopulated by the recurring cron), 1
+   trial-campaign row (recreated 2026-08-05, live again at slug
+   `loan-officer-beta`).
 2. The invite-signup trigger's `digest()` call needed `extensions.digest()`
    (pgcrypto lives in the `extensions` schema on Supabase) — fixed, plus a
-   permanent exception-handler safety net added.
+   permanent exception-handler safety net that (as of 2026-08-05) also
+   logs to `signup_trigger_errors` instead of failing silently.
 
-**Still needed to finish Stripe team billing**: `STRIPE_SECRET_KEY` /
-`STRIPE_WEBHOOK_SECRET` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are all
-blank in `.env.local` (same short-lived-credential pattern as
-`DATABASE_URL`) — comped (no-Stripe) org subscriptions work today via
-`/admin/teams`, but `node scripts/stripe-team-billing.js` (creating the
-per-seat Prices) hasn't run yet. See `docs/team-membership.md`'s
-"Deployment status" for the exact remaining commands.
+**Stripe team billing is complete** — see "Stripe billing status" above.
+Comped (no-Stripe) org subscriptions also still work today via
+`/admin/teams`.
 
 ## IN PROGRESS — Bulk Membership, 2026-07-31
 

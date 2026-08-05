@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * Catches an exception thrown by the ROOT layout itself (rarer than a
@@ -17,6 +18,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error("Unhandled root-layout exception:", error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (

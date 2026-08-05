@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import { Card } from "@/components/ui";
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { hashInviteToken } from "@/lib/invites";
 import { SignupForm } from "./signup-form";
+import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Sign Up — NON-QM Nexus",
+  description: "Create a NON-QM Nexus account to start matching Non-QM mortgage scenarios to verified lender guidelines.",
+  path: "/signup",
+  noindex: true,
+});
 
 /** A safe, minimal preview of a pending invite for the signup page's copy —
  * looked up via service role (the visitor has no session/membership yet, so

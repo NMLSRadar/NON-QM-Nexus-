@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
+import { SUPPORT_EMAIL } from "@/lib/support";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy — NON-QM Nexus",
-};
+  description: "How NON-QM Nexus collects, uses, and protects your data as an underwriting-assistance and research platform.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (
@@ -73,7 +77,7 @@ export default function PrivacyPage() {
       <ul>
         <li>
           <strong>Access / export:</strong> you can request a copy of your account and scenario data by emailing{" "}
-          <a href="mailto:legal@nonqmnexus.com">legal@nonqmnexus.com</a>.
+          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
         </li>
         <li>
           <strong>Correction:</strong> you can update your own account details at any time from your account
@@ -81,7 +85,7 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Deletion:</strong> you can request deletion of your account and associated personal data at any
-          time by emailing <a href="mailto:legal@nonqmnexus.com">legal@nonqmnexus.com</a>. We will process deletion
+          time by emailing <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. We will process deletion
           requests within a reasonable time, subject to any records we are legally required to retain.
         </li>
         <li>
@@ -112,7 +116,7 @@ export default function PrivacyPage() {
       <h2>9. Contact</h2>
       <p>
         Questions about this Privacy Policy, or to make a data access/deletion request:{" "}
-        <a href="mailto:legal@nonqmnexus.com">legal@nonqmnexus.com</a>.
+        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
       </p>
 
       <h2>10. AE Directory &amp; Business Contact Outreach</h2>
@@ -146,7 +150,7 @@ export default function PrivacyPage() {
         <li>
           <strong>Removal on request:</strong> any AE (or someone acting on their behalf) may request removal of
           their business contact information from the directory, or correction of any inaccurate detail, at any
-          time by emailing <a href="mailto:legal@nonqmnexus.com">legal@nonqmnexus.com</a> or clicking the
+          time by emailing <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> or clicking the
           unsubscribe link in any email we&apos;ve sent them.
         </li>
       </ul>

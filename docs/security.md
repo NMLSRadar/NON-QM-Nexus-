@@ -20,8 +20,8 @@
 ## Production-readiness checklist (required before real consumer data)
 
 **Application**
-- [ ] Wire Supabase Auth (sessions, MFA adapter, session timeout) and replace the demo organization
-- [ ] Enable the Prisma repository and apply RLS; add cross-tenant integration tests against a live database
+- [x] Wire Supabase Auth (sessions, MFA adapter, session timeout) and replace the demo organization — **done**: real Supabase Auth (email/password), real per-user organizations, no more single demo org.
+- [x] Enable the Prisma repository and apply RLS; add cross-tenant integration tests against a live database — **done**: `SupabaseRepository` is the live repository, RLS is enforced on every tenant-owned table (`supabase/rls-policies.sql` + related policy files), and `tests/integration/teamIsolationRegression.test.ts` (among others) verifies cross-tenant isolation via real RLS-scoped sessions against the live database.
 - [ ] CSRF protection on all mutating routes (Next.js server actions include origin checks; verify configuration)
 - [ ] Rate limiting on auth, analysis, upload, and shared-link endpoints
 - [ ] File uploads: MIME/type validation, size limits (`FILE_MAX_SIZE_MB`), virus-scanning adapter, signed URLs

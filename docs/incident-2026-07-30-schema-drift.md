@@ -128,3 +128,74 @@ This is unrelated to the incident above — just the next item to finish once a 
 4. Run `REQUIRE_INTEGRATION=1 npm test` — confirm 0 failures.
 5. Check `select count(*) from trial_redemptions;`, `select count(*) from citation_link_checks;`, `select count(*) from trial_campaigns;` against the live DB to see current row counts (0 unless PITR was run since).
 6. Ask the owner directly whether they've checked Supabase PITR for the 230 trial records — this is the one action item that requires a human with dashboard access, not code.
+
+## 10. Verification results (2026-08-05, Final Closeout)
+
+Independently re-verified per the checklist in section 9, plus the
+reviewer-ordered trigger-observability hardening:
+
+1. **Commit `9e6e2f6` and the following merge** — present on `main`.
+2. **`prisma/schema.prisma`** — confirmed all 9 models + `Lender.emailDomain`
+   + the 3 trial columns on `UserSubscription` are present, plus a NEW
+   10th model added this pass: `SignupTriggerError` (`signup_trigger_errors`).
+3. **`npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --script`**
+   — re-run live. Zero `DROP TABLE`, zero `DROP COLUMN`. Only cosmetic
+   `DropIndex` (2, both non-data-bearing) and `ALTER COLUMN ... DROP
+   DEFAULT` (the long-documented "known operational gotcha" cosmetic
+   drift) — PASS.
+4. **`REQUIRE_INTEGRATION=1 npm test`** — 99 test files, 2750 tests, 0
+   failures, 0 skips. The require-integration reporter did not trip.
+   Stripe test-mode credentials and `RESEND_API_KEY` are now populated, so
+   `stripeWebhook`, `trialEmailCron`, `teamStripeLifecycle`, and
+   `pricingLenderCountPin` all ran live (not skipped) for the first time.
+5. **Row counts against the live DB:**
+   - `trial_redemptions`: 0 (PITR was not run / not available — the 230
+     historical rows remain unrecovered; new activations work normally).
+   - `citation_link_checks`: 125 (self-repopulated by the recurring
+     citation-check cron, as predicted — no permanent loss).
+   - `trial_campaigns`: was 0 (the lost row), now 1 — recreated below.
+6. **Lost trial campaign recreated:** re-ran
+   `scripts/create_loan_officer_beta_campaign.mjs` (idempotent upsert on
+   slug) — live again at slug `loan-officer-beta` ("Loan Officer Beta
+   Testing", 14-day trial, one redemption per email, no NMLS/company
+   requirement). End-to-end activation re-verified live via
+   `tests/integration/trialActivation.test.ts`,
+   `trialAdminActions.test.ts`, `trialCampaignDeactivation.test.ts`, and
+   `trialExpiration.test.ts` — 11/11 passing against the real database.
+7. **Trigger observability hardening (reviewer-ordered):** the
+   `handle_new_user()` invite-branch `exception when others` handler
+   (section 6 above) used to fall through with a bare `null;` — now
+   (`supabase/team-invite-signup.sql`) it also `RAISE WARNING`s with the
+   SQLSTATE + message, AND inserts a row into a new `signup_trigger_errors`
+   table (id, occurred_at, sqlstate, message, email_domain_only — never
+   the full email). Verified live: a purpose-built integration test
+   (`tests/integration/signupTriggerObservability.test.ts`) manufactures a
+   genuinely corrupted invite (a real invite whose backing organization is
+   deleted out from under it via a session-scoped
+   `session_replication_role = replica`, affecting only that one test
+   connection — never any concurrently running test/session) and confirms:
+   the signup still succeeds via the normal fallback, the user lands in
+   their own new org (never the deleted one), and a
+   `signup_trigger_errors` row is written with `sqlstate = '23503'`
+   (foreign_key_violation) and a domain-only value. Additionally, the
+   accept-invite/signup landing path (`/scenarios`, the default
+   post-login destination) now renders a clear banner + support-contact
+   link (`src/components/invite-mismatch-banner.tsx`) whenever a signed-in
+   user still carries an `invite_token` in their Supabase Auth metadata but
+   is NOT a member of that invite's organization — replacing what used to
+   be silent, unexplained confusion.
+8. **Schema workflow — now LAW:** `prisma/migrations/` now exists, with its
+   first committed migration
+   (`20260805033308_add_signup_trigger_errors`). **This is the first live
+   use of the new committed-migration workflow** — it was authored as a
+   `migration.sql` file, applied to the live database via `prisma db
+   execute` (baselining an already-live schema, since no prior migration
+   history existed), then recorded via `prisma migrate resolve --applied`
+   so `prisma migrate deploy` is now the correct, tracked production path
+   for every future schema change. Raw `prisma db push` against production
+   is retired for new schema work — see HANDOFF.md's "Schema workflow"
+   section for the standing rules.
+
+**Answering section 9 item 6 plainly:** `prisma/migrations/` now exists
+with committed migrations, and `prisma migrate deploy` is the production
+path going forward. Before this pass, the answer was no.

@@ -774,3 +774,22 @@ model OutreachSend {
 
   @@map("outreach_sends")
 }
+
+// ---------------------------------------------------------------------------
+// Trigger observability (incident 2026-07-30 hardening, 2026-08-05) —
+// handle_new_user()'s invite-branch EXCEPTION WHEN OTHERS handler
+// (supabase/team-invite-signup.sql) used to swallow errors invisibly and
+// silently fall through to normal (self-org) signup. It now also inserts a
+// row here (in addition to RAISE WARNING) so a corrupted/erroring invite
+// path is observable after the fact. Never stores the full email — only
+// the domain, so this table carries no direct PII.
+// ---------------------------------------------------------------------------
+model SignupTriggerError {
+  id              String   @id @default(uuid()) @db.Uuid
+  occurredAt      DateTime @default(now()) @map("occurred_at")
+  sqlstate        String
+  message         String
+  emailDomainOnly String?  @map("email_domain_only")
+
+  @@map("signup_trigger_errors")
+}

@@ -93,7 +93,15 @@ begin
     -- Safety net: any unexpected error validating/applying the invite
     -- (should not happen in normal operation) falls through to the normal
     -- signup path below rather than failing account creation entirely.
-    null;
+    -- Observability hardening (2026-08-05, incident 2026-07-30 follow-up):
+    -- this used to be a silent `null;` — now it also surfaces via
+    -- RAISE WARNING (visible in Postgres/Supabase logs) AND a durable row
+    -- in signup_trigger_errors (never the full email, only its domain), so
+    -- a corrupted/erroring invite path is observable after the fact
+    -- instead of only ever showing up as an unexplained "wrong org" report.
+    raise warning 'handle_new_user invite branch failed: % (SQLSTATE %)', sqlerrm, sqlstate;
+    insert into public.signup_trigger_errors (id, sqlstate, message, email_domain_only)
+    values (gen_random_uuid(), sqlstate, sqlerrm, split_part(new.email, '@', 2));
    end;
   end if;
 

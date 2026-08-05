@@ -100,4 +100,6 @@ user cannot insert into `lenders` / `programs` / `guideline_versions` /
 `rules`; neither can an anonymous request; a regular user cannot upload
 to the `lender-documents` bucket (neither can anonymous); and self-seeding
 still works via the service-role path. Combined with the fixes above, the
-full suite is 139 tests, all passing.
+full suite was 139 tests, all passing, at the time this audit was written
+(2026-07-xx) — the suite has grown substantially since; see `HANDOFF.md`
+for the current total.

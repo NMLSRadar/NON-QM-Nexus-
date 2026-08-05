@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Clock, AlertTriangle, ArrowRight, Plus } from "lucide-react";
 import { analyzeScenario } from "@/domain/analyze";
 import { getCurrentOrganizationId, getRepository } from "@/lib/session";
@@ -6,8 +7,16 @@ import { createClient } from "@/lib/supabase/server";
 import { ScenarioTable, type ScenarioRowData } from "@/components/scenario-table";
 import { HomeVoiceHero } from "@/components/home-voice-hero";
 import { PublicLanding } from "./public-landing";
+import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = pageMetadata({
+  title: "NON-QM Nexus — Non-QM Scenario Analysis & Lender Match",
+  description:
+    "Match Non-QM mortgage scenarios—DSCR, bank statement, ITIN, foreign national—to verified lender guidelines by real eligibility, not pricing.",
+  path: "/",
+});
 
 export default async function DashboardPage() {
   // External-audit fix (2026-07-28): "/" previously had no public-facing

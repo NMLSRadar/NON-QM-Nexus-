@@ -30,7 +30,7 @@ Broker/LO (create/analyze/share scenarios), Account executive (review, recommend
 
 | # | Criterion | Status |
 |---|---|---|
-| 1–2 | Registration / org invites & roles | Modeled (schema + RLS); demo runs as single org without login |
+| 1–2 | Registration / org invites & roles | ✅ live — Supabase Auth, real per-user/org registration, team invites with roles (see docs/team-membership.md) |
 | 3 | Create and save a scenario | ✅ |
 | 4 | Conditional questions per income type | ✅ |
 | 5 | LTV, DTI, DSCR, bank-statement, P&L, asset-depletion calcs | ✅ tested |
@@ -42,8 +42,8 @@ Broker/LO (create/analyze/share scenarios), Account executive (review, recommend
 | 11 | Needs list | ✅ |
 | 12 | Scenario report | ◐ JSON export + print-friendly page; PDF pending |
 | 13–14 | Admin CRUD + rule testing | ◐ read views + regression framework; builder UI pending |
-| 15–16 | Private documents, RLS isolation | ◐ schema + policies shipped; live wiring pending |
-| 17 | Automated tests for critical calcs | ✅ 68 tests |
+| 15–16 | Private documents, RLS isolation | ✅ live — RLS enforced on every tenant-owned table (`supabase/rls-policies.sql` + related policy files) |
+| 17 | Automated tests for critical calcs | ✅ 2,751 tests across domain/e2e/live-database integration |
 | 18 | Demo data clearly labeled | ✅ persistent labels |
 | 19 | Never presented as loan approval | ✅ disclaimers everywhere |
 | 20 | Builds + documented deploy steps | ✅ |

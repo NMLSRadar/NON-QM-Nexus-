@@ -1,5 +1,5 @@
 {
-  "name": "non-qm-navigator",
+  "name": "non-qm-nexus",
   "version": "0.1.0",
   "private": true,
   "description": "NON-QM Nexus — an original, configurable, AI-assisted NON-QM scenario analysis and lender-matching decision-support platform.",
@@ -14,18 +14,21 @@
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run tests/integration",
     "seed:check": "tsx scripts/seed-check.ts",
+    "check:email-dns": "node scripts/check-email-dns.mjs",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@sentry/nextjs": "^10.69.0",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.8",
     "decimal.js": "^10.4.3",
     "lucide-react": "^1.26.0",
     "next": "^15.1.6",
     "papaparse": "^5.5.4",
+    "pg": "^8.22.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "server-only": "^0.0.1",
