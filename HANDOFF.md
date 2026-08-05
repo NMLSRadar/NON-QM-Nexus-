@@ -48,7 +48,30 @@ not a commitment (see `src/app/terms/page.tsx` for the exact legal framing).
   re-fetches a guideline once its `last_checked_at` is 6+ weeks old (42-day
   `RECHECK_INTERVAL_DAYS`), so the effective cadence per guideline is 6 weeks.
 
-## Known operational gotcha (important — will bite you)
+## Schema workflow (mandatory, since 2026-08-05 — supersedes the gotcha below for NEW changes)
+
+Following the 2026-07-30 schema-drift data-loss incident (see
+`docs/incident-2026-07-30-schema-drift.md`, "Verification results"), raw
+`prisma db push --accept-data-loss` against the live database is retired
+for new work. Every table/column change from now on:
+1. Is modeled in `prisma/schema.prisma`.
+2. Ships as a real, committed migration file in `prisma/migrations/`
+   (created + applied via `prisma migrate`, e.g. `prisma migrate dev
+   --create-only` to author it, `prisma migrate deploy` to apply it —
+   `prisma migrate deploy` is the standing production path going forward).
+3. Never raw hand-run SQL for schema (DDL) changes — `supabase/*.sql`
+   remains the right place ONLY for policies, triggers, functions, and
+   seeds, never table/column definitions.
+4. One schema-writer at a time — confirm no other session is mutating the
+   database before any schema step.
+5. Any `--accept-data-loss` (or equivalent) prompt naming a NON-EMPTY
+   object is a full stop: abort and report, never confirm through it.
+
+The first migration committed under this workflow is
+`prisma/migrations/20260805033308_add_signup_trigger_errors` (the
+trigger-observability table, see the incident doc).
+
+## Known operational gotcha (historical — applied to the old `db push` workflow)
 
 `npx prisma db push` resets manually-added DB-level defaults
 (`gen_random_uuid()`, `now()`, membership defaults) on tables it doesn't
@@ -59,7 +82,10 @@ supabase/updated-at-defaults.sql
 supabase/membership-defaults.sql
 ```
 This is documented in `docs/membership.md` and has bitten this project
-multiple times already.
+multiple times already. Not relevant going forward for schema changes made
+via the migration workflow above (a real migration doesn't reset defaults
+the way `db push` did) — kept here for historical context and in case
+`db push` is ever used again for local/throwaway experimentation only.
 
 ## Features built (in build order)
 
