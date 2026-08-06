@@ -255,13 +255,15 @@ describe("Assistant system prompt — AE upgrade contract", () => {
   it("never answers 'who is the best lender' with a lender list — best is determined by the scenario", () => {
     const lower = ASSISTANT_SYSTEM_PROMPT.toLowerCase();
     expect(lower).toContain('no single best lender');
-    expect(lower).toContain("best fits the specific scenario");
+    expect(lower).toContain("determined by the scenario itself");
     // The rate-vs-get-it-done philosophy.
     expect(lower).toContain("best rate");
-    expect(lower).toContain("rate becomes irrelevant");
+    expect(lower).toContain("rate is now irrelevant");
     expect(lower).toContain("get the deal done");
     // Must NOT name a list of lenders on the bare question.
-    expect(lower).toContain("do not name a list of lenders");
+    expect(lower).toContain("must not name any specific lender");
+    // Must give the philosophy verbatim-enough to land the point.
+    expect(lower).toContain("determined by the scenario itself");
   });
 
   it("enforces scannable chat formatting — separated lender blocks, no cramming, max 3 on broad questions", () => {
