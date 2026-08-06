@@ -252,12 +252,22 @@ describe("Assistant system prompt — AE upgrade contract", () => {
     expect(p).toContain("expense factor");
   });
 
-  it("guides a conversational recommendation flow and confidence levels", () => {
+  it("never answers 'who is the best lender' with one name — best is determined by the scenario", () => {
     const lower = ASSISTANT_SYSTEM_PROMPT.toLowerCase();
-    // Conversational sections (em-dash used, not the colon in a user's sentence).
-    expect(ASSISTANT_SYSTEM_PROMPT).toContain("Why:");
-    expect(ASSISTANT_SYSTEM_PROMPT).toContain("Watch out:");
-    expect(ASSISTANT_SYSTEM_PROMPT).toContain("What could change this:");
+    expect(lower).toContain('no single "best lender"');
+    expect(lower).toContain("determined by the scenario itself");
+    // The rate-vs-get-it-done philosophy.
+    expect(lower).toContain("best rate");
+    expect(lower).toContain("rate becomes irrelevant");
+    expect(lower).toContain("get the deal done");
+  });
+
+  it("guides a conversational recommendation flow and bans run-on numbered lists", () => {
+    const lower = ASSISTANT_SYSTEM_PROMPT.toLowerCase();
+    // Conversational, plain-English section labels (em-dash headers, not the colon in a sentence).
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain("CRITICAL FORMATTING RULE");
+    expect(lower).toContain("run-on paragraph");
+    expect(lower).toContain("own separated block");
     for (const level of ["high confidence", "medium confidence", "ae review recommended", "exception request"]) {
       expect(lower, level).toContain(level);
     }
