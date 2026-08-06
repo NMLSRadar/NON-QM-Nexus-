@@ -278,11 +278,11 @@ async function main() {
   assert(fiveNine?.propertyTypes?.includes("5_8_unit") && fiveNine?.propertyTypes?.includes("9_plus_unit"), "5-9 Unit property types are incomplete");
   assert(fiveNine?.minFico === 680 && fiveNine?.maxLoanAmount === 2500000 && fiveNine?.baseMaxLtv === 75, "5-9 Unit headline limits are incorrect");
 
-  for (const [name, lienPosition] of [["Equity Advantage HELOC — First Lien", "first_lien"], ["Equity Advantage HELOC — Second Lien", "second_lien"]]) {
+  for (const [name, lienPosition, leverageMetric] of [["Equity Advantage HELOC — First Lien", "first_lien", "ltv"], ["Equity Advantage HELOC — Second Lien", "standalone_second", "cltv"]]) {
     const heloc = verified.get(name)?.config;
-    assert(heloc?.loanPurposes?.includes("heloc") && heloc?.ltvMetric === "cltv", `${name} purpose/CLTV setup is incorrect`);
-    assert(heloc?.lienPositionsEligible?.includes(lienPosition), `${name} lien position is incorrect`);
-    assert(heloc?.sourceDocuments?.includes(DH.helocWh) && heloc?.sourceDocuments?.includes(DH.helocGuideline), `${name} source documents are incomplete`);
+    assert(heloc?.loanPurposes?.includes("heloc") && heloc?.ltvMetric === leverageMetric, `${name} purpose/leverage-metric setup is incorrect`);
+    assert(heloc?.lienPosition === lienPosition, `${name} lien position is incorrect`);
+    assert(heloc?.sourceDocuments?.includes(DH.helocWholesaleGuideline) && heloc?.sourceDocuments?.includes(DH.helocGuideline), `${name} source documents are incomplete`);
   }
 
   const pnl = verified.get("12-Month Profit & Loss Statement — P&L Only")?.config;
