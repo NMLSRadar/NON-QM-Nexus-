@@ -98,6 +98,22 @@ describe("full eligibility LTV matrix", () => {
     expect(results.find((r) => r.ruleName === "Current lender matrix confirmation")?.outcome).toBe(RuleOutcome.ManualReview);
     expect(results.find((r) => r.ruleName === "Maximum CLTV")?.outcome).toBe(RuleOutcome.Pass);
   });
+  it("treats omitted numeric matrix fields as manual review instead of a fabricated $0 decline", () => {
+    const p = program({
+      incomeDocTypes: ["bank_statement"],
+      minLoanAmount: 0,
+      maxLoanAmount: 0,
+      minFico: 0,
+      baseMaxLtv: 0,
+      matrixConfirmationRequired: true,
+    });
+    const calc = { results: [], ltv: { value: 80, source: "test" } } as never;
+    const results = baseProgramChecks(scenario({ incomeDocType: "bank_statement" }), calc, p);
+    expect(results.find((r) => r.ruleName === "Loan amount range")?.outcome).toBe(RuleOutcome.ManualReview);
+    expect(results.find((r) => r.ruleName === "Minimum FICO")?.outcome).toBe(RuleOutcome.ManualReview);
+    expect(results.find((r) => r.ruleName === "Maximum LTV")?.outcome).toBe(RuleOutcome.ManualReview);
+    expect(results.some((r) => r.outcome === RuleOutcome.Fail)).toBe(false);
+  });
   it("applies first-time-investor and STR leverage reductions", () => {
     const p = program({
       eligibilityLtvMatrix: [{ minFico: 700, minDscr: 1, loanPurpose: "purchase", maxLtv: 80 }],

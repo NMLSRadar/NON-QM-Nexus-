@@ -580,21 +580,35 @@ export function baseProgramChecks(
     }
   }
 
-  // Loan amount
+  // Loan amount. A zero/zero range on a matrix-confirmation program means
+  // the narrative guide confirmed the product but did not contain the
+  // separate numeric matrix — never turn that data gap into a fabricated
+  // $0 hard decline.
   if (scenario.requestedLoanAmount != null) {
     const amt = scenario.requestedLoanAmount;
-    const ok = amt >= program.minLoanAmount && amt <= program.maxLoanAmount;
-    out.push(result(`${p}:amt`, "Loan amount range", "loan_amount", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
-      ok
-        ? `Loan amount is within $${program.minLoanAmount.toLocaleString()}–$${program.maxLoanAmount.toLocaleString()}.`
-        : `Loan amount $${amt.toLocaleString()} is outside $${program.minLoanAmount.toLocaleString()}–$${program.maxLoanAmount.toLocaleString()}.`));
+    if (program.matrixConfirmationRequired && program.minLoanAmount === 0 && program.maxLoanAmount === 0) {
+      out.push(result(`${p}:amt`, "Loan amount range", "loan_amount", RuleOutcome.ManualReview, RuleSeverity.Soft,
+        "The supplied narrative guideline does not contain this program's loan-amount grid; confirm the current lender matrix."));
+    } else {
+      const ok = amt >= program.minLoanAmount && amt <= program.maxLoanAmount;
+      out.push(result(`${p}:amt`, "Loan amount range", "loan_amount", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+        ok
+          ? `Loan amount is within $${program.minLoanAmount.toLocaleString()}–$${program.maxLoanAmount.toLocaleString()}.`
+          : `Loan amount $${amt.toLocaleString()} is outside $${program.minLoanAmount.toLocaleString()}–$${program.maxLoanAmount.toLocaleString()}.`));
+    }
   }
 
-  // FICO
+  // FICO. Zero on a matrix-confirmation program is "not supplied," not
+  // "no minimum FICO required."
   if (scenario.fico != null) {
-    const ok = scenario.fico >= program.minFico;
-    out.push(result(`${p}:fico`, "Minimum FICO", "fico", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
-      ok ? `FICO ${scenario.fico} ≥ minimum ${program.minFico}.` : `FICO ${scenario.fico} is below the minimum ${program.minFico}.`));
+    if (program.matrixConfirmationRequired && program.minFico === 0) {
+      out.push(result(`${p}:fico`, "Minimum FICO", "fico", RuleOutcome.ManualReview, RuleSeverity.Soft,
+        "The supplied narrative guideline defers the minimum FICO and score tiers to the current lender matrix."));
+    } else {
+      const ok = scenario.fico >= program.minFico;
+      out.push(result(`${p}:fico`, "Minimum FICO", "fico", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+        ok ? `FICO ${scenario.fico} ≥ minimum ${program.minFico}.` : `FICO ${scenario.fico} is below the minimum ${program.minFico}.`));
+    }
   } else if (scenario.creditProfileType && scenario.creditProfileType !== "us_fico_score") {
     // No numeric FICO — F-1 visa / no-FICO fix (2026-07-28). Never
     // auto-reject just because `minFico` can't be evaluated numerically,
@@ -631,10 +645,15 @@ export function baseProgramChecks(
   const maxLtv = deriveMaxLtv(scenario, program, calc.dscr?.value);
   const leverage = program.ltvMetric === "cltv" ? calc.cltv : calc.ltv;
   if (leverage?.value != null) {
-    const ok = leverage.value <= maxLtv;
     const metricLabel = program.ltvMetric === "cltv" ? "CLTV" : "LTV";
-    out.push(result(`${p}:ltv`, `Maximum ${metricLabel}`, "ltv", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
-      ok ? `Requested ${metricLabel} ${leverage.value}% ≤ maximum ${maxLtv}%.` : `Requested ${metricLabel} ${leverage.value}% exceeds maximum ${maxLtv}%.`));
+    if (program.matrixConfirmationRequired && program.baseMaxLtv === 0 && !program.ltvMatrix?.length && !program.eligibilityLtvMatrix?.length && !program.purposeLtvMatrix?.length) {
+      out.push(result(`${p}:ltv`, `Maximum ${metricLabel}`, "ltv", RuleOutcome.ManualReview, RuleSeverity.Soft,
+        `The supplied narrative guideline defers the maximum ${metricLabel} grid to the current lender matrix.`));
+    } else {
+      const ok = leverage.value <= maxLtv;
+      out.push(result(`${p}:ltv`, `Maximum ${metricLabel}`, "ltv", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+        ok ? `Requested ${metricLabel} ${leverage.value}% ≤ maximum ${maxLtv}%.` : `Requested ${metricLabel} ${leverage.value}% exceeds maximum ${maxLtv}%.`));
+    }
 
     if (scenario.loanPurpose === "cash_out_refinance" && scenario.requestedCashOut != null && program.cashOutLimits?.length) {
       const limit = [...program.cashOutLimits]

@@ -46,6 +46,10 @@ function isEligibleStatus(status: MatchStatus): boolean {
   return status !== "ineligible";
 }
 
+function requiresCurrentMatrix(e: ProgramEvaluation): boolean {
+  return e.ruleResults.some((r) => r.ruleName === "Current lender matrix confirmation");
+}
+
 function MatchScoreRing({ score }: { score: number }) {
   // Simple, dependency-free circular progress using conic-gradient — no
   // charting library needed for a single-number ring.
@@ -144,6 +148,7 @@ function LenderCard({
   const isBestMatch = rank === 0 && (e.status === "strong_match" || e.status === "eligible");
   const isLowestReserves = e.estimatedReservesRequiredMonths != null;
   const isHighestLtv = e.maxLtv != null;
+  const matrixPending = requiresCurrentMatrix(e);
 
   return (
     <div
@@ -191,10 +196,10 @@ function LenderCard({
       </div>
 
       <dl className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 border-t border-surface-border pt-4">
-        <Stat label="Max LTV" value={fmtPct(e.maxLtv, 1)} />
-        <Stat label="Min FICO" value={e.minFico > 0 ? e.minFico : "Not required"} />
-        <Stat label="Max loan amount" value={fmtUsd(e.maxLoanAmount)} />
-        <Stat label="Reserves required" value={`${e.estimatedReservesRequiredMonths ?? "—"} mo`} />
+        <Stat label="Max LTV" value={matrixPending && e.maxLtv === 0 ? "Confirm matrix" : fmtPct(e.maxLtv, 1)} />
+        <Stat label="Min FICO" value={matrixPending && e.minFico === 0 ? "Confirm matrix" : e.minFico > 0 ? e.minFico : "Not required"} />
+        <Stat label="Max loan amount" value={matrixPending && e.maxLoanAmount === 0 ? "Confirm matrix" : fmtUsd(e.maxLoanAmount)} />
+        <Stat label="Reserves required" value={matrixPending && (e.estimatedReservesRequiredMonths ?? 0) === 0 ? "Confirm matrix" : `${e.estimatedReservesRequiredMonths ?? "—"} mo`} />
         <Stat label="Max DTI" value={e.maxDti != null ? fmtPct(e.maxDti, 0) : "N/A"} />
         <Stat
           label="Qualifying income"
@@ -217,6 +222,7 @@ function LenderCard({
         {e.incomeDocTypes.includes("bank_statement") && <Pill tone="neutral">Bank Statement</Pill>}
         {e.incomeDocTypes.includes("dscr") && <Pill tone="neutral">DSCR</Pill>}
         {e.premierProduct && <Pill tone="gold">Premier Product</Pill>}
+        {matrixPending && <Pill tone="neutral">Current matrix required</Pill>}
         {e.incomeDocTypes.includes("pnl_only") && <Pill tone="neutral">12-Month P&amp;L Only</Pill>}
         {e.incomeDocTypes.includes("asset_depletion") && <Pill tone="neutral">Asset Depletion</Pill>}
         {e.interestOnlyAvailable && <Pill tone="neutral">Interest-Only</Pill>}
@@ -385,11 +391,11 @@ function CompareTable({ items }: { items: ProgramEvaluation[] }) {
   const rows: Array<{ label: string; render: (e: ProgramEvaluation) => React.ReactNode }> = [
     { label: "Status", render: (e) => <StatusBadge status={e.status} /> },
     { label: "Match score", render: (e) => `${e.matchScore}/100` },
-    { label: "Max LTV", render: (e) => fmtPct(e.maxLtv, 1) },
-    { label: "Min FICO", render: (e) => (e.minFico > 0 ? e.minFico : "Not required") },
+    { label: "Max LTV", render: (e) => (requiresCurrentMatrix(e) && e.maxLtv === 0 ? "Confirm matrix" : fmtPct(e.maxLtv, 1)) },
+    { label: "Min FICO", render: (e) => (requiresCurrentMatrix(e) && e.minFico === 0 ? "Confirm matrix" : e.minFico > 0 ? e.minFico : "Not required") },
     { label: "Max DTI", render: (e) => (e.maxDti != null ? fmtPct(e.maxDti, 0) : "N/A") },
-    { label: "Max loan amount", render: (e) => fmtUsd(e.maxLoanAmount) },
-    { label: "Reserves required", render: (e) => `${e.estimatedReservesRequiredMonths ?? "—"} mo` },
+    { label: "Max loan amount", render: (e) => (requiresCurrentMatrix(e) && e.maxLoanAmount === 0 ? "Confirm matrix" : fmtUsd(e.maxLoanAmount)) },
+    { label: "Reserves required", render: (e) => (requiresCurrentMatrix(e) && (e.estimatedReservesRequiredMonths ?? 0) === 0 ? "Confirm matrix" : `${e.estimatedReservesRequiredMonths ?? "—"} mo`) },
     { label: "Documentation", render: (e) => e.documentationType },
     { label: "Guideline version", render: (e) => `${e.guidelineVersion} (eff. ${e.effectiveDate})` },
   ];

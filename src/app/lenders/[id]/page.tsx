@@ -102,16 +102,17 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
                       </span>
                     </div>
                     <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      <MetricTile label="Max LTV" value={fmtPct(p.baseMaxLtv, 1)} />
-                      <MetricTile label="Min FICO" value={p.minFico} />
-                      <MetricTile label="Loan amount" value={`${fmtUsd(p.minLoanAmount)}–${fmtUsd(p.maxLoanAmount)}`} />
-                      <MetricTile label="Reserves" value={`${p.minReservesMonths} mo`} />
+                      <MetricTile label="Max LTV" value={p.matrixConfirmationRequired && p.baseMaxLtv === 0 ? "Confirm matrix" : fmtPct(p.baseMaxLtv, 1)} />
+                      <MetricTile label="Min FICO" value={p.matrixConfirmationRequired && p.minFico === 0 ? "Confirm matrix" : p.minFico} />
+                      <MetricTile label="Loan amount" value={p.matrixConfirmationRequired && p.minLoanAmount === 0 && p.maxLoanAmount === 0 ? "Confirm matrix" : `${fmtUsd(p.minLoanAmount)}–${fmtUsd(p.maxLoanAmount)}`} />
+                      <MetricTile label="Reserves" value={p.matrixConfirmationRequired && p.minReservesMonths === 0 ? "Confirm matrix" : `${p.minReservesMonths} mo`} />
                       {p.minDscr !== undefined && <MetricTile label="Min DSCR" value={p.minDscr} />}
                       {p.maxDti !== undefined && <MetricTile label="Max DTI" value={fmtPct(p.maxDti, 0)} />}
                       <MetricTile label="Interest-only" value={p.interestOnlyAvailable ? "Available" : "Not offered"} />
                     </div>
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {p.premierProduct && <Pill tone="gold">Premier Product</Pill>}
+                      {p.matrixConfirmationRequired && <Pill tone="neutral">Current matrix required</Pill>}
                       {p.incomeDocTypes.map((d) => (
                         <Pill key={d} tone="sky">
                           {d === "pnl_only" ? "12-month P&L only" : d.replace(/_/g, " ")}

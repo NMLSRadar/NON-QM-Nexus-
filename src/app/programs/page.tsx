@@ -73,15 +73,15 @@ export default async function ProgramsPage() {
                     </td>
                     <td className="py-2 pr-4 text-slate-300">{lenderName.get(p.lenderId)}</td>
                     <td className="py-2 pr-4 text-slate-300">{p.incomeDocTypes.join(", ")}</td>
-                    <td className="py-2 pr-4 text-slate-300">{fmtPct(p.baseMaxLtv, 1)}</td>
-                    <td className="py-2 pr-4 text-slate-300">{p.minFico > 0 ? p.minFico : "—"}</td>
+                    <td className="py-2 pr-4 text-slate-300">{p.matrixConfirmationRequired && p.baseMaxLtv === 0 ? "Confirm matrix" : fmtPct(p.baseMaxLtv, 1)}</td>
+                    <td className="py-2 pr-4 text-slate-300">{p.matrixConfirmationRequired && p.minFico === 0 ? "Confirm matrix" : p.minFico > 0 ? p.minFico : "—"}</td>
                     <td className="py-2 pr-4 text-slate-300">
                       {p.maxDti != null ? `DTI ≤ ${p.maxDti}%` : p.minDscr != null ? `DSCR ≥ ${p.minDscr}` : "—"}
                     </td>
                     <td className="py-2 pr-4 whitespace-nowrap text-slate-300">
-                      {fmtUsd(p.minLoanAmount)}–{fmtUsd(p.maxLoanAmount)}
+                      {p.matrixConfirmationRequired && p.minLoanAmount === 0 && p.maxLoanAmount === 0 ? "Confirm matrix" : <>{fmtUsd(p.minLoanAmount)}–{fmtUsd(p.maxLoanAmount)}</>}
                     </td>
-                    <td className="py-2 pr-4 text-slate-300">{p.minReservesMonths} mo</td>
+                    <td className="py-2 pr-4 text-slate-300">{p.matrixConfirmationRequired && p.minReservesMonths === 0 ? "Confirm matrix" : `${p.minReservesMonths} mo`}</td>
                     <td className="py-2 pr-4 tabular-nums text-slate-300">{rules.filter((r) => r.programId === p.id).length}</td>
                     <td className="py-2 text-xs text-slate-400">
                       {p.guidelineVersionLabel} · eff. {p.effectiveDate}
