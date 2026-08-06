@@ -1,5 +1,5 @@
 import { RuleOutcome, RuleSeverity, MORTGAGE_LATES_SEVERITY, MORTGAGE_LATES_CATEGORY_LABELS } from "../types/enums";
-import type { Program, FiveToEightUnitLtvMatrixEntry, EligibilityLtvMatrixEntry } from "../types/program";
+import type { Program, FiveToEightUnitLtvMatrixEntry, EligibilityLtvMatrixEntry, PurposeLtvMatrixEntry } from "../types/program";
 import type { Scenario } from "../types/scenario";
 import type { CalculationSummary, RuleEvaluationResult } from "../types/results";
 
@@ -64,11 +64,31 @@ function findEligibilityLtvTier(
     })[0];
 }
 
+function findPurposeLtvTier(scenario: Scenario, program: Program, calculatedDscr?: number): PurposeLtvMatrixEntry | undefined {
+  if (!program.purposeLtvMatrix?.length || scenario.fico == null || scenario.requestedLoanAmount == null) return undefined;
+  const capForPurpose = (entry: PurposeLtvMatrixEntry) => scenario.loanPurpose === "cash_out_refinance"
+    ? entry.maxLtvCashOut
+    : scenario.loanPurpose === "rate_term_refinance"
+      ? entry.maxLtvRateTerm
+      : entry.maxLtvPurchase;
+  return program.purposeLtvMatrix
+    .filter((entry) =>
+      entry.maxLoanAmount >= scenario.requestedLoanAmount! &&
+      entry.minFico <= scenario.fico! &&
+      (!entry.occupancy || entry.occupancy === scenario.occupancy) &&
+      (entry.minDscr == null || (calculatedDscr != null && calculatedDscr >= entry.minDscr)))
+    .sort((a, b) =>
+      (capForPurpose(b) ?? -1) - (capForPurpose(a) ?? -1) ||
+      a.maxLoanAmount - b.maxLoanAmount ||
+      b.minFico - a.minFico ||
+      (b.minDscr ?? 0) - (a.minDscr ?? 0))[0];
+}
+
 /**
  * Derive the applicable maximum LTV for a scenario by selecting the lender's
  * most specific published matrix row, then applying any tighter overlays.
  */
-export function deriveMaxLtv(scenario: Scenario, program: Program, dscr?: number | null): number {
+export function deriveMaxLtv(scenario: Scenario, program: Program, calculatedDscr?: number | null): number {
   // 5-8 Unit Residential overlay — added 2026-08-01. Real 5-8 unit
   // matrices vary max LTV by loan amount, FICO, AND transaction type
   // simultaneously, a dimension the general ltvMatrix/baseMaxLtv path
@@ -91,7 +111,7 @@ export function deriveMaxLtv(scenario: Scenario, program: Program, dscr?: number
     if (program.fiveToEightUnitLtvMatrix && program.fiveToEightUnitLtvMatrix.length > 0) return 0;
   }
   if (program.eligibilityLtvMatrix?.length) {
-    const tier = findEligibilityLtvTier(scenario, program, dscr);
+    const tier = findEligibilityLtvTier(scenario, program, calculatedDscr);
     // The lender published a complete matrix, so an uncovered combination is
     // a real no-match rather than permission to use a looser headline cap.
     if (!tier) return 0;
@@ -122,6 +142,25 @@ export function deriveMaxLtv(scenario: Scenario, program: Program, dscr?: number
       if (program.strIncomeMaxLtv != null) matrixCap = Math.min(matrixCap, program.strIncomeMaxLtv);
     }
     return Math.max(0, matrixCap);
+  }
+  if (program.purposeLtvMatrix?.length) {
+    const tier = findPurposeLtvTier(scenario, program, calculatedDscr ?? undefined);
+    if (!tier) return 0;
+    const purposeCap = scenario.loanPurpose === "cash_out_refinance"
+      ? tier.maxLtvCashOut
+      : scenario.loanPurpose === "rate_term_refinance"
+        ? tier.maxLtvRateTerm
+        : tier.maxLtvPurchase;
+    if (purposeCap == null) return 0;
+    let cap = Math.min(program.baseMaxLtv, purposeCap);
+    const citizenshipCap = scenario.citizenship ? program.citizenshipLtvCaps?.[scenario.citizenship] : undefined;
+    if (citizenshipCap != null) cap = Math.min(cap, citizenshipCap);
+    const propertyTypeCap = scenario.propertyType ? program.propertyTypeLtvCaps?.[scenario.propertyType] : undefined;
+    if (propertyTypeCap != null) cap = Math.min(cap, propertyTypeCap);
+    if (scenario.fico == null && scenario.creditProfileType && scenario.creditProfileType !== "us_fico_score" && program.noFicoMaxLtv != null) {
+      cap = Math.min(cap, program.noFicoMaxLtv);
+    }
+    return cap;
   }
   let cap = program.baseMaxLtv;
   if (program.ltvMatrix && scenario.fico != null) {

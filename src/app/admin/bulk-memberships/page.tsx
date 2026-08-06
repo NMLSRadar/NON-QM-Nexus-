@@ -36,7 +36,7 @@ export default async function AdminBulkMembershipsPage() {
           <h1 className="text-2xl font-semibold">Bulk Memberships</h1>
           <p className="text-sm text-ink-secondary">
             One system for any brokerage from 1 up to 500 loan officers — fully custom-quoted, entirely separate
-            from the self-serve Essential / Professional / Enterprise tiers.
+            from the self-serve membership.
           </p>
         </div>
         <Link href="/admin/bulk-memberships/new" className="rounded-md bg-slate-900 text-white text-sm font-medium px-4 py-2">

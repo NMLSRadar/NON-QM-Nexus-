@@ -36,9 +36,10 @@ export default async function AdminLendersPage() {
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Lender tier assignment</h2>
         <p className="text-sm text-slate-500">
-          Tier 1 (Essential) should hold your Top 10; Tier 2 (Professional) your Top 26 total, since Tier 1
-          lenders are also visible to Tier 2 subscribers (assign each lender to the lowest tier that should see it).
-          New lenders default to Tier 3 until you move them.
+          Tier 1 should hold your top-curated lenders; Tier 2 your next set, since Tier 1
+          lenders are also visible to Tier 2+ subscribers (assign each lender to the lowest tier that should see it).
+          New lenders default to Tier 3 until you move them. Every membership plan unlocks all tiers, so these levels
+          are curation ordering only.
         </p>
         <p className="mt-1 text-xs text-slate-500">
           Tier 1: {byTier[1]} · Tier 2: {byTier[2]} · Tier 3: {byTier[3]}

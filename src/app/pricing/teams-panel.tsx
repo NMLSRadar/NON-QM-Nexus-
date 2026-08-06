@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card } from "@/components/ui";
+import { Star, User, Users, UsersRound, ArrowRight } from "lucide-react";
 import { SUPPORT_EMAIL } from "@/lib/support";
 
 /**
@@ -10,52 +10,63 @@ import { SUPPORT_EMAIL } from "@/lib/support";
  * HANDOFF.md / the final report's "volume-breakpoint constants" note.
  */
 const DISPLAY_BREAKPOINTS = [
-  { range: "1-4 seats", note: "full per-seat price" },
-  { range: "5-9 seats", note: "volume discount" },
-  { range: "10+ seats", note: "contact us for a custom rate" },
+  { range: "1-4 seats", note: "full per-seat price", Icon: User },
+  { range: "5-9 seats", note: "volume discount", Icon: Users },
+  { range: "10+ seats", note: "contact us for a custom rate", Icon: UsersRound },
 ];
 
 export function TeamsPanel({ isSignedIn }: { isSignedIn: boolean }) {
   return (
-    <Card dark className="max-w-3xl mx-auto">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Teams</h2>
-          <p className="mt-1 text-sm text-slate-400 max-w-md">
-            One subscription, any number of seats, one bill. Your brokerage picks a plan and a seat count — invite teammates and
-            each covered seat gets full access at that tier, no separate billing per person.
-          </p>
+    <div className="relative mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-amber-500/25 bg-[#0d0d0f]/80 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)]">
+      <div className="pointer-events-none absolute -bottom-24 left-1/2 h-48 w-[30rem] -translate-x-1/2 rounded-full bg-amber-500/15 blur-[80px]" />
+      <div className="relative p-6 sm:p-9">
+        <div className="flex items-center justify-center gap-2">
+          <Star className="h-5 w-5 text-amber-400" strokeWidth={2.2} />
+          <h2 className="text-sm font-semibold uppercase tracking-[0.25em] text-amber-400">Teams</h2>
         </div>
+        <p className="mx-auto mt-3 max-w-xl text-center text-sm text-slate-300">
+          One subscription, any number of seats, one bill. Your brokerage picks a plan and a seat count — invite
+          teammates and each covered seat gets full access at that tier, no separate billing per person.
+        </p>
+
+        <div className="mt-7 grid gap-3 sm:grid-cols-3">
+          {DISPLAY_BREAKPOINTS.map(({ range, note, Icon }) => (
+            <div key={range} className="rounded-xl border border-amber-500/20 bg-black/30 p-4 text-center sm:p-5">
+              <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 text-black shadow-lg">
+                <Icon className="h-5 w-5" strokeWidth={2.2} />
+              </span>
+              <p className="mt-2.5 text-sm font-semibold text-white">{range}</p>
+              <p className="mt-0.5 text-xs text-slate-400">{note}</p>
+            </div>
+          ))}
+        </div>
+
         {isSignedIn ? (
           <Link
             href="/account/team/subscribe"
-            className="shrink-0 rounded-md gold-button gold-cta-glow text-sm font-medium px-4 py-2"
+            className="gold-to-black-button group mx-auto mt-7 flex w-full max-w-sm items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
           >
-            Subscribe your team
+            Subscribe Your Team
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.4} />
           </Link>
         ) : (
-          <Link href="/signup?next=/pricing" className="shrink-0 rounded-md bg-white/5 border border-amber-500/20 text-white text-sm font-medium px-4 py-2 hover:bg-white/10">
-            Sign up to get started
+          <Link
+            href="/signup?next=/pricing"
+            className="gold-to-black-button group mx-auto mt-7 flex w-full max-w-sm items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
+          >
+            Subscribe Your Team
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.4} />
           </Link>
         )}
-      </div>
 
-      <div className="mt-5 grid sm:grid-cols-3 gap-3">
-        {DISPLAY_BREAKPOINTS.map((b) => (
-          <div key={b.range} className="rounded border border-white/10 bg-black/20 p-3 text-center">
-            <p className="text-sm font-semibold text-white">{b.range}</p>
-            <p className="text-xs text-slate-400 mt-0.5">{b.note}</p>
-          </div>
-        ))}
+        <p className="mt-5 text-center text-xs text-slate-500">
+          Need 10+ seats or a multi-year prepay?{" "}
+          <a href={`mailto:${SUPPORT_EMAIL}?subject=Team%20pricing`} className="text-amber-400 underline">
+            Contact us
+          </a>{" "}
+          — larger teams and multi-year prepay are handled directly, not through self-serve checkout.
+        </p>
       </div>
-
-      <p className="mt-4 text-xs text-slate-500">
-        Need 10+ seats or a multi-year prepay?{" "}
-        <a href={`mailto:${SUPPORT_EMAIL}?subject=Team%20pricing`} className="text-amber-400 underline">
-          Contact us
-        </a>{" "}
-        — larger teams and multi-year prepay are handled directly, not through self-serve checkout.
-      </p>
-    </Card>
+    </div>
   );
 }

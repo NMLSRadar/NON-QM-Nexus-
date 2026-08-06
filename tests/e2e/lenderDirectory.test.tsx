@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 //
-// Regression tests for the "lenders always visible, guidelines locked by
-// tier" correction: every lender must render, above-tier lenders show a
-// locked "Upgrade to Unlock" card instead of disappearing, the old
-// "No lenders are visible on your current plan." message is gone, and the
-// Investor filter chip has been removed entirely.
+// Regression tests for the single-membership lender directory (2026-08-05):
+// the 3-tier presentation is gone — every lender renders in one "All Lenders"
+// section, a non-member sees every lender locked behind a "Membership
+// required" card, and a member sees every lender unlocked (clickable). The
+// old tier filter chips and "Upgrade to Unlock" copy are removed entirely.
 import "@testing-library/jest-dom/vitest";
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -53,65 +53,46 @@ function makeProgram(overrides: Partial<Program>): Program {
   };
 }
 
-const tier1: DirectoryLender[] = [{ lender: makeLender({ id: "t1", name: "Alpha Lending", tierLevel: 1 }), programs: [makeProgram({ lenderId: "t1" })] }];
-const tier2: DirectoryLender[] = [{ lender: makeLender({ id: "t2", name: "Beta Mortgage", tierLevel: 2 }), programs: [makeProgram({ lenderId: "t2" })] }];
-const tier3: DirectoryLender[] = [{ lender: makeLender({ id: "t3", name: "Gamma Capital", tierLevel: 3 }), programs: [makeProgram({ lenderId: "t3" })] }];
+const lenders: DirectoryLender[] = [
+  { lender: makeLender({ id: "t1", name: "Alpha Lending", tierLevel: 1 }), programs: [makeProgram({ lenderId: "t1" })] },
+  { lender: makeLender({ id: "t2", name: "Beta Mortgage", tierLevel: 2 }), programs: [makeProgram({ lenderId: "t2" })] },
+  { lender: makeLender({ id: "t3", name: "Gamma Capital", tierLevel: 3 }), programs: [makeProgram({ lenderId: "t3" })] },
+];
 
-describe("LenderDirectory: every tier is always visible; access is locked, not hidden", () => {
-  it("a user with NO subscription (tier 0) still sees all 3 tiers of lenders, all locked", () => {
-    render(<LenderDirectory tier1={tier1} tier2={tier2} tier3={tier3} userTierLevel={0} />);
+describe("LenderDirectory: single-membership — every lender visible, access locked or unlocked by membership", () => {
+  it("a non-member still sees all lenders, all locked behind 'Membership required'", () => {
+    render(<LenderDirectory lenders={lenders} isMember={false} />);
     expect(screen.getByText("Alpha Lending")).toBeInTheDocument();
     expect(screen.getByText("Beta Mortgage")).toBeInTheDocument();
     expect(screen.getByText("Gamma Capital")).toBeInTheDocument();
-    // Never the old generic empty/plan-gated message.
-    expect(screen.queryByText("No lenders are visible on your current plan.")).not.toBeInTheDocument();
-    expect(screen.getAllByText(/Upgrade to Unlock/)).toHaveLength(3);
+    expect(screen.getAllByText(/Membership required/)).toHaveLength(3);
+    expect(screen.getAllByText(/Unlock with Membership/)).toHaveLength(3);
   });
 
-  it("a Tier 1 subscriber sees Tier 2 and Tier 3 lenders too, but only Tier 1 is unlocked (clickable link)", () => {
-    render(<LenderDirectory tier1={tier1} tier2={tier2} tier3={tier3} userTierLevel={1} />);
+  it("a member sees every lender unlocked (clickable link to the lender page)", () => {
+    render(<LenderDirectory lenders={lenders} isMember={true} />);
     expect(screen.getByRole("link", { name: /View Alpha Lending programs and guidelines/ })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /View Beta Mortgage/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /View Gamma Capital/ })).not.toBeInTheDocument();
-    expect(screen.getByText("Beta Mortgage")).toBeInTheDocument();
-    expect(screen.getByText("Gamma Capital")).toBeInTheDocument();
-    expect(screen.getAllByText(/Upgrade to Unlock/)).toHaveLength(2);
-  });
-
-  it("a Tier 2 subscriber unlocks Tier 1 and Tier 2, but Tier 3 stays locked", () => {
-    render(<LenderDirectory tier1={tier1} tier2={tier2} tier3={tier3} userTierLevel={2} />);
-    expect(screen.getByRole("link", { name: /View Alpha Lending/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /View Beta Mortgage/ })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /View Gamma Capital/ })).not.toBeInTheDocument();
-    expect(screen.getAllByText(/Upgrade to Unlock/)).toHaveLength(1);
-  });
-
-  it("a Tier 3 (Enterprise) subscriber unlocks everything", () => {
-    render(<LenderDirectory tier1={tier1} tier2={tier2} tier3={tier3} userTierLevel={3} />);
-    expect(screen.getByRole("link", { name: /View Alpha Lending/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /View Beta Mortgage/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /View Gamma Capital/ })).toBeInTheDocument();
-    expect(screen.queryByText(/Upgrade to Unlock/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Membership required/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Unlock with Membership/)).not.toBeInTheDocument();
   });
 
-  it("the locked card's Upgrade button links to /pricing", () => {
-    render(<LenderDirectory tier1={tier1} tier2={tier2} tier3={tier3} userTierLevel={0} />);
-    const upgradeLinks = screen.getAllByRole("link", { name: /Upgrade to Unlock/ });
-    for (const link of upgradeLinks) expect(link).toHaveAttribute("href", "/pricing");
+  it("the locked card's Unlock button links to /pricing", () => {
+    render(<LenderDirectory lenders={lenders} isMember={false} />);
+    const unlockLinks = screen.getAllByRole("link", { name: /Unlock with Membership/ });
+    for (const link of unlockLinks) expect(link).toHaveAttribute("href", "/pricing");
   });
 
-  it('the Investor filter chip has been completely removed', () => {
-    render(<LenderDirectory tier1={tier1} tier2={tier2} tier3={tier3} userTierLevel={3} />);
-    expect(screen.queryByRole("button", { name: "Investor" })).not.toBeInTheDocument();
+  it("the single 'All Lenders' section heading is present", () => {
+    render(<LenderDirectory lenders={lenders} isMember={true} />);
+    expect(screen.getByRole("heading", { name: /All Lenders/ })).toBeInTheDocument();
   });
 
-  it("the program-type filter chips (DSCR, Bank Statement, P&L Only, Foreign National, Asset Depletion) have been removed — only All/Tier 1/Tier 2/Tier 3 remain", () => {
-    render(<LenderDirectory tier1={tier1} tier2={tier2} tier3={tier3} userTierLevel={3} />);
-    for (const label of ["DSCR", "Bank Statement", "P&L Only", "Foreign National", "Asset Depletion"]) {
+  it("the old tier / program filter chips have been completely removed", () => {
+    render(<LenderDirectory lenders={lenders} isMember={true} />);
+    for (const label of ["All", "Tier 1", "Tier 2", "Tier 3", "Investor", "DSCR", "Bank Statement", "P&L Only", "Foreign National", "Asset Depletion"]) {
       expect(screen.queryByRole("button", { name: label })).not.toBeInTheDocument();
-    }
-    for (const label of ["All", "Tier 1", "Tier 2", "Tier 3"]) {
-      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
   });
 });

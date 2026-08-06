@@ -211,6 +211,28 @@ body:has(.gold-page) {
   outline-offset: 2px;
 }
 
+/* Gold-to-black vertical gradient CTA — the membership/teams subscribe
+   buttons on the pricing page. Reads as a premium gold bar that fades to
+   near-black at the bottom. */
+.gold-to-black-button {
+  background: linear-gradient(180deg, #f0c860 0%, #d4af37 28%, #6b4f0e 72%, #0a0a0a 100%);
+  color: #fff;
+  box-shadow: 0 12px 26px -10px rgba(212, 175, 55, 0.55);
+  transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease;
+}
+.gold-to-black-button:hover {
+  filter: brightness(1.07);
+  box-shadow: 0 14px 30px -8px rgba(212, 175, 55, 0.7);
+  transform: translateY(-1px);
+}
+.gold-to-black-button:active {
+  transform: translateY(0);
+}
+.gold-to-black-button:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
 /* Slowly drifting ambient particles/glow behind hero + section headers. */
 .gold-ambient {
   position: absolute;
