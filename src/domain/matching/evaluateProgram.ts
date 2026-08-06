@@ -66,7 +66,7 @@ export function evaluateProgram(
     status,
     matchScore: score,
     scoreBreakdown: breakdown,
-    maxLtv: deriveMaxLtv(scenario, program),
+    maxLtv: deriveMaxLtv(scenario, program, calc.dscr?.value),
     maxLoanAmount: program.maxLoanAmount,
     minFico: program.minFico,
     maxDti: program.maxDti,

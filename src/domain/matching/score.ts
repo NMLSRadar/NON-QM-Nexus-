@@ -28,7 +28,7 @@ export function computeScore(
   const breakdown: ScoreBreakdownEntry[] = [];
 
   // 1. LTV headroom (25)
-  const maxLtv = deriveMaxLtv(scenario, program);
+  const maxLtv = deriveMaxLtv(scenario, program, calc.dscr?.value);
   const ltv = calc.ltv?.value;
   if (ltv != null) {
     const headroom = maxLtv - ltv;

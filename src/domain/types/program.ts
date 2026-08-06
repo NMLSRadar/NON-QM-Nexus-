@@ -84,6 +84,17 @@ export interface LtvMatrixEntry {
   maxLoanAmount?: number;
 }
 
+/** Purpose-aware 1-4 unit matrix row. Null is an explicit N/A cell. */
+export interface PurposeLtvMatrixEntry {
+  maxLoanAmount: number;
+  minFico: number;
+  occupancy?: Occupancy;
+  minDscr?: number;
+  maxLtvPurchase: number | null;
+  maxLtvRateTerm: number | null;
+  maxLtvCashOut: number | null;
+}
+
 /**
  * A single loan-amount-band / FICO-tier row of a lender's 5-8 unit
  * residential LTV grid — added 2026-08-01 (Lender Database Audit & 5-8
@@ -129,6 +140,7 @@ export interface Program {
   interestOnlyAvailable: boolean;
   prepaymentPenaltyOptions: string[];
   ltvMatrix?: LtvMatrixEntry[];
+  purposeLtvMatrix?: PurposeLtvMatrixEntry[];
   // Borrower-experience eligibility flags. All optional/undefined = no
   // restriction on that dimension (matches every existing Program record
   // without any migration — see docs/voice-vitals.md).
