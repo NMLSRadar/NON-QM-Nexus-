@@ -144,6 +144,13 @@ async function main() {
   check(wvoe?.occupancies?.length === 1 && wvoe.occupancies[0] === "primary" && wvoe?.firstTimeHomebuyerAllowed === true, "WVOE fields");
   const asset = map.get("Asset Utilization")?.config;
   check(asset?.notes?.includes("÷ 60") && asset?.matrixConfirmationRequired === true, "Asset Utilization divisor/matrix gate");
-  console.log(`Cake production validation passed: ${map.size} active reviewed non-DSCR programs; Bank Statement, P&L, WVOE, 1099, AiF, Asset Utilization and Full Doc fields verified.`);
+  const { data: legacyBank, error: legacyBankError } = await admin.from("programs").select("id,config").eq("lender_id", lenderId).eq("name", "Bank Statement").eq("active", true);
+  if (legacyBankError) throw legacyBankError;
+  for (const row of legacyBank ?? []) {
+    const q = await admin.from("programs").update({ active: false, config: { ...row.config, active: false, notes: `${row.config?.notes ?? ""}\nRetired ${REVIEWED}: superseded by Bank Statement — 12/24 Month from Cake Version 4.0.`.trim() } }).eq("id", row.id);
+    if (q.error) throw q.error;
+    console.log("Retired obsolete Cake row: Bank Statement");
+  }
+  console.log(`Cake production validation passed: ${map.size} active reviewed non-DSCR programs; existing DSCR records unchanged; Bank Statement, P&L, WVOE, 1099, AiF, Asset Utilization and Full Doc fields verified.`);
 }
 main().catch((e) => { console.error(e); process.exit(1); });
