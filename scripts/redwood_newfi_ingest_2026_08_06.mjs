@@ -135,6 +135,29 @@ async function main() {
     if (!lenderCache.has(def.lender)) lenderCache.set(def.lender, await ensureLender(def.lender, createdBy));
     await upsertProgram(def, lenderCache.get(def.lender), createdBy);
   }
-  console.log(JSON.stringify({run:RUN_ID,status:"complete",lenders:lenderCache.size,programs:programs.length,verifiedAt:TODAY}));
+  const qa = [];
+  for (const def of programs) {
+    const lender = lenderCache.get(def.lender);
+    const rows = await one("programs", db.from("programs").select("id,name,active,config").eq("lender_id",lender.id),`QA read ${def.name}`);
+    const matches = rows.filter((x) => normalize(x.name) === normalize(def.name));
+    const current = matches[0];
+    qa.push({program:def.name,unique:matches.length===1,active:current?.active===true,sourceStamped:current?.config?.notes?.includes(RUN_ID)===true,matrixRows:current?.config?.purposeLtvMatrix?.length ?? current?.config?.fiveToEightUnitLtvMatrix?.length ?? 0});
+  }
+  const versions = await one("guideline_versions", db.from("guideline_versions").select("program_id,label,verification_status,last_verified_date").eq("verification_status","human_verified").eq("last_verified_date",TODAY),"QA guideline versions");
+  const assertions = [
+    ["all program identities are unique", qa.every((x)=>x.unique)],
+    ["all imported programs are active", qa.every((x)=>x.active)],
+    ["all imported programs carry the migration marker", qa.every((x)=>x.sourceStamped)],
+    ["all seven current guideline versions are human verified", versions.filter((v)=>programs.some((p)=>p.version===v.label)).length===7],
+    ["Artemis purpose matrix retained", artemis.length===12],
+    ["Hercules purpose matrices retained", hercules.length===27 && herculesExpanded.length===18],
+    ["Redwood DSCR and Expanded matrices retained", redwoodDscr.length===7 && full.length===18 && alt.length===19],
+    ["P&L-only standing rule retained", programs.find((p)=>p.name.includes("Alternative Documentation"))?.config.notes.includes("Tax returns are never")===true],
+    ["Olympus routed as standalone second", programs.find((p)=>p.name.startsWith("Olympus"))?.config.lienPosition==="standalone_second"],
+    ["Redwood 5-8 unit matrix retained", programs.find((p)=>p.name==="Aspire DSCR")?.config.fiveToEightUnitLtvMatrix.length===2],
+  ];
+  for (const [name,pass] of assertions) console.log(JSON.stringify({run:RUN_ID,qa:name,pass}));
+  if (assertions.some(([,pass])=>!pass)) throw new Error("One or more post-migration QA assertions failed.");
+  console.log(JSON.stringify({run:RUN_ID,status:"complete",lenders:lenderCache.size,programs:programs.length,verifiedAt:TODAY,qa}));
 }
 main().catch((error) => { console.error(`[${RUN_ID}] FAILED`, error); process.exit(1); });
