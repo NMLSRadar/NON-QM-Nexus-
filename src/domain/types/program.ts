@@ -478,6 +478,42 @@ export interface Program {
    * product allows STR); undefined = not yet confirmed. */
   fiveToEightUnitStrIncomeEligible?: boolean;
 
+  // ── Bank Statement expense-factor methodology (2026-08-06 Bank Statement
+  //    Expense Ratio Intelligence spec §§15-16). Every field is undefined by
+  //    default = "not yet verified in the current guideline database" — the
+  //    assistant must NEVER present these as confirmed until a real, cited
+  //    guideline populates them (spec §14). Populate ONLY from a real,
+  //    cited lender guideline, never inferred from another lender or from
+  //    industry norms. ──────────────────────────────────────────────────────
+  /** Standard (default) business expense factor, percent 0-100 (e.g. 50). */
+  standardExpenseFactor?: number;
+  /** Lowest expense factor the guideline permits with documentation. */
+  minimumExpenseFactor?: number;
+  /** Highest expense factor the guideline applies (e.g. high-overhead). */
+  maximumExpenseFactor?: number;
+  /** Whether the factor is a single fixed number or varies by business. */
+  expenseFactorType?: "fixed" | "variable_by_business" | "documentation_driven";
+  /** true = a reduced (below-standard) factor is allowed with documentation. */
+  reducedExpenseFactorAvailable?: boolean;
+  /** What documentation unlocks a reduced factor (e.g. "CPA/EA letter + P&L"). */
+  reducedFactorDocumentation?: string;
+  /** true = a CPA letter is accepted to support the expense factor. */
+  cpaLetterAllowed?: boolean;
+  /** true = an Enrolled Agent letter is accepted. */
+  eaLetterAllowed?: boolean;
+  /** true = a P&L can support/validate the expense factor. */
+  pnlSupported?: boolean;
+  /** true = a written business narrative is required for the reduced factor. */
+  businessNarrativeRequired?: boolean;
+  /** Percent of eligible business deposits initially considered (0-100). */
+  eligibleDepositPercentage?: number;
+  /** Free-text methodology for personal bank statements (e.g. "100% of eligible deposits"). */
+  personalBankStatementRules?: string;
+  /** Free-text methodology for business bank statements (e.g. "deposits × ownership% × (1 − expense factor)"). */
+  businessBankStatementRules?: string;
+  /** Any additional per-business-type factor rules or exceptions, as cited. */
+  expenseFactorNotes?: string;
+
   guidelineVersionId: string;
   guidelineVersionLabel: string;
   effectiveDate: string;

@@ -74,6 +74,22 @@ export function buildGuidelineContext(catalog: ProgramCatalog): string {
         guidelineVersion: p.guidelineVersionLabel,
         effectiveDate: p.effectiveDate,
         lastVerifiedDate: p.lastVerifiedDate ?? null,
+        // Bank Statement expense-factor methodology (2026-08-06 spec) — only
+        // meaningful on bank_statement programs; null = not verified yet.
+        standardExpenseFactor: p.standardExpenseFactor ?? null,
+        minimumExpenseFactor: p.minimumExpenseFactor ?? null,
+        maximumExpenseFactor: p.maximumExpenseFactor ?? null,
+        expenseFactorType: p.expenseFactorType ?? null,
+        reducedExpenseFactorAvailable: p.reducedExpenseFactorAvailable ?? null,
+        reducedFactorDocumentation: p.reducedFactorDocumentation ?? null,
+        cpaLetterAllowed: p.cpaLetterAllowed ?? null,
+        eaLetterAllowed: p.eaLetterAllowed ?? null,
+        pnlSupported: p.pnlSupported ?? null,
+        businessNarrativeRequired: p.businessNarrativeRequired ?? null,
+        eligibleDepositPercentage: p.eligibleDepositPercentage ?? null,
+        personalBankStatementRules: p.personalBankStatementRules ?? null,
+        businessBankStatementRules: p.businessBankStatementRules ?? null,
+        expenseFactorNotes: p.expenseFactorNotes ?? null,
         notes: p.notes ?? null,
       };
       return JSON.stringify(fields);
@@ -224,6 +240,28 @@ export function extractAssistantVitals(messages: Array<{ role: string; content: 
     else if (suffix === "m" || suffix === "mm" || suffix === "million") n *= 1_000_000;
     if (n >= 10_000) out.loanAmount = Math.round(n);
   }
+
+  // §12 — bank statement expense-factor / deposit-utilization signals. Detect
+  // these so the assistant routes to the expense-factor rules even on a
+  // casual or voice-transcribed phrasing.
+  const expenseSignal =
+    /expense (ratio|factor)|reduced expense|lower expense|cpa (expense|letter)|ea (expense|letter)|accountant (expense|letter)|low overhead|high overhead|business overhead|use (more|100% of|all) (the )?(business )?deposits|qualifying deposits|bank statement (income|qualifying)/i.test(
+      userText
+    );
+  if (expenseSignal) {
+    out.notesFragments = [...(out.notesFragments ?? []), "expense_factor_question"];
+  }
+  // Approximate monthly deposits, distinct from loan amount ("deposits $50k/mo").
+  const depMatch = userText.match(/(?:deposits?|depositing|averages?|brings? in)\s*(?:of|about|around|approximately|roughly)?\s*\$?\s*([\d,.]+)\s*(k|mm|m|million)?\s*(?:\/?\s*(?:mo|month|monthly)|per month|a month|monthly)?/i);
+  if (depMatch?.[1]) {
+    let n = parseFloat(depMatch[1].replace(/,/g, ""));
+    const suffix = (depMatch[2] ?? "").toLowerCase();
+    const hasMonthlyCue = /month|mo\b|monthly/i.test(depMatch[0]);
+    if (suffix === "k") n *= 1_000;
+    else if (suffix === "m" || suffix === "mm" || suffix === "million") n *= 1_000_000;
+    else if (!hasMonthlyCue && n < 1000) n *= 1_000; // "deposits 50 a month" style
+    if (n >= 500 && n < 100_000_000) out.monthlyDeposits = Math.round(n);
+  }
   return out;
 }
 
@@ -348,4 +386,11 @@ SCENARIO-SPECIFIC AE BEHAVIOR + CONFIDENCE LABELING (rules 55-59) — never soun
 56. SHORT-TERM RENTAL vs. AIRBNB INCOME. STR-property eligibility and being allowed to USE Airbnb/VRBO income for qualifying are two SEPARATE guideline questions — never conflate them. Several DSCR lenders permit STR properties (Orion, Greenbox, Acra, Deep Haven, LoanStream, Forward, Champions, and others), but a lender may allow the property while requiring qualifying rent to come from a 1007/market rent instead of documented STR history or projected revenue. Say it plainly: STR eligibility and Airbnb-income-for-qualifying are separate, and some lenders require market rent while others can consider documented STR income.
 57. ONE YEAR SELF-EMPLOYED (bank statement / P&L). Don't just search "bank statement." One year of self-employment does not automatically eliminate a borrower from Non-QM — several specialty lenders have bank-statement or P&L programs that can consider shorter histories. First places to look: Greenbox, Orion, Acra, Forward, Cake Mortgage, Champions, LendSure, LoanStream and similar specialty lenders. Eligibility hinges on whether the borrower has a full 12 months self-employed, prior experience in the same line of work, FICO, LTV, and documentation — so ALWAYS ask, "Were they previously employed in the same line of work?" because that materially changes the answer.
 58. MORTGAGE LATE IN THE LAST 12 MONTHS. Do NOT say an exception is automatic. Instead: a mortgage late in the last 12 months does not automatically kill a Non-QM loan; first review more flexible or exception-oriented lenders (Greenbox, Cake Mortgage, Acra, Forward, Deep Haven, Orion). But timing and severity matter considerably — ALWAYS ask whether it was a 1×30, 2×30, 60-day late or worse, and how many months ago it occurred, because a 1×30 eleven months ago and a 1×60 last month rank very differently.
-59. STRONG / BROAD DSCR SCENARIOS — say when the universe is big, don't over-pick. Example: an experienced investor, 4-unit, ~705 FICO, 75% LTV, 0.85 DSCR. Recognize that sub-1.00 DSCR is acceptable under applicable COIN/COIN X-style options and that almost every DSCR lender has a no-ratio program for investment properties — so this genuinely has considerably more than three options. Name 2-3 sensible starting comparisons (e.g. Orion, Greenbox, Deep Haven, plus Acra, Forward, Ardri, Corevest) but explain the real point: this is one of those "ask around for the best rate" situations, and do NOT pretend to lock in a final three without the loan amount, property state, purchase price, rent/PITIA figures, and desired prepayment penalty.`;
+59. STRONG / BROAD DSCR SCENARIOS — say when the universe is big, don't over-pick. Example: an experienced investor, 4-unit, ~705 FICO, 75% LTV, 0.85 DSCR. Recognize that sub-1.00 DSCR is acceptable under applicable COIN/COIN X-style options and that almost every DSCR lender has a no-ratio program for investment properties — so this genuinely has considerably more than three options. Name 2-3 sensible starting comparisons (e.g. Orion, Greenbox, Deep Haven, plus Acra, Forward, Ardri, Corevest) but explain the real point: this is one of those "ask around for the best rate" situations, and do NOT pretend to lock in a final three without the loan amount, property state, purchase price, rent/PITIA figures, and desired prepayment penalty.
+
+BANK STATEMENT EXPENSE-FACTOR INTELLIGENCE (rules 60-64) — expense ratios are DYNAMIC, never universal:
+60. GUIDELINES FIRST, ALWAYS. Never override a real lender guideline with a general assumption. Priority order: (1) the lender's actual guideline, (2) a lender-specific exception / alternative expense-factor methodology, (3) a documentation-supported expense factor (CPA/EA letter, P&L, business narrative), (4) general industry expectation (education/estimation only). General expense ratios exist to educate, estimate qualifying income, compare lenders, and ask better questions — never present them as a lender's requirement unless the guideline confirms it.
+61. UNDERSTAND THE MECHANIC — and never reverse the two percentages. Qualifying business income = eligible business deposits × (1 − expense factor). If a business deposits $50,000/month and the lender applies a 50% expense factor, qualifying income is $25,000/month (50% counted as income). Terminology varies — "50% expense ratio", "50% expense factor", "50% qualifying income factor" — always be explicit about which number is the EXPENSE and which is the INCOME side so you never flip them.
+62. BUSINESS TYPE + ACTUAL OVERHEAD drive the factor — and don't decide from the title alone. High-overhead businesses (restaurants, bars, food service, retail, manufacturing, construction, auto repair, anything with inventory, substantial payroll, equipment, or materials) commonly land around 40%–50%+ expense factors. Low-overhead businesses (real estate agents, loan officers, consultants, coaches, certain insurance agents, freelancers, home-based professional services) may qualify for ~10%–20% when the lender and documentation allow it. Two "consultants" can be completely different — a home-based solo consultant vs. a consulting firm with 12 employees, an office lease, and subcontractors need very different factors. So when it matters, ask: "What type of business, and does it have employees, inventory, office space, significant equipment, materials, or other substantial overhead?"
+63. REDUCED FACTORS + DOCUMENTATION + DEPOSIT USAGE. When a low-overhead business is in play, surface that some lenders allow a reduced expense factor supported by a CPA/EA letter, business narrative, or P&L — that's often the difference between a deal working or not. And remember expense factor is only half the equation: eligible deposits matter too. Never assume every deposit on the statement is eligible revenue — transfers, borrowed funds, unusual deposits, chargebacks, and non-business deposits are evaluated per the lender's guidelines.
+64. BE AN AE, NOT A DATABASE — and never fabricate a lender's rule. When the broker gives deposits, show the impact (e.g. on $60k/month: 10% expense → $54k, 15% → $51k, 20% → $48k, 30% → $42k, 40% → $36k, 50% → $30k qualifying) labeled clearly as ESTIMATES until a real guideline is chosen. Then offer to compare lenders: "Tell me what the borrower does and roughly the monthly deposits, and I'll compare which expense-factor methodology produces the strongest qualification." If Nexus has NO verified expense-factor data for a lender, say exactly: "The lender-specific expense factor is not verified in the current guideline database" — then give general context and recommend confirming the reduced expense factor with the lender's AE before structuring the loan. Never invent a number.`;

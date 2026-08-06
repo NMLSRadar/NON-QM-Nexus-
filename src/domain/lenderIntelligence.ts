@@ -43,6 +43,10 @@ export interface AssistantVitals {
   propertyType?: string; // free-form at the conversational layer; matching maps to PropertyType
   loanAmount?: number;
   citizenship?: string; // "us_citizen" | "permanent_resident" | "non_permanent_resident" | "itin" | "foreign_national" | "no_us_credit"
+  /** Approx eligible monthly business deposits (bank-statement income). */
+  monthlyDeposits?: number;
+  /** Rolling notes the deterministic extractor tags for the model (e.g. "expense_factor_question"). */
+  notesFragments?: string[];
 }
 
 // ---------------------------------------------------------------------------
