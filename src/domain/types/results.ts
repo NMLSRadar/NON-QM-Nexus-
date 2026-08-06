@@ -69,6 +69,8 @@ export interface ProgramEvaluation {
   itinSpecialist: boolean;
   bankStatementCleanExecution: boolean;
   bankStatementFlexible: boolean;
+  /** Editorial flagship signal; never an eligibility override. */
+  premierProduct?: boolean;
   /** True only when this evaluation is for an ITIN borrower requesting
    * DSCR/no-ratio qualification AND the program's current matrix
    * expressly confirms the combination (Program.itinDscrEligible /

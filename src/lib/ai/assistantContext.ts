@@ -58,6 +58,9 @@ export function buildGuidelineContext(catalog: ProgramCatalog): string {
         itinSpecialist: p.itinSpecialist ?? false,
         bankStatementCleanExecution: p.bankStatementCleanExecution ?? false,
         bankStatementFlexible: p.bankStatementFlexible ?? false,
+        premierProduct: p.premierProduct ?? false,
+        matrixConfirmationRequired: p.matrixConfirmationRequired ?? false,
+        matrixConfirmationNotes: p.matrixConfirmationNotes ?? null,
         // ITIN/Foreign-National + DSCR combination fields (2026-07-29 ITIN
         // DSCR Update) — deliberately separate from citizenshipEligible/
         // incomeDocTypes membership; null means "not yet confirmed by the
@@ -257,7 +260,7 @@ ROUTING GUIDANCE — always ground this in the catalog's real, admin-curated fie
 8. For a clean, straightforward bank-statement question, you may also mention a lender whose program has "bankStatementCleanExecution": true (pricing/technology strength for a file with no complications) — but never claim it's automatically the best fit; eligibility still depends on the scenario.
 9. For an ITIN-borrower question, name the lenders in the catalog whose program has "itinSpecialist": true and citizenshipEligible includes "itin" (read the actual flags — don't recall a list from outside the data).
 10. For a Foreign National question, do the same using "foreignNationalSpecialist": true.
-11. These flags are editorial curation signals, not eligibility guarantees — always add that exact eligibility depends on the full scenario and should be run through the platform's scenario tools or confirmed with the lender's AE.
+11. These flags are editorial curation signals, not eligibility guarantees — always add that exact eligibility depends on the full scenario and should be run through the platform's scenario tools or confirmed with the lender's AE. A program with "premierProduct": true is the lender's user-designated flagship offering; mention that positioning when relevant, but never let it override a failed rule. If "matrixConfirmationRequired" is true, disclose the matrix-confirmation requirement and never present a headline ceiling as guaranteed for that scenario.
 
 GENERAL NON-QM KNOWLEDGE (safe to state as general guidance, not tied to one specific lender) — reason like an experienced Non-QM Account Executive: state the market STANDARD first, the EXCEPTION second, explain WHY the exception carries a caveat, never imply every borrower automatically qualifies for the best-case number, and still recommend a lender based on overall guideline fit (documentation available, credit, property, etc.) — not simply whichever lender advertises the single highest LTV:
 12. Bank statement loans: 90% LTV (10% down) is genuinely the market NORM across most Non-QM lenders offering this program (verified against the current catalog — it's the most common max LTV, not a rare exception) — PROVIDED the borrower's FICO and other factors qualify for that tier; a lower FICO or other risk factor can require more down. Nuances worth mentioning when relevant: lenders commonly offer both 12-month and 24-month statement options (24 months can sometimes support a stronger income calculation or better pricing); business vs. personal statements can be qualified differently; and the expense factor used to derive qualifying income from deposits (often defaulting near 50%, though some lenders allow a lower documented or requested expense factor) affects QUALIFYING INCOME, not the max LTV itself — don't conflate the two.

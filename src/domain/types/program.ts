@@ -333,6 +333,13 @@ export interface Program {
    * high complexity, or manual-review-recommended; never for a clean
    * file. */
   bankStatementFlexible?: boolean;
+  /** Admin-curated product-positioning signal. Never overrides eligibility;
+   * it only identifies a lender's explicitly designated flagship product. */
+  premierProduct?: boolean;
+  /** True when the official narrative guideline confirms the program/rules but
+   * defers scenario-specific numeric tiers to a separate matrix not provided. */
+  matrixConfirmationRequired?: boolean;
+  matrixConfirmationNotes?: string;
   /**
    * ITIN + DSCR combination fields — added 2026-07-29 per the "Lender
    * Program Expansion and ITIN DSCR Update" spec. A program can

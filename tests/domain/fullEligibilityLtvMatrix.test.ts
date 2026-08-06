@@ -81,6 +81,23 @@ describe("full eligibility LTV matrix", () => {
     expect(results.find((r) => r.ruleName === "P&L without supporting statements — FICO")?.outcome).toBe(RuleOutcome.Fail);
     expect(results.find((r) => r.ruleName === "P&L without supporting statements — loan amount")?.outcome).toBe(RuleOutcome.Fail);
   });
+  it("keeps a premier product editorial-only and requires matrix confirmation", () => {
+    const p = program({
+      premierProduct: true,
+      matrixConfirmationRequired: true,
+      matrixConfirmationNotes: "Confirm the current CES matrix.",
+      incomeDocTypes: ["dscr"],
+      loanPurposes: ["second_lien"],
+      occupancies: ["investment"],
+      lienPosition: "standalone_second",
+      ltvMetric: "cltv",
+      minDscr: 1,
+    });
+    const calc = { results: [], ltv: { value: 50, source: "test" }, cltv: { value: 70, source: "test" }, dscr: { value: 1.1, source: "test" } } as never;
+    const results = baseProgramChecks(scenario({ incomeDocType: "dscr", loanPurpose: "second_lien", occupancy: "investment", lienPosition: "standalone_second" }), calc, p);
+    expect(results.find((r) => r.ruleName === "Current lender matrix confirmation")?.outcome).toBe(RuleOutcome.ManualReview);
+    expect(results.find((r) => r.ruleName === "Maximum CLTV")?.outcome).toBe(RuleOutcome.Pass);
+  });
   it("applies first-time-investor and STR leverage reductions", () => {
     const p = program({
       eligibilityLtvMatrix: [{ minFico: 700, minDscr: 1, loanPurpose: "purchase", maxLtv: 80 }],

@@ -222,6 +222,11 @@ export function baseProgramChecks(
   const out: RuleEvaluationResult[] = [];
   const p = program.id;
 
+  if (program.matrixConfirmationRequired) {
+    out.push(result(`${p}:matrix-confirmation`, "Current lender matrix confirmation", "guideline", RuleOutcome.ManualReview, RuleSeverity.Soft,
+      program.matrixConfirmationNotes ?? "The official narrative guideline confirms this product but defers scenario-specific numeric tiers to the lender's current matrix; obtain current matrix confirmation before final eligibility."));
+  }
+
   // Income documentation type
   if (scenario.incomeDocType) {
     const ok = program.incomeDocTypes.includes(scenario.incomeDocType);

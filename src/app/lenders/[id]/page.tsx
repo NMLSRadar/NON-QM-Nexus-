@@ -111,6 +111,7 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
                       <MetricTile label="Interest-only" value={p.interestOnlyAvailable ? "Available" : "Not offered"} />
                     </div>
                     <div className="mt-3 flex flex-wrap gap-1.5">
+                      {p.premierProduct && <Pill tone="gold">Premier Product</Pill>}
                       {p.incomeDocTypes.map((d) => (
                         <Pill key={d} tone="sky">
                           {d === "pnl_only" ? "12-month P&L only" : d.replace(/_/g, " ")}

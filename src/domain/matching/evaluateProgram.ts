@@ -82,6 +82,7 @@ export function evaluateProgram(
     itinSpecialist: program.itinSpecialist ?? false,
     bankStatementCleanExecution: program.bankStatementCleanExecution ?? false,
     bankStatementFlexible: program.bankStatementFlexible ?? false,
+    premierProduct: program.premierProduct ?? false,
     itinDscrConfirmed:
       scenario.citizenship === "itin" &&
       scenario.incomeDocType === "dscr" &&
