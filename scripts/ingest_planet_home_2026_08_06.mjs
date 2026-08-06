@@ -104,7 +104,7 @@ async function upsertProgram(lenderId, name, config, label, sourceUrl, createdBy
     const { error } = await admin.from("guideline_versions").insert({ organization_id: PLATFORM_ORG, program_id: id, ...version });
     if (error) throw error;
   }
-  console.log(`Quarantined: ${name}`);
+  console.log(`Verified: ${name}`);
   return id;
 }
 
