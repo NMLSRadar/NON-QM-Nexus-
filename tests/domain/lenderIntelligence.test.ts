@@ -252,13 +252,22 @@ describe("Assistant system prompt — AE upgrade contract", () => {
     expect(p).toContain("expense factor");
   });
 
-  it("teaches the required BEST MATCHES response format and confidence levels", () => {
-    expect(ASSISTANT_SYSTEM_PROMPT).toContain("BEST MATCHES");
-    expect(ASSISTANT_SYSTEM_PROMPT).toContain("WHAT COULD CHANGE THE RECOMMENDATION");
-    expect(ASSISTANT_SYSTEM_PROMPT).toContain("AE REVIEW");
+  it("guides a conversational recommendation flow and confidence levels", () => {
+    const lower = ASSISTANT_SYSTEM_PROMPT.toLowerCase();
+    // Conversational sections (em-dash used, not the colon in a user's sentence).
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain("Why:");
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain("Watch out:");
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain("What could change this:");
     for (const level of ["high confidence", "medium confidence", "ae review recommended", "exception request"]) {
-      expect(p, level).toContain(level);
+      expect(lower, level).toContain(level);
     }
+  });
+
+  it("reads like a casual conversation, not a rigid form or wall of text", () => {
+    const lower = ASSISTANT_SYSTEM_PROMPT.toLowerCase();
+    expect(lower).toContain("sound like a person");
+    expect(lower).toContain("wall of text");
+    expect(lower).toContain("contractions");
   });
 
   it("never presents an exception as published eligibility; guidelines override reputation", () => {
