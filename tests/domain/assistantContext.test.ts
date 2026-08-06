@@ -155,9 +155,12 @@ describe("Assistant system prompt — slang comprehension, grounded routing, and
     expect(lower).toContain("12 months");
   });
 
-  it("clarifies the assistant's role is directional guidance, not guideline clarification — that's the AE's job", () => {
-    expect(ASSISTANT_SYSTEM_PROMPT.toLowerCase()).toContain("account executive");
-    expect(ASSISTANT_SYSTEM_PROMPT.toLowerCase()).toContain("not a guideline-clarification");
+  it("positions the assistant as a seasoned Account Executive who gives routing guidance, never an approval", () => {
+    const lower = ASSISTANT_SYSTEM_PROMPT.toLowerCase();
+    expect(lower).toContain("account executive");
+    // Still never implies a specific borrower is approved/eligible — an
+    // actual determination only comes from running a Scenario.
+    expect(lower).toMatch(/never state or imply that a borrower is approved|never state or imply that a borrower/);
   });
 
   it("still requires every claim to trace to the real catalog, never fabricate a lender", () => {

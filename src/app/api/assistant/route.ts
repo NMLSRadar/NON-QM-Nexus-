@@ -1,12 +1,18 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLenderAccessInfo, getRepository } from "@/lib/session";
 import { getAiProvider, asUntrustedData, type AiMessage } from "@/lib/ai/provider";
-import { ASSISTANT_SYSTEM_PROMPT, buildGuidelineContext, buildPendingReviewContext } from "@/lib/ai/assistantContext";
+import {
+  ASSISTANT_SYSTEM_PROMPT,
+  buildGuidelineContext,
+  buildLenderIntelligenceContext,
+  buildPendingReviewContext,
+  extractAssistantVitals,
+} from "@/lib/ai/assistantContext";
 
 export const dynamic = "force-dynamic";
 
 const MAX_HISTORY_MESSAGES = 8; // caps context/cost; the assistant doesn't need unlimited chat history
-const MAX_MESSAGE_LENGTH = 800;
+const MAX_MESSAGE_LENGTH = 1200;
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -76,18 +82,23 @@ export async function POST(request: Request) {
   const context = buildGuidelineContext(catalog);
   const pendingReview = await repo.listPendingReviewLenderPrograms(org);
   const pendingContext = buildPendingReviewContext(pendingReview);
+  // AE-intelligence layer: qualitative routing (exceptions, deposit
+  // utilization, DSCR first-time classification, specialty tags) computed
+  // deterministically from the live catalog + conversation vitals.
+  const vitals = extractAssistantVitals(messages);
+  const intelligenceContext = buildLenderIntelligenceContext(catalog, vitals);
 
   const aiMessages: AiMessage[] = [
     {
       role: "system",
-      content: `${ASSISTANT_SYSTEM_PROMPT}\n\n${asUntrustedData("lender_guideline_catalog", context)}\n\n${asUntrustedData("pending_review_lender_programs", pendingContext)}`,
+      content: `${ASSISTANT_SYSTEM_PROMPT}\n\n${asUntrustedData("lender_guideline_catalog", context)}\n\n${asUntrustedData("pending_review_lender_programs", pendingContext)}\n\n${asUntrustedData("lender_intelligence", intelligenceContext)}`,
     },
     ...messages,
   ];
 
   try {
     const provider = getAiProvider();
-    const reply = await provider.complete({ messages: aiMessages, maxTokens: 500, temperature: 0.2 });
+    const reply = await provider.complete({ messages: aiMessages, maxTokens: 1200, temperature: 0.2 });
     return Response.json({ reply });
   } catch (err) {
     console.error("AI assistant error:", err);
