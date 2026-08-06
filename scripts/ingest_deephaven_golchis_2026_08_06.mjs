@@ -1,13 +1,19 @@
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 
-const env = Object.fromEntries(
-  fs.readFileSync(".env.local", "utf8").split("\n").filter((l) => l.includes("=")).map((l) => {
-    const i = l.indexOf("=");
-    return [l.slice(0, i), l.slice(i + 1)];
-  }),
-);
-const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+const DRY_RUN = process.argv.includes("--dry-run");
+const env = fs.existsSync(".env.local")
+  ? Object.fromEntries(
+    fs.readFileSync(".env.local", "utf8").split("\n").filter((l) => l.includes("=")).map((l) => {
+      const i = l.indexOf("=");
+      return [l.slice(0, i), l.slice(i + 1)];
+    }),
+  )
+  : {};
+if (!DRY_RUN && (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY)) {
+  throw new Error("Missing .env.local Supabase credentials. Use --dry-run to validate the payload without database access.");
+}
+const admin = DRY_RUN ? null : createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 const PLATFORM_ORG = "bfe87b1c-86e7-4186-b1c4-ecc25d0e4420";
 const REVIEWED = "2026-08-06";
 const ADMIN_EMAIL = "nonqmnexusadmin@gmail.com";
@@ -18,9 +24,10 @@ const DH = {
   corr: `${ROOT}d2184ecc-3935-47a6-96af-37068a9a72ef.pdf`,
   bpl: `${ROOT}f581b131-0bf3-46d6-a4da-cc41774694ea.pdf`,
   ea: `${ROOT}2aaebcb0-28cb-42a1-87a1-b5c1eeef092c.pdf`,
-  fiveNine: `${ROOT}7c248192-d7a6-42c0-81ea-4d761cd1b021.pdf`,
+  fiveNine: `${ROOT}87b96f31-7f1b-440f-b14e-61bf3dbae9b4.pdf`,
   helocMatrix: `${ROOT}bbaf2c48-26d3-4f55-9843-b76561c477ea.pdf`,
-  helocGuideline: `${ROOT}cd74148d-b5ca-4587-880c-10e02f3f1214.pdf`,
+  helocWholesaleGuideline: `${ROOT}2ba76de8-7c01-4e95-9cff-3cce09954ff6.pdf`,
+  helocGuideline: `${ROOT}72c16eae-35a5-4dd3-b608-1e28edcaee03.pdf`,
 };
 const GC = {
   policy: `${ROOT}33506e94-565d-4b19-bffa-85c2b5cfd950.pdf`,
@@ -124,6 +131,11 @@ function expandedPrime(id) {
     reserveRules: [{ months: 9, minLoanAmountExclusive: 2000000, maxLoanAmount: 2500000 }, { months: 12, minLoanAmountExclusive: 2500000 }],
     interestOnlyAvailable: true, propertyTypeLtvCaps: { condo: 80, non_warrantable_condo: 80, "2_4_unit": 80, rural: 75 },
     maxMortgageLates30x12: 1, maxMortgageLatesCategory: "late_30", firstTimeHomebuyerAllowed: true,
+    pnlPeriodMonths: 12, pnlTaxReturnsRequired: false, pnlPreparerAttestationPurpose: "confirms_tax_filing_only",
+    pnlSupportingBankStatementsMonths: 2,
+    pnlWithSupportingStatementsLtvCaps: { purchase: 80, rate_term_refinance: 70, cash_out_refinance: 70 },
+    pnlWithoutSupportingStatementsLtvCaps: { purchase: 70, rate_term_refinance: 60, cash_out_refinance: 60 },
+    pnlWithoutSupportingStatementsMinFico: 720, pnlWithoutSupportingStatementsMaxLoanAmount: 2000000,
     incomeDocTypeLtvCaps: { pnl_only: { purchase: 80, rate_term_refinance: 70, cash_out_refinance: 70 }, asset_depletion: { purchase: 80, rate_term_refinance: 80 } },
     incomeDocTypePurposeRestrictions: { asset_depletion: ["purchase", "rate_term_refinance"] },
     eligibilityLtvMatrix: rows(defs), cashOutLimits: [{ maxLtv: 65, maxCashOutAmount: null }, { maxLtv: 100, maxCashOutAmount: 500000 }],
@@ -131,6 +143,18 @@ function expandedPrime(id) {
     sourceDocuments: [DH.matrix,DH.corr],
     notes: "Official 05/05/2026 matrix. P&L-only is an income-document method: borrower tax returns are not required; preparer attestation confirms filing. P&L without supporting statements is limited to 70% purchase/60% refinance, 720 FICO, $2MM. Asset Utilization is purchase/rate-term only. Rural cap is 75% purchase/70% refinance; matching uses the stricter stored cap and notes until a purpose-specific property overlay is added.",
   });
+}
+
+function deephavenPnlOnly(id) {
+  const p = expandedPrime(id);
+  return {
+    ...p,
+    incomeDocTypes: ["pnl_only"],
+    baseMaxLtv: 80,
+    sourceCitation: `${DH.matrix} p.1; ${DH.corr} §§8.5.1–8.5.3`,
+    sourceDocuments: [DH.matrix, DH.corr],
+    notes: "Standalone catalog entry for Deephaven's 12-month P&L-only income program. The P&L statement is the income document; borrower tax returns are not required. Tax-preparer attestation only confirms tax filing. With two months business statements: max 80% purchase/70% rate-term or cash-out. Without supporting statements: max 70% purchase/60% refinance, minimum 720 FICO and maximum $2MM. All transaction, occupancy, property, reserve and matrix overlays remain subject to the official Expanded Prime guideline.",
+  };
 }
 
 function nonPrime(id) {
@@ -183,7 +207,7 @@ function closedSecond(id,name,variant) {
 function deephavenHeloc(id,name,second) {
   const defs=[]; const matrix=[[500000,740,80,80,75,90,85,75],[500000,720,80,75,70,90,85,75],[500000,700,80,75,70,90,85,70],[500000,680,75,70,null,85,75,null],[500000,660,70,65,null,70,60,null],[750000,720,75,70,65,80,75,65],[750000,680,70,65,null,75,null,null],[1000000,720,75,70,65,65,null,null],[1000000,680,70,65,null,null,null,null]];
   for(const [maxLoanAmount,minFico,fp,fs,fi,sp,ss,si] of matrix){for(const [o,v] of [["primary",second?sp:fp],["second_home",second?ss:fs],["investment",second?si:fi]])if(v!=null)defs.push(...rows([{maxLoanAmount,minFico,occupancy:o,purposes:["heloc"],ltvs:[v]}]).map(r=>({...r,lienPosition:second?"standalone_second":"first_lien"})));}
-  return common(id,{incomeDocTypes:["full_doc","bank_statement"],loanPurposes:["heloc"],occupancies:["primary","second_home","investment"],propertyTypes:["single_family","pud","townhome","condo","non_warrantable_condo","2_4_unit","rural"],citizenshipEligible:["us_citizen","permanent_resident","non_permanent_resident"],vestingEligible:["individual","joint_tenants","trust","llc","corporation"],minLoanAmount:50000,maxLoanAmount:1000000,minFico:660,maxDti:50,baseMaxLtv:90,minReservesMonths:0,interestOnlyAvailable:true,lienPosition:second?"standalone_second":"first_lien",ltvMetric:second?"cltv":"ltv",maxMortgageLates30x12:0,maxMortgageLatesCategory:"none",eligibilityLtvMatrix:defs,sourceCitation:`${DH.helocMatrix} p.1 numerical grid; ${DH.helocGuideline} effective 06/02/2026`,sourceDocuments:[DH.helocMatrix,DH.helocGuideline],notes:"Newer 06/02/2026 guideline controls conflicts: initial draw 80% and at least $50,000; 90-day draw blackout then $5,000 minimum; no reserves; primary has no minimum ownership but <6 months reduces leverage 10 points; condos now eligible. DSCR is supported at 1.10 but the 05/05 matrix has no DSCR HCLTV values, so no DSCR income type is enabled on this numerical program until Deephaven confirms the current grid."});
+  return common(id,{incomeDocTypes:["full_doc","bank_statement"],loanPurposes:["heloc"],occupancies:["primary","second_home","investment"],propertyTypes:["single_family","pud","townhome","condo","non_warrantable_condo","2_4_unit","rural"],citizenshipEligible:["us_citizen","permanent_resident","non_permanent_resident"],vestingEligible:["individual","joint_tenants","trust","llc","corporation"],minLoanAmount:50000,maxLoanAmount:1000000,minFico:660,maxDti:50,baseMaxLtv:90,minReservesMonths:0,interestOnlyAvailable:true,lienPosition:second?"standalone_second":"first_lien",ltvMetric:second?"cltv":"ltv",maxMortgageLates30x12:0,maxMortgageLatesCategory:"none",eligibilityLtvMatrix:defs,sourceCitation:`${DH.helocMatrix} p.1 numerical grid; ${DH.helocGuideline} effective 06/02/2026; ${DH.helocWholesaleGuideline} effective 04/14/2026`,sourceDocuments:[DH.helocMatrix,DH.helocGuideline,DH.helocWholesaleGuideline],notes:"Newer 06/02/2026 guideline controls conflicts: initial draw 80% and at least $50,000; 90-day draw blackout then $5,000 minimum; no reserves; primary has no minimum ownership but <6 months reduces leverage 10 points; condos now eligible. DSCR is supported at 1.10 but the 05/05 matrix has no DSCR HCLTV values, so no DSCR income type is enabled on this numerical program until Deephaven confirms the current grid."});
 }
 
 function golchisSingle(id) {
@@ -198,31 +222,40 @@ function golchisCrossed(id) {
   return common(id,{incomeDocTypes:["dscr"],loanPurposes:purposes,occupancies:["investment"],propertyTypes:["single_family","townhome","condo","2_4_unit"],citizenshipEligible:["us_citizen","permanent_resident","non_permanent_resident","foreign_national"],vestingEligible:["individual","llc","corporation"],minLoanAmount:75000,maxLoanAmount:5000000,minFico:680,minDscr:1.15,baseMaxLtv:75,minReservesMonths:3,interestOnlyAvailable:true,firstTimeHomebuyerAllowed:false,firstTimeInvestorAllowed:false,experiencedInvestorRequired:true,maxMortgageLates30x12:1,maxMortgageLatesCategory:"late_30",citizenshipLtvCaps:{non_permanent_resident:75,foreign_national:60},noFicoPolicy:"eligible",noFicoMaxLtv:60,foreignNationalDscrEligible:true,propertyTypeLtvCaps:{condo:75,"2_4_unit":75},eligibilityLtvMatrix:defs,cashOutLimits:[{maxLtv:50,maxCashOutAmount:null},{maxLtv:100,maxCashOutAmount:1000000}],sourceCitation:`${GC.policy} pp.1–8; ${GC.policyDocx}; ${GC.redline} p.2`,sourceDocuments:[GC.policy,GC.policyDocx,GC.redline],notes:"Crossed Collateralized DSCR: 3-10 same-state properties, experienced investors only, aggregate DSCR >=1.15 and at least 90% occupancy. $100K minimum as-is value per property ($60K/door for 2+ units). Partial release requires 120% of allocated loan amount. 36-month major-credit-event seasoning."});
 }
 
+const deephavenPrograms = (dhId) => [
+  ["Expanded Prime — Full / Alternative Documentation", expandedPrime(dhId), "Deephaven Correspondent Matrix 05.05.2026", "2026-05-05", DH.matrix],
+  ["12-Month Profit & Loss Statement — P&L Only", deephavenPnlOnly(dhId), "Deephaven P&L Only 05.05.2026", "2026-05-05", DH.corr],
+  ["Non-Prime — Full / Alternative Documentation", nonPrime(dhId), "Deephaven Correspondent Matrix 05.05.2026", "2026-05-05", DH.matrix],
+  ["Investor Cash Flow (DSCR) — 1-4 Unit", deephavenDscr(dhId), "Deephaven DSCR Matrix 05.05.2026", "2026-05-05", DH.matrix],
+  ["Investor Cash Flow (DSCR) — 5-9 Unit", deephavenFiveNine(dhId), "Deephaven DSCR 5-9 Unit Matrix 05.05.2026", "2026-05-05", DH.fiveNine],
+  ["ITIN Mortgage", deephavenItin(dhId), "Deephaven ITIN Matrix 05.05.2026", "2026-05-05", DH.matrix],
+  ["Expanded Prime Super Jumbo", deephavenSuperJumbo(dhId), "Deephaven Super Jumbo Matrix 05.05.2026", "2026-05-05", DH.matrix],
+  ["Equity Advantage Closed-End Second", closedSecond(dhId,"", "standard"), "Deephaven Equity Advantage Matrix 05.05.2026", "2026-05-05", DH.ea],
+  ["Equity Advantage Elite Closed-End Second", closedSecond(dhId,"", "elite"), "Deephaven Equity Advantage Elite Matrix 05.05.2026", "2026-05-05", DH.ea],
+  ["Equity Advantage DSCR Closed-End Second", closedSecond(dhId,"", "dscr"), "Deephaven Equity Advantage DSCR Matrix 05.05.2026", "2026-05-05", DH.ea],
+  ["Equity Advantage HELOC — First Lien", deephavenHeloc(dhId,"", false), "Deephaven HELOC Guideline 06.02.2026 + Matrix 05.05.2026", "2026-06-02", DH.helocGuideline],
+  ["Equity Advantage HELOC — Second Lien", deephavenHeloc(dhId,"", true), "Deephaven HELOC Guideline 06.02.2026 + Matrix 05.05.2026", "2026-06-02", DH.helocGuideline],
+];
+const golchisPrograms = (gcId) => [
+  ["DSCR — Single Asset", golchisSingle(gcId), "Golchis DSCR Credit Policy 03.20.2026", "2026-03-20", GC.policy],
+  ["DSCR — Crossed Collateralized", golchisCrossed(gcId), "Golchis DSCR Credit Policy 03.20.2026", "2026-03-20", GC.policy],
+];
+
 async function main() {
+  if (DRY_RUN) {
+    const payload = deephavenPrograms("dry-run-deephaven").map(([name, config, label, effectiveDate, sourceUrl]) => ({
+      name, label, effectiveDate, sourceUrl, incomeDocTypes: config.incomeDocTypes,
+      loanPurposes: config.loanPurposes, propertyTypes: config.propertyTypes,
+      minFico: config.minFico, maxLoanAmount: config.maxLoanAmount, baseMaxLtv: config.baseMaxLtv,
+    }));
+    console.log(JSON.stringify({ lender: "Deephaven Mortgage", programCount: payload.length, programs: payload }, null, 2));
+    return;
+  }
   const createdBy = await adminId();
   const dhId = await lender("Deephaven Mortgage", createdBy);
   const gcId = await lender("Golchis Capital", createdBy);
-
-  const dhPrograms = [
-    ["Expanded Prime — Full / Alternative Documentation", expandedPrime(dhId), "Deephaven Correspondent Matrix 05.05.2026", "2026-05-05", DH.matrix],
-    ["Non-Prime — Full / Alternative Documentation", nonPrime(dhId), "Deephaven Correspondent Matrix 05.05.2026", "2026-05-05", DH.matrix],
-    ["Investor Cash Flow (DSCR) — 1-4 Unit", deephavenDscr(dhId), "Deephaven DSCR Matrix 05.05.2026", "2026-05-05", DH.matrix],
-    ["Investor Cash Flow (DSCR) — 5-9 Unit", deephavenFiveNine(dhId), "Deephaven DSCR 5-9 Unit Matrix 05.05.2026", "2026-05-05", DH.fiveNine],
-    ["ITIN Mortgage", deephavenItin(dhId), "Deephaven ITIN Matrix 05.05.2026", "2026-05-05", DH.matrix],
-    ["Expanded Prime Super Jumbo", deephavenSuperJumbo(dhId), "Deephaven Super Jumbo Matrix 05.05.2026", "2026-05-05", DH.matrix],
-    ["Equity Advantage Closed-End Second", closedSecond(dhId,"", "standard"), "Deephaven Equity Advantage Matrix 05.05.2026", "2026-05-05", DH.ea],
-    ["Equity Advantage Elite Closed-End Second", closedSecond(dhId,"", "elite"), "Deephaven Equity Advantage Elite Matrix 05.05.2026", "2026-05-05", DH.ea],
-    ["Equity Advantage DSCR Closed-End Second", closedSecond(dhId,"", "dscr"), "Deephaven Equity Advantage DSCR Matrix 05.05.2026", "2026-05-05", DH.ea],
-    ["Equity Advantage HELOC — First Lien", deephavenHeloc(dhId,"", false), "Deephaven HELOC Guideline 06.02.2026 + Matrix 05.05.2026", "2026-06-02", DH.helocGuideline],
-    ["Equity Advantage HELOC — Second Lien", deephavenHeloc(dhId,"", true), "Deephaven HELOC Guideline 06.02.2026 + Matrix 05.05.2026", "2026-06-02", DH.helocGuideline],
-  ];
-  for (const p of dhPrograms) await upsertProgram(dhId, ...p, createdBy);
-
-  const gcPrograms = [
-    ["DSCR — Single Asset", golchisSingle(gcId), "Golchis DSCR Credit Policy 03.20.2026", "2026-03-20", GC.policy],
-    ["DSCR — Crossed Collateralized", golchisCrossed(gcId), "Golchis DSCR Credit Policy 03.20.2026", "2026-03-20", GC.policy],
-  ];
-  for (const p of gcPrograms) await upsertProgram(gcId, ...p, createdBy);
+  for (const p of deephavenPrograms(dhId)) await upsertProgram(dhId, ...p, createdBy);
+  for (const p of golchisPrograms(gcId)) await upsertProgram(gcId, ...p, createdBy);
 
   const { data: obsolete } = await admin.from("programs").select("id,name,config").eq("lender_id", dhId).eq("name", "Expanded Prime — Bank Statement / 1099 / Asset Utilization");
   for (const p of obsolete ?? []) {

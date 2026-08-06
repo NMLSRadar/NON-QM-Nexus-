@@ -107,6 +107,13 @@ export function deriveMaxLtv(scenario: Scenario, program: Program, dscr?: number
       ? program.incomeDocTypeLtvCaps?.[scenario.incomeDocType]?.[scenario.loanPurpose]
       : undefined;
     if (docCap != null) matrixCap = Math.min(matrixCap, docCap);
+    if (scenario.incomeDocType === "pnl_only" && scenario.loanPurpose) {
+      const pnlCaps = scenario.pnl?.supportingBankStatements === true
+        ? program.pnlWithSupportingStatementsLtvCaps
+        : program.pnlWithoutSupportingStatementsLtvCaps;
+      const pnlCap = pnlCaps?.[scenario.loanPurpose];
+      if (pnlCap != null) matrixCap = Math.min(matrixCap, pnlCap);
+    }
     if (scenario.investorExperience === "first_time_investor" && program.firstTimeInvestorLtvAdjustment != null) {
       matrixCap -= program.firstTimeInvestorLtvAdjustment;
     }
@@ -146,6 +153,15 @@ export function deriveMaxLtv(scenario: Scenario, program: Program, dscr?: number
     ? program.incomeDocTypeLtvCaps?.[scenario.incomeDocType]?.[scenario.loanPurpose]
     : undefined;
   if (docCap != null) cap = Math.min(cap, docCap);
+  if (scenario.incomeDocType === "pnl_only" && scenario.loanPurpose) {
+    // Unknown support is evaluated conservatively as the no-support tier;
+    // the lender's higher cap is only earned by an explicit `true`.
+    const pnlCaps = scenario.pnl?.supportingBankStatements === true
+      ? program.pnlWithSupportingStatementsLtvCaps
+      : program.pnlWithoutSupportingStatementsLtvCaps;
+    const pnlCap = pnlCaps?.[scenario.loanPurpose];
+    if (pnlCap != null) cap = Math.min(cap, pnlCap);
+  }
   if (scenario.investorExperience === "first_time_investor" && program.firstTimeInvestorLtvAdjustment != null) cap -= program.firstTimeInvestorLtvAdjustment;
   if (scenario.incomeDocType === "dscr" && scenario.dscr?.strIncomeUsed === "yes") {
     if (program.strIncomeLtvAdjustment != null) cap -= program.strIncomeLtvAdjustment;
@@ -174,6 +190,32 @@ export function baseProgramChecks(
       result(`${p}:doc`, "Income documentation type", "documentation", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
         ok ? `Program supports ${scenario.incomeDocType} documentation.` : `Program does not offer ${scenario.incomeDocType} documentation.`),
     );
+  }
+
+  if (scenario.incomeDocType === "pnl_only") {
+    if (program.pnlPeriodMonths != null && scenario.pnl?.periodMonths != null) {
+      const periodOk = scenario.pnl.periodMonths >= program.pnlPeriodMonths;
+      out.push(result(`${p}:pnl-period`, "P&L statement period", "documentation", periodOk ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+        periodOk
+          ? `${scenario.pnl.periodMonths}-month P&L meets the required ${program.pnlPeriodMonths}-month period.`
+          : `${scenario.pnl.periodMonths}-month P&L is shorter than the required ${program.pnlPeriodMonths} months.`));
+    }
+    if (scenario.pnl?.supportingBankStatements !== true) {
+      if (program.pnlWithoutSupportingStatementsMinFico != null && scenario.fico != null) {
+        const ficoOk = scenario.fico >= program.pnlWithoutSupportingStatementsMinFico;
+        out.push(result(`${p}:pnl-no-support-fico`, "P&L without supporting statements — FICO", "documentation", ficoOk ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+          ficoOk
+            ? `FICO ${scenario.fico} meets the ${program.pnlWithoutSupportingStatementsMinFico} minimum for P&L without supporting business statements.`
+            : `FICO ${scenario.fico} is below the ${program.pnlWithoutSupportingStatementsMinFico} minimum for P&L without supporting business statements.`));
+      }
+      if (program.pnlWithoutSupportingStatementsMaxLoanAmount != null && scenario.requestedLoanAmount != null) {
+        const loanOk = scenario.requestedLoanAmount <= program.pnlWithoutSupportingStatementsMaxLoanAmount;
+        out.push(result(`${p}:pnl-no-support-loan`, "P&L without supporting statements — loan amount", "documentation", loanOk ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+          loanOk
+            ? `Loan amount is within the $${program.pnlWithoutSupportingStatementsMaxLoanAmount.toLocaleString("en-US")} no-support limit.`
+            : `P&L without supporting business statements is limited to $${program.pnlWithoutSupportingStatementsMaxLoanAmount.toLocaleString("en-US")}.`));
+      }
+    }
   }
 
   // Loan purpose

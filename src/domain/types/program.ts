@@ -398,6 +398,18 @@ export interface Program {
    * confirmed value above 12 means this program does NOT support a
    * one-year self-employed borrower without compensating factors. */
   minSelfEmploymentMonths?: number;
+  /** P&L-only qualification controls. The P&L itself is the income
+   * document; `pnlTaxReturnsRequired: false` must never be rendered as a
+   * borrower tax-return requirement. A preparer attestation, when required,
+   * confirms tax filing only. */
+  pnlPeriodMonths?: number;
+  pnlTaxReturnsRequired?: boolean;
+  pnlPreparerAttestationPurpose?: "confirms_tax_filing_only";
+  pnlSupportingBankStatementsMonths?: number;
+  pnlWithSupportingStatementsLtvCaps?: Partial<Record<LoanPurpose, number>>;
+  pnlWithoutSupportingStatementsLtvCaps?: Partial<Record<LoanPurpose, number>>;
+  pnlWithoutSupportingStatementsMinFico?: number;
+  pnlWithoutSupportingStatementsMaxLoanAmount?: number;
   /**
    * 5-8 Unit Residential / Small-Balance Multifamily overlay — added
    * 2026-08-01 (Lender Database Audit & 5-8 Unit Expansion spec). This

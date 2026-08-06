@@ -49,7 +49,7 @@ Existing record: `Expanded Prime — Bank Statement / 1099 / Asset Utilization`.
 | Maximum loan | $2M | Expanded Prime to $3.5M; Super Jumbo to $5M | UPDATED |
 | Foreign National | Bundled | Not eligible under consumer Expanded Prime; eligible under DSCR tier | UPDATED |
 | Cash-out | Not accurately modeled | Purpose-specific cells and dollar caps | NEW |
-| P&L Only | Not separately controlled | Specific support/no-support tiers and overlays | NEW |
+| P&L Only | Previously bundled inside broader programs | Standalone 12-Month Profit & Loss Statement catalog entry plus support/no-support tiers | NEW — added as a separately visible and matchable program |
 | DSCR/ITIN/CES/HELOC | Missing | Separate official programs | NEW |
 
 The combined row should be deactivated only after the replacement records are published.

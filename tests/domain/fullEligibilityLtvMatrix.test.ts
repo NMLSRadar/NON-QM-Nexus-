@@ -62,6 +62,25 @@ describe("full eligibility LTV matrix", () => {
     const results = baseProgramChecks(scenario({ incomeDocType: "asset_depletion", loanPurpose: "cash_out_refinance" }), calc, p);
     expect(results.find((r) => r.ruleName === "Documentation-specific loan purpose")?.outcome).toBe(RuleOutcome.Fail);
   });
+  it("applies Deephaven-style P&L support tiers without requiring tax returns", () => {
+    const p = program({
+      incomeDocTypes: ["pnl_only"], minFico: 660, maxLoanAmount: 3_500_000,
+      pnlPeriodMonths: 12, pnlTaxReturnsRequired: false,
+      pnlPreparerAttestationPurpose: "confirms_tax_filing_only",
+      pnlWithSupportingStatementsLtvCaps: { purchase: 80, rate_term_refinance: 70, cash_out_refinance: 70 },
+      pnlWithoutSupportingStatementsLtvCaps: { purchase: 70, rate_term_refinance: 60, cash_out_refinance: 60 },
+      pnlWithoutSupportingStatementsMinFico: 720,
+      pnlWithoutSupportingStatementsMaxLoanAmount: 2_000_000,
+      eligibilityLtvMatrix: [{ minFico: 660, loanPurpose: "purchase", maxLtv: 85 }],
+    });
+    expect(deriveMaxLtv(scenario({ incomeDocType: "pnl_only", pnl: { periodMonths: 12, supportingBankStatements: true } }), p, 1.1)).toBe(80);
+    expect(deriveMaxLtv(scenario({ incomeDocType: "pnl_only", pnl: { periodMonths: 12, supportingBankStatements: false } }), p, 1.1)).toBe(70);
+    const calc = { results: [], ltv: { value: 65, source: "test" }, dscr: { value: 1.1, source: "test" } } as never;
+    const results = baseProgramChecks(scenario({ incomeDocType: "pnl_only", fico: 700, requestedLoanAmount: 2_100_000, pnl: { periodMonths: 6, supportingBankStatements: false } }), calc, p);
+    expect(results.find((r) => r.ruleName === "P&L statement period")?.outcome).toBe(RuleOutcome.Fail);
+    expect(results.find((r) => r.ruleName === "P&L without supporting statements — FICO")?.outcome).toBe(RuleOutcome.Fail);
+    expect(results.find((r) => r.ruleName === "P&L without supporting statements — loan amount")?.outcome).toBe(RuleOutcome.Fail);
+  });
   it("applies first-time-investor and STR leverage reductions", () => {
     const p = program({
       eligibilityLtvMatrix: [{ minFico: 700, minDscr: 1, loanPurpose: "purchase", maxLtv: 80 }],

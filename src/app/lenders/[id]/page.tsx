@@ -113,7 +113,17 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {p.incomeDocTypes.map((d) => (
                         <Pill key={d} tone="sky">
-                          {d.replace(/_/g, " ")}
+                          {d === "pnl_only" ? "12-month P&L only" : d.replace(/_/g, " ")}
+                        </Pill>
+                      ))}
+                      {p.loanPurposes.map((purpose) => (
+                        <Pill key={purpose} tone="gold">
+                          {purpose === "heloc" ? "HELOC" : purpose.replace(/_/g, " ")}
+                        </Pill>
+                      ))}
+                      {p.propertyTypes.map((propertyType) => (
+                        <Pill key={propertyType} tone="neutral">
+                          {propertyType === "5_8_unit" ? "5–8 unit" : propertyType === "9_plus_unit" ? "9-unit residential" : propertyType.replace(/_/g, " ")}
                         </Pill>
                       ))}
                       {p.occupancies.map((o) => (

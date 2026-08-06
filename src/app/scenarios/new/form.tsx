@@ -431,7 +431,7 @@ export function ScenarioForm() {
         <Field name="incomeDocType" title="Income-documentation type">
           <select id="incomeDocType" name="incomeDocType" className={field} value={incomeDocType} onChange={(e) => setIncomeDocType(e.target.value)}>
             <option value="bank_statement">Bank statements</option>
-            <option value="pnl_only">P&amp;L only</option>
+            <option value="pnl_only">12-month P&amp;L only</option>
             <option value="dscr">DSCR (investor)</option>
             <option value="asset_depletion">Asset depletion</option>
             <option value="full_doc">Full doc</option>
@@ -507,7 +507,7 @@ export function ScenarioForm() {
             </Field>
             <div className="flex items-end">
               <label className="flex items-center gap-2 text-sm text-slate-200">
-                <input type="checkbox" name="pnlSupport" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" defaultChecked /> Supporting bank statements
+                <input type="checkbox" name="pnlSupport" className="rounded border-amber-500/40 bg-black/40 text-amber-500 focus:ring-amber-400/50" defaultChecked /> Supporting business bank statements
               </label>
             </div>
           </div>

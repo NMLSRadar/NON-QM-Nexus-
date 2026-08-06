@@ -156,7 +156,7 @@ const DOC_TYPES: Array<[IncomeDocType, string]> = [
   ["bank_statement", "Bank statements"],
   ["dscr", "DSCR"],
   ["full_doc", "Full doc"],
-  ["pnl_only", "P&L only"],
+  ["pnl_only", "12-month P&L only"],
   ["1099", "1099"],
   ["asset_depletion", "Asset depletion"],
   ["wvoe_only", "Written Verification of Employment (WVOE)"],

@@ -216,7 +216,7 @@ function LenderCard({
         {e.bankStatementFlexible && <Pill tone="gold">Bank Statement Flexibility</Pill>}
         {e.incomeDocTypes.includes("bank_statement") && <Pill tone="neutral">Bank Statement</Pill>}
         {e.incomeDocTypes.includes("dscr") && <Pill tone="neutral">DSCR</Pill>}
-        {e.incomeDocTypes.includes("pnl_only") && <Pill tone="neutral">P&amp;L Only</Pill>}
+        {e.incomeDocTypes.includes("pnl_only") && <Pill tone="neutral">12-Month P&amp;L Only</Pill>}
         {e.incomeDocTypes.includes("asset_depletion") && <Pill tone="neutral">Asset Depletion</Pill>}
         {e.interestOnlyAvailable && <Pill tone="neutral">Interest-Only</Pill>}
         {e.occupancies.includes("investment") && <Pill tone="neutral">Investment Property</Pill>}
