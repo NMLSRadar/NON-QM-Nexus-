@@ -1,5 +1,5 @@
 import { RuleOutcome, RuleSeverity, MORTGAGE_LATES_SEVERITY, MORTGAGE_LATES_CATEGORY_LABELS } from "../types/enums";
-import type { Program, FiveToEightUnitLtvMatrixEntry } from "../types/program";
+import type { Program, FiveToEightUnitLtvMatrixEntry, EligibilityLtvMatrixEntry } from "../types/program";
 import type { Scenario } from "../types/scenario";
 import type { CalculationSummary, RuleEvaluationResult } from "../types/results";
 
@@ -36,11 +36,39 @@ function findFiveToEightUnitTier(scenario: Scenario, program: Program): FiveToEi
     .sort((a, b) => b.minFico - a.minFico)[0];
 }
 
+function findEligibilityLtvTier(
+  scenario: Scenario,
+  program: Program,
+  dscr?: number | null,
+): EligibilityLtvMatrixEntry | undefined {
+  const matrix = program.eligibilityLtvMatrix;
+  if (!matrix?.length) return undefined;
+  return matrix
+    .filter((e) => e.loanPurpose == null || e.loanPurpose === scenario.loanPurpose)
+    .filter((e) => e.occupancy == null || e.occupancy === scenario.occupancy)
+    .filter((e) => e.propertyType == null || e.propertyType === scenario.propertyType)
+    .filter((e) => e.citizenship == null || e.citizenship === scenario.citizenship)
+    .filter((e) => e.incomeDocType == null || e.incomeDocType === scenario.incomeDocType)
+    .filter((e) => e.lienPosition == null || e.lienPosition === (scenario.lienPosition ?? "first_lien"))
+    .filter((e) => e.maxLoanAmount == null || (scenario.requestedLoanAmount != null && scenario.requestedLoanAmount <= e.maxLoanAmount))
+    .filter((e) => e.minFico == null || (scenario.fico != null && scenario.fico >= e.minFico))
+    .filter((e) => e.minDscr == null || (dscr != null && dscr >= e.minDscr))
+    .filter((e) => e.maxDscrExclusive == null || (dscr != null && dscr < e.maxDscrExclusive))
+    .sort((a, b) => {
+      const specificity = (e: EligibilityLtvMatrixEntry) =>
+        Number(e.loanPurpose != null) + Number(e.occupancy != null) + Number(e.propertyType != null) +
+        Number(e.citizenship != null) + Number(e.incomeDocType != null) + Number(e.lienPosition != null) + Number(e.minDscr != null) + Number(e.maxDscrExclusive != null);
+      return specificity(b) - specificity(a)
+        || (a.maxLoanAmount ?? Number.MAX_SAFE_INTEGER) - (b.maxLoanAmount ?? Number.MAX_SAFE_INTEGER)
+        || (b.minFico ?? 0) - (a.minFico ?? 0);
+    })[0];
+}
+
 /**
- * Derive the applicable maximum LTV for a scenario under a program by combining
- * the base cap, the FICO/occupancy LTV matrix, and the most restrictive value.
+ * Derive the applicable maximum LTV for a scenario by selecting the lender's
+ * most specific published matrix row, then applying any tighter overlays.
  */
-export function deriveMaxLtv(scenario: Scenario, program: Program): number {
+export function deriveMaxLtv(scenario: Scenario, program: Program, dscr?: number | null): number {
   // 5-8 Unit Residential overlay — added 2026-08-01. Real 5-8 unit
   // matrices vary max LTV by loan amount, FICO, AND transaction type
   // simultaneously, a dimension the general ltvMatrix/baseMaxLtv path
@@ -61,6 +89,32 @@ export function deriveMaxLtv(scenario: Scenario, program: Program): number {
     // through to the program's general 1-4 unit baseMaxLtv/ltvMatrix,
     // which would misrepresent this specific product's real grid.
     if (program.fiveToEightUnitLtvMatrix && program.fiveToEightUnitLtvMatrix.length > 0) return 0;
+  }
+  if (program.eligibilityLtvMatrix?.length) {
+    const tier = findEligibilityLtvTier(scenario, program, dscr);
+    // The lender published a complete matrix, so an uncovered combination is
+    // a real no-match rather than permission to use a looser headline cap.
+    if (!tier) return 0;
+    let matrixCap = tier.maxLtv;
+    const citizenshipCap = scenario.citizenship ? program.citizenshipLtvCaps?.[scenario.citizenship] : undefined;
+    if (citizenshipCap != null) matrixCap = Math.min(matrixCap, citizenshipCap);
+    const propertyTypeCap = scenario.propertyType ? program.propertyTypeLtvCaps?.[scenario.propertyType] : undefined;
+    if (propertyTypeCap != null) matrixCap = Math.min(matrixCap, propertyTypeCap);
+    if (scenario.fico == null && scenario.creditProfileType && scenario.creditProfileType !== "us_fico_score" && program.noFicoMaxLtv != null) {
+      matrixCap = Math.min(matrixCap, program.noFicoMaxLtv);
+    }
+    const docCap = scenario.incomeDocType && scenario.loanPurpose
+      ? program.incomeDocTypeLtvCaps?.[scenario.incomeDocType]?.[scenario.loanPurpose]
+      : undefined;
+    if (docCap != null) matrixCap = Math.min(matrixCap, docCap);
+    if (scenario.investorExperience === "first_time_investor" && program.firstTimeInvestorLtvAdjustment != null) {
+      matrixCap -= program.firstTimeInvestorLtvAdjustment;
+    }
+    if (scenario.incomeDocType === "dscr" && scenario.dscr?.strIncomeUsed === "yes") {
+      if (program.strIncomeLtvAdjustment != null) matrixCap -= program.strIncomeLtvAdjustment;
+      if (program.strIncomeMaxLtv != null) matrixCap = Math.min(matrixCap, program.strIncomeMaxLtv);
+    }
+    return Math.max(0, matrixCap);
   }
   let cap = program.baseMaxLtv;
   if (program.ltvMatrix && scenario.fico != null) {
@@ -88,7 +142,16 @@ export function deriveMaxLtv(scenario: Scenario, program: Program): number {
   if (scenario.fico == null && scenario.creditProfileType && scenario.creditProfileType !== "us_fico_score" && program.noFicoMaxLtv != null) {
     cap = Math.min(cap, program.noFicoMaxLtv);
   }
-  return cap;
+  const docCap = scenario.incomeDocType && scenario.loanPurpose
+    ? program.incomeDocTypeLtvCaps?.[scenario.incomeDocType]?.[scenario.loanPurpose]
+    : undefined;
+  if (docCap != null) cap = Math.min(cap, docCap);
+  if (scenario.investorExperience === "first_time_investor" && program.firstTimeInvestorLtvAdjustment != null) cap -= program.firstTimeInvestorLtvAdjustment;
+  if (scenario.incomeDocType === "dscr" && scenario.dscr?.strIncomeUsed === "yes") {
+    if (program.strIncomeLtvAdjustment != null) cap -= program.strIncomeLtvAdjustment;
+    if (program.strIncomeMaxLtv != null) cap = Math.min(cap, program.strIncomeMaxLtv);
+  }
+  return Math.max(0, cap);
 }
 
 /**
@@ -118,6 +181,17 @@ export function baseProgramChecks(
     const ok = program.loanPurposes.includes(scenario.loanPurpose);
     out.push(result(`${p}:purpose`, "Loan purpose", "eligibility", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
       ok ? `Loan purpose ${scenario.loanPurpose} is eligible.` : `Loan purpose ${scenario.loanPurpose} is not eligible.`));
+
+    if (scenario.incomeDocType) {
+      const restrictedPurposes = program.incomeDocTypePurposeRestrictions?.[scenario.incomeDocType];
+      if (restrictedPurposes) {
+        const docPurposeOk = restrictedPurposes.includes(scenario.loanPurpose);
+        out.push(result(`${p}:doc-purpose`, "Documentation-specific loan purpose", "documentation", docPurposeOk ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+          docPurposeOk
+            ? `${scenario.incomeDocType} documentation supports ${scenario.loanPurpose}.`
+            : `${scenario.incomeDocType} documentation does not support ${scenario.loanPurpose} under this program.`));
+      }
+    }
   }
 
   // Occupancy
@@ -466,12 +540,28 @@ export function baseProgramChecks(
     }
   }
 
-  // LTV vs derived max
-  const maxLtv = deriveMaxLtv(scenario, program);
-  if (calc.ltv?.value != null) {
-    const ok = calc.ltv.value <= maxLtv;
-    out.push(result(`${p}:ltv`, "Maximum LTV", "ltv", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
-      ok ? `Requested LTV ${calc.ltv.value}% ≤ maximum ${maxLtv}%.` : `Requested LTV ${calc.ltv.value}% exceeds maximum ${maxLtv}%.`));
+  // LTV/CLTV vs derived max. Standalone seconds and HELOCs use combined
+  // liens; ordinary first-lien programs continue to use LTV.
+  const maxLtv = deriveMaxLtv(scenario, program, calc.dscr?.value);
+  const leverage = program.ltvMetric === "cltv" ? calc.cltv : calc.ltv;
+  if (leverage?.value != null) {
+    const ok = leverage.value <= maxLtv;
+    const metricLabel = program.ltvMetric === "cltv" ? "CLTV" : "LTV";
+    out.push(result(`${p}:ltv`, `Maximum ${metricLabel}`, "ltv", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+      ok ? `Requested ${metricLabel} ${leverage.value}% ≤ maximum ${maxLtv}%.` : `Requested ${metricLabel} ${leverage.value}% exceeds maximum ${maxLtv}%.`));
+
+    if (scenario.loanPurpose === "cash_out_refinance" && scenario.requestedCashOut != null && program.cashOutLimits?.length) {
+      const limit = [...program.cashOutLimits]
+        .filter((r) => leverage.value! <= r.maxLtv)
+        .sort((a, b) => a.maxLtv - b.maxLtv)[0];
+      if (limit && limit.maxCashOutAmount != null) {
+        const cashOk = scenario.requestedCashOut <= limit.maxCashOutAmount;
+        out.push(result(`${p}:cashout-cap`, "Maximum cash-out proceeds", "cash_out", cashOk ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+          cashOk
+            ? `Requested cash-out $${scenario.requestedCashOut.toLocaleString()} is within the $${limit.maxCashOutAmount.toLocaleString()} cap at ${leverage.value}% leverage.`
+            : `Requested cash-out $${scenario.requestedCashOut.toLocaleString()} exceeds the $${limit.maxCashOutAmount.toLocaleString()} cap at ${leverage.value}% leverage.`));
+      }
+    }
   }
 
   // DTI vs limit (only when program uses ratios)
@@ -488,14 +578,25 @@ export function baseProgramChecks(
       ok ? `DSCR ${calc.dscr.value} ≥ minimum ${program.minDscr}.` : `DSCR ${calc.dscr.value} is below the minimum ${program.minDscr}.`));
   }
 
-  // Reserves (soft — usually curable)
+  // Reserves (soft — usually curable). Conditional lender overlays stack by
+  // taking the highest matching requirement, never by adding months.
+  const conditionalReserveMonths = (program.reserveRules ?? [])
+    .filter((r) => r.minLoanAmountExclusive == null || (scenario.requestedLoanAmount != null && scenario.requestedLoanAmount > r.minLoanAmountExclusive))
+    .filter((r) => r.maxLoanAmount == null || (scenario.requestedLoanAmount != null && scenario.requestedLoanAmount <= r.maxLoanAmount))
+    .filter((r) => r.minDscr == null || (calc.dscr?.value != null && calc.dscr.value >= r.minDscr))
+    .filter((r) => r.maxDscrExclusive == null || (calc.dscr?.value != null && calc.dscr.value < r.maxDscrExclusive))
+    .filter((r) => r.citizenship == null || scenario.citizenship === r.citizenship)
+    .filter((r) => r.occupancy == null || scenario.occupancy === r.occupancy)
+    .filter((r) => r.loanPurpose == null || scenario.loanPurpose === r.loanPurpose)
+    .map((r) => r.months);
+  const requiredReserves = Math.max(program.minReservesMonths, ...conditionalReserveMonths);
   const reservesMonths = calc.results.find((r) => r.key === "available_reserves_months")?.value ?? null;
   if (reservesMonths != null) {
-    const ok = reservesMonths >= program.minReservesMonths;
+    const ok = reservesMonths >= requiredReserves;
     out.push(result(`${p}:res`, "Required reserves", "reserves", ok ? RuleOutcome.Pass : RuleOutcome.Warning, RuleSeverity.Soft,
       ok
-        ? `Available reserves ${reservesMonths} mo ≥ required ${program.minReservesMonths} mo.`
-        : `Available reserves ${reservesMonths} mo are below the required ${program.minReservesMonths} mo.`));
+        ? `Available reserves ${reservesMonths} mo ≥ required ${requiredReserves} mo.`
+        : `Available reserves ${reservesMonths} mo are below the required ${requiredReserves} mo.`));
   }
 
   // Interest-only availability

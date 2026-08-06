@@ -22,6 +22,7 @@ describe("lenderBrandStyle: text-only wordmark treatments (no logos)", () => {
       "Forward Lending",
       "FundLoans",
       "GreenBox Loans",
+      "Golchis Capital",
       "HomeXpress Mortgage",
       "Hometown Equity Mortgage",
       "JMAC Lending",

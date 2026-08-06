@@ -48,6 +48,7 @@ export const LENDER_WORDMARK_STYLES: Record<string, LenderWordmarkStyle> = {
   "Forward Lending": { first: "Forward", second: "Lending", firstColor: "#1D4ED8", secondColor: "#6B7280" },
   FundLoans: { first: "Fund", second: "Loans", joiner: "", firstColor: "#0369A1", secondColor: "#1E293B" },
   "GreenBox Loans": { first: "GreenBox", second: "Loans", firstColor: "#16A34A", secondColor: "#166534" },
+  "Golchis Capital": { first: "Golchis", second: "Capital", firstColor: "#92722A", secondColor: "#6B7280" },
   "HomeXpress Mortgage": { first: "HomeXpress", second: "Mortgage", firstColor: "#1E3A8A", secondColor: "#6B7280" },
   "Hometown Equity Mortgage": { first: "Hometown Equity", second: "Mortgage", firstColor: "#7C2D12", secondColor: "#6B7280" },
   "JMAC Lending": { first: "JMAC", second: "Lending", firstColor: "#7C2D12", secondColor: "#6B7280" },

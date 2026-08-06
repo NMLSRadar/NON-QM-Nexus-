@@ -84,6 +84,26 @@ export interface LtvMatrixEntry {
   maxLoanAmount?: number;
 }
 
+/** A full-fidelity lender matrix row. This preserves transaction purpose,
+ * loan-amount band, DSCR band, citizenship and property type instead of
+ * collapsing a real matrix to one headline LTV. */
+export interface EligibilityLtvMatrixEntry {
+  maxLtv: number;
+  minFico?: number;
+  maxLoanAmount?: number;
+  loanPurpose?: LoanPurpose;
+  occupancy?: Occupancy;
+  propertyType?: PropertyType;
+  citizenship?: Citizenship;
+  incomeDocType?: IncomeDocType;
+  lienPosition?: LienPosition;
+  minDscr?: number;
+  /** Exclusive upper boundary, e.g. 1.0 for a 0.75–0.99 DSCR tier. */
+  maxDscrExclusive?: number;
+  sourcePage?: number;
+  sourceSection?: string;
+}
+
 /**
  * A single loan-amount-band / FICO-tier row of a lender's 5-8 unit
  * residential LTV grid — added 2026-08-01 (Lender Database Audit & 5-8
@@ -126,14 +146,45 @@ export interface Program {
   minDscr?: number;
   baseMaxLtv: number; // percent, before matrix/rule refinement
   minReservesMonths: number;
+  /** Conditional reserve overlays. Every matching row applies and the highest
+   * months requirement controls. Omitted dimensions mean all. */
+  reserveRules?: Array<{
+    months: number;
+    minLoanAmountExclusive?: number;
+    maxLoanAmount?: number;
+    minDscr?: number;
+    maxDscrExclusive?: number;
+    citizenship?: Citizenship;
+    occupancy?: Occupancy;
+    loanPurpose?: LoanPurpose;
+  }>;
   interestOnlyAvailable: boolean;
   prepaymentPenaltyOptions: string[];
   ltvMatrix?: LtvMatrixEntry[];
+  /** Preferred full-fidelity matrix. When present it is authoritative over
+   * ltvMatrix/baseMaxLtv for the scenario being evaluated. */
+  eligibilityLtvMatrix?: EligibilityLtvMatrixEntry[];
+  /** Closed-end seconds and HELOCs are evaluated against combined liens. */
+  ltvMetric?: "ltv" | "cltv";
+  /** Cash-out dollar caps by leverage band. Select the smallest maxLtv that
+   * covers the scenario; null means unlimited at that leverage. */
+  cashOutLimits?: Array<{ maxLtv: number; maxCashOutAmount: number | null }>;
+  /** Additional documentation-method caps/restrictions. They only tighten the
+   * program matrix and prevent a bundled program row from granting a purpose
+   * that the lender allows for another documentation method only. */
+  incomeDocTypeLtvCaps?: Partial<Record<IncomeDocType, Partial<Record<LoanPurpose, number>>>>;
+  incomeDocTypePurposeRestrictions?: Partial<Record<IncomeDocType, LoanPurpose[]>>;
   // Borrower-experience eligibility flags. All optional/undefined = no
   // restriction on that dimension (matches every existing Program record
   // without any migration — see docs/voice-vitals.md).
   firstTimeHomebuyerAllowed?: boolean;
   firstTimeInvestorAllowed?: boolean;
+  /** Guideline-specific reduction from the selected matrix cap for a first-time investor. */
+  firstTimeInvestorLtvAdjustment?: number;
+  /** DSCR short-term-rental reduction from the selected matrix cap. */
+  strIncomeLtvAdjustment?: number;
+  /** Optional absolute STR leverage ceiling applied after the reduction. */
+  strIncomeMaxLtv?: number;
   /** true = this program requires an experienced investor (first-time
    * investors are ineligible); undefined/false = no such requirement. */
   experiencedInvestorRequired?: boolean;
