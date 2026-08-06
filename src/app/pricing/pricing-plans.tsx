@@ -25,7 +25,7 @@ function membershipFeatures(verifiedLenderCount: number): { left: string[]; righ
   return {
     left: [
       "Everything in the platform — matching, voice intake, restructuring",
-      `Full access to all ${verifiedLenderCount} currently verified Non-QM lenders in the platform`,
+      "Full access to all verified programs across all lenders",
       "Automatically includes any future verified lenders added",
     ],
     right: ["No restrictions on guideline comparisons", "Dedicated support", "Cancel anytime"],
@@ -78,7 +78,7 @@ export function PricingPlans({
             aria-checked={interval === "annual"}
             onClick={() => setInterval_((v) => (v === "monthly" ? "annual" : "monthly"))}
             className="relative h-7 w-14 shrink-0 rounded-full border border-amber-400/50 bg-black/50 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400"
-          >
+      >
             <span
               aria-hidden
               className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.7)] transition-transform ${
