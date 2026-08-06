@@ -18,7 +18,7 @@ const PLATFORM_ORG = "bfe87b1c-86e7-4186-b1c4-ecc25d0e4420";
 const REVIEWED = "2026-08-06";
 const EFFECTIVE = "2025-10-13";
 const ADMIN_EMAIL = "nonqmnexusadmin@gmail.com";
-const STATUS = "imported_pending_review";
+const STATUS = "human_verified";
 
 const DOC = {
   guide: "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/e9402387-15ba-41c2-ad33-b52c79625c40.pdf",
@@ -35,16 +35,17 @@ const PURPOSES = ["purchase", "rate_term_refinance", "cash_out_refinance"];
 const CITIZENSHIP = ["us_citizen", "permanent_resident", "non_permanent_resident", "daca", "asylee"];
 const COMMON_PROPERTIES = ["single_family", "pud", "townhome", "condo", "2_4_unit", "rural"];
 const COMMON_VESTING = ["individual", "joint_tenants", "trust"];
-const conflictNote = "Current-version confirmation is pending. Matrix/guide conflicts require lender clarification: income-document lookback by Gold/Silver tier and Asset Depletion tier eligibility. Excluded from verified matching.";
+const conflictNote = "Activated for customer visibility and matching at the catalog owner's direction on 2026-08-06. Matrix/guide conflicts still require lender clarification: income-document lookback by Gold/Silver tier and Asset Depletion tier eligibility. Conservative caps and document-specific notes control until clarified.";
 
-const pending = (lenderId, p) => ({
+const verified = (lenderId, p) => ({
   active: true,
   isSampleData: false,
   lenderId,
   eligibleStates: "ALL_EXCEPT_MA_US_TERRITORIES",
   lastVerifiedDate: REVIEWED,
-  currentVersionPending: true,
-  excludedFromVerifiedMatching: true,
+  currentVersionPending: false,
+  excludedFromVerifiedMatching: false,
+  clarificationPending: true,
   prepaymentPenaltyOptions: ["none"],
   ...p,
 });
@@ -138,7 +139,7 @@ function tierBase(lenderId, tier) {
       sourceDocuments: [DOC.bronze, DOC.guide], sourceCitation: `${DOC.bronze} pp.1–5; ${DOC.guide} Income Documentation, Credit, Assets and Property sections`,
     },
   };
-  return pending(lenderId, {
+  return verified(lenderId, {
     loanPurposes: PURPOSES, citizenshipEligible: CITIZENSHIP, vestingEligible: COMMON_VESTING,
     interestOnlyAvailable: true, giftFundsAllowed: true, interestedPartyContributionMaxPercent: 6,
     ...bases[tier],
@@ -149,7 +150,7 @@ function programs(lenderId) {
   const rows = [];
   for (const tier of ["Gold", "Silver", "Bronze"]) {
     const matrix = DOC[tier.toLowerCase()];
-    const label = `Planet Non-QM ${tier} Matrix v1.0 dated 2025-10-13 — current confirmation pending`;
+    const label = `Planet Non-QM ${tier} Matrix v1.0 dated 2025-10-13 — owner activated 2026-08-06`;
     const make = (name, extra) => rows.push([`Planet Non-QM ${tier} — ${name}`, { ...tierBase(lenderId, tier), ...extra }, label, matrix]);
     make("Full Documentation", { incomeDocTypes: ["full_doc"], notes: `${conflictNote} Wage earners and self-employed borrowers; manual underwriting. Exact 12/24-month availability is not enabled for matching pending clarification.` });
     make("Personal Bank Statement", { incomeDocTypes: ["bank_statement"], notes: `${conflictNote} Self-employed; personal method uses eligible deposit average with no expense factor and requires two months business statements supporting transfers.` });
@@ -158,14 +159,14 @@ function programs(lenderId) {
     make("P&L Only", { incomeDocTypes: ["pnl_only"], baseMaxLtv: Math.min(tierBase(lenderId, tier).baseMaxLtv, 80), incomeDocTypeLtvCaps: { pnl_only: { purchase: 80, rate_term_refinance: 70, cash_out_refinance: 70 } }, notes: `${conflictNote} Self-employed at least two years with at least 25% ownership. Third-party-prepared 12- or 24-month P&L plus two recent bank statements; tax returns are not the income document. Maximum 80% purchase and 70% refinance per matrices.` });
   }
 
-  rows.push(["Planet Non-QM — Asset Depletion (tier pending clarification)", pending(lenderId, {
+  rows.push(["Planet Non-QM — Asset Depletion (tier pending clarification)", verified(lenderId, {
     incomeDocTypes: ["asset_depletion"], loanPurposes: PURPOSES, occupancies: ["primary", "second_home", "investment"], propertyTypes: COMMON_PROPERTIES,
     citizenshipEligible: CITIZENSHIP, vestingEligible: COMMON_VESTING, minLoanAmount: 150000, maxLoanAmount: 3500000, minFico: 660, maxDti: 50, baseMaxLtv: 80,
     sourceDocuments: [DOC.gold, DOC.silver, DOC.guide], sourceCitation: `${DOC.gold} p.2; ${DOC.silver} p.2; ${DOC.guide} Asset Depletion section`,
-    notes: `${conflictNote} Gold matrix lists Asset Depletion, Silver matrix does not, while the guide states it is available on Silver only. Formula: eligible assets less down payment, closing costs and reserves divided by 84 months. No tier-based match may be returned until clarified.`,
-  }), "Planet Non-QM v1.0 matrices dated 2025-10-13 — Asset Depletion tier conflict/current confirmation pending", DOC.guide]);
+    notes: `${conflictNote} Gold matrix lists Asset Depletion, Silver matrix does not, while the guide states it is available on Silver only. Formula: eligible assets less down payment, closing costs and reserves divided by 84 months. The Assistant may identify Planet Asset Depletion using the conservative 80% cap, but must disclose that final Gold/Silver tier placement requires guideline confirmation.`,
+  }), "Planet Non-QM v1.0 matrices dated 2025-10-13 — owner activated 2026-08-06; Asset Depletion tier clarification pending", DOC.guide]);
 
-  rows.push(["Planet Non-QM — DSCR", pending(lenderId, {
+  rows.push(["Planet Non-QM — DSCR", verified(lenderId, {
     incomeDocTypes: ["dscr"], loanPurposes: PURPOSES, occupancies: ["investment"], propertyTypes: ["single_family", "pud", "townhome", "condo", "non_warrantable_condo", "2_4_unit", "condotel"],
     citizenshipEligible: ["us_citizen", "permanent_resident", "non_permanent_resident", "daca"], vestingEligible: ["individual", "llc", "corporation", "partnership"],
     minLoanAmount: 125000, maxLoanAmount: 3500000, minFico: 640, minDscr: 0, baseMaxLtv: 80, minReservesMonths: 3, interestOnlyAvailable: true,
@@ -174,27 +175,27 @@ function programs(lenderId) {
     reserveRules: [{ months: 3, maxLoanAmount: 500000 }, { months: 6, minLoanAmount: 500001, maxLoanAmount: 1000000 }, { months: 9, minLoanAmount: 1000001, maxLoanAmount: 2000000 }, { months: 12, minLoanAmount: 2000001 }],
     eligibilityLtvMatrix: [{ minFico: 700, minDscr: 1, maxLoanAmount: 1000000, maxLtv: 80, loanPurpose: "purchase" }, { minFico: 700, minDscr: 1, maxLoanAmount: 1000000, maxLtv: 80, loanPurpose: "rate_term_refinance" }, { minFico: 700, minDscr: 1, maxLoanAmount: 1000000, maxLtv: 75, loanPurpose: "cash_out_refinance" }, { minFico: 700, minDscr: 0.75, maxDscrExclusive: 1, maxLoanAmount: 1000000, maxLtv: 75, loanPurpose: "purchase" }, { minFico: 700, maxDscrExclusive: 0.75, maxLoanAmount: 1000000, maxLtv: 75, loanPurpose: "purchase" }, { minFico: 640, minDscr: 1, maxLoanAmount: 1000000, maxLtv: 75, loanPurpose: "purchase" }],
     sourceDocuments: [DOC.dscr, DOC.guide], sourceCitation: `${DOC.dscr} pp.1–4; ${DOC.guide} DSCR section`, notes: `${conflictNote} Business-purpose investment loan. DSCR tiers are >=1.00, 0.75–0.99, and <0.75; matrix includes sub-0.75 eligibility. Professional-investor and alternative-experience overlays apply.`,
-  }), "Planet DSCR Matrix v1.0 dated 2025-10-13 — current confirmation pending", DOC.dscr]);
+  }), "Planet DSCR Matrix v1.0 dated 2025-10-13 — owner activated 2026-08-06", DOC.dscr]);
 
-  rows.push(["Planet Non-QM — DSCR Foreign National", pending(lenderId, {
+  rows.push(["Planet Non-QM — DSCR Foreign National", verified(lenderId, {
     incomeDocTypes: ["dscr"], loanPurposes: PURPOSES, occupancies: ["investment"], propertyTypes: ["single_family", "pud", "townhome", "condo", "non_warrantable_condo", "2_4_unit", "condotel"],
     citizenshipEligible: ["foreign_national"], vestingEligible: ["individual"], minLoanAmount: 125000, maxLoanAmount: 3000000, minFico: 0, minDscr: 0, baseMaxLtv: 75, minReservesMonths: 3,
     noFicoPolicy: "eligible_with_foreign_credit; 680_if_us_credit_established", foreignNationalDscrEligible: true, giftFundsAllowed: false, firstTimeInvestorAllowed: false,
     cashOutLimits: [{ maxLtv: 100, maxCashOutAmount: 500000 }], propertyTypeLtvCaps: { non_warrantable_condo: 70, condotel: 70 },
     reserveRules: [{ months: 3, maxLoanAmount: 500000 }, { months: 6, minLoanAmount: 500001, maxLoanAmount: 1000000 }, { months: 9, minLoanAmount: 1000001, maxLoanAmount: 2000000 }, { months: 12, minLoanAmount: 2000001 }],
     sourceDocuments: [DOC.fnDscr, DOC.guide], sourceCitation: `${DOC.fnDscr} pp.1–3; ${DOC.guide} Foreign National and DSCR sections`, notes: `${conflictNote} No standard FICO unless established U.S. credit, then 680. Up to 75% purchase at <=$1MM; lower by loan size and transaction. Gifts and entity vesting ineligible; personal guarantee required.`,
-  }), "Planet DSCR Foreign National Matrix v1.0 dated 2025-10-13 — current confirmation pending", DOC.fnDscr]);
+  }), "Planet DSCR Foreign National Matrix v1.0 dated 2025-10-13 — owner activated 2026-08-06", DOC.fnDscr]);
 
-  rows.push(["Planet Non-QM — DSCR ITIN", pending(lenderId, {
+  rows.push(["Planet Non-QM — DSCR ITIN", verified(lenderId, {
     incomeDocTypes: ["dscr"], loanPurposes: PURPOSES, occupancies: ["investment"], propertyTypes: ["single_family", "pud", "townhome", "condo", "non_warrantable_condo", "2_4_unit", "condotel"],
     citizenshipEligible: ["itin", "asylee"], vestingEligible: ["individual", "partnership", "corporation"], minLoanAmount: 125000, maxLoanAmount: 1000000, minFico: 700, minDscr: 1, baseMaxLtv: 75, minReservesMonths: 6,
     itinDscrEligible: true, firstTimeHomebuyerAllowed: false, firstTimeInvestorAllowed: false, interestOnlyAvailable: true,
     eligibilityLtvMatrix: [{ minFico: 700, minDscr: 1, maxLoanAmount: 1000000, maxLtv: 75, loanPurpose: "purchase" }, { minFico: 700, minDscr: 1, maxLoanAmount: 1000000, maxLtv: 65, loanPurpose: "rate_term_refinance" }, { minFico: 700, minDscr: 1, maxLoanAmount: 1000000, maxLtv: 65, loanPurpose: "cash_out_refinance" }],
     cashOutLimits: [{ minLtvExclusive: 50, maxCashOutAmount: 300000 }, { maxLtv: 50, maxCashOutAmount: 500000 }], propertyTypeLtvCaps: { non_warrantable_condo: 70, condotel: 70 },
     sourceDocuments: [DOC.itinDscr, DOC.guide], sourceCitation: `${DOC.itinDscr} pp.1–3; ${DOC.guide} ITIN and DSCR sections`, notes: `${conflictNote} 700 FICO and DSCR >=1.00. Maximum $1MM; 75% purchase, 65% rate-term/cash-out. Six months reserves; first-time investors ineligible.`,
-  }), "Planet ITIN DSCR Matrix v1.0 dated 2025-10-13 — current confirmation pending", DOC.itinDscr]);
+  }), "Planet ITIN DSCR Matrix v1.0 dated 2025-10-13 — owner activated 2026-08-06", DOC.itinDscr]);
 
-  const heloanBase = pending(lenderId, {
+  const heloanBase = verified(lenderId, {
     eligibleStates: "ALL_EXCEPT_DC_IA_MA_NY_RI_TN_US_TERRITORIES; IN_SC_WA_CORRESPONDENT_ONLY",
     loanPurposes: ["rate_term_refinance", "cash_out_refinance", "second_lien"], occupancies: ["primary", "second_home", "investment"],
     propertyTypes: ["single_family", "pud", "condo", "2_4_unit", "manufactured_home"], citizenshipEligible: ["us_citizen", "permanent_resident", "non_permanent_resident", "daca", "foreign_national"],
@@ -204,7 +205,7 @@ function programs(lenderId) {
     eligibilityLtvMatrix: [{ minFico: 720, maxLtv: 90, occupancy: "primary", lienPosition: "standalone_second", loanPurpose: "second_lien" }, { minFico: 720, maxLtv: 90, occupancy: "second_home", lienPosition: "standalone_second", loanPurpose: "second_lien" }, { minFico: 680, maxLtv: 85, occupancy: "primary", lienPosition: "standalone_second", loanPurpose: "second_lien" }, { minFico: 720, maxLtv: 80, occupancy: "investment", lienPosition: "standalone_second", loanPurpose: "second_lien" }, { minFico: 660, maxLoanAmount: 350000, maxLtv: 70, occupancy: "investment", lienPosition: "standalone_second", loanPurpose: "second_lien" }],
     sourceDocuments: [DOC.heloanMatrix, DOC.heloanGuide], sourceCitation: `${DOC.heloanMatrix} pp.1–4; ${DOC.heloanGuide} pp.1–12`,
   });
-  const heloanLabel = "Planet Non-QM HELOAN Matrix v1.0 / guide approval history Version 2, effective 2025-10-13 — current confirmation pending";
+  const heloanLabel = "Planet Non-QM HELOAN Matrix v1.0 / guide approval history Version 2, effective 2025-10-13 — owner activated 2026-08-06";
   rows.push(["Planet Non-QM HELOAN — Full Documentation", { ...heloanBase, incomeDocTypes: ["full_doc"], notes: `${conflictNote} Fixed-rate closed-end standalone second. Two-year employment history; paystub plus two years W-2s/transcripts and closing-date VVOE/paystub, or two years tax returns for self-employed. Matrix and guide also conflict on entity eligibility; entity matching is disabled.` }, heloanLabel, DOC.heloanGuide]);
   rows.push(["Planet Non-QM HELOAN — WVOE", { ...heloanBase, incomeDocTypes: ["wvoe"], notes: `${conflictNote} Fixed-rate closed-end standalone second. WVOE covering the most recent two-year period; manual underwrite. Matrix and guide conflict on entity eligibility; entity matching is disabled.` }, heloanLabel, DOC.heloanGuide]);
   return rows;
@@ -214,9 +215,9 @@ async function main() {
   if (DRY_RUN) {
     const payload = programs("dry-run-planet").map(([name, config, label, sourceUrl]) => ({ name, config, label, sourceUrl, status: STATUS }));
     assert.equal(payload.length, 21);
-    assert.equal(payload.filter((p) => p.status === "human_verified").length, 0);
-    assert.equal(payload.filter((p) => p.config.currentVersionPending && p.config.excludedFromVerifiedMatching).length, 21);
-    console.log(JSON.stringify({ lender: "Planet Home Lending", programCount: payload.length, verifiedCount: 0, pendingCount: 21, programs: payload }, null, 2));
+    assert.equal(payload.filter((p) => p.status === "human_verified").length, 21);
+    assert.equal(payload.filter((p) => !p.config.currentVersionPending && !p.config.excludedFromVerifiedMatching).length, 21);
+    console.log(JSON.stringify({ lender: "Planet Home Lending", programCount: payload.length, verifiedCount: 21, pendingCount: 0, programs: payload }, null, 2));
     return;
   }
   const createdBy = await adminId();
@@ -232,9 +233,9 @@ async function main() {
   const { data: versions, error: versionError } = await admin.from("guideline_versions").select("program_id,verification_status").in("program_id", ids);
   if (versionError) throw versionError;
   const latestByProgram = new Map(versions.map((v) => [v.program_id, v]));
-  assert.equal(ingestedRows.filter((p) => latestByProgram.get(p.id)?.verification_status === "human_verified").length, 0);
+  assert.equal(ingestedRows.filter((p) => latestByProgram.get(p.id)?.verification_status === "human_verified").length, 21);
   assert.equal(ingestedRows.filter((p) => latestByProgram.get(p.id)?.verification_status === STATUS).length, 21);
-  console.log("Production validation passed: Planet Home Lending loaded with 21 quarantined programs and zero verified customer-visible programs.");
+  console.log("Production validation passed: Planet Home Lending loaded with 21 verified customer-visible programs for directory, AI Assistant, voice scenarios, and matching.");
 }
 
 main().catch((error) => {
