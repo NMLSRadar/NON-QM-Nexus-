@@ -506,7 +506,7 @@ export function baseProgramChecks(
   }
 
   // LTV vs derived max
-  const maxLtv = deriveMaxLtv(scenario, program, calc.dscr?.value);
+  const maxLtv = deriveMaxLtv(scenario, program, calc.dscr?.value ?? undefined);
   if (calc.ltv?.value != null) {
     const ok = calc.ltv.value <= maxLtv;
     out.push(result(`${p}:ltv`, "Maximum LTV", "ltv", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
