@@ -81,7 +81,7 @@ export function AiAssistantWidget() {
             {messages.length === 0 && (
               <div className="space-y-3">
                 <p className="text-xs text-slate-400">
-                  Describe your borrower or ask which lender fits — I'll route it like an AE, then you can run it through a Scenario.
+                  Describe your borrower or ask which lender fits — I&apos;ll route it like an AE, then you can run it through a Scenario.
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {SUGGESTED_PROMPTS.map((p) => (
