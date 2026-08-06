@@ -264,6 +264,35 @@ async function main() {
     await admin.from("programs").update({ active: false, config: { ...p.config, active: false, supersededByOfficial20260505: true, lastVerifiedDate: REVIEWED, notes: `${p.config.notes ?? ""} RETIRED ${REVIEWED}: obsolete combined/misclassified row replaced by separately verified official Deephaven programs.` } }).eq("id", p.id);
     console.log(`Retired obsolete row: ${p.name}`);
   }
+
+  const requiredNames = deephavenPrograms(dhId).map(([name]) => name);
+  const { data: verifiedRows, error: verifyError } = await admin.from("programs").select("name,active,config").eq("lender_id", dhId).in("name", requiredNames);
+  if (verifyError) throw verifyError;
+  const verified = new Map((verifiedRows ?? []).map((row) => [row.name, row]));
+  const assert = (condition, message) => { if (!condition) throw new Error(`Production validation failed: ${message}`); };
+  assert(verified.size === requiredNames.length, `expected ${requiredNames.length} Deephaven programs, found ${verified.size}`);
+  for (const name of requiredNames) assert(verified.get(name)?.active === true && verified.get(name)?.config?.active === true, `${name} is not active`);
+
+  const fiveNine = verified.get("Investor Cash Flow (DSCR) — 5-9 Unit")?.config;
+  assert(fiveNine?.incomeDocTypes?.includes("dscr"), "5-9 Unit must support DSCR");
+  assert(fiveNine?.propertyTypes?.includes("5_8_unit") && fiveNine?.propertyTypes?.includes("9_plus_unit"), "5-9 Unit property types are incomplete");
+  assert(fiveNine?.minFico === 680 && fiveNine?.maxLoanAmount === 2500000 && fiveNine?.baseMaxLtv === 75, "5-9 Unit headline limits are incorrect");
+
+  for (const [name, lienPosition] of [["Equity Advantage HELOC — First Lien", "first_lien"], ["Equity Advantage HELOC — Second Lien", "second_lien"]]) {
+    const heloc = verified.get(name)?.config;
+    assert(heloc?.loanPurposes?.includes("heloc") && heloc?.ltvMetric === "cltv", `${name} purpose/CLTV setup is incorrect`);
+    assert(heloc?.lienPositionsEligible?.includes(lienPosition), `${name} lien position is incorrect`);
+    assert(heloc?.sourceDocuments?.includes(DH.helocWh) && heloc?.sourceDocuments?.includes(DH.helocGuideline), `${name} source documents are incomplete`);
+  }
+
+  const pnl = verified.get("12-Month Profit & Loss Statement — P&L Only")?.config;
+  assert(pnl?.incomeDocTypes?.length === 1 && pnl?.incomeDocTypes?.[0] === "pnl_only", "P&L Only documentation classification is incorrect");
+  assert(pnl?.pnlPeriodMonths === 12 && pnl?.pnlTaxReturnsRequired === false && pnl?.pnlPreparerAttestationPurpose === "confirms_tax_filing_only", "P&L period/tax-return rules are incorrect");
+  assert(pnl?.pnlWithSupportingStatementsLtvCaps?.purchase === 80 && pnl?.pnlWithSupportingStatementsLtvCaps?.rate_term_refinance === 70, "P&L supported tier is incorrect");
+  assert(pnl?.pnlWithoutSupportingStatementsLtvCaps?.purchase === 70 && pnl?.pnlWithoutSupportingStatementsLtvCaps?.rate_term_refinance === 60, "P&L unsupported tier is incorrect");
+  assert(pnl?.pnlWithoutSupportingStatementsMinFico === 720 && pnl?.pnlWithoutSupportingStatementsMaxLoanAmount === 2000000, "P&L unsupported-tier overlays are incorrect");
+
+  console.log(`Production validation passed: ${verified.size} active Deephaven programs; 5-9 Unit, first/second-lien HELOC, and 12-month P&L fields verified.`);
   console.log("Deephaven + Golchis ingestion complete.");
 }
 
