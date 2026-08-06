@@ -9,12 +9,12 @@ interface ChatMessage {
 }
 
 const SUGGESTED_PROMPTS = [
-  "Does Orion allow STR?",
-  "What is the maximum LTV?",
-  "Compare Orion and Acra.",
+  "Who is good with exceptions?",
+  "Who uses the most business deposits?",
+  "First-time investor DSCR at 80% LTV.",
+  "720 FICO, first-time homebuyer, 80% LTV DSCR.",
   "Which lenders allow LLC vesting?",
-  "Show lenders with no reserve requirement.",
-  "Best lender for a first-time investor.",
+  "Best lender for a low-FICO bank statement file.",
 ];
 
 /** Persistent AI assistant, lower-right corner — mounted globally
@@ -70,7 +70,7 @@ export function AiAssistantWidget() {
         <div className="gold-theme gold-glass mb-3 flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl shadow-2xl">
           <div className="flex items-center justify-between border-b border-amber-500/20 px-4 py-3">
             <p className="flex items-center gap-2 text-sm font-semibold text-white">
-              <Sparkles className="h-4 w-4 text-amber-300" /> Guideline Assistant
+              <Sparkles className="h-4 w-4 text-amber-300" /> Non-QM Account Executive
             </p>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close assistant" className="text-slate-400 hover:text-white">
               <X className="h-4 w-4" />
@@ -81,7 +81,7 @@ export function AiAssistantWidget() {
             {messages.length === 0 && (
               <div className="space-y-3">
                 <p className="text-xs text-slate-400">
-                  Ask about any lender or program on your plan — I only answer from your real, current guideline data.
+                  Describe your borrower or ask which lender fits — I'll route it like an AE, then you can run it through a Scenario.
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {SUGGESTED_PROMPTS.map((p) => (
