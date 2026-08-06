@@ -2,16 +2,18 @@ import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 
 const DRY_RUN = process.argv.includes("--dry-run");
-const env = fs.existsSync(".env.local")
+const fileEnv = fs.existsSync(".env.local")
   ? Object.fromEntries(
     fs.readFileSync(".env.local", "utf8").split("\n").filter((l) => l.includes("=")).map((l) => {
       const i = l.indexOf("=");
-      return [l.slice(0, i), l.slice(i + 1)];
+      const raw = l.slice(i + 1).trim();
+      return [l.slice(0, i), raw.replace(/^(["'])(.*)\1$/, "$2")];
     }),
   )
   : {};
+const env = { ...process.env, ...fileEnv };
 if (!DRY_RUN && (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY)) {
-  throw new Error("Missing .env.local Supabase credentials. Use --dry-run to validate the payload without database access.");
+  throw new Error("Missing Supabase credentials in process environment or .env.local. Use --dry-run to validate the payload without database access.");
 }
 const admin = DRY_RUN ? null : createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 const PLATFORM_ORG = "bfe87b1c-86e7-4186-b1c4-ecc25d0e4420";
