@@ -252,11 +252,15 @@ async function updateProgramByName(lenderId, organizationId, name, patch, review
   console.log(`Updated (verified): ${name} -> ${id}`);
 }
 
-async function createProgramIfMissing(lenderId, organizationId, name, config, reviewedBy, label, sourceUrl, createdBy) {
-  const { data: existing, error } = await admin.from("programs").select("id").eq("lender_id", lenderId).eq("name", name).limit(1);
+async function upsertProgramByName(lenderId, organizationId, name, config, reviewedBy, label, sourceUrl, createdBy) {
+  const { data: existing, error } = await admin.from("programs").select("id,config").eq("lender_id", lenderId).eq("name", name).limit(1);
   if (error) throw new Error(`Lookup failed for "${name}": ${error.message}`);
   if (existing?.length) {
-    console.log(`SKIP create (already exists): ${name} -> ${existing[0].id}`);
+    const merged = { ...existing[0].config, ...config };
+    const { error: updateError } = await admin.from("programs").update({ config: merged, updated_at: new Date().toISOString() }).eq("id", existing[0].id);
+    if (updateError) throw new Error(`Update failed for "${name}": ${updateError.message}`);
+    await upsertGuidelineVersion(organizationId, existing[0].id, label, sourceUrl, reviewedBy);
+    console.log(`Updated (verified, pre-existing): ${name} -> ${existing[0].id}`);
     return;
   }
   const { data, error: insertError } = await admin
@@ -275,9 +279,8 @@ async function main() {
   await updateProgramByName(lenderId, organizationId, "Bank Statement Loans", standardConfig, adminId, "AHL Standard credit matrix (real, uploaded 2026-08-07)", SRC.standard);
   await updateProgramByName(lenderId, organizationId, "DSCR (Debt Service Coverage Ratio)", dscrPatch, adminId, "AHL DSCR credit matrix (real, uploaded 2026-08-07)", SRC.dscr);
   await updateProgramByName(lenderId, organizationId, "Asset Qualifier Loans", assetQualifierPatch, adminId, "AHL Standard credit matrix (real, uploaded 2026-08-07)", SRC.standard);
-  await createProgramIfMissing(lenderId, organizationId, "1-Year Profit & Loss Only", plConfig, adminId, "AHL Premier credit matrix (real, uploaded 2026-08-07)", SRC.premier, adminId);
-  await createProgramIfMissing(lenderId, organizationId, "Investment Property Loans (Non-DSCR)", investmentConfig, adminId, "AHL Investment Property credit matrix (real, uploaded 2026-08-07)", SRC.investment, adminId);
-
+  await upsertProgramByName(lenderId, organizationId, "1-Year Profit & Loss Only", plConfig, adminId, "AHL Premier credit matrix (real, uploaded 2026-08-07)", SRC.premier, adminId);
+  await upsertProgramByName(lenderId, organizationId, "Investment Property Loans (Non-DSCR)", investmentConfig, adminId, "AHL Investment Property credit matrix (real, uploaded 2026-08-07)", SRC.investment, adminId);
   console.log(`[${RUN_ID}] done.`);
 }
 
