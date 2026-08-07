@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postbuild": "vitest run tests/domain/purposeLtvMatrix.test.ts tests/domain/fullEligibilityLtvMatrix.test.ts && node scripts/redwood_newfi_ingest_2026_08_06.mjs && node scripts/ingest_deephaven_golchis_2026_08_06.mjs && node scripts/ingest_bff_2026_08_06.mjs && node scripts/ingest_cake_2026_08_06.mjs && node scripts/ingest_eresi_core_2026_08_06.mjs && node scripts/ingest_planet_home_2026_08_06.mjs && node scripts/ingest_nqmf_carrington_category_expansion_2026_08_07.mjs",
+    "postbuild": "vitest run tests/domain/purposeLtvMatrix.test.ts tests/domain/fullEligibilityLtvMatrix.test.ts && node scripts/redwood_newfi_ingest_2026_08_06.mjs && node scripts/ingest_deephaven_golchis_2026_08_06.mjs && node scripts/ingest_bff_2026_08_06.mjs && node scripts/ingest_cake_2026_08_06.mjs && node scripts/ingest_eresi_core_2026_08_06.mjs && node scripts/ingest_planet_home_2026_08_06.mjs && node scripts/ingest_nqmf_carrington_category_expansion_2026_08_07.mjs && node scripts/fix_missing_guideline_versions_2026_08_07.mjs",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
