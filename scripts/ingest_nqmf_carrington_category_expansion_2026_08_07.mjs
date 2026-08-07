@@ -35,12 +35,24 @@
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 
-const env = Object.fromEntries(
-  fs.readFileSync(".env.local", "utf8").split("\n").filter((l) => l.includes("=")).map((l) => {
-    const i = l.indexOf("=");
-    return [l.slice(0, i), l.slice(i + 1)];
-  })
-);
+// Mirrors the fallback pattern used by every other ingest script in this
+// repo (e.g. ingest_cake_2026_08_06.mjs): prefer a local .env.local for a
+// manual run, but never require it — production builds (Vercel postbuild)
+// have no .env.local file on disk and rely on process.env alone. Reading
+// it unconditionally previously crashed the production build with ENOENT.
+const fileEnv = fs.existsSync(".env.local")
+  ? Object.fromEntries(
+      fs.readFileSync(".env.local", "utf8").split(/\r?\n/).filter((l) => l.includes("=")).map((l) => {
+        const i = l.indexOf("=");
+        return [l.slice(0, i), l.slice(i + 1).trim().replace(/^(["'])(.*)\1$/, "$2")];
+      })
+    )
+  : {};
+const env = { ...process.env, ...fileEnv };
+if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error("Missing Supabase credentials (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY) — skipping this ingest step.");
+  process.exit(0);
+}
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 const TODAY = "2026-08-07";
 
