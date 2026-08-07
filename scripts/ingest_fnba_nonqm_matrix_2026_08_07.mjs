@@ -24,12 +24,16 @@
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 
-const env = Object.fromEntries(
-  fs.readFileSync(".env.local", "utf8").split("\n").filter((l) => l.includes("=")).map((l) => {
-    const i = l.indexOf("=");
-    return [l.slice(0, i), l.slice(i + 1)];
-  })
-);
+const fileEnv = fs.existsSync(".env.local")
+  ? Object.fromEntries(fs.readFileSync(".env.local", "utf8").split("\n").filter((l) => l.includes("=")).map((l) => {
+      const i = l.indexOf("=");
+      return [l.slice(0, i), l.slice(i + 1).trim().replace(/^(["'])(.*)\1$/, "$2")];
+    }))
+  : {};
+const env = { ...process.env, ...fileEnv };
+if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error("Missing Supabase credentials.");
+}
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 const PLATFORM_ORG = "bfe87b1c-86e7-4186-b1c4-ecc25d0e4420";
 const FNBA_ID = "e7f0aa3b-866d-474e-b8cd-9d17c6e6f569";
