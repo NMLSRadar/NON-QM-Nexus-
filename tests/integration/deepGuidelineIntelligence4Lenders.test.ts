@@ -66,11 +66,11 @@ describe.skipIf(!hasCredentials)("Deep guideline intelligence — 4-lender corre
     }
   }, 15_000);
 
-  it("American Heritage Lending's Asset Qualifier and Bank Statement programs also remain unverified — numeric matrix genuinely wasn't provided", async () => {
-    const stillUnconfirmedIds = ["75a28282-5deb-4952-8ea0-0020191d0730", "2168eed2-8606-4605-94c7-acbe2f4e6b1b"];
-    const { data: gvs } = await admin.from("guideline_versions").select("program_id, verification_status").in("program_id", stillUnconfirmedIds);
+  it("American Heritage Lending's Asset Qualifier and Bank Statement programs now carry real numeric matrices from AHL's own Credit Matrix PDFs (uploaded 2026-08-07) and are human_verified", async () => {
+    const ids = ["75a28282-5deb-4952-8ea0-0020191d0730", "2168eed2-8606-4605-94c7-acbe2f4e6b1b"];
+    const { data: gvs } = await admin.from("guideline_versions").select("program_id, verification_status").in("program_id", ids);
     for (const gv of gvs ?? []) {
-      expect(gv.verification_status).not.toBe("human_verified");
+      expect(gv.verification_status).toBe("human_verified");
     }
   }, 15_000);
 });
