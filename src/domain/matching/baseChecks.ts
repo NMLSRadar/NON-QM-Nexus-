@@ -261,6 +261,25 @@ export function baseProgramChecks(
       result(`${p}:doc`, "Income documentation type", "documentation", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
         ok ? `Program supports ${scenario.incomeDocType} documentation.` : `Program does not offer ${scenario.incomeDocType} documentation.`),
     );
+
+    if (ok && scenario.incomeDocType === "bank_statement" && scenario.bankStatement) {
+      const months = scenario.bankStatement.months;
+      const accountType = scenario.bankStatement.personalOrBusiness;
+      if (program.bankStatementMonthsEligible?.length) {
+        const monthsOk = program.bankStatementMonthsEligible.includes(months);
+        out.push(result(`${p}:bsmonths`, "Bank statement period", "documentation", monthsOk ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+          monthsOk
+            ? `${months} months of bank statements is supported by this program.`
+            : `${months} months is not supported; this program accepts ${program.bankStatementMonthsEligible.join(" or ")} months.`));
+      }
+      if (program.bankStatementAccountTypes?.length) {
+        const typeOk = program.bankStatementAccountTypes.includes(accountType);
+        out.push(result(`${p}:bstype`, "Bank statement account type", "documentation", typeOk ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+          typeOk
+            ? `${accountType} bank statements are supported by this program.`
+            : `${accountType} statements are not supported; this program accepts ${program.bankStatementAccountTypes.join(" or ")} statements.`));
+      }
+    }
   }
 
   if (scenario.incomeDocType === "pnl_only") {
