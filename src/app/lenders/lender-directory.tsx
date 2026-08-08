@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { ArrowRight, Building2, LockKeyhole, Search, ShieldCheck } from "lucide-react";
 import { getWordmarkStyle } from "@/domain/lenderBrandStyle";
 import type { Lender, Program } from "@/domain/types/program";
+import { sortLendersAlphabetically } from "@/app/programs/program-directory-utils";
 
 export interface DirectoryLender {
   lender: Lender;
@@ -12,21 +14,15 @@ export interface DirectoryLender {
 
 interface Props {
   lenders: DirectoryLender[];
-  /** True when the signed-in user has an active NON-QM Nexus membership.
-   * Controls ONLY whether a lender's card is unlocked or shown in its
-   * locked "Membership required" state — every lender is always rendered
-   * regardless of this value; see docs on Repository.listAllLenders. */
+  /** Membership controls only whether guideline details are unlocked. Every
+   * active production lender remains visible in the alphabetical directory. */
   isMember: boolean;
 }
 
-/** The two-tone brand "wordmark" treatment for a lender's plain name text —
- * never a logo image, just colored typography (see lenderBrandStyle.ts).
- * Falls back to plain ink text for lenders without a defined style. */
-function LenderName({ name, muted, dark }: { name: string; muted?: boolean; dark?: boolean }) {
+function LenderName({ name, muted }: { name: string; muted?: boolean }) {
   const style = getWordmarkStyle(name);
   if (!style || muted) {
-    const color = dark ? "text-slate-100" : "text-ink-primary";
-    return <span className={`font-semibold leading-snug ${muted ? (dark ? "text-slate-400" : "text-ink-secondary") : color}`}>{name}</span>;
+    return <span className={`font-semibold leading-snug ${muted ? "text-slate-400" : "text-slate-100"}`}>{name}</span>;
   }
   return (
     <span className="font-semibold leading-snug">
@@ -41,65 +37,32 @@ function LenderName({ name, muted, dark }: { name: string; muted?: boolean; dark
   );
 }
 
-/** Single gold/black theme for the unified membership directory. */
-const THEME = {
-  icon: "👑",
-  sectionClass: "bg-gradient-to-b from-[#0d0d0f] to-black border border-amber-500/25",
-  headingClass: "text-white",
-  descriptionClass: "text-slate-400",
-  iconCircleClass: "bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 ring-4 ring-black shadow-lg",
-  pillClass: "bg-amber-500/10 border border-amber-400/50 text-amber-300",
-  buttonClass: "bg-gradient-to-r from-amber-300 to-amber-600 text-black shadow-md hover:shadow-lg",
-  cardClass: "bg-[#111113] border border-amber-500/25 shadow-lg",
-  cardBorderHover: "hover:border-amber-400/70 hover:shadow-[0_0_20px_-4px_rgba(212,175,55,0.5)]",
-  tierPillClass: "bg-black/60 border border-slate-700 text-slate-300",
-  lockedPillClass: "bg-amber-500/15 border border-amber-500/30 text-amber-300",
-  upgradeButtonClass: "bg-gradient-to-r from-amber-300 to-amber-600 text-black border border-amber-300 hover:brightness-110",
-  lockIconClass: "text-amber-400",
-  dark: true,
-};
-
-/** Numbered ribbon/pennant badge — flat top, notched bottom point,
- * overlapping the card's top-left corner. */
-function RankBadge({ rank }: { rank: number }) {
+function AlphabetBadge({ name }: { name: string }) {
+  const firstCharacter = name.trim().charAt(0).toUpperCase() || "#";
   return (
-    <span
-      className="absolute -top-2 -left-2 z-10 flex h-7 w-7 items-start justify-center pt-1 text-[11px] font-bold text-white"
-      style={{
-        background: "linear-gradient(180deg, #FBBF24 0%, #B8860B 100%)",
-        clipPath: "polygon(0% 0%, 100% 0%, 100% 72%, 50% 100%, 0% 72%)",
-        filter: "drop-shadow(0 2px 2px rgb(0 0 0 / 0.25))",
-      }}
-    >
-      {rank}
+    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-gradient-to-br from-amber-300/20 to-amber-700/10 text-sm font-bold text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]" aria-hidden>
+      {firstCharacter}
     </span>
   );
 }
 
-function LenderCard({ d, rank, unlocked }: { d: DirectoryLender; rank: number; unlocked: boolean }) {
+function LenderCard({ directoryLender, unlocked }: { directoryLender: DirectoryLender; unlocked: boolean }) {
+  const { lender, programs } = directoryLender;
   if (!unlocked) {
     return (
-      <div
-        className={`relative flex min-h-[150px] flex-col justify-between gap-2.5 rounded-xl p-4 pt-5 ${THEME.cardClass}`}
-        aria-label={`${d.lender.name} — membership required`}
-      >
-        <RankBadge rank={rank} />
-        <div className="flex items-start justify-between gap-2 pl-1">
-          <LenderName name={d.lender.name} muted dark={THEME.dark} />
-          <span aria-hidden className={`shrink-0 text-base leading-none ${THEME.lockIconClass}`}>
-            🔒
-          </span>
+      <div className="relative flex min-h-[148px] flex-col justify-between gap-3 rounded-xl border border-amber-500/20 bg-[#111113] p-4 shadow-[0_12px_35px_-24px_rgba(245,158,11,0.45)]" aria-label={`${lender.name} — membership required`}>
+        <div className="flex items-start gap-3">
+          <AlphabetBadge name={lender.name} />
+          <div className="min-w-0 flex-1">
+            <LenderName name={lender.name} muted />
+            <p className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-amber-300/80">
+              <LockKeyhole className="h-3 w-3" aria-hidden /> Membership required
+            </p>
+          </div>
+          <LockKeyhole className="h-4 w-4 shrink-0 text-amber-400/80" aria-hidden />
         </div>
-        <div className="flex items-center gap-1.5 pl-1">
-          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${THEME.lockedPillClass}`}>
-            🔒 Membership required
-          </span>
-        </div>
-        <Link
-          href="/pricing"
-          className={`flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${THEME.upgradeButtonClass}`}
-        >
-          👑 Unlock with Membership
+        <Link href="/pricing" className="flex items-center justify-center gap-2 rounded-full border border-amber-300/50 bg-gradient-to-r from-amber-300 to-amber-600 px-3 py-2 text-xs font-semibold text-black transition hover:brightness-110">
+          <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> Unlock with Membership
         </Link>
       </div>
     );
@@ -107,14 +70,16 @@ function LenderCard({ d, rank, unlocked }: { d: DirectoryLender; rank: number; u
 
   return (
     <Link
-      href={`/lenders/${d.lender.id}`}
-      className={`group relative flex min-h-[92px] items-center rounded-xl p-4 pt-5 transition-all duration-200 hover:-translate-y-0.5 ${THEME.cardClass} ${THEME.cardBorderHover}`}
-      aria-label={`View ${d.lender.name} programs and guidelines`}
+      href={`/lenders/${lender.id}`}
+      className="group flex min-h-[112px] items-center gap-3 rounded-xl border border-amber-500/20 bg-[#111113] p-4 shadow-[0_12px_35px_-24px_rgba(245,158,11,0.45)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-400/65 hover:bg-[#151411] hover:shadow-[0_16px_35px_-22px_rgba(245,158,11,0.7)] focus:outline-none focus:ring-2 focus:ring-amber-400/60"
+      aria-label={`View ${lender.name} programs and guidelines`}
     >
-      <RankBadge rank={rank} />
-      <span className="pl-1">
-        <LenderName name={d.lender.name} dark={THEME.dark} />
-      </span>
+      <AlphabetBadge name={lender.name} />
+      <div className="min-w-0 flex-1">
+        <LenderName name={lender.name} />
+        <p className="mt-1 text-xs tabular-nums text-slate-500">{programs.length} {programs.length === 1 ? "program" : "programs"}</p>
+      </div>
+      <ArrowRight className="h-4 w-4 shrink-0 text-amber-400/70 transition-transform group-hover:translate-x-0.5" aria-hidden />
     </Link>
   );
 }
@@ -122,63 +87,66 @@ function LenderCard({ d, rank, unlocked }: { d: DirectoryLender; rank: number; u
 export function LenderDirectory({ lenders, isMember }: Props) {
   const [query, setQuery] = useState("");
 
+  const alphabeticalLenders = useMemo(
+    () => sortLendersAlphabetically(lenders.map((item) => ({ ...item, name: item.lender.name }))).map(({ name: _name, ...item }) => item),
+    [lenders],
+  );
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return lenders;
-    return lenders.filter((d) => d.lender.name.toLowerCase().includes(q));
-  }, [lenders, query]);
+    const normalizedQuery = query.trim().toLocaleLowerCase("en-US");
+    if (!normalizedQuery) return alphabeticalLenders;
+    return alphabeticalLenders.filter((item) => item.lender.name.toLocaleLowerCase("en-US").includes(normalizedQuery));
+  }, [alphabeticalLenders, query]);
 
   return (
     <div className="space-y-5">
-      <div className="space-y-3">
-        <label htmlFor="lender-search" className="sr-only">
-          Search lenders
-        </label>
-        <input
-          id="lender-search"
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search lenders..."
-          className="w-full max-w-md rounded-xl border border-amber-500/25 bg-black/40 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/30"
-        />
+      <div>
+        <label htmlFor="lender-search" className="sr-only">Search lenders</label>
+        <div className="relative max-w-xl">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-amber-400/70" aria-hidden />
+          <input
+            id="lender-search"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search lenders..."
+            className="h-12 w-full rounded-xl border border-amber-500/25 bg-black/45 pl-12 pr-4 text-sm text-white placeholder:text-slate-500 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/25"
+          />
+        </div>
       </div>
 
-      {query.trim() !== "" && filtered.length === 0 && (
-        <p className="text-sm text-slate-400 py-8 text-center">No lenders match “{query}”.</p>
-      )}
-
-      <section className={`rounded-2xl p-5 ${THEME.sectionClass}`}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      <section className="rounded-2xl border border-amber-500/25 bg-gradient-to-b from-[#0d0d0f] to-black p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <span className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-2xl ${THEME.iconCircleClass}`} aria-hidden>
-              {THEME.icon}
+            <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-amber-300/25 bg-gradient-to-br from-amber-300/20 via-amber-500/15 to-amber-700/10 text-amber-300 shadow-lg" aria-hidden>
+              <Building2 className="h-6 w-6" />
             </span>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className={`text-lg font-bold uppercase tracking-wide ${THEME.headingClass}`}>All Lenders</h2>
-                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${THEME.pillClass}`}>
-                  👑 Full Access
+                <h2 className="text-lg font-bold uppercase tracking-wide text-white">All Lenders</h2>
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/35 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
+                  <ShieldCheck className="h-3 w-3" aria-hidden /> A–Z Directory
                 </span>
               </div>
-              <p className={`mt-1 text-sm max-w-xl ${THEME.descriptionClass}`}>
-                The complete verified NON-QM lender catalog, unlocked with a NON-QM Nexus membership.
-              </p>
+              <p className="mt-1 max-w-xl text-sm text-slate-400">The complete verified Non-QM lender catalog, always organized alphabetically.</p>
             </div>
           </div>
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold ${THEME.buttonClass}`}>
-            {THEME.icon} View All {filtered.length} Lenders →
+          <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/30 bg-amber-400/10 px-4 py-2 text-sm font-semibold tabular-nums text-amber-200">
+            {filtered.length} {filtered.length === 1 ? "Lender" : "Lenders"}
           </span>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {filtered.map((d, i) => (
-            <LenderCard key={d.lender.id} d={d} rank={i + 1} unlocked={isMember} />
-          ))}
-        </div>
+        {filtered.length === 0 ? (
+          <p className="py-12 text-center text-sm text-slate-400">No lenders match “{query}”.</p>
+        ) : (
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filtered.map((directoryLender) => (
+              <LenderCard key={directoryLender.lender.id} directoryLender={directoryLender} unlocked={isMember} />
+            ))}
+          </div>
+        )}
       </section>
 
-      {lenders.length === 0 && <p className="text-center py-12 text-sm text-slate-400">No lenders are configured for this organization yet.</p>}
+      {lenders.length === 0 ? <p className="py-12 text-center text-sm text-slate-400">No lenders are configured for this organization yet.</p> : null}
     </div>
   );
 }

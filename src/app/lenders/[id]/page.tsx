@@ -6,6 +6,7 @@ import { getWordmarkStyle } from "@/domain/lenderBrandStyle";
 import { ProgramCitation } from "./program-citation";
 import { AeSection } from "./ae-section";
 import { LenderNotes } from "./lender-notes";
+import { compareAlphabetically } from "@/app/programs/program-directory-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,11 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
   // actually covers this lender — a locked lender's real program details
   // never reach this request at all, matching the same server-side
   // enforcement as the Lenders directory page.
-  const lenderPrograms = unlocked ? (await repo.listPrograms(org)).filter((p) => p.lenderId === lender.id) : [];
+  const lenderPrograms = unlocked
+    ? (await repo.listPrograms(org))
+        .filter((p) => p.lenderId === lender.id && p.active)
+        .sort((a, b) => compareAlphabetically(a.name, b.name))
+    : [];
   const style = getWordmarkStyle(lender.name);
 
   return (
@@ -88,7 +93,7 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
             ) : (
               <div className="space-y-4">
                 {lenderPrograms.map((p) => (
-                  <div key={p.id} className="rounded-control border border-amber-500/20 bg-black/30 p-4">
+                  <div id={`program-${p.id}`} key={p.id} className="scroll-mt-24 rounded-control border border-amber-500/20 bg-black/30 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <h3 className="font-semibold text-white">{p.name}</h3>
                       <span className="text-xs text-slate-400">

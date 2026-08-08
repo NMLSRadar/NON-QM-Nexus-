@@ -1,4 +1,5 @@
 import { getCurrentOrganizationId, getRepository, getLenderAccessInfo } from "@/lib/session";
+import { compareAlphabetically } from "@/app/programs/program-directory-utils";
 import { LenderDirectory, type DirectoryLender } from "./lender-directory";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,13 @@ export default async function LendersPage() {
   // verified lender records.
   const lenders: DirectoryLender[] = allLenders
     .filter((l) => l.active && !l.isSampleData)
-    .map((lender) => ({ lender, programs: programs.filter((p) => p.lenderId === lender.id && p.active) }));
+    .sort((a, b) => compareAlphabetically(a.name, b.name))
+    .map((lender) => ({
+      lender,
+      programs: programs
+        .filter((p) => p.lenderId === lender.id && p.active)
+        .sort((a, b) => compareAlphabetically(a.name, b.name)),
+    }));
 
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">

@@ -89,6 +89,18 @@ describe("LenderDirectory: single-membership — every lender visible, access lo
     expect(screen.getByRole("heading", { name: /All Lenders/ })).toBeInTheDocument();
   });
 
+  it("always renders lenders alphabetically instead of preserving database or tier order", () => {
+    render(<LenderDirectory lenders={[lenders[2]!, lenders[0]!, lenders[1]!]} isMember={true} />);
+    const lenderLinks = screen
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("href")?.startsWith("/lenders/"));
+    expect(lenderLinks.map((link) => link.getAttribute("aria-label"))).toEqual([
+      "View Alpha Lending programs and guidelines",
+      "View Beta Mortgage programs and guidelines",
+      "View Gamma Capital programs and guidelines",
+    ]);
+  });
+
   it("the old tier / program filter chips have been completely removed", () => {
     render(<LenderDirectory lenders={lenders} isMember={true} />);
     for (const label of ["All", "Tier 1", "Tier 2", "Tier 3", "Investor", "DSCR", "Bank Statement", "P&L Only", "Foreign National", "Asset Depletion"]) {
