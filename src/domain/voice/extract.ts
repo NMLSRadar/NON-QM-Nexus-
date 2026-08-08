@@ -1503,7 +1503,7 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   const fullDocPattern =
     /full[\s-]?doc(?:s|umentation)?\b|full[\s-]?dock\b|fully documented\b|traditional (?:income )?documentation\b|conventional (?:income )?documentation\b|standard (?:income )?documentation\b|normal (?:income )?documentation\b|(?:personal|business|federal)\s+tax returns?\b|\btax returns?\b|taxes? (?:to|used to) qualify\b|qualify(?:ing)? (?:using|with|off) (?:the )?taxes\b|\b1040s?\b|\bw-?2s?\b|wage income\b|salaried income\b|pay ?stubs?\b|payroll income\b|employment income\b|\btranscripts?\b|irs transcripts?\b|4506-?c\b/;
   const bankStatementPattern = /bank statements?|bank deposits\b|qualifying off deposits\b|deposit[\s-]only income\b|deposit[\s-]based income\b|\b(?:personal|business)\s+deposits\b|deposits for income\b/;
-  const dscrPattern = /\bdscr\b|debt[\s-]?service|investor cash[\s-]?flow|rental income only|no[\s-]ratio|cash[\s-]?flow (?:only )?loan|rental cash[\s-]?flow|property('s)? cash[\s-]?flow|qualify(?:ing)? off (?:the )?(?:rent|property)|no income no employment/;
+  const dscrPattern = /\bdscr\b|debt[\s-]?service(?:\s+coverage)?|investor cash[\s-]?flow|rental income only|no[\s-]ratio|cash[\s-]?flow (?:only )?loan|rental cash[\s-]?flow|rental property loan|no[\s-]?income investor loan|property('s)? cash[\s-]?flow|qualify(?:ing)? off (?:the )?(?:rent|property)|using rents? to qualify|no income no employment/;
   const pnlPattern = /p\s*&\s*l|p and l|\bpnl\b|profit and loss|cpa[\s-]prepared statement|accountant[\s-]prepared statement/;
   const income1099Pattern = /\b1099s?\b|independent contractor income|contractor income only/;
   const assetDepletionPattern = /asset (?:depletion|utilization|based|qualifier)|qualify(?:ing)? off (?:their |his |her )?assets\b|using (?:their |his |her )?assets to qualify\b|no income at all\s*,?\s*just using (?:their |his |her )?(?:investment )?accounts\b|qualifying off (?:their |his |her )?(?:investment )?(?:accounts|portfolio)\b/;
@@ -1559,6 +1559,11 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
     if (kind) x.bankStatementKind = (kind[1] ?? "") as "personal" | "business";
   } else if (dscrPattern.test(t)) {
     x.incomeDocType = cap(IncomeDocType.Dscr, "DSCR");
+    // DSCR is an investment-property qualification method. Infer investment
+    // occupancy only when the borrower did not explicitly state a conflicting
+    // occupancy; explicit primary/second-home language remains visible so the
+    // eligibility engine can fail it or request clarification.
+    if (!x.occupancy) x.occupancy = cap(Occupancy.Investment, "inferred from DSCR / rental qualification", true);
   } else if (pnlPattern.test(t)) {
     x.incomeDocType = cap(IncomeDocType.ProfitAndLoss, "P&L");
   } else if (income1099Pattern.test(t)) {

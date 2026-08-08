@@ -339,6 +339,11 @@ export interface Program {
    * high complexity, or manual-review-recommended; never for a clean
    * file. */
   bankStatementFlexible?: boolean;
+  /** Exact statement periods supported by this program. Omitted means the
+   * reviewed source did not distinguish the period; never guess it. */
+  bankStatementMonthsEligible?: Array<12 | 24>;
+  /** Exact account types supported by this program. */
+  bankStatementAccountTypes?: Array<"personal" | "business">;
   /** Admin-curated product-positioning signal. Never overrides eligibility;
    * it only identifies a lender's explicitly designated flagship product. */
   premierProduct?: boolean;

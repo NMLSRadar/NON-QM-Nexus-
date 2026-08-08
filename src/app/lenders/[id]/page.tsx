@@ -113,6 +113,9 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
                           {d === "pnl_only" ? "12-month P&L only" : d.replace(/_/g, " ")}
                         </Pill>
                       ))}
+                      {p.bankStatementMonthsEligible?.map((months) => <Pill key={`bs-${months}`} tone="sky">{months}-month statements</Pill>)}
+                      {p.bankStatementAccountTypes?.map((kind) => <Pill key={`bs-${kind}`} tone="sky">{kind} statements</Pill>)}
+                      {/no ratio|foreign national|one.year|closed.end second|standalone second|asset|wvoe|1099|high.ltv/i.test(`${p.name} ${(p.searchTags ?? []).join(" ")}`) ? <Pill tone="gold">Unique Non-QM Product</Pill> : null}
                       {p.loanPurposes.map((purpose) => (
                         <Pill key={purpose} tone="gold">
                           {purpose === "heloc" ? "HELOC" : purpose.replace(/_/g, " ")}

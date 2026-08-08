@@ -58,6 +58,8 @@ export function buildGuidelineContext(catalog: ProgramCatalog): string {
         itinSpecialist: p.itinSpecialist ?? false,
         bankStatementCleanExecution: p.bankStatementCleanExecution ?? false,
         bankStatementFlexible: p.bankStatementFlexible ?? false,
+        bankStatementMonthsEligible: p.bankStatementMonthsEligible ?? null,
+        bankStatementAccountTypes: p.bankStatementAccountTypes ?? null,
         premierProduct: p.premierProduct ?? false,
         matrixConfirmationRequired: p.matrixConfirmationRequired ?? false,
         matrixConfirmationNotes: p.matrixConfirmationNotes ?? null,

@@ -14,6 +14,7 @@ import { ChevronDown } from "lucide-react";
  */
 export function ProgramCitation({ notes, sourceCitation }: { notes?: string; sourceCitation: string }) {
   const [expanded, setExpanded] = useState(false);
+  const urls = Array.from(sourceCitation.matchAll(/https?:\/\/[^\s,;]+/g), (match) => match[0].replace(/[).]+$/, ""));
 
   if (!notes && !sourceCitation) return null;
 
@@ -34,6 +35,15 @@ export function ProgramCitation({ notes, sourceCitation }: { notes?: string; sou
           <p className="text-xs text-slate-500">
             Source: <span className="italic">{sourceCitation}</span>
           </p>
+          {urls.length ? (
+            <div className="flex flex-wrap gap-2">
+              {urls.map((url, index) => (
+                <a key={url} href={url} target="_blank" rel="noreferrer" className="text-xs font-medium text-amber-400 underline decoration-amber-400/40 underline-offset-2 hover:text-amber-300">
+                  {urls.length === 1 ? "View guideline / matrix" : `View source ${index + 1}`}
+                </a>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
