@@ -81,12 +81,6 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
         </Card>
       ) : (
         <>
-          {lender.notes && (
-            <Card title="Notes" dark>
-              <p className="text-sm text-slate-400 whitespace-pre-line">{lender.notes}</p>
-            </Card>
-          )}
-
           <Card title={`Programs (${lenderPrograms.length})`} dark>
             {lenderPrograms.length === 0 ? (
               <p className="text-sm text-slate-400">No active programs on file for this lender yet.</p>
@@ -145,6 +139,12 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
           <Card title={`Account Executives`} dark>
             <AeSection lenderId={lender.id} />
           </Card>
+
+          {lender.notes && (
+            <Card title="Notes" dark>
+              <p className="text-sm text-slate-400 whitespace-pre-line">{lender.notes}</p>
+            </Card>
+          )}
         </>
       )}
     </div>
