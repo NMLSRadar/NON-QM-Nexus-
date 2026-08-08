@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const NAV = [
@@ -14,34 +15,57 @@ const NAV = [
   { href: "/account", label: "Account" },
 ] as const;
 
+function isActive(pathname: string, href: string) {
+  const isScenarioDetail = href === "/scenarios" && pathname.startsWith("/scenarios/") && !pathname.startsWith("/scenarios/new") && !pathname.startsWith("/scenarios/voice");
+  const isLenderDetail = href === "/lenders" && pathname.startsWith("/lenders/");
+  return pathname === href || isScenarioDetail || isLenderDetail;
+}
+
 export function PrimaryNav() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "/";
 
   return (
-    <nav aria-label="Primary" className="flex flex-wrap justify-center gap-x-6 gap-y-1 text-sm">
-      {NAV.map((item) => {
-        const isScenarioDetail = item.href === "/scenarios" && pathname?.startsWith("/scenarios/") && !pathname.startsWith("/scenarios/new") && !pathname.startsWith("/scenarios/voice");
-        const isLenderDetail = item.href === "/lenders" && pathname?.startsWith("/lenders/");
-        const active = pathname === item.href || isScenarioDetail || isLenderDetail;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={active ? "page" : undefined}
-            className={`relative rounded px-1 py-1 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-              active ? "text-amber-300" : "text-slate-300 hover:text-amber-200"
-            }`}
-          >
-            {item.label}
-            <span
-              aria-hidden
-              className={`absolute -bottom-0.5 left-1 right-1 h-px rounded-full transition-opacity ${
-                active ? "bg-gradient-to-r from-amber-300 via-amber-400 to-amber-300 opacity-100 shadow-[0_0_6px_1px_rgba(240,200,96,0.6)]" : "opacity-0"
+    <>
+      <nav aria-label="Primary" className="hidden items-center justify-center gap-x-5 whitespace-nowrap text-[13px] xl:flex 2xl:gap-x-7 2xl:text-sm">
+        {NAV.map((item) => {
+          const active = isActive(pathname, item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              className={`premium-nav-link relative rounded-md px-1 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                active ? "text-amber-300" : "text-slate-200 hover:text-amber-200"
               }`}
-            />
-          </Link>
-        );
-      })}
-    </nav>
+            >
+              {item.label}
+              <span aria-hidden className={`premium-nav-underline ${active ? "is-active" : ""}`} />
+            </Link>
+          );
+        })}
+      </nav>
+
+      <details className="premium-mobile-nav relative xl:hidden">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-2 rounded-lg border border-amber-400/35 bg-black/40 px-3 py-2 text-sm font-medium text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400">
+          <Menu className="h-4 w-4" aria-hidden="true" />
+          Menu
+        </summary>
+        <nav aria-label="Mobile primary" className="premium-mobile-nav-panel">
+          {NAV.map((item) => {
+            const active = isActive(pathname, item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={active ? "is-active" : ""}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </details>
+    </>
   );
 }

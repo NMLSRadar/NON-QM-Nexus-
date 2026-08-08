@@ -11,10 +11,7 @@ export async function AuthStatus() {
 
   if (!user) {
     return (
-      <Link
-        href="/login"
-        className="text-slate-300 hover:text-white text-sm rounded px-1 focus:outline-none focus:ring-2 focus:ring-amber-400"
-      >
+      <Link href="/login" className="premium-header-signin">
         Sign in
       </Link>
     );
@@ -25,14 +22,14 @@ export async function AuthStatus() {
       <OrgSwitcher />
       <Link
         href="/account"
-        className="text-slate-300 hover:text-white rounded px-1 focus:outline-none focus:ring-2 focus:ring-amber-400"
+        className="max-w-36 truncate rounded px-1 text-slate-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
       >
         {user.email}
       </Link>
       <form action={signOut}>
         <button
           type="submit"
-          className="text-amber-300 hover:text-amber-200 underline focus:outline-none focus:ring-2 focus:ring-amber-400 rounded px-1"
+          className="rounded px-1 text-amber-300 underline hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400"
         >
           Sign out
         </button>
