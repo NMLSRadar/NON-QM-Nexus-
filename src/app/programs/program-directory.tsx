@@ -54,53 +54,63 @@ function ProgramCard({ program, lender }: { program: Program; lender: Lender }) 
       ? { label: "Min FICO", value: String(program.minFico) }
       : program.matrixConfirmationRequired
         ? { label: "Min FICO", value: "Confirm matrix" }
-        : null,
+        : program.noFicoPolicy?.startsWith("eligible")
+          ? { label: "Credit", value: "No FICO path" }
+          : null,
     program.baseMaxLtv > 0
       ? { label: "Max LTV", value: fmtPct(program.baseMaxLtv, 1) }
       : program.matrixConfirmationRequired
         ? { label: "Max LTV", value: "Confirm matrix" }
         : null,
     program.maxLoanAmount > 0 ? { label: "Max loan", value: fmtUsd(program.maxLoanAmount) } : null,
-    program.minDscr != null ? { label: "Min DSCR", value: String(program.minDscr) } : null,
+    program.maxDti != null ? { label: "Max DTI", value: fmtPct(program.maxDti, 0) } : null,
+    program.minDscr != null ? { label: "Min DSCR", value: program.minDscr === 0 ? "No ratio" : String(program.minDscr) } : null,
+    { label: "Reserves", value: `${program.minReservesMonths} mo minimum` },
   ].filter((detail): detail is { label: string; value: string } => detail !== null);
 
   const occupancy = program.occupancies.slice(0, 2).map(readableValue).join(" · ");
-  const citizenship = program.citizenshipEligible.slice(0, 2).map(readableValue).join(" · ");
+  const citizenship = program.citizenshipEligible.slice(0, 3).map(readableValue).join(" · ");
+  const categoryIds = getProgramCategories(program).filter((id) => id !== "all");
+  const category = categoryIds.length > 0
+    ? categoryIds.map((id) => PROGRAM_CATEGORIES.find((item) => item.id === id)?.shortLabel).filter(Boolean).join(" · ")
+    : program.incomeDocTypes.map(readableValue).join(" · ");
+  const sourceUrl = program.sourceDocuments?.find((url) => /^https:\/\//.test(url));
 
   return (
-    <Link
-      href={`/lenders/${lender.id}#program-${program.id}`}
-      className="group block rounded-xl border border-amber-500/15 bg-[#111113] p-4 shadow-[0_12px_35px_-24px_rgba(245,158,11,0.45)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-400/55 hover:bg-[#151411] focus:outline-none focus:ring-2 focus:ring-amber-400/60"
-      aria-label={`View ${program.name} from ${lender.name}`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-amber-300/75">{lender.name}</p>
-          <h4 className="mt-1 text-base font-semibold leading-snug text-white group-hover:text-amber-100">{program.name}</h4>
+    <article className="group rounded-xl border border-amber-500/15 bg-[#111113] p-4 shadow-[0_12px_35px_-24px_rgba(245,158,11,0.45)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-400/55 hover:bg-[#151411]">
+      <Link href={`/lenders/${lender.id}#program-${program.id}`} className="block focus:outline-none focus:ring-2 focus:ring-amber-400/60" aria-label={`View ${program.name} from ${lender.name}`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-amber-300/75">{lender.name}</p>
+            <h4 className="mt-1 text-base font-semibold leading-snug text-white group-hover:text-amber-100">{program.name}</h4>
+            <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-500">{category}</p>
+          </div>
+          <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-400/25 bg-amber-400/10 text-amber-300 transition group-hover:border-amber-300/50 group-hover:bg-amber-300/15">
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+          </span>
         </div>
-        <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-400/25 bg-amber-400/10 text-amber-300 transition group-hover:border-amber-300/50 group-hover:bg-amber-300/15">
-          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-        </span>
+      </Link>
+
+      <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {details.map((detail) => (
+          <div key={detail.label} className="rounded-lg border border-white/[0.06] bg-black/35 px-2.5 py-2">
+            <dt className="text-[10px] uppercase tracking-wide text-slate-500">{detail.label}</dt>
+            <dd className="mt-0.5 truncate text-xs font-semibold tabular-nums text-slate-200">{detail.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-400">
+        {occupancy ? <span className="rounded-full border border-white/[0.07] bg-white/[0.03] px-2.5 py-1">{occupancy}</span> : null}
+        {citizenship ? <span className="rounded-full border border-white/[0.07] bg-white/[0.03] px-2.5 py-1">{citizenship}</span> : null}
+        {program.matrixConfirmationRequired ? <span className="rounded-full border border-amber-400/25 bg-amber-400/[0.07] px-2.5 py-1 text-amber-200">Needs verification</span> : null}
       </div>
 
-      {details.length > 0 ? (
-        <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {details.map((detail) => (
-            <div key={detail.label} className="rounded-lg border border-white/[0.06] bg-black/35 px-2.5 py-2">
-              <dt className="text-[10px] uppercase tracking-wide text-slate-500">{detail.label}</dt>
-              <dd className="mt-0.5 truncate text-xs font-semibold tabular-nums text-slate-200">{detail.value}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : null}
-
-      {(occupancy || citizenship) && (
-        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-400">
-          {occupancy ? <span className="rounded-full border border-white/[0.07] bg-white/[0.03] px-2.5 py-1">{occupancy}</span> : null}
-          {citizenship ? <span className="rounded-full border border-white/[0.07] bg-white/[0.03] px-2.5 py-1">{citizenship}</span> : null}
-        </div>
-      )}
-    </Link>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-3 text-[11px]">
+        <span className="text-slate-500">Effective {program.effectiveDate || "not published"} · Verified {program.lastVerifiedDate || "pending"}</span>
+        {sourceUrl ? <a href={sourceUrl} target="_blank" rel="noreferrer" className="font-semibold text-amber-300 hover:text-amber-200">View Full Guidelines</a> : <span className="font-semibold text-slate-600">Source pending</span>}
+      </div>
+    </article>
   );
 }
 

@@ -26,6 +26,7 @@ const scripts = [
   "ingest_acra_complete_2026_08_08.mjs",
   "acc_mortgage_complete_audit_2026_08_08.mjs",
   "ingest_amwest_pennymac_clearedge_fundloans_2026_08_08.mjs",
+  "ingest_ten_lender_nonqm_2026_08_08.mjs",
 ];
 
 for (const script of scripts) {
