@@ -278,22 +278,6 @@ async function annotatePublicCatalogPrograms(admin, lenderIds) {
   }
 }
 
-async function archiveKnownGenericRows(admin, lenderIds) {
-  const stale = new Map([
-    ["BluePoint Mortgage", ["Asset Utilization","Bank Statement Loan","BlueXpanded DSCR (Single Investment Property)"]],
-    ["Oaktree Funding Corporation", ["Bank Statement Program","Investor Advantage (DSCR)","Investor Advantage — Alt-Doc / Foreign National"]],
-    ["Forward Lending", ["DSCR Loan","Full Doc Non-QM","Non-QM Select — Bank Statement / Alt Doc"]],
-    ["Hometown Equity Mortgage", ["Non-QM Bank Statement Qualifier","theNONI DSCR","theSuperNONI — Asset Depletion"]],
-    ["Redwood Residential Acquisition Corporation", ["Aspire DSCR","Aspire Expanded — Alternative Documentation","Aspire Expanded — Full Documentation"]],
-  ]);
-  for (const [lender, names] of stale) {
-    const lenderId = lenderIds.get(lender);
-    if (!lenderId) continue;
-    const { data } = await admin.from("programs").select("id,name").eq("lender_id", lenderId).in("name", names).is("deleted_at", null);
-    for (const row of data ?? []) await admin.from("programs").update({ active: false, deleted_at: new Date().toISOString() }).eq("id", row.id);
-  }
-}
-
 export async function runIngestion() {
   const env = loadEnv();
   if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || env.NEXT_PUBLIC_SUPABASE_URL === "[SENSITIVE]") return { skipped: true, programs: 0 };
@@ -302,7 +286,6 @@ export async function runIngestion() {
   const lenderIds = await resolveLenders(admin, adminId);
   for (const p of PROGRAMS) await upsertProgram(admin, adminId, lenderIds.get(p.lender), p);
   await annotatePublicCatalogPrograms(admin, lenderIds);
-  await archiveKnownGenericRows(admin, lenderIds);
   console.log(`[ten-lender-ingest] complete: ${PROGRAMS.length} normalized program records; 4 access-gated catalogs annotated`);
   return { skipped: false, programs: PROGRAMS.length };
 }

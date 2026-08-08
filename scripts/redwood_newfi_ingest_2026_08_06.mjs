@@ -103,17 +103,21 @@ async function ensureLender(name, createdBy) {
   return lender;
 }
 async function upsertProgram(def, lender, createdBy) {
-  const existingRows = await one("programs", db.from("programs").select("*").eq("lender_id", lender.id), `read programs ${lender.name}`);
+  const existingRows = await one("programs", db.from("programs").select("*").eq("lender_id", lender.id).order("created_at", {ascending:true}), `read programs ${lender.name}`);
   const targetName = normalize(def.name);
-  let existing = existingRows.find((x) => normalize(x.name) === targetName);
+  const sameNameRows = existingRows.filter((x) => normalize(x.name) === targetName);
+  let existing = sameNameRows[0];
   const config = {...def.config,lenderId:lender.id,effectiveDate:def.effective,lastVerifiedDate:TODAY,sourceCitation:def.source,guidelineVersionLabel:def.version};
   const previous = existing ? existing.config : null;
   if (existing) {
-    await one("programs", db.from("programs").update({name:def.name,active:true,config,version:(existing.version ?? 1)+1}).eq("id",existing.id).select("id").single(),`update ${def.name}`);
+    await one("programs", db.from("programs").update({name:def.name,active:true,deleted_at:null,config,version:(existing.version ?? 1)+1}).eq("id",existing.id).select("id").single(),`update ${def.name}`);
   } else {
     existing = await one("programs", db.from("programs").insert({organization_id:PLATFORM_ORG,lender_id:lender.id,name:def.name,is_sample_data:false,active:true,config,created_by:createdBy}).select("id").single(),`insert ${def.name}`);
   }
   const programId = existing.id;
+  for (const duplicate of sameNameRows.slice(1)) {
+    await one("programs", db.from("programs").update({active:false,deleted_at:new Date().toISOString()}).eq("id",duplicate.id).select("id").single(),`archive duplicate ${def.name}`);
+  }
   const oldVersions = await one("guideline_versions", db.from("guideline_versions").select("id,label,verification_status").eq("program_id",programId),`read versions ${def.name}`);
   for (const old of oldVersions.filter((x) => x.label !== def.version && x.verification_status !== "superseded")) {
     await one("guideline_versions", db.from("guideline_versions").update({verification_status:"superseded",expiration_date:def.effective}).eq("id",old.id),`supersede ${old.label}`);
@@ -138,7 +142,7 @@ async function main() {
   const qa = [];
   for (const def of programs) {
     const lender = lenderCache.get(def.lender);
-    const rows = await one("programs", db.from("programs").select("id,name,active,config").eq("lender_id",lender.id),`QA read ${def.name}`);
+    const rows = await one("programs", db.from("programs").select("id,name,active,config").eq("lender_id",lender.id).eq("active",true).is("deleted_at",null),`QA read ${def.name}`);
     const matches = rows.filter((x) => normalize(x.name) === normalize(def.name));
     const current = matches[0];
     qa.push({program:def.name,unique:matches.length===1,active:current?.active===true,sourceStamped:current?.config?.notes?.includes(RUN_ID)===true,matrixRows:current?.config?.purposeLtvMatrix?.length ?? current?.config?.fiveToEightUnitLtvMatrix?.length ?? 0});
