@@ -9,6 +9,7 @@ const NAV = [
   { href: "/scenarios/voice", label: "Voice Scenario" },
   { href: "/scenarios", label: "Scenarios" },
   { href: "/document-checklists", label: "Doc Checklists" },
+  { href: "/unique-products", label: "Unique Non-QM Products" },
   { href: "/lenders", label: "Lenders" },
   { href: "/programs", label: "Programs" },
   { href: "/pricing", label: "Pricing" },
@@ -18,7 +19,8 @@ const NAV = [
 function isActive(pathname: string, href: string) {
   const isScenarioDetail = href === "/scenarios" && pathname.startsWith("/scenarios/") && !pathname.startsWith("/scenarios/new") && !pathname.startsWith("/scenarios/voice");
   const isLenderDetail = href === "/lenders" && pathname.startsWith("/lenders/");
-  return pathname === href || isScenarioDetail || isLenderDetail;
+  const isUniqueProductDetail = href === "/unique-products" && pathname.startsWith("/unique-products/");
+  return pathname === href || isScenarioDetail || isLenderDetail || isUniqueProductDetail;
 }
 
 export function PrimaryNav() {
@@ -26,7 +28,7 @@ export function PrimaryNav() {
 
   return (
     <>
-      <nav aria-label="Primary" className="hidden items-center justify-center gap-x-5 whitespace-nowrap text-[13px] xl:flex 2xl:gap-x-7 2xl:text-sm">
+      <nav aria-label="Primary" className="hidden items-center justify-center gap-x-3 whitespace-nowrap text-[12px] xl:flex 2xl:gap-x-5 2xl:text-[13px]">
         {NAV.map((item) => {
           const active = isActive(pathname, item.href);
           return (

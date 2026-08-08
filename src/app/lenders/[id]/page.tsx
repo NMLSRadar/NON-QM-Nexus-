@@ -140,9 +140,11 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
             )}
           </Card>
 
-          <Card title={`Account Executives`} dark>
-            <AeSection lenderId={lender.id} />
-          </Card>
+          <div id="account-executives" className="scroll-mt-28">
+            <Card title={`Account Executives`} dark>
+              <AeSection lenderId={lender.id} />
+            </Card>
+          </div>
 
           {lender.notes && <LenderNotes notes={lender.notes} />}
         </>
