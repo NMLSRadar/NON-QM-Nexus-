@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { ShieldCheck, Lock, Mail } from "lucide-react";
 import "./globals.css";
 import { DISCLAIMER } from "@/domain/types/enums";
 import { AuthStatus } from "@/components/auth-status";
@@ -85,24 +86,51 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
         </header>
         <main className="relative z-10 flex-1 mx-auto w-full max-w-7xl px-4 py-6">{children}</main>
-        <footer className="relative z-10 border-t-2 border-black bg-white">
-          <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-slate-500 space-y-2">
-            <p>{DISCLAIMER}</p>
-            <p>
-              This platform is an underwriting-assistance and research tool; it does not issue loan approvals,
-              credit decisions, or commitments to lend. Lender program data is maintained by NON-QM Nexus
-              administrators and is subject to change without notice — always confirm current guidelines directly
-              with the lender before advising a client.
-            </p>
-            <nav aria-label="Legal" className="flex gap-4 pt-1">
-              <Link href="/terms" className="hover:text-slate-900 hover:underline">
+        <footer className="relative z-10 border-t border-amber-500/20 gold-theme gold-glass">
+          <div className="mx-auto max-w-7xl px-4 py-6 text-xs text-slate-400 space-y-5">
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <span
+                  aria-hidden
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-400/40 bg-black/40 text-amber-400"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                </span>
+                <p className="pt-1.5 leading-relaxed">{DISCLAIMER}</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <span
+                  aria-hidden
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-400/40 bg-black/40 text-amber-400"
+                >
+                  <Lock className="h-4 w-4" />
+                </span>
+                <p className="pt-1.5 leading-relaxed">
+                  This platform is an underwriting-assistance and research tool; it does not issue loan approvals,
+                  credit decisions, or commitments to lend. Lender program data is maintained by NON-QM Nexus
+                  administrators and is subject to change without notice — always confirm current guidelines directly
+                  with the lender before advising a client.
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t border-amber-500/15" />
+
+            <nav aria-label="Legal" className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <Link href="/terms" className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 hover:underline">
+                <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
                 Terms of Service
               </Link>
-              <Link href="/privacy" className="hover:text-slate-900 hover:underline">
+              <Link href="/privacy" className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 hover:underline">
+                <Lock className="h-3.5 w-3.5" aria-hidden />
                 Privacy Policy
               </Link>
-              <span>
-                Support: <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-slate-900 hover:underline">{SUPPORT_EMAIL}</a>
+              <span className="flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5 text-amber-400" aria-hidden />
+                Support:{" "}
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="text-amber-400 hover:text-amber-300 hover:underline">
+                  {SUPPORT_EMAIL}
+                </a>
               </span>
             </nav>
           </div>
