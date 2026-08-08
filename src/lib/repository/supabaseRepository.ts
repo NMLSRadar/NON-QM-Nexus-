@@ -57,6 +57,37 @@ interface ProgramRow {
   config: Omit<Program, "id" | "organizationId" | "lenderId" | "name" | "isSampleData" | "active">;
 }
 
+/**
+ * JSONB program configs predate several required eligibility dimensions.
+ * TypeScript cannot protect runtime data loaded from Postgres, and one
+ * malformed active row must never crash every signed-in user's dashboard.
+ *
+ * Missing eligibility arrays are not defaulted to broad access. Instead the
+ * row is quarantined by listPrograms(), so incomplete data always fails
+ * closed until an administrator repairs and re-verifies the program.
+ */
+export function getProgramConfigRuntimeIssues(config: unknown): string[] {
+  if (!config || typeof config !== "object" || Array.isArray(config)) return ["config"];
+
+  const value = config as Record<string, unknown>;
+  const requiredArrays = [
+    "incomeDocTypes",
+    "loanPurposes",
+    "occupancies",
+    "propertyTypes",
+    "citizenshipEligible",
+    "vestingEligible",
+    "prepaymentPenaltyOptions",
+  ];
+  const issues = requiredArrays.filter((field) => !Array.isArray(value[field]));
+
+  if (value.eligibleStates !== "ALL" && !Array.isArray(value.eligibleStates)) {
+    issues.push("eligibleStates");
+  }
+
+  return issues;
+}
+
 function rowToProgram(row: ProgramRow): Program {
   return {
     ...row.config,
@@ -362,7 +393,21 @@ export class SupabaseRepository implements Repository {
       .lte("lenders.tier_level", tier)
       .is("deleted_at", null);
     if (error) throw new Error(`Failed to list programs: ${error.message}`);
-    const programs = (data as unknown as ProgramRow[]).map(rowToProgram);
+    const programRows = data as unknown as ProgramRow[];
+    const invalidRows = programRows
+      .map((row) => ({ row, issues: getProgramConfigRuntimeIssues(row.config) }))
+      .filter(({ issues }) => issues.length > 0);
+
+    if (invalidRows.length > 0) {
+      // Catalog metadata only — no borrower/customer data is logged.
+      console.error(
+        "Quarantined malformed program configs",
+        invalidRows.map(({ row, issues }) => ({ programId: row.id, programName: row.name, issues })),
+      );
+    }
+
+    const invalidProgramIds = new Set(invalidRows.map(({ row }) => row.id));
+    const programs = programRows.filter((row) => !invalidProgramIds.has(row.id)).map(rowToProgram);
     if (programs.length === 0) return [];
     // External-audit fix (2026-07-28): same verified-only gate as
     // listLenders — a program must not evaluate in matching for customer
