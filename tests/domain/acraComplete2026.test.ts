@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { extractFromTranscript } from "@/domain/voice/extract";
-import { deriveMaxLtv } from "@/domain/matching/baseChecks";
+import { deriveMaxLtv, deriveRequiredReservesMonths } from "@/domain/matching/baseChecks";
 import type { Program } from "@/domain/types/program";
 import type { Scenario } from "@/domain/types/scenario";
 // The production ingestion artifact is deliberately plain ESM so Vercel can
@@ -55,6 +55,22 @@ describe("Acra complete 2026 program update", () => {
     expect(deriveMaxLtv(scenario({ fico:660, occupancy:"investment", incomeDocType:"dscr", loanPurpose:"cash_out_refinance" }), p, 1.1)).toBe(60);
     expect(p.itinDscrEligible).toBe(true);
     expect(p.ownerOccupiedItinEligible).toBe(false);
+  });
+
+  it("applies Acra's 3-12 month reserve tiers instead of reporting zero", () => {
+    for (const definition of PROGRAMS) {
+      expect(program(definition.name).minReservesMonths, definition.name).toBe(3);
+    }
+
+    const bank = program("Acra Bank Statement");
+    expect(deriveRequiredReservesMonths(scenario({ citizenship:"us_citizen", fico:700 }), bank, undefined, 75)).toBe(3);
+    expect(deriveRequiredReservesMonths(scenario({ citizenship:"us_citizen", fico:700 }), bank, undefined, 86)).toBe(6);
+    expect(deriveRequiredReservesMonths(scenario({ citizenship:"us_citizen", fico:610 }), bank, undefined, 65)).toBe(12);
+
+    const itinDscr = program("Acra ITIN DSCR");
+    const itinDscrScenario = scenario({ occupancy:"investment", incomeDocType:"dscr", fico:700 });
+    expect(deriveRequiredReservesMonths(itinDscrScenario, itinDscr, 1.1, 70)).toBe(3);
+    expect(deriveRequiredReservesMonths({ ...itinDscrScenario, firstTimeHomebuyer:true }, itinDscr, 1.15, 70)).toBe(6);
   });
 
   it("caps condos under the platform-wide property overlays", () => {

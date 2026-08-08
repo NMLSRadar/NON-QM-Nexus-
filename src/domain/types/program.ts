@@ -163,11 +163,17 @@ export interface Program {
     months: number;
     minLoanAmountExclusive?: number;
     maxLoanAmount?: number;
+    minLtvExclusive?: number;
+    maxLtv?: number;
+    minFico?: number;
+    maxFicoExclusive?: number;
     minDscr?: number;
     maxDscrExclusive?: number;
     citizenship?: Citizenship;
     occupancy?: Occupancy;
     loanPurpose?: LoanPurpose;
+    firstTimeHomebuyer?: boolean;
+    firstTimeInvestor?: boolean;
   }>;
   interestOnlyAvailable: boolean;
   prepaymentPenaltyOptions: string[];

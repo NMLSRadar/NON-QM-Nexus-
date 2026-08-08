@@ -14,6 +14,33 @@ function result(
   return { ruleId: id, ruleName: name, category, outcome, severity, userExplanation: explanation };
 }
 
+/** Resolve the scenario-specific reserve requirement. Conditional rows stack
+ * by taking the highest matching requirement; they are never added together. */
+export function deriveRequiredReservesMonths(
+  scenario: Scenario,
+  program: Program,
+  dscr?: number | null,
+  leverage?: number | null,
+): number {
+  const actualLeverage = leverage ?? null;
+  const matching = (program.reserveRules ?? [])
+    .filter((r) => r.minLoanAmountExclusive == null || (scenario.requestedLoanAmount != null && scenario.requestedLoanAmount > r.minLoanAmountExclusive))
+    .filter((r) => r.maxLoanAmount == null || (scenario.requestedLoanAmount != null && scenario.requestedLoanAmount <= r.maxLoanAmount))
+    .filter((r) => r.minLtvExclusive == null || (actualLeverage != null && actualLeverage > r.minLtvExclusive))
+    .filter((r) => r.maxLtv == null || (actualLeverage != null && actualLeverage <= r.maxLtv))
+    .filter((r) => r.minFico == null || (scenario.fico != null && scenario.fico >= r.minFico))
+    .filter((r) => r.maxFicoExclusive == null || (scenario.fico != null && scenario.fico < r.maxFicoExclusive))
+    .filter((r) => r.minDscr == null || (dscr != null && dscr >= r.minDscr))
+    .filter((r) => r.maxDscrExclusive == null || (dscr != null && dscr < r.maxDscrExclusive))
+    .filter((r) => r.citizenship == null || scenario.citizenship === r.citizenship)
+    .filter((r) => r.occupancy == null || scenario.occupancy === r.occupancy)
+    .filter((r) => r.loanPurpose == null || scenario.loanPurpose === r.loanPurpose)
+    .filter((r) => r.firstTimeHomebuyer == null || scenario.firstTimeHomebuyer === r.firstTimeHomebuyer)
+    .filter((r) => r.firstTimeInvestor == null || scenario.firstTimeInvestor === r.firstTimeInvestor)
+    .map((r) => r.months);
+  return Math.max(program.minReservesMonths, ...matching);
+}
+
 /**
  * Look up the applicable 5-8 unit LTV/FICO/loan-amount tier for a scenario,
  * per the lookup rule documented on FiveToEightUnitLtvMatrixEntry: the
@@ -685,16 +712,7 @@ export function baseProgramChecks(
 
   // Reserves (soft — usually curable). Conditional lender overlays stack by
   // taking the highest matching requirement, never by adding months.
-  const conditionalReserveMonths = (program.reserveRules ?? [])
-    .filter((r) => r.minLoanAmountExclusive == null || (scenario.requestedLoanAmount != null && scenario.requestedLoanAmount > r.minLoanAmountExclusive))
-    .filter((r) => r.maxLoanAmount == null || (scenario.requestedLoanAmount != null && scenario.requestedLoanAmount <= r.maxLoanAmount))
-    .filter((r) => r.minDscr == null || (calc.dscr?.value != null && calc.dscr.value >= r.minDscr))
-    .filter((r) => r.maxDscrExclusive == null || (calc.dscr?.value != null && calc.dscr.value < r.maxDscrExclusive))
-    .filter((r) => r.citizenship == null || scenario.citizenship === r.citizenship)
-    .filter((r) => r.occupancy == null || scenario.occupancy === r.occupancy)
-    .filter((r) => r.loanPurpose == null || scenario.loanPurpose === r.loanPurpose)
-    .map((r) => r.months);
-  const requiredReserves = Math.max(program.minReservesMonths, ...conditionalReserveMonths);
+  const requiredReserves = deriveRequiredReservesMonths(scenario, program, calc.dscr?.value, leverage?.value);
   const reservesMonths = calc.results.find((r) => r.key === "available_reserves_months")?.value ?? null;
   if (reservesMonths != null) {
     const ok = reservesMonths >= requiredReserves;

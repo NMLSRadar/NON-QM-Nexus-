@@ -4,7 +4,7 @@ import type { Scenario } from "../types/scenario";
 import type { CalculationSummary, ProgramEvaluation, RuleEvaluationResult } from "../types/results";
 import { selectActiveRules } from "../rules/activeRules";
 import { evaluateRules } from "../rules/evaluate";
-import { baseProgramChecks, deriveMaxLtv } from "./baseChecks";
+import { baseProgramChecks, deriveMaxLtv, deriveRequiredReservesMonths } from "./baseChecks";
 import { computeScore } from "./score";
 import type { BankStatementFileClassification } from "./bankStatementComplexity";
 
@@ -71,7 +71,7 @@ export function evaluateProgram(
     minFico: program.minFico,
     maxDti: program.maxDti,
     estimatedQualifyingIncome: calc.qualifyingMonthlyIncome?.value ?? undefined,
-    estimatedReservesRequiredMonths: program.minReservesMonths,
+    estimatedReservesRequiredMonths: deriveRequiredReservesMonths(scenario, program, calc.dscr?.value, calc.ltv?.value),
     documentationType: program.incomeDocTypes.join(", "),
     incomeDocTypes: program.incomeDocTypes,
     loanPurposes: program.loanPurposes,
