@@ -20,4 +20,20 @@ describe("production catalog mutation safety", () => {
     expect(source).toContain("sameNameRows.slice(1)");
     expect(source).toContain('order("created_at", {ascending:true})');
   });
+
+  it("contains no blanket named-program archival pass in current catalog ingestions", () => {
+    for (const file of [
+      "scripts/ingest_ten_lender_nonqm_2026_08_08.mjs",
+      "scripts/ingest_amwest_pennymac_clearedge_fundloans_2026_08_08.mjs",
+    ]) {
+      const source = readFileSync(file, "utf8");
+      expect(source).not.toMatch(/archiveSupersededGenericPrograms|archiveKnownGenericRows|staleByLender/);
+    }
+  });
+
+  it("repairs both accidentally archived lenders and their verified programs", () => {
+    const source = readFileSync("scripts/repair_incorrect_catalog_archives_2026_08_08.mjs", "utf8");
+    expect(source).toContain('from("lenders").update({ active: true, deleted_at: null })');
+    expect(source).toContain('from("programs").update({ active: true, deleted_at: null, config })');
+  });
 });

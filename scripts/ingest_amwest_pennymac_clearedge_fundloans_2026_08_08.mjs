@@ -641,23 +641,6 @@ async function upsertProgram(admin, adminId, lenderId, p) {
   return programId;
 }
 
-async function archiveSupersededGenericPrograms(admin, lenderIds) {
-  const staleByLender = new Map([
-    ["FundLoans", ["Bank Statement / P&L", "Assets Only", "WVOE"]],
-  ]);
-  for (const [lenderName, names] of staleByLender) {
-    const lenderId = lenderIds.get(lenderName);
-    if (!lenderId) continue;
-    const { data, error } = await admin.from("programs").select("id,name").eq("lender_id", lenderId).in("name", names).is("deleted_at", null);
-    if (error) throw new Error(`Read superseded ${lenderName} programs: ${error.message}`);
-    for (const stale of data ?? []) {
-      const { error: archiveError } = await admin.from("programs").update({ active: false, deleted_at: new Date().toISOString() }).eq("id", stale.id);
-      if (archiveError) throw new Error(`Archive ${lenderName} ${stale.name}: ${archiveError.message}`);
-      console.log(`[four-lender-ingest] archived superseded generic row: ${lenderName} — ${stale.name}`);
-    }
-  }
-}
-
 export async function runIngestion() {
   const env = loadEnv();
   if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || env.NEXT_PUBLIC_SUPABASE_URL === "[SENSITIVE]") {
@@ -675,7 +658,6 @@ export async function runIngestion() {
     count += 1;
     console.log(`[four-lender-ingest] ${p.lender}: ${p.name}`);
   }
-  await archiveSupersededGenericPrograms(admin, lenderIds);
   console.log(`[four-lender-ingest] complete: ${count} program records`);
   return { skipped: false, programs: count };
 }
