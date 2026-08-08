@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 import assert from "node:assert/strict";
+import { pathToFileURL } from "node:url";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const fileEnv = fs.existsSync(".env.local")
@@ -35,13 +36,20 @@ const PURPOSES = ["purchase", "rate_term_refinance", "cash_out_refinance"];
 const CITIZENSHIP = ["us_citizen", "permanent_resident", "non_permanent_resident", "daca", "asylee"];
 const COMMON_PROPERTIES = ["single_family", "pud", "townhome", "condo", "2_4_unit", "rural"];
 const COMMON_VESTING = ["individual", "joint_tenants", "trust"];
+const US_STATES_AND_DC = [
+  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS",
+  "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC",
+  "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
+];
+const PLANET_FIRST_LIEN_STATES = US_STATES_AND_DC.filter((state) => state !== "MA");
+const PLANET_HELOAN_STATES = US_STATES_AND_DC.filter((state) => !["DC", "IA", "MA", "NY", "RI", "TN"].includes(state));
 const conflictNote = "Activated for customer visibility and matching at the catalog owner's direction on 2026-08-06. Matrix/guide conflicts still require lender clarification: income-document lookback by Gold/Silver tier and Asset Depletion tier eligibility. Conservative caps and document-specific notes control until clarified.";
 
 const verified = (lenderId, p) => ({
   active: true,
   isSampleData: false,
   lenderId,
-  eligibleStates: "ALL_EXCEPT_MA_US_TERRITORIES",
+  eligibleStates: PLANET_FIRST_LIEN_STATES,
   lastVerifiedDate: REVIEWED,
   currentVersionPending: false,
   excludedFromVerifiedMatching: false,
@@ -146,7 +154,7 @@ function tierBase(lenderId, tier) {
   });
 }
 
-function programs(lenderId) {
+export function programs(lenderId) {
   const rows = [];
   for (const tier of ["Gold", "Silver", "Bronze"]) {
     const matrix = DOC[tier.toLowerCase()];
@@ -196,7 +204,7 @@ function programs(lenderId) {
   }), "Planet ITIN DSCR Matrix v1.0 dated 2025-10-13 — owner activated 2026-08-06", DOC.itinDscr]);
 
   const heloanBase = verified(lenderId, {
-    eligibleStates: "ALL_EXCEPT_DC_IA_MA_NY_RI_TN_US_TERRITORIES; IN_SC_WA_CORRESPONDENT_ONLY",
+    eligibleStates: PLANET_HELOAN_STATES,
     loanPurposes: ["rate_term_refinance", "cash_out_refinance", "second_lien"], occupancies: ["primary", "second_home", "investment"],
     propertyTypes: ["single_family", "pud", "condo", "2_4_unit", "manufactured_home"], citizenshipEligible: ["us_citizen", "permanent_resident", "non_permanent_resident", "daca", "foreign_national"],
     vestingEligible: ["individual"], minLoanAmount: 25000, maxLoanAmount: 750000, minFico: 660, maxDti: 50, baseMaxLtv: 90, minReservesMonths: 0,
@@ -211,9 +219,25 @@ function programs(lenderId) {
   return rows;
 }
 
+function assertCatalogCompatible(rows) {
+  const requiredArrays = [
+    "incomeDocTypes", "loanPurposes", "occupancies", "propertyTypes",
+    "citizenshipEligible", "vestingEligible", "prepaymentPenaltyOptions",
+  ];
+  assert.equal(rows.length, 21, "Planet Home catalog must contain exactly 21 programs");
+  for (const [name, config] of rows) {
+    for (const field of requiredArrays) {
+      assert.ok(Array.isArray(config[field]), `${name}: ${field} must be an array`);
+    }
+    assert.ok(config.eligibleStates === "ALL" || Array.isArray(config.eligibleStates), `${name}: eligibleStates must be ALL or an explicit state array`);
+  }
+}
+
 async function main() {
+  const catalogRows = programs(DRY_RUN ? "dry-run-planet" : "production-planet");
+  assertCatalogCompatible(catalogRows);
   if (DRY_RUN) {
-    const payload = programs("dry-run-planet").map(([name, config, label, sourceUrl]) => ({ name, config, label, sourceUrl, status: STATUS }));
+    const payload = catalogRows.map(([name, config, label, sourceUrl]) => ({ name, config, label, sourceUrl, status: STATUS }));
     assert.equal(payload.length, 21);
     assert.equal(payload.filter((p) => p.status === "human_verified").length, 21);
     assert.equal(payload.filter((p) => !p.config.currentVersionPending && !p.config.excludedFromVerifiedMatching).length, 21);
@@ -238,7 +262,10 @@ async function main() {
   console.log("Production validation passed: Planet Home Lending loaded with 21 verified customer-visible programs for directory, AI Assistant, voice scenarios, and matching.");
 }
 
-main().catch((error) => {
-  console.error("FATAL", error.message);
-  process.exit(1);
-});
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) {
+  main().catch((error) => {
+    console.error("FATAL", error.message);
+    process.exit(1);
+  });
+}
