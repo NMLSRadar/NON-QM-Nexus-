@@ -2,7 +2,7 @@ import { RuleOutcome, RuleSeverity } from "../types/enums";
 import type { Program } from "../types/program";
 import type { Scenario } from "../types/scenario";
 import type { CalculationSummary, RuleEvaluationResult } from "../types/results";
-import { deriveMaxLtv } from "./baseChecks";
+import { deriveMaxLtv, deriveRequiredReservesMonths } from "./baseChecks";
 import type { BankStatementFileClassification } from "./bankStatementComplexity";
 
 export interface ScoreBreakdownEntry {
@@ -84,8 +84,9 @@ export function computeScore(
   // 5. Reserves fit (10)
   const reservesMonths = calc.results.find((r) => r.key === "available_reserves_months")?.value ?? null;
   if (reservesMonths != null) {
-    const ok = reservesMonths >= program.minReservesMonths;
-    breakdown.push({ factor: "Reserves fit", points: ok ? 10 : 4, maxPoints: 10, note: `${reservesMonths} mo vs required ${program.minReservesMonths} mo.` });
+    const requiredReserves = deriveRequiredReservesMonths(scenario, program, calc.dscr?.value, calc.ltv?.value);
+    const ok = reservesMonths >= requiredReserves;
+    breakdown.push({ factor: "Reserves fit", points: ok ? 10 : 4, maxPoints: 10, note: `${reservesMonths} mo vs required ${requiredReserves} mo.` });
   }
 
   // 6. Documentation burden (10) — lighter doc => more points

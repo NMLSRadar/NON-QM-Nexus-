@@ -22,7 +22,7 @@ export const DOCUMENTS = [
 
 const commonOwner = {
   active: true, isSampleData: false, minLoanAmount: 100000, maxLoanAmount: 1000000,
-  minFico: 640, maxDti: 50.49, baseMaxLtv: 75, minReservesMonths: 0,
+  minFico: 640, maxDti: 50.49, baseMaxLtv: 75, minReservesMonths: 3,
   loanPurposes: ["purchase", "rate_term_refinance", "cash_out_refinance"],
   occupancies: ["primary", "second_home"],
   propertyTypes: ["single_family", "townhome", "pud", "condo", "non_warrantable_condo", "condotel", "2_4_unit", "manufactured", "rural"],
@@ -43,7 +43,10 @@ const commonOwner = {
     { citizenship: "itin", maxLoanAmount: 1000000, minFico: 640, loanPurpose: "rate_term_refinance", maxLtv: 60, sourceSection: "Borrower Citizenship — ITIN overlay" },
     { citizenship: "itin", maxLoanAmount: 1000000, minFico: 640, loanPurpose: "cash_out_refinance", maxLtv: 60, sourceSection: "Borrower Citizenship — ITIN overlay" }
   ],
-  reserveRules: [{ months: 0, maxLoanAmount: 1000000 }],
+  reserveRules: [
+    { months: 6, minLtvExclusive: 85 },
+    { months: 12, maxFicoExclusive: 620 }
+  ],
   cashOutLimits: [{ maxLtv: 65, maxCashOutAmount: 500000 }, { maxLtv: 100, maxCashOutAmount: 500000 }],
   guidelineVersionLabel: "Acra owner-occupied program summary + ITIN overview — verified 2026-08-08",
   effectiveDate: EFFECTIVE, lastVerifiedDate: VERIFIED,
@@ -85,12 +88,12 @@ export const PROGRAMS = [
   {
     name: "Acra Bank Statement", primaryDocumentKey: "ownerOccupied",
     config: {
-      active:true,isSampleData:false,minLoanAmount:100000,maxLoanAmount:4000000,minFico:600,maxDti:50.49,baseMaxLtv:90,minReservesMonths:0,
+      active:true,isSampleData:false,minLoanAmount:100000,maxLoanAmount:4000000,minFico:600,maxDti:50.49,baseMaxLtv:90,minReservesMonths:3,
       incomeDocTypes:["bank_statement"], loanPurposes:["purchase","rate_term_refinance","cash_out_refinance"], occupancies:["primary","second_home","investment"],
       propertyTypes:["single_family","townhome","pud","condo","non_warrantable_condo","condotel","2_4_unit","manufactured","rural"],
       eligibleStates:"ALL", citizenshipEligible:["us_citizen","permanent_resident","non_permanent_resident"], vestingEligible:["individual","trust","llc","corporation"],
       purposeLtvMatrix:[...standardOwnerGrid,...nooGrid], propertyTypeLtvCaps:{condo:85,non_warrantable_condo:80,condotel:75,"2_4_unit":85,manufactured:65,rural:80},
-      cashOutLimits:[{maxLtv:65,maxCashOutAmount:null},{maxLtv:100,maxCashOutAmount:500000}], reserveRules:[{months:0,maxLoanAmount:4000000},{months:3}],
+      cashOutLimits:[{maxLtv:65,maxCashOutAmount:null},{maxLtv:100,maxCashOutAmount:500000}], reserveRules:[{months:6,minLtvExclusive:85},{months:12,maxFicoExclusive:620}],
       interestOnlyAvailable:true,prepaymentPenaltyOptions:["Investment property only where permitted by state law"], firstTimeHomebuyerAllowed:true,maxMortgageLates30x12:1,
       minSelfEmploymentMonths:12, bankStatementMonths:[12,24], personalBankStatementsEligible:true,businessBankStatementsEligible:true,
       bankStatementNotes:"12- or 24-month personal/business statements are permitted. One-year self-employed: min 640 FICO; max 80% purchase/rate-term and 65% cash-out. One/no-score bank-statement housing history must be evidenced by cancelled checks, withdrawals, or equivalent; VOR is not acceptable.",
@@ -114,7 +117,7 @@ export const PROGRAMS = [
   {
     name:"Acra ITIN DSCR", primaryDocumentKey:"dscr",
     config:{
-      active:true,isSampleData:false,minLoanAmount:100000,maxLoanAmount:1000000,minFico:640,minDscr:0,baseMaxLtv:70,minReservesMonths:0,
+      active:true,isSampleData:false,minLoanAmount:100000,maxLoanAmount:1000000,minFico:640,minDscr:0,baseMaxLtv:70,minReservesMonths:3,
       incomeDocTypes:["dscr"],loanPurposes:["purchase","rate_term_refinance","cash_out_refinance"],occupancies:["investment"],
       propertyTypes:["single_family","townhome","pud","condo","non_warrantable_condo","condotel","2_4_unit","manufactured","rural"],eligibleStates:["AL","AZ","AR","CA","CO","CT","DC","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","OH","OK","OR","PA","RI","SC","TN","TX","UT","VT","VA","WA","WV","WI","WY"],
       citizenshipEligible:["itin"],citizenshipDocTypeRestrictions:{itin:["dscr"]},vestingEligible:["individual","llc","corporation"],itinSpecialist:true,itinDscrEligible:true,itinNoRatioEligible:true,ownerOccupiedItinEligible:false,investmentItinEligible:true,
@@ -127,6 +130,7 @@ export const PROGRAMS = [
       propertyTypeLtvCaps:{condo:85,non_warrantable_condo:80,condotel:75,"2_4_unit":80,manufactured:65,rural:80},strIncomeEligible:false,strIncomeMaxLtv:75,
       firstTimeInvestorAllowed:true,firstTimeHomebuyerAllowed:true,maxMortgageLates30x12:1,
       dscrTiers:[{min:1.2,maxLtvGeneral:85,reservesMonths:6},{min:1.0,maxLtvGeneral:85},{min:0,maxExclusive:1.0,maxLtvPurchase:75,maxLtvRateTerm:70,maxLtvCashOut:65,minFico:640}],
+      reserveRules:[{months:6,minLtvExclusive:80},{months:6,firstTimeHomebuyer:true},{months:12,maxFicoExclusive:620}],
       dscrCalculationNotes:"Borrowing-entity income documentation is not required. Supplied summary confirms DSCR below 1.00 or no-ratio tier. PITIA/ITIA and 1007/1025 calculation detail is not confirmed in supplied documents.",
       shortTermRentalNotes:"STR property is eligible at max 75% purchase / 70% refinance, min 640 FICO. Use of Airbnb/VRBO actual or projected income is not confirmed; do not infer it from STR property eligibility.",
       vacantPropertyNotes:"Rate-term: 700 FICO, DSCR >=1.0, 2-year PPP where allowed, no IO, impounds, 6 months reserves; max 70% under $1M / 65% under $2M. Cash-out: 700 FICO, DSCR >=1.15, 3-year PPP, no IO, impounds, 6 months reserves; max 60% under $1.5M and 15 months ownership.",
