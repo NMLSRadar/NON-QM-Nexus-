@@ -67,18 +67,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <BuildVersionGuard />
         <GlobalAmbientEngine />
         {access ? <TrialStatusBanner isTrial={access.isTrial} trialExpiresAt={access.trialExpiresAt} currentTierLevel={access.tierLevel} /> : null}
-        <header className="relative z-40 gold-theme gold-glass sticky top-0 text-white">
-          <div className="mx-auto max-w-7xl px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
-            <Link href="/" className="flex items-center gap-2.5 text-lg font-semibold tracking-tight shrink-0">
-              <Image src="/logo.png" alt="NON-QM Nexus" width={36} height={36} className="rounded-full ring-1 ring-amber-400/40" priority />
+        <header className="premium-site-header relative z-40 gold-theme gold-glass sticky top-0 text-white">
+          <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:px-6">
+            <Link href="/" className="premium-wordmark flex shrink-0 items-center gap-2.5 text-lg font-semibold tracking-tight">
+              <Image src="/logo.png" alt="NON-QM Nexus" width={38} height={38} className="rounded-full ring-1 ring-amber-400/40" priority />
               <span>
                 NON-QM <span className="gold-text-gradient font-bold">Nexus</span>
               </span>
             </Link>
-            <div className="flex-1 flex justify-center min-w-[280px]">
+            <div className="order-3 flex w-full justify-start xl:order-none xl:w-auto xl:flex-1 xl:justify-center">
               <PrimaryNav />
             </div>
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="ml-auto flex shrink-0 items-center gap-3">
               <TeamNavLink />
               <AdminNavLink />
               <AuthStatus />
