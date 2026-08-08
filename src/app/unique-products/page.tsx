@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, BriefcaseBusiness, Building2, GraduationCap, HeartPulse, Landmark, ShieldCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, BriefcaseBusiness, Building2, GraduationCap, HeartPulse, House, Landmark, ShieldCheck } from "lucide-react";
 import { UNIQUE_PRODUCT_CATEGORIES } from "@/domain/uniqueProducts";
 
 const icons = {
@@ -8,6 +8,7 @@ const icons = {
   ITIN_PL_ONLY: BriefcaseBusiness,
   GRADUATE_MORTGAGE: GraduationCap,
   DOCTOR_MEDICAL_PROFESSIONAL: HeartPulse,
+  NO_RATIO_PRIMARY_RESIDENCE: House,
 } as const;
 
 export default function UniqueProductsPage() {

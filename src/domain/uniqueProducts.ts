@@ -3,7 +3,8 @@ export type UniqueProgramType =
   | "ITIN_DSCR"
   | "ITIN_PL_ONLY"
   | "GRADUATE_MORTGAGE"
-  | "DOCTOR_MEDICAL_PROFESSIONAL";
+  | "DOCTOR_MEDICAL_PROFESSIONAL"
+  | "NO_RATIO_PRIMARY_RESIDENCE";
 
 export type VerificationStatus = "CONFIRMED" | "VERIFY_CURRENT_MATRIX";
 
@@ -105,6 +106,20 @@ const doctorFields = [
   "Reserves",
   "First-Time Homebuyer",
   "Non-Occupant Co-Borrower",
+  "Special Benefit",
+];
+
+const noRatioPrimaryFields = [
+  "Minimum FICO",
+  "Maximum LTV",
+  "Maximum Loan Amount",
+  "Income Documentation",
+  "Employment Verification",
+  "Assets / Reserves",
+  "Occupancy",
+  "Property Types",
+  "Purchase Available",
+  "Cash-Out Available",
   "Special Benefit",
 ];
 
@@ -395,11 +410,67 @@ export const UNIQUE_PRODUCT_CATEGORIES: UniqueProductCategory[] = [
       },
     ],
   },
+  {
+    slug: "no-ratio-primary-residence",
+    programType: "NO_RATIO_PRIMARY_RESIDENCE",
+    name: "No-Ratio Primary Residence",
+    description:
+      "No-income-qualification mortgage programs for an owner-occupied primary residence. These specialty offerings do not use traditional income documentation to calculate a qualifying debt-to-income ratio.",
+    summary: "No-income, no-ratio qualification for an owner-occupied primary residence.",
+    fieldOrder: noRatioPrimaryFields,
+    active: true,
+    lenders: [
+      {
+        id: "no-ratio-primary-champions",
+        lenderName: "Champions Funding",
+        programName: "No-Ratio Primary Residence",
+        programType: "NO_RATIO_PRIMARY_RESIDENCE",
+        verificationStatus: "CONFIRMED",
+        highlights: [
+          "Owner-occupied primary residence",
+          "No traditional income documentation used for qualification",
+          "No qualifying DTI ratio calculated from borrower income",
+          "Asset, reserve, credit, property, and other eligibility requirements still apply",
+        ],
+        standoutFeature: "Offers no-income, no-ratio qualification for a primary residence.",
+        whyConsider:
+          "Champions Funding is worth considering when an owner-occupant cannot document income through conventional or standard Non-QM methods but may otherwise meet the program's credit, asset, reserve, and property requirements.",
+        fields: unknownFields(noRatioPrimaryFields, {
+          "Income Documentation": "No traditional income documentation for qualification",
+          "Employment Verification": "Verify Current Matrix",
+          Occupancy: "Primary residence / owner occupied",
+          "Special Benefit": "No qualifying income or income-based DTI calculation for an eligible primary residence",
+        }),
+      },
+      {
+        id: "no-ratio-primary-change",
+        lenderName: "Change Wholesale",
+        programName: "No-Ratio Primary Residence",
+        programType: "NO_RATIO_PRIMARY_RESIDENCE",
+        verificationStatus: "CONFIRMED",
+        highlights: [
+          "Owner-occupied primary residence",
+          "No traditional income documentation used for qualification",
+          "No qualifying DTI ratio calculated from borrower income",
+          "Asset, reserve, credit, property, and other eligibility requirements still apply",
+        ],
+        standoutFeature: "A no-income-qualification option for eligible owner-occupied borrowers.",
+        whyConsider:
+          "Change Wholesale provides a rare primary-residence path for borrowers whose income cannot be documented through traditional methods, while still requiring the borrower and property to satisfy the current program matrix and overlays.",
+        fields: unknownFields(noRatioPrimaryFields, {
+          "Income Documentation": "No traditional income documentation for qualification",
+          "Employment Verification": "Verify Current Matrix",
+          Occupancy: "Primary residence / owner occupied",
+          "Special Benefit": "No qualifying income or income-based DTI calculation for an eligible primary residence",
+        }),
+      },
+    ],
+  },
 ];
 
 export const FUTURE_UNIQUE_PRODUCT_CATEGORIES = [
   "WVOE Only", "1099 Only", "1-Year Self-Employed", "3-Month Bank Statement", "6-Month Bank Statement",
-  "No-Ratio Owner Occupied", "Asset Depletion", "ITIN No-FICO", "Foreign National No-FICO",
+  "Asset Depletion", "ITIN No-FICO", "Foreign National No-FICO",
   "Closed-End Second — Bank Statement", "Closed-End Second — P&L", "DSCR 5–10 Units", "DSCR Condotel",
   "DSCR Rural", "DSCR Short-Term Rental", "DSCR First-Time Investor", "DSCR First-Time Homebuyer",
   "Foreign National DSCR", "Non-Permanent Resident P&L", "Non-Permanent Resident Bank Statement",

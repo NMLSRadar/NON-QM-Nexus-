@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 import { FUTURE_UNIQUE_PRODUCT_CATEGORIES, UNIQUE_PRODUCT_CATEGORIES, VERIFY_CURRENT_MATRIX } from "@/domain/uniqueProducts";
 
 describe("unique Non-QM product directory", () => {
-  it("ships exactly the five requested active categories without duplicate doctor variants", () => {
+  it("ships the six active specialty categories without duplicate doctor variants", () => {
     expect(UNIQUE_PRODUCT_CATEGORIES.map((category) => category.name)).toEqual([
       "Jumbo AUS",
       "ITIN DSCR",
       "ITIN P&L Only",
       "Graduate Mortgage",
       "Doctor / Medical Professional Loan",
+      "No-Ratio Primary Residence",
     ]);
     expect(UNIQUE_PRODUCT_CATEGORIES.some((category) => /physician loan|100% financing|future income|no-pmi/i.test(category.name))).toBe(false);
   });
@@ -37,6 +38,7 @@ describe("unique Non-QM product directory", () => {
   it("keeps future categories inactive and outside the live category collection", () => {
     expect(FUTURE_UNIQUE_PRODUCT_CATEGORIES).toContain("WVOE Only");
     expect(FUTURE_UNIQUE_PRODUCT_CATEGORIES).toContain("Blanket Loans");
+    expect(FUTURE_UNIQUE_PRODUCT_CATEGORIES).not.toContain("No-Ratio Owner Occupied");
     expect(UNIQUE_PRODUCT_CATEGORIES.some((category) => FUTURE_UNIQUE_PRODUCT_CATEGORIES.includes(category.name as never))).toBe(false);
   });
 });
