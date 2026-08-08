@@ -8,6 +8,8 @@
 
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 /* ---------------------------------------------------------------------
@@ -594,6 +596,7 @@ body:has(.gold-page) {
 .premium-site-header {
   border-bottom: 1px solid rgba(212, 175, 55, 0.22);
   box-shadow: 0 1px 0 rgba(240, 200, 96, 0.08), 0 12px 36px -28px rgba(212, 175, 55, 0.75);
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .premium-wordmark {
@@ -1130,13 +1133,20 @@ body:has(.gold-page) {
 }
 
 @media (max-width: 420px) {
-  .premium-wordmark { font-size: 0.98rem; gap: 8px; }
-  .premium-wordmark img { width: 34px; height: 34px; }
+  .premium-wordmark { min-width: 0; font-size: 0.9rem; gap: 7px; }
+  .premium-wordmark img { width: 32px; height: 32px; }
+  .premium-header-inner { align-items: center; }
   .premium-header-signin { min-height: 36px; padding: 0 13px; }
   .nexus-eyebrow { font-size: 0.72rem; }
   .nexus-headline { letter-spacing: -0.038em; }
   .nexus-primary-cta, .nexus-closing-cta { width: 100%; }
   .nexus-closing-prompt p { font-size: 0.82rem; }
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  footer > div {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

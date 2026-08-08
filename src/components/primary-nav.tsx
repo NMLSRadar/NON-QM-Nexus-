@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 const NAV = [
   { href: "/scenarios/new", label: "New Scenario" },
@@ -25,6 +26,25 @@ function isActive(pathname: string, href: string) {
 
 export function PrimaryNav() {
   const pathname = usePathname() ?? "/";
+  const [open, setOpen] = useState(false);
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => setOpen(false), [pathname]);
+
+  useEffect(() => {
+    function closeOnOutsidePress(event: PointerEvent) {
+      if (detailsRef.current && !detailsRef.current.contains(event.target as Node)) setOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
 
   return (
     <>
@@ -47,7 +67,12 @@ export function PrimaryNav() {
         })}
       </nav>
 
-      <details className="premium-mobile-nav relative xl:hidden">
+      <details
+        ref={detailsRef}
+        open={open}
+        onToggle={(event) => setOpen(event.currentTarget.open)}
+        className="premium-mobile-nav relative xl:hidden"
+      >
         <summary className="inline-flex cursor-pointer list-none items-center gap-2 rounded-lg border border-amber-400/35 bg-black/40 px-3 py-2 text-sm font-medium text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400">
           <Menu className="h-4 w-4" aria-hidden="true" />
           Menu
@@ -59,6 +84,7 @@ export function PrimaryNav() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setOpen(false)}
                 aria-current={active ? "page" : undefined}
                 className={active ? "is-active" : ""}
               >

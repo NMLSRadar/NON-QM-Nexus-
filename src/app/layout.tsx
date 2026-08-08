@@ -50,6 +50,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
   themeColor: "#060606",
 };
 
@@ -68,24 +71,24 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <GlobalAmbientEngine />
         {access ? <TrialStatusBanner isTrial={access.isTrial} trialExpiresAt={access.trialExpiresAt} currentTierLevel={access.tierLevel} /> : null}
         <header className="premium-site-header relative z-40 gold-theme gold-glass sticky top-0 text-white">
-          <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:px-6">
+          <div className="premium-header-inner mx-auto grid max-w-[1500px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 px-3 py-2.5 sm:gap-x-4 sm:px-6 sm:py-3 xl:flex xl:flex-wrap">
             <Link href="/" className="premium-wordmark flex shrink-0 items-center gap-2.5 text-lg font-semibold tracking-tight">
               <Image src="/logo.png" alt="NON-QM Nexus" width={38} height={38} className="rounded-full ring-1 ring-amber-400/40" priority />
               <span>
                 NON-QM <span className="gold-text-gradient font-bold">Nexus</span>
               </span>
             </Link>
-            <div className="order-3 flex w-full justify-start xl:order-none xl:w-auto xl:flex-1 xl:justify-center">
+            <div className="order-3 col-span-2 flex w-full justify-start xl:order-none xl:w-auto xl:flex-1 xl:justify-center">
               <PrimaryNav />
             </div>
-            <div className="ml-auto flex shrink-0 items-center gap-3">
+            <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
               <TeamNavLink />
               <AdminNavLink />
               <AuthStatus />
             </div>
           </div>
         </header>
-        <main className="relative z-10 flex-1 mx-auto w-full max-w-7xl px-4 py-6">{children}</main>
+        <main className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-3 py-4 sm:px-4 sm:py-6">{children}</main>
         <footer className="relative z-10 border-t border-amber-500/20 gold-theme gold-glass">
           <div className="mx-auto max-w-7xl px-4 py-6 text-xs text-slate-400 space-y-5">
             <div className="space-y-4">

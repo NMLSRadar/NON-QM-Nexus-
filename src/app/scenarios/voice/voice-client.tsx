@@ -54,10 +54,40 @@ interface RecognitionLike {
 }
 type RecognitionCtor = new () => RecognitionLike;
 
+interface NativeListenerHandle { remove(): Promise<void> }
+interface NativeSpeechPlugin {
+  available(): Promise<{ available: boolean }>;
+  checkPermissions(): Promise<{ speechRecognition: string }>;
+  requestPermissions(): Promise<{ speechRecognition: string }>;
+  start(options: {
+    language: string;
+    maxResults: number;
+    partialResults: boolean;
+    popup: boolean;
+  }): Promise<{ matches?: string[] }>;
+  stop(): Promise<void>;
+  addListener(
+    eventName: "partialResults",
+    listener: (data: { matches?: string[] }) => void,
+  ): Promise<NativeListenerHandle>;
+}
+
 function getRecognitionCtor(): RecognitionCtor | undefined {
   if (typeof window === "undefined") return undefined;
   const w = window as unknown as { SpeechRecognition?: RecognitionCtor; webkitSpeechRecognition?: RecognitionCtor };
   return w.SpeechRecognition ?? w.webkitSpeechRecognition;
+}
+
+function getNativeSpeechPlugin(): NativeSpeechPlugin | undefined {
+  if (typeof window === "undefined") return undefined;
+  const capacitor = (window as unknown as {
+    Capacitor?: {
+      isNativePlatform?: () => boolean;
+      Plugins?: { SpeechRecognition?: NativeSpeechPlugin };
+    };
+  }).Capacitor;
+  if (!capacitor?.isNativePlatform?.()) return undefined;
+  return capacitor.Plugins?.SpeechRecognition;
 }
 
 /* ---------------------- manual overrides on top of speech ---------------------- */
@@ -211,6 +241,8 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   const [serverMessage, setServerMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const recognitionRef = useRef<RecognitionLike | null>(null);
+  const nativeListenerRef = useRef<NativeListenerHandle | null>(null);
+  const nativeInterimRef = useRef("");
   const lastAttemptedRef = useRef<string | null>(null);
   const inFlightRef = useRef(false);
   const hasFailedRef = useRef(false);
@@ -234,7 +266,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   const [additionalInfoResolved, setAdditionalInfoResolved] = useState(false);
 
   useEffect(() => {
-    setSupported(getRecognitionCtor() !== undefined);
+    setSupported(getNativeSpeechPlugin() !== undefined || getRecognitionCtor() !== undefined);
   }, []);
 
   // One-tap auto-start: when embedded on the homepage, the caller reveals
@@ -357,17 +389,62 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
     }
   }
 
-  function startListening() {
+  function commitNativeTranscript(text: string) {
+    const clean = text.trim();
+    if (!clean) return;
+    setTranscript((current) => `${current}${current && !current.endsWith(" ") ? " " : ""}${clean} `);
+  }
+
+  async function startListening() {
+    const native = getNativeSpeechPlugin();
+    if (native) {
+      setMicError(null);
+      try {
+        let permission = await native.checkPermissions();
+        if (permission.speechRecognition !== "granted") permission = await native.requestPermissions();
+        if (permission.speechRecognition !== "granted") {
+          setMicError("Microphone and speech recognition access are off. Open iPhone Settings → NON QM NEXUS and enable Microphone and Speech Recognition, then tap the mic again.");
+          return;
+        }
+
+        const availability = await native.available();
+        if (!availability.available) {
+          setMicError("Speech recognition is temporarily unavailable on this iPhone. Check your connection and try again, or type the scenario below.");
+          return;
+        }
+
+        await nativeListenerRef.current?.remove();
+        nativeInterimRef.current = "";
+        nativeListenerRef.current = await native.addListener("partialResults", ({ matches }) => {
+          const phrase = matches?.[0]?.trim() ?? "";
+          nativeInterimRef.current = phrase;
+          setInterim(phrase);
+        });
+        setListening(true);
+        const result = await native.start({ language: "en-US", maxResults: 3, partialResults: true, popup: false });
+        const finalPhrase = result.matches?.[0]?.trim();
+        if (finalPhrase) {
+          nativeInterimRef.current = "";
+          setInterim("");
+          commitNativeTranscript(finalPhrase);
+        }
+      } catch (error) {
+        setListening(false);
+        setInterim("");
+        const code = error instanceof Error ? error.message : String(error);
+        setMicError(
+          /denied|permission|not.?allowed/i.test(code)
+            ? "Microphone and speech recognition access are off. Open iPhone Settings → NON QM NEXUS and enable Microphone and Speech Recognition, then tap the mic again."
+            : "Voice capture could not start. Close any other app using the microphone and try again, or type the scenario below.",
+        );
+      }
+      return;
+    }
+
     const Ctor = getRecognitionCtor();
     if (!Ctor) {
-      // Previously a silent no-op — on a platform/context where speech
-      // recognition genuinely isn't available (unsupported browser, or an
-      // installed PWA whose WebKit build restricts the API), the mic
-      // button looked completely unresponsive with zero feedback. Now
-      // surfaces the same actionable message the "unsupported browser"
-      // banner shows, so a tap always produces a visible result.
       setMicError(
-        "Voice recognition isn't available in this app/browser. If you're using the installed home-screen app, try opening nonqmnexus.com directly in Safari instead — or just type the scenario below, everything else works the same.",
+        "Voice recognition isn't available in this browser. Open nonqmnexus.com in Chrome or Edge, or type the scenario below. The iPhone app uses its native microphone service.",
       );
       return;
     }
@@ -402,20 +479,37 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
       rec.start();
       setListening(true);
     } catch {
-      // Most commonly thrown when the mic is already in use elsewhere, or
-      // the platform silently refuses to start recognition (some Android
-      // WebView/PWA containers do this instead of firing onerror) — show
-      // the same actionable message rather than leaving the button looking
-      // unresponsive with no feedback at all.
       setListening(false);
       setMicError(micErrorMessage("not-allowed"));
     }
   }
-  function stopListening() {
+
+  async function stopListening() {
+    const native = getNativeSpeechPlugin();
+    if (native) {
+      const finalPhrase = nativeInterimRef.current;
+      nativeInterimRef.current = "";
+      try {
+        await native.stop();
+        await nativeListenerRef.current?.remove();
+      } catch {
+        // Stopping an already-finished native recognition session is harmless.
+      }
+      nativeListenerRef.current = null;
+      commitNativeTranscript(finalPhrase);
+      setInterim("");
+      setListening(false);
+      return;
+    }
     recognitionRef.current?.stop();
     setListening(false);
   }
-  useEffect(() => () => recognitionRef.current?.stop(), []);
+
+  useEffect(() => () => {
+    recognitionRef.current?.stop();
+    void nativeListenerRef.current?.remove();
+    void getNativeSpeechPlugin()?.stop().catch(() => undefined);
+  }, []);
 
   /* -------- spoken assistant replies (off by default; muted while listening) -------- */
   useEffect(() => {
@@ -563,9 +657,8 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
     <div className="space-y-5">
       {supported === false && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-200 text-sm p-3">
-          This browser doesn&apos;t support speech recognition (Chrome or Edge do; Safari on iOS does not — this is an
-          Apple platform limitation, not a bug). You can type or paste the scenario below — everything else works the
-          same.
+          Voice recognition is not available in this browser. You can type or paste the scenario below; everything else
+          works the same. The iPhone app uses its native microphone and speech-recognition service.
         </div>
       )}
 

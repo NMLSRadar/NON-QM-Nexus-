@@ -18,18 +18,19 @@ export async function AuthStatus() {
   }
 
   return (
-    <div className="flex items-center gap-3 text-sm">
+    <div className="flex min-w-0 items-center gap-2 text-xs sm:gap-3 sm:text-sm">
       <OrgSwitcher />
       <Link
         href="/account"
-        className="max-w-36 truncate rounded px-1 text-slate-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+        aria-label={`Account: ${user.email ?? "signed-in user"}`}
+        className="hidden max-w-32 truncate rounded px-1 text-slate-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 sm:block lg:max-w-36"
       >
         {user.email}
       </Link>
       <form action={signOut}>
         <button
           type="submit"
-          className="rounded px-1 text-amber-300 underline hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400"
+          className="whitespace-nowrap rounded px-1 text-amber-300 underline hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400"
         >
           Sign out
         </button>
