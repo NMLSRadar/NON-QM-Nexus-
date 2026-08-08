@@ -1,0 +1,186 @@
+{
+  "lender": "JMAC Lending",
+  "programCount": 18,
+  "programs": [
+    {
+      "name": "Prime Closed-End Second — Full Doc",
+      "label": "Prime CES revision 6.29.2026",
+      "effectiveDate": "2026-06-29",
+      "minFico": 680,
+      "maxLoanAmount": 500000,
+      "baseMaxLtv": 85,
+      "matrixRows": 6,
+      "matrixConfirmationRequired": false
+    },
+    {
+      "name": "Prime Closed-End Second — Bank Statement",
+      "label": "Prime CES revision 6.29.2026",
+      "effectiveDate": "2026-06-29",
+      "minFico": 700,
+      "maxLoanAmount": 500000,
+      "baseMaxLtv": 80,
+      "matrixRows": 4,
+      "matrixConfirmationRequired": false
+    },
+    {
+      "name": "JMAC Closed-End Second",
+      "label": "JMAC CES revision 6.29.2026",
+      "effectiveDate": "2026-06-29",
+      "minFico": 680,
+      "maxLoanAmount": 750000,
+      "baseMaxLtv": 90,
+      "matrixRows": 110,
+      "matrixConfirmationRequired": false
+    },
+    {
+      "name": "Zuma Gold",
+      "label": "Zuma Gold revision 7.1.2026 V2",
+      "effectiveDate": "2026-07-01",
+      "minFico": 620,
+      "maxLoanAmount": 3000000,
+      "baseMaxLtv": 85,
+      "matrixRows": 76,
+      "matrixConfirmationRequired": false
+    },
+    {
+      "name": "Zuma Silver",
+      "label": "Zuma Silver revision 7.1.2026 V3",
+      "effectiveDate": "2026-07-01",
+      "minFico": 660,
+      "maxLoanAmount": 3500000,
+      "baseMaxLtv": 90,
+      "matrixRows": 1092,
+      "matrixConfirmationRequired": false
+    },
+    {
+      "name": "Jumbo Plus — AUS",
+      "label": "Jumbo Plus revision 1.5.2026",
+      "effectiveDate": "2026-01-05",
+      "minFico": 660,
+      "maxLoanAmount": 3500000,
+      "baseMaxLtv": 80,
+      "matrixRows": 33,
+      "matrixConfirmationRequired": false
+    },
+    {
+      "name": "Newport Non-Conforming — Full Doc",
+      "label": "Newport revision 8.4.2026",
+      "effectiveDate": "2026-08-04",
+      "minFico": 620,
+      "maxLoanAmount": 3000000,
+      "baseMaxLtv": 90,
+      "matrixRows": 120,
+      "matrixConfirmationRequired": false
+    },
+    {
+      "name": "Newport Non-Conforming — Alt Doc / ITIN",
+      "label": "Newport revision 8.4.2026",
+      "effectiveDate": "2026-08-04",
+      "minFico": 660,
+      "maxLoanAmount": 3000000,
+      "baseMaxLtv": 85,
+      "matrixRows": 0,
+      "matrixConfirmationRequired": true
+    },
+    {
+      "name": "JMAC Limited Doc — WVOE / P&L",
+      "label": "Limited Doc revision 7.27.2026",
+      "effectiveDate": "2026-07-27",
+      "minFico": 660,
+      "maxLoanAmount": 3000000,
+      "baseMaxLtv": 80,
+      "matrixRows": 27,
+      "matrixConfirmationRequired": false
+    },
+    {
+      "name": "JMAC Limited Doc — Asset Utilization",
+      "label": "Limited Doc revision 7.27.2026",
+      "effectiveDate": "2026-07-27",
+      "minFico": 660,
+      "maxLoanAmount": 3000000,
+      "baseMaxLtv": 80,
+      "matrixRows": 0,
+      "matrixConfirmationRequired": true
+    },
+    {
+      "name": "DSCR Prime",
+      "label": "DSCR Prime revision 5.14.2026 V2",
+      "effectiveDate": "2026-05-14",
+      "minFico": 640,
+      "maxLoanAmount": 2000000,
+      "baseMaxLtv": 80,
+      "matrixRows": 46,
+      "matrixConfirmationRequired": false
+    },
+    {
+      "name": "ITIN Non-QM",
+      "label": "ITIN revision 7.10.2026",
+      "effectiveDate": "2026-07-10",
+      "minFico": 660,
+      "maxLoanAmount": 1500000,
+      "baseMaxLtv": 80,
+      "matrixRows": 9,
+      "matrixConfirmationRequired": false
+    },
+    {
+      "name": "Venice DSCR",
+      "label": "DSCR comparison 3.9.2026",
+      "effectiveDate": "2026-03-09",
+      "minFico": 640,
+      "maxLoanAmount": 3500000,
+      "baseMaxLtv": 80,
+      "matrixRows": 0,
+      "matrixConfirmationRequired": true
+    },
+    {
+      "name": "Newport DSCR",
+      "label": "DSCR comparison 3.9.2026",
+      "effectiveDate": "2026-03-09",
+      "minFico": 620,
+      "maxLoanAmount": 3000000,
+      "baseMaxLtv": 80,
+      "matrixRows": 0,
+      "matrixConfirmationRequired": true
+    },
+    {
+      "name": "Zuma Prime",
+      "label": "Non-QM comparison 6.29.2026",
+      "effectiveDate": "2026-06-29",
+      "minFico": 620,
+      "maxLoanAmount": 4000000,
+      "baseMaxLtv": 90,
+      "matrixRows": 0,
+      "matrixConfirmationRequired": true
+    },
+    {
+      "name": "Balboa Non-Conforming",
+      "label": "Non-QM comparison 6.29.2026",
+      "effectiveDate": "2026-06-29",
+      "minFico": 660,
+      "maxLoanAmount": 3000000,
+      "baseMaxLtv": 85,
+      "matrixRows": 0,
+      "matrixConfirmationRequired": true
+    },
+    {
+      "name": "Carmel Non-Conforming",
+      "label": "Non-QM comparison 6.29.2026",
+      "effectiveDate": "2026-06-29",
+      "minFico": 620,
+      "maxLoanAmount": 5000000,
+      "baseMaxLtv": 80,
+      "matrixRows": 0,
+      "matrixConfirmationRequired": true
+    },
+    {
+      "name": "Monterey Non-Conforming Jumbo",
+      "label": "Monterey revision 1.27.2026",
+      "effectiveDate": "2026-01-27",
+      "minFico": 720,
+      "maxLoanAmount": 3000000,
+      "baseMaxLtv": 80,
+      "matrixRows": 16,
+      "matrixConfirmationRequired": false
+    }
+  ]
+}
