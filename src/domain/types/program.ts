@@ -514,6 +514,19 @@ export interface Program {
   /** Any additional per-business-type factor rules or exceptions, as cited. */
   expenseFactorNotes?: string;
 
+  // Structured discoverability and specialty-program facts. These remain
+  // guideline data only when populated from a cited, reviewed source.
+  searchTags?: string[];
+  documentationRequirements?: string[];
+  sourceDocuments?: string[];
+  assetQualifierMethods?: string[];
+  eligibleProfessions?: string[];
+  futureEmploymentEligible?: boolean;
+  employmentStartWithinDays?: number;
+  pmiRequired?: boolean;
+  /** DSCR-specific distinction: whether the IO payment may be used in the ratio. */
+  ioDscrPaymentAllowed?: boolean;
+
   guidelineVersionId: string;
   guidelineVersionLabel: string;
   effectiveDate: string;

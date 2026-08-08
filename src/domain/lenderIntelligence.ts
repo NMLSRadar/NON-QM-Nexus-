@@ -87,6 +87,27 @@ export interface SeededLenderProfile {
 }
 
 export const SEEDED_LENDER_PROFILES: Record<string, SeededLenderProfile> = {
+  "luxury mortgage corp.": {
+    strengths: [
+      "bank statements",
+      "low-overhead self-employed",
+      "p&l only",
+      "1099 only",
+      "asset qualifier",
+      "dscr",
+      "foreign national",
+      "recent professional graduate",
+      "medical graduate",
+      "legal graduate",
+      "engineering graduate",
+      "architecture graduate",
+      "accounting graduate",
+      "90% ltv no pmi graduate program",
+      "future employment contract",
+    ],
+    exceptionFriendly: false,
+    highDepositUtilization: false,
+  },
   "orion lending": {
     strengths: [
       "bank statements",
