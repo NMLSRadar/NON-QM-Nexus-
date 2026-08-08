@@ -90,6 +90,31 @@ export function buildGuidelineContext(catalog: ProgramCatalog): string {
         personalBankStatementRules: p.personalBankStatementRules ?? null,
         businessBankStatementRules: p.businessBankStatementRules ?? null,
         expenseFactorNotes: p.expenseFactorNotes ?? null,
+        // Full-fidelity matrix/overlays and structured specialty discoverability.
+        // These are serialized so the assistant uses the exact reviewed tier
+        // instead of reasoning from the headline maximum.
+        eligibilityLtvMatrix: p.eligibilityLtvMatrix ?? null,
+        propertyTypeLtvCaps: p.propertyTypeLtvCaps ?? null,
+        cashOutLimits: p.cashOutLimits ?? null,
+        reserveRules: p.reserveRules ?? null,
+        maxMortgageLates30x12: p.maxMortgageLates30x12 ?? null,
+        maxMortgageLatesCategory: p.maxMortgageLatesCategory ?? null,
+        giftFundsAllowed: p.giftFundsAllowed ?? null,
+        strIncomeEligible: p.strIncomeEligible ?? null,
+        strIncomeNotes: p.strIncomeNotes ?? null,
+        ioDscrPaymentAllowed: p.ioDscrPaymentAllowed ?? null,
+        pnlPeriodMonths: p.pnlPeriodMonths ?? null,
+        pnlTaxReturnsRequired: p.pnlTaxReturnsRequired ?? null,
+        pnlPreparerAttestationPurpose: p.pnlPreparerAttestationPurpose ?? null,
+        pnlSupportingBankStatementsMonths: p.pnlSupportingBankStatementsMonths ?? null,
+        searchTags: p.searchTags ?? null,
+        documentationRequirements: p.documentationRequirements ?? null,
+        assetQualifierMethods: p.assetQualifierMethods ?? null,
+        eligibleProfessions: p.eligibleProfessions ?? null,
+        futureEmploymentEligible: p.futureEmploymentEligible ?? null,
+        employmentStartWithinDays: p.employmentStartWithinDays ?? null,
+        pmiRequired: p.pmiRequired ?? null,
+        sourceCitation: p.sourceCitation,
         notes: p.notes ?? null,
       };
       return JSON.stringify(fields);
