@@ -5,6 +5,7 @@ import { PageHeader, Card, Pill, SampleDataBadge, MetricTile, fmtUsd, fmtPct } f
 import { getWordmarkStyle } from "@/domain/lenderBrandStyle";
 import { ProgramCitation } from "./program-citation";
 import { AeSection } from "./ae-section";
+import { LenderNotes } from "./lender-notes";
 
 export const dynamic = "force-dynamic";
 
@@ -140,11 +141,7 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
             <AeSection lenderId={lender.id} />
           </Card>
 
-          {lender.notes && (
-            <Card title="Notes" dark>
-              <p className="text-sm text-slate-400 whitespace-pre-line">{lender.notes}</p>
-            </Card>
-          )}
+          {lender.notes && <LenderNotes notes={lender.notes} />}
         </>
       )}
     </div>
