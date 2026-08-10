@@ -1,0 +1,178 @@
+---
+slug: glossary
+title: Glossary — as NEXUS uses it
+order: 110
+summary: Short, alphabetical definitions of the terms on this platform, framed around what NEXUS does with each one.
+feature: glossary
+updated_at: 2026-08-10
+keywords:
+  - glossary
+  - DSCR
+  - PITIA
+  - LTV
+  - CLTV
+  - reserves
+  - ITIN
+  - bank statement
+  - asset depletion
+  - seasoning
+  - interest-only
+  - prepayment penalty
+  - non-warrantable condo
+  - first-time investor
+---
+
+The glossary assumes you know the mortgage business — it explains what NEXUS
+does with each term, not what the term means. Each entry links to the feature
+where you will meet it.
+
+<GlossaryTerm id="1099-income" name="1099 income">
+Income documented through 1099 forms instead of W-2s. NEXUS treats it as its
+own income-documentation type (`1099` in the matrix&apos;s Doc types column) and
+only ranks programs whose guidelines accept 1099-based income.
+[Used in: Programs](#programs)
+</GlossaryTerm>
+
+<GlossaryTerm id="asset-depletion" name="Asset depletion">
+Qualifying from liquid assets drawn down over the loan term rather than earned
+income. NEXUS models it as an income-documentation type; programs that accept
+it carry an `asset_depletion` Doc type, and the Unique Non-QM Products tag often
+applies.
+[Used in: Manual Scenario](#manual-scenario) · [Unique Non-QM Products](#unique-nonqm-products)
+</GlossaryTerm>
+
+<GlossaryTerm id="bank-statement-income" name="Bank statement income">
+Non-QM&apos;s most common self-employed income proof: qualifying from deposits or
+net income across 12 or 24 months of personal and/or business statements. In
+NEXUS you can say it as a vital, and the form expands with which months and
+account types apply. Lenders differ on what counts as income — the match cards
+surface **Bank Statement Flexibility** and **Clean-File Execution** where a
+lender explicitly addresses it.
+[Used in: Voice Scenario](#voice-scenario) · [Lender List](#lender-list)
+</GlossaryTerm>
+
+<GlossaryTerm id="cltv" name="CLTV">
+Combined loan-to-value: all liens against the property, not just the first. It
+matters whenever a scenario has a second lien or HELOC behind the first
+mortgage — NEXUS checks the program&apos;s combined-lien limits, not just the
+first-lien LTV.
+[Used in: Reading Your Results](#reading-results)
+</GlossaryTerm>
+
+<GlossaryTerm id="dscr" name="DSCR">
+Debt-service coverage ratio — property income over the proposed payment. In
+NEXUS it is both a vital and a program dimension: say “DSCR” as the income
+documentation, and programs quote a minimum DSCR (`DSCR ≥ 1.0`) that the
+scenario&apos;s rental income is checked against.
+[Used in: Voice Scenario](#voice-scenario) · [Programs](#programs)
+</GlossaryTerm>
+
+<GlossaryTerm id="expense-factor" name="Expense factor">
+The percentage of rental income a lender deducts (typically 25%) when
+calculating a DSCR borrower&apos;s net rental income, or the fixed propensity used
+for business-expense assumptions on bank-statement files. When a program&apos;s
+guideline states one, NEXUS applies that exact factor to the scenario&apos;s income
+before checking ratios.
+[Used in: Voice Scenario](#voice-scenario) · [Reading Your Results](#reading-results)
+</GlossaryTerm>
+
+<GlossaryTerm id="first-time-investor" name="First-time investor">
+A borrower who owns no prior investment property. NEXUS models this as a
+separate dimension from first-time homebuyer and uses it to filter investor-
+experience requirements — some DSCR programs explicitly exclude first-time
+investors or cap their LTV.
+[Used in: Manual Scenario](#manual-scenario) · [Reading Your Results](#reading-results)
+</GlossaryTerm>
+
+<GlossaryTerm id="foreign-national" name="Foreign national">
+A non-U.S. borrower without permanent-resident status, often with no U.S. FICO.
+NEXUS treats it as a citizenship vital and only ranks programs whose verified
+guidelines admit foreign nationals — the **Foreign National** and **Foreign
+National Specialist** pills mark them.
+[Used in: Voice Scenario](#voice-scenario) · [Unique Non-QM Products](#unique-nonqm-products)
+</GlossaryTerm>
+
+<GlossaryTerm id="full-doc" name="Full doc">
+Traditional documentation: W-2s, tax returns, paystubs. NEXUS models it as the
+`full_doc` income type and uses it as the baseline most borrowers think of —
+the programs matrix marks which lenders still take it in the NON-QM lane.
+[Used in: Programs](#programs) · [Documentation Needs](#documentation-needs)
+</GlossaryTerm>
+
+<GlossaryTerm id="interest-only" name="Interest-only">
+A mortgage where early payments cover interest only, lowering the qualifying
+payment. NEXUS captures it as a requested feature (`interest_only_requested`),
+and result cards pill programs where **Interest-Only** is available — which
+materially changes DSCR and DTI math.
+[Used in: Manual Scenario](#manual-scenario) · [Reading Your Results](#reading-results)
+</GlossaryTerm>
+
+<GlossaryTerm id="itin" name="ITIN">
+Individual Taxpayer Identification Number — a U.S. tax ID for borrowers who
+cannot get an SSN. A citizenship vital in NEXUS: say “ITIN” and only programs
+whose current guidelines list ITIN eligibility are ranked; ITIN-specialist
+lenders carry a dedicated pill.
+[Used in: Voice Scenario](#voice-scenario) · [Unique Non-QM Products](#unique-nonqm-products)
+</GlossaryTerm>
+
+<GlossaryTerm id="ltv" name="LTV">
+Loan-to-value: loan amount over property value. A core vital — provide it
+directly or let NEXUS derive it from value and loan amount. Every program row
+in the matrix has a max LTV; it is usually the first filter that bites.
+[Used in: Voice Scenario](#voice-scenario) · [Programs](#programs)
+</GlossaryTerm>
+
+<GlossaryTerm id="non-permanent-resident" name="Non-permanent resident">
+A visa holder (e.g. E-2, H-1B, L-1) who lives in the U.S. without a green card.
+NEXUS treats the visa type as part of the citizenship vital — an F-1 holder is
+classified as a foreign national, while work-visa residents are matched against
+programs that accept non-permanent residency.
+[Used in: Voice Scenario](#voice-scenario) · [Manual Scenario](#manual-scenario)
+</GlossaryTerm>
+
+<GlossaryTerm id="non-warrantable-condo" name="Non-warrantable condo">
+A condo that fails Fannie/Freddie warrantability (investor concentration,
+litigation, limited commercial space, etc.). NEXUS models it as a distinct
+property type (`non_warrantable_condo`) with its own LTV cap tier and only
+ranks programs that underwrite it as such.
+[Used in: Voice Scenario](#voice-scenario) · [Programs](#programs)
+</GlossaryTerm>
+
+<GlossaryTerm id="pnl-only" name="P&amp;L only">
+A 12-month profit-and-loss statement as the sole income document — no tax
+returns required on P&L-only programs. In NEXUS it is the `pnl_only` income
+type; CPA attestation is confirmation of filing where a program asks for it,
+never the income proof itself.
+[Used in: Programs](#programs) · [Documentation Needs](#documentation-needs)
+</GlossaryTerm>
+
+<GlossaryTerm id="pitia" name="PITIA">
+Principal, interest, taxes, insurance, and association dues — the full housing
+payment. DSCR and DTI checks in NEXUS run against PITIA, not just the P&amp;I
+payment, because that is the number the ratio really has to cover.
+[Used in: Reading Your Results](#reading-results)
+</GlossaryTerm>
+
+<GlossaryTerm id="prepayment-penalty" name="Prepayment penalty">
+A charge for paying the loan off early, common on investor products. NEXUS
+captures it where the borrower&apos;s details call for it and surfaces it as a
+difference between programs in the matrix and on program cards — it is
+eligibility-neutral but deal-shaping.
+[Used in: Lender List](#lender-list) · [Reading Your Results](#reading-results)
+</GlossaryTerm>
+
+<GlossaryTerm id="reserves" name="Reserves">
+Liquid assets the borrower must retain after closing, quoted in months of the
+PITIA payment. Every program row shows its reserves requirement (`6 mo`); the
+**Lowest Reserves** pill flags the friendliest option on the results page for
+borrowers who are asset-thin.
+[Used in: Programs](#programs) · [Reading Your Results](#reading-results)
+</GlossaryTerm>
+
+<GlossaryTerm id="seasoning" name="Seasoning">
+Required time an asset, title, or credit event must have been in place before
+the loan (e.g. self-employment history, recent foreclosure). When a guideline
+states one, NEXUS encodes it as a rule and flags scenarios that walk into it —
+recent events surface in **Potential Issues**.
+[Used in: Reading Your Results](#reading-results)
+</GlossaryTerm>

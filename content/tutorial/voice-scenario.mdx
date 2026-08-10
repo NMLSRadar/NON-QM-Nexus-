@@ -1,0 +1,104 @@
+---
+slug: voice-scenario
+title: Voice Scenario
+order: 20
+summary: Speak a borrower out loud instead of filling in a form — NEXUS captures the vitals and runs the analysis automatically.
+feature: voice-scenario
+updated_at: 2026-08-10
+keywords:
+  - voice
+  - speak scenario
+  - DSCR script
+  - bank statement script
+  - nine vitals
+  - review captured
+---
+
+Voice Scenario is the fastest way into an analysis. Speak (or type) the full
+situation in plain language. NEXUS extracts the vitals, shows you what it
+captured, and runs the analysis automatically once everything it needs is there.
+
+### Do it in 3 steps
+
+1. **Open Voice Scenario** and press the microphone (or type instead of speaking —
+   the same parser runs either way).
+2. **Speak the deal.** Cover the vitals below; whatever you leave out, the
+   assistant asks for. You can also say the whole thing in one breath — the
+   parser handles a full scenario in a single utterance.
+3. **Review what was captured, fix anything, and let it run.** Once all nine
+   vitals are in, the analysis runs automatically and shows matching lender
+   programs, best option first.
+
+### What NEXUS needs to hear (the nine vitals)
+
+| # | Vital | Examples of clean phrasing |
+| --- | --- | --- |
+| 1 | Loan purpose | “purchase”, “cash-out refi”, “rate-and-term refi”, “HELOC”, “second lien” |
+| 2 | Occupancy | “primary residence”, “second home”, “investment property” |
+| 3 | Property type | “single-family”, “condo”, “non-warrantable condo”, “townhome”, “2-4 unit”, “5-8 units” |
+| 4 | Property value | “seven hundred fifty thousand dollars” |
+| 5 | Loan amount | “five hundred thousand” |
+| 6 | LTV | “sixty percent LTV” — or leave it out; NEXUS derives it from value + loan amount |
+| 7 | Credit | “720 FICO”, or a profile like “no US FICO”, “foreign credit” |
+| 8 | Income documentation | “DSCR”, “bank statement”, “12-month P&L only”, “1099”, “asset depletion”, “full doc” |
+| 9 | Citizenship | “US citizen”, “permanent resident”, “ITIN”, “non-permanent resident”, “foreign national” |
+
+Say numbers clearly and let the assistant confirm each one. A missing vital is
+not failure — the assistant simply asks for exactly what is missing.
+
+### Example script — a DSCR deal
+
+<Copy
+  text={`This is a purchase of an investment property, a single-family home for seven hundred fifty thousand dollars. The loan amount is five hundred sixty thousand, so about seventy-five percent loan to value. The borrower has a 700 FICO score. The income documentation is DSCR — the property rents for thirty-eight hundred a month. The borrower is a US citizen and an experienced investor.`}
+  label="Copy DSCR example script"
+/>
+
+### Example script — a bank-statement deal
+
+<Copy
+  text={`Cash-out refinance on a primary residence, a townhome worth six hundred thousand. The loan amount is four hundred fifty thousand. FICO is 740. Income documentation is 24-month bank statements, personal and business deposits. The borrower is a US citizen, first-time homebuyer.`}
+  label="Copy bank-statement example script"
+/>
+
+### Review before you run
+
+The captured vitals are shown back to you as a checkable summary — this is the
+step that keeps voice fast *and* correct. If NEXUS misheard a number or
+misclassified a property type, correct it right there before the analysis runs:
+
+- Tap any captured value to correct it in place.
+- If a vital is missing, the assistant asks for it — answer, or mark it as not
+  applicable / unknown where that is genuinely the right answer.
+
+<Screenshot
+  title="Voice vitals review"
+  alt="The Voice Scenario review step showing the nine captured vitals as editable chips before the analysis runs."
+  script={`1. Sign in, open /scenarios/voice, speak the DSCR example script above.
+2. After the assistant captures the nine vitals, capture the review summary (1440x900): each vital shown as an editable value, and the state before "Run analysis".`}
+/>
+
+<TryIt href="/scenarios/voice" label="Open Voice Scenario" feature="voice-scenario" />
+
+<Tip>
+
+State the FICO as a plain number (“seven oh oh”), the value as full dollars (“seven
+hundred fifty thousand”), and the income type by its product name (“DSCR”,
+“bank statement”). That is the vocabulary NEXUS parses most reliably.
+
+</Tip>
+
+<Tip>
+
+“I don’t know yet” is a valid answer for optional items like rental income or
+mortgage lates — say it and move on. An honest “unknown” is treated as unknown,
+never as a restriction, and it is not missing data.
+
+</Tip>
+
+<Mistake>
+
+Assuming a partial capture runs anyway. If a core vital is missing the assistant
+keeps asking — that is by design; a scenario analyzed on a guessed FICO is worse
+than one asked one more question.
+
+</Mistake>

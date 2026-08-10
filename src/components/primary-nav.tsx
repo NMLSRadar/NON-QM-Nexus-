@@ -13,6 +13,7 @@ const NAV = [
   { href: "/unique-products", label: "Unique Non-QM Products" },
   { href: "/lenders", label: "Lenders" },
   { href: "/programs", label: "Programs" },
+  { href: "/tutorial", label: "Tutorial" },
   { href: "/pricing", label: "Pricing" },
   { href: "/account", label: "Account" },
 ] as const;

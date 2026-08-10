@@ -1195,3 +1195,186 @@ body:has(.gold-page) {
   }
 }
 
+/* ---------------------------------------------------------------------
+   /tutorial — MDX prose, search & outline chrome, print styles
+   Scoped to .tutorial-prose / #tutorial-page so nothing bleeds into the
+   rest of the app's theme.
+--------------------------------------------------------------------- */
+.tutorial-prose {
+  font-size: 0.925rem;
+  line-height: 1.7;
+  color: #cbd5e1;
+}
+.tutorial-prose > :first-child {
+  margin-top: 0;
+}
+.tutorial-prose p {
+  margin: 0.75rem 0;
+}
+.tutorial-prose ul,
+.tutorial-prose ol {
+  margin: 0.75rem 0;
+  padding-left: 1.4rem;
+}
+.tutorial-prose ul {
+  list-style: disc;
+}
+.tutorial-prose ol {
+  list-style: decimal;
+}
+.tutorial-prose li {
+  margin: 0.35rem 0;
+}
+.tutorial-prose li::marker {
+  color: #d4af37;
+}
+.tutorial-prose a {
+  color: #f0c860;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 150ms ease;
+}
+.tutorial-prose a:hover {
+  color: #ffd97a;
+}
+.tutorial-prose strong {
+  color: #fff;
+  font-weight: 600;
+}
+.tutorial-prose code {
+  font-size: 0.85em;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 6px;
+  padding: 0.1em 0.35em;
+  color: #f0c860;
+  overflow-wrap: anywhere;
+}
+.tutorial-prose pre {
+  background: #0d0d0f;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  overflow-x: auto;
+}
+.tutorial-prose pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #cbd5e1;
+}
+.tutorial-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.9rem 0;
+  font-size: 0.875rem;
+}
+.tutorial-prose th {
+  text-align: left;
+  color: #f0c860;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+}
+.tutorial-prose td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+  vertical-align: top;
+  color: #d1d5db;
+}
+.tutorial-prose blockquote {
+  border-left: 3px solid #d4af37;
+  margin: 1rem 0;
+  padding: 0.6rem 1rem;
+  background: rgba(212, 175, 55, 0.07);
+  border-radius: 0 10px 10px 0;
+  color: #e5e7eb;
+}
+#tutorial-page details > summary::-webkit-details-marker {
+  display: none;
+}
+#tutorial-page details > summary {
+  position: relative;
+  padding-right: 1.5rem;
+}
+#tutorial-page details > summary::after {
+  content: "+";
+  position: absolute;
+  right: 0.1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #d4af37;
+  font-weight: 700;
+}
+#tutorial-page details[open] > summary::after {
+  content: "−";
+}
+
+/* Print — brokers print this page, so it must read cleanly on paper:
+   light backgrounds, near-black type, no sticky chrome, links expanded. */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  body:has(#tutorial-page),
+  #tutorial-page {
+    background: #fff !important;
+  }
+  body:has(#tutorial-page) .premium-site-header,
+  body:has(#tutorial-page) footer,
+  body:has(#tutorial-page) aside,
+  body:has(#tutorial-page) details,
+  body:has(#tutorial-page) .fixed.bottom-5,
+  body:has(#tutorial-page) .fixed.bottom-5 * {
+    display: none !important;
+  }
+  #tutorial-page .gold-ambient,
+  #tutorial-page .gold-button,
+  #tutorial-page .gold-outline-button,
+  #tutorial-page button,
+  #tutorial-page [data-tutorial-cta],
+  #tutorial-page figure[role="img"] {
+    display: none !important;
+  }
+  #tutorial-page {
+    color: #111827 !important;
+  }
+  #tutorial-page h1,
+  #tutorial-page h2,
+  #tutorial-page h3,
+  #tutorial-page .tutorial-prose strong {
+    color: #000 !important;
+  }
+  #tutorial-page p,
+  #tutorial-page li,
+  #tutorial-page td,
+  #tutorial-page th,
+  #tutorial-page blockquote {
+    color: #1f2937 !important;
+  }
+  #tutorial-page .tutorial-prose a {
+    color: #1a56db !important;
+  }
+  #tutorial-page .tutorial-prose a::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    color: #6b7280;
+  }
+  #tutorial-page section {
+    break-inside: avoid;
+  }
+  #tutorial-page .tutorial-prose table {
+    border-collapse: collapse !important;
+  }
+  #tutorial-page .tutorial-prose th,
+  #tutorial-page .tutorial-prose td {
+    border: 1px solid #d1d5db !important;
+  }
+  #tutorial-page .tutorial-prose pre,
+  #tutorial-page .tutorial-prose code {
+    background: #f3f4f6 !important;
+    border-color: #e5e7eb !important;
+    color: #111827 !important;
+  }
+}
+

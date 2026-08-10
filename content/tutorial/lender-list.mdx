@@ -1,0 +1,78 @@
+---
+slug: lender-list
+title: Lender List
+order: 40
+summary: Browse and search the verified NON-QM lender catalog, then open a lender to see its full program coverage.
+feature: lender-list
+updated_at: 2026-08-10
+keywords:
+  - lenders
+  - lender directory
+  - search lenders
+  - program coverage
+  - membership required
+---
+
+The **Lenders** page is the full catalog of real, verified NON-QM lenders that
+NEXUS evaluates scenarios against. It is a research surface, not a ranking — the
+rankings change per-scenario and live on each scenario&apos;s results page.
+
+### Do it in 3 steps
+
+1. **Browse or search.** The directory shows every active lender in the catalog;
+   use the search box to filter by name.
+2. **Read the card.** Each card shows the lender&apos;s name and its position in the
+   catalog. Lenders your membership doesn&apos;t unlock yet show a 🔒
+   **Membership required** state — the card stays visible, but the guideline
+   details are not served to your browser until you unlock them.
+3. **Open a lender for coverage.** Click an unlocked lender to see its detail
+   page: every program on file, each with its own terms, effective date, and
+   source citation.
+
+### What the lender detail page shows
+
+For each program, the detail page lists:
+
+| What | Meaning |
+| --- | --- |
+| **Program name** | The lender&apos;s product name (e.g. balance-sheet DSCR, 12-month bank statement) |
+| **Max LTV / Min FICO** | The program&apos;s stated limit; “Confirm matrix” means the current lender matrix must be confirmed for your exact deal |
+| **Loan amount / Reserves** | The program&apos;s stated loan range and required months of reserves |
+| **Min DSCR / Max DTI** | The income-ratio requirement, if the program is ratio-based |
+| **Doc-type pills** | Which income documentation the program takes — bank statement (and which months/account types), 12-month P&L only, DSCR, asset depletion, 1099, WVOE |
+| **Guideline version** | Version label, effective date, and last-verified date — every program runs on a versioned guideline |
+| **Source citation** | Where the guideline came from (lender guide, matrix, rate sheet), so you can verify it |
+| **Account Executives** | Contactable AEs for that lender (sponsored placements) |
+
+### Reading program coverage
+
+“Coverage” means which products a lender actually defends in writing. A lender
+that is well-known for ITIN lending is only surfaced as ITIN-eligible when its
+current, verified guideline lists ITIN as an eligible citizenship classification
+— never just because of reputation. Use the pills on each program card to see
+exactly which scenario shapes that program covers.
+
+<Screenshot
+  title="Lender detail page — program coverage"
+  alt="A lender detail page listing its programs, each with metric tiles for LTV, FICO, loan amount and reserves, plus documentation, occupancy and citizenship pills."
+  script={`1. Sign in with a member account and open /lenders, then open any unlocked lender.
+2. Capture at 1440x900 the Programs section: the per-program metric tiles, the doc-type/occupancy pills, the guideline version line, and the source citation.`}
+/>
+
+<TryIt href="/lenders" label="Open the lender list" feature="lender-list" />
+
+<Tip>
+
+Filters live in the search box. The catalog is intentionally not tier-filtered
+at the directory level — a lender whose details your plan doesn’t cover yet is
+still shown, locked, so you can see what upgrading unlocks.
+
+</Tip>
+
+<Mistake>
+
+Treating the directory order as a lender ranking. It is a catalog order; the
+order that matters for a deal is the **Best Lender Matches** list on that
+scenario&apos;s results page.
+
+</Mistake>

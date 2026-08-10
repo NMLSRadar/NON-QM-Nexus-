@@ -16,7 +16,7 @@ import { SITE_URL } from "@/lib/seo";
 // rather than merely unused. Omitting it entirely (rather than a hand-typed
 // fixed date that would just as quickly go stale) is the honest choice
 // until there's a real per-page "content last changed" source to drive it.
-const PUBLIC_PATHS = ["/", "/pricing", "/document-checklists", "/terms", "/privacy"] as const;
+const PUBLIC_PATHS = ["/", "/pricing", "/tutorial", "/document-checklists", "/terms", "/privacy"] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return PUBLIC_PATHS.map((path) => ({

@@ -1,0 +1,132 @@
+---
+slug: reading-results
+title: Reading Your Results
+order: 100
+summary: What every match status means in plain language, what the numbers actually are, and what to do with a near-miss versus a hard fail.
+feature: reading-results
+updated_at: 2026-08-10
+keywords:
+  - results
+  - match status
+  - strong match
+  - eligible
+  - conditional
+  - eligible with restructuring
+  - manual review
+  - ineligible
+  - match score
+  - best match
+  - near miss
+  - hard fail
+  - why this lender
+  - potential issues
+---
+
+The results page is where NEXUS earns its keep — and where brokers most often
+misread it. Read this section before you quote anything from a results page.
+The badges below are the **exact components the app renders**; what each one
+means is written out next to it.
+
+### The match statuses
+
+<StatusBadge status="strong_match" /> — the program fits the scenario
+cleanly, with no condition or restructuring attached. This is the closest NEXUS
+comes to “yes, pursue this.”
+
+<StatusBadge status="eligible" /> — the program accepts the scenario as
+entered. A smaller match-score than a Strong match, but a real, usable fit.
+
+<StatusBadge status="conditional" /> — the program works **if** a stated
+condition is met (a specific document, a detail verified, a matrix confirmed).
+The condition is shown on the card — treat it as a to-do, not a dead end.
+
+<StatusBadge status="eligible_with_restructuring" /> — the deal misses one
+lever, and pulling it unlocks the program. The **Restructuring options** section
+on the results page names the lever (“Loan amount $540,000 → $500,000”), why it
+matters, and what remains to verify. Honest structural changes only — never
+misrepresent occupancy, income, or assets to force a fit.
+
+<StatusBadge status="manual_review" /> — no hard rule failed, but the
+program needs a human look (typical with a “confirm current matrix” term or an
+edge-case profile). Not a no; a next step.
+
+<StatusBadge status="ineligible" /> — a hard rule failed: something in the
+program&apos;s guidelines the scenario cannot satisfy as entered. The card shows
+which rules failed. This is the only status that is a hard fail.
+
+### What every number on the page is
+
+Every figure — score, LTV, FICO minimum, reserves, qualifying income — is a
+**preliminary calculation from the configured program criteria** as of the
+guideline&apos;s effective date. It is a decision-support estimate, not a lender
+decision, not pricing, not an approval. The page says so; take it seriously.
+
+- **Match score (0–100)** — the weighted fit of this scenario against that
+  program&apos;s rules, shown as a ring plus a star rating. It ranks matches; it
+  is not an approval probability.
+- **Best Match pill** — the highest-ranked eligible program. It is the one to
+  start with, not the one that will definitely close.
+- **Highest LTV / Lowest Reserves pills** — quick flags on the top cards;
+  useful when the borrower is stretched on one specific dimension.
+
+### Which criteria drove a result
+
+Every card shows **Why This Lender?** (the checks that passed and pushed the
+score up) and **Potential Issues** (the soft spots that kept it from ranking
+higher or made it conditional). Failed-rule detail lives on the program card
+itself. If a number in the matrix disagrees with what you know, check the
+guideline version and effective date on that row — and verify with the lender.
+
+### Near-miss vs. hard fail
+
+- **Near-miss (conditional / eligible-with-restructuring / manual review):**
+  act on it. Read the condition or the restructure lever, gather the document
+  or adjust the structure, then re-run. Most real deals live in this band.
+- **Hard fail (ineligible):** move on. The card tells you the rule that
+  failed — if the borrower cannot change that dimension, no amount of re-running
+  changes the answer, and no ethical structuring should fake it.
+- Display rules you will notice: with three or more eligible matches, ineligible
+  lenders are hidden entirely; at most five ineligible/near-match lenders are
+  ever shown. Absence from a list means *not a fit*, not *worse than everything
+  below it*.
+
+### Why guidelines change — and who has the final word
+
+Lender guidelines are living documents: matrices get replaced, appetites
+tighten, effective dates move. NEXUS versions every guideline and only lets a
+new version run after human verification, but configured criteria can still lag
+a lender&apos;s very latest post or matrix by days. That is why the lender is
+always the final word on eligibility, documentation, pricing, and approval —
+use NEXUS to build the shortlist and the file, then let the lender bless the
+file.
+
+<Screenshot
+  title="Match card anatomy"
+  alt="One match card annotated: score ring, status badge, Best Match pill, Why This Lender and Potential Issues lists."
+  script={`1. Sign in and run any scenario from the Quick Start.
+2. Capture at 1440x900 the top match card: gold "Best Match" pill, the emerald Strong match badge, the score ring, the Why This Lender list, and the Potential Issues list.`}
+/>
+
+<TryIt href="/scenarios" label="Open your scenarios" feature="reading-results" />
+
+<Tip>
+
+When a borrower’s deal changes (rate lock date, cash-out amount, reserves),
+re-run the scenario rather than extrapolating — eligibility curves are not
+linear, and a small change can unlock or kill a program.
+
+</Tip>
+
+<Mistake>
+
+Quoting a match score as an approval likelihood. It is a fit score against
+configured criteria — a 92 can still hit a lender matrix term, and a 71 can
+close clean.
+
+</Mistake>
+
+> **Preliminary scenario analysis only.** NON-QM NEXUS is a research and
+> decision-support tool. It does not issue loan approvals, credit decisions, or
+> commitments to lend. Final eligibility, pricing, documentation, and approval
+> are determined by the lender under the guidelines in effect at the time of
+> submission.

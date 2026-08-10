@@ -1,0 +1,86 @@
+---
+slug: programs
+title: Programs
+order: 50
+summary: The human-verified lender program matrix — find programs by income type and compare terms side by side.
+feature: programs
+updated_at: 2026-08-10
+keywords:
+  - programs
+  - program matrix
+  - compare programs
+  - income type
+  - bank statement program
+  - P&L only program
+  - DSCR program
+  - asset depletion
+  - 1099
+  - ITIN program
+  - jumbo
+  - compare
+---
+
+The **Programs** page is the master matrix behind every scenario result: one row
+per lender program, with its structured, versioned guidelines. Every program you
+see here is human-verified before it runs — AI-extracted rules never activate
+automatically.
+
+### Do it in 3 steps
+
+1. **Find the programs for your borrower&apos;s income type.** The **Doc types**
+   column lists what each program takes: `bank_statement`, `pnl_only` (12-month
+   P&amp;L only), `dscr`, `asset_depletion`, `full_doc`, `1099`, `wvoe_only`.
+   Program rows cover these exactly as the lender&apos;s guideline states them.
+2. **Read the terms.** Each row shows Max LTV, Min FICO, Max DTI (or Min DSCR),
+   the loan range, and required reserves — plus the number of structured rules
+   that govern it and its guideline version / effective date.
+3. **Compare side by side.** Two ways: scan related rows in the matrix, or — the
+   more powerful one — run a scenario and tick **Compare** on up to four match
+   cards on the results page to hold them next to each other.
+
+### Where the citizenship dimensions live
+
+ITIN, foreign national, and non-permanent resident are **citizenship**
+classifications, not income-documentation types — so they do not appear in the
+matrix&apos;s Doc types column. They are modeled per-program and surfaced where they
+matter: as **ITIN Eligible**, **Foreign National**, or **Foreign National
+Specialist** pills on scenario result cards, and as citizenship pills on lender
+program pages. If a lender is ITIN-eligible, the current verified guideline
+lists ITIN — not reputation — as the basis.
+
+### Reading the numbers
+
+- **Max LTV** and **Min FICO** are the program&apos;s stated limits. “Confirm
+  matrix” (typically `Confirm matrix` in the cell) means the lender&apos;s current
+  matrix must be confirmed for the exact deal — a scenario evaluation treats
+  that as a manual step, not a stated number.
+- **Max DTI / Min DSCR** is the ratio requirement for income-dependent
+  programs. DSCR programs quote a minimum DSCR; W-2/full-doc programs quote a
+  maximum DTI.
+- **Version + eff. date** identify which guideline this row reflects. When a
+  lender updates its guide, the new version gets its own review before it can
+  replace this one — results never silently switch to un-reviewed numbers.
+
+<Screenshot
+  title="Programs matrix"
+  alt="The Programs page table with one row per lender program: program, lender, doc types, max LTV, min FICO, max DTI or min DSCR, loan range, reserves, rules count and guideline version."
+  script={`1. Sign in with a member account and open /programs.
+2. Capture at 1440x900 the full matrix table — the column headers plus at least six real program rows — and the version/effective-date column.`}
+/>
+
+<TryIt href="/programs" label="Open the program matrix" feature="programs" />
+
+<Tip>
+
+Start from the income type, not the lender: a shortlist of programs that accept
+the borrower&apos;s documentation is the frame for everything else (LTV, FICO,
+reserves) to fit into.
+
+</Tip>
+
+<Mistake>
+
+Reading the matrix like a rate sheet. These are eligibility terms — what a
+program permits — not pricing. Nothing on this page is a quote.
+
+</Mistake>

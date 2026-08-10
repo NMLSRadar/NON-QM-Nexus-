@@ -1,0 +1,79 @@
+---
+slug: ai-assistant
+title: AI Assistant
+order: 80
+summary: The assistant answers lookup questions against the real lender catalog and says so when it doesn’t know — it does not structure deals or make decisions.
+feature: ai-assistant
+updated_at: 2026-08-10
+keywords:
+  - AI assistant
+  - ask a question
+  - lender lookup
+  - guideline question
+  - account executive
+  - verify
+---
+
+The AI Assistant (the chat bubble at the bottom-right, signed-in users) is a
+fast lookup layer over the same verified, tier-gated lender/program catalog the
+rest of the app uses. It is built to answer “who / which / does this lender…”
+questions — and explicitly trained to say it doesn&apos;t know rather than invent
+lender facts.
+
+### Do it in 3 steps
+
+1. **Open the assistant** (bubble at the bottom-right of any page — you must be
+   signed in).
+2. **Ask a single, concrete lookup question** — one lender, one rule, one
+   program at a time. Try the suggested prompts to see the shape that works.
+3. **Verify anything material.** The assistant is a search tool with a friendly
+   face. For anything you will actually quote or submit, confirm the answer on
+   the Programs matrix and with the lender.
+
+### What it answers well — and what it doesn’t
+
+| ✅ Works well (lookup) | ❌ Works poorly (judgment / process) |
+| --- | --- |
+| “Which lenders allow ITIN on a primary residence?” | Multi-part questions (“ITIN and bank statement and 80% LTV, who works?”) |
+| “What is the lowest FICO for DSCR?” | Requests for pricing or rate quotes |
+| “Who is flexible on recent mortgage lates?” | Requests for a final decision on a deal |
+| “Which lenders allow exceptions?” | Anything that would require the borrower’s actual documents |
+| “Does [lender] allow 5–8 units?” | Structuring or restructure advice — that is what a scenario run is for |
+
+### Scope, stated honestly
+
+- The assistant answers **from the platform&apos;s data** — your account&apos;s
+  tier-gated program catalog. It cannot see the borrower&apos;s documents, pull
+  a credit file, or know a lender&apos;s unpublished appetite today.
+- It does **not** structure deals, recommend one lender over another as a
+  decision, or produce an approval. A scenario run does the structuring; the
+  lender does the deciding.
+- When the answer isn&apos;t in the data, it says so — that&apos;s a feature, not a
+  failure. Chase it with a scenario run or the Programs matrix instead.
+
+<Note>
+
+The deterministic matching engine — the one that scores your scenarios — and
+the AI assistant are different systems. The assistant is designed to complement
+scenario analysis, not replace it: ask it to narrow down, then run the scenario
+to rank.
+
+</Note>
+
+<TryIt href="/programs" label="Open the data it answers from" feature="ai-assistant" />
+
+<Tip>
+
+Ask one clause at a time: “Which lenders take 12-month bank statements?” then
+“Which of those allow ITIN?” beats one long sentence, and each answer stays
+grounded in the catalog.
+
+</Tip>
+
+<Mistake>
+
+Quoting the assistant to a borrower as if it were a lender position. Any answer
+that will be relied on must be verified against the Programs data and confirmed
+with the lender — the assistant itself will tell you the same.
+
+</Mistake>

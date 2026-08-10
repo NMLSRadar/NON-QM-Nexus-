@@ -4,6 +4,13 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // The /tutorial page compiles its MDX sections from content/tutorial/ at
+  // runtime (server-side, force-dynamic like every page here). Without this
+  // include, Next.js output-file-tracing would strip the content folder from
+  // the /tutorial serverless function and the page would 500 in production.
+  outputFileTracingIncludes: {
+    "/tutorial": ["./content/tutorial/**/*"],
+  },
   // Baked into the client bundle at build time — compared at runtime by
   // src/components/build-version-guard.tsx against the currently-deployed
   // server's own build id (via /api/version) so an already-open installed

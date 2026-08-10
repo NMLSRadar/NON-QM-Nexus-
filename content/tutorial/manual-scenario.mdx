@@ -1,0 +1,96 @@
+---
+slug: manual-scenario
+title: Manual Scenario
+order: 30
+summary: The full intake form — enter the borrower and property once; conditional sections appear based on income documentation type and citizenship.
+feature: manual-scenario
+updated_at: 2026-08-10
+keywords:
+  - manual scenario
+  - intake form
+  - required fields
+  - optional fields
+  - conditional sections
+  - save scenario
+  - duplicate
+---
+
+Manual Scenario is the typed equivalent of Voice Scenario — the same eight core
+vitals, one form. It is the right tool when the borrower&apos;s details are already
+in front of you and you want every field visible at once, or when the situation
+needs specifics that are easier to type than say.
+
+### Do it in 3 steps
+
+1. **Open New Scenario.** The form starts with the core vitals: loan purpose,
+   occupancy, property type, property value, requested loan amount, credit
+   profile, income documentation type, and citizenship.
+2. **Fill what applies.** Every other field is optional. The form changes shape
+   as you go — select **DSCR** and rental-income and expense fields appear;
+   select **Bank statement** and months/account-type questions appear; select
+   **ITIN** or a **non-permanent resident** visa and the citizenship section
+   expands accordingly. Deeper sections (investor experience, mortgage lates,
+   self-employment, gifting) unfold once the core vitals are complete.
+3. **Run it.** Submit, and NEXUS analyzes the scenario against the full lender
+   catalog. The scenario is saved automatically — you do not need to do anything
+   extra to keep it.
+
+### Required vs. optional
+
+| Field | Required? | Notes |
+| --- | --- | --- |
+| Loan purpose | Yes | Purchase, rate-and-term refinance, cash-out refinance, HELOC, second lien |
+| Occupancy | Yes | Primary, second home, investment |
+| Property type | Yes | Single-family, condo, non-warrantable condo, townhome, 2–4 unit, 5–8 units, and more |
+| Property value | Yes | Estimated value (or purchase price) |
+| Requested loan amount | Yes | |
+| Credit profile | Yes | A numeric U.S. FICO, or a profile: no FICO / no U.S. credit / foreign credit |
+| Income documentation type | Yes | Full doc, bank statement, P&L only, DSCR, asset depletion, 1099 |
+| Citizenship | Yes | US citizen, permanent resident, non-permanent resident, ITIN, foreign national |
+| Borrower reference | No | An anonymized label only — never enter borrower PII here |
+| State, units, vesting | No | Useful for state-specific and multi-unit programs |
+| Cash out / existing lien balance | No | Only for refinance scenarios |
+| Investor experience, first-time homebuyer | No | Opens first-time-investor and experienced-investor programs correctly |
+| Mortgage lates, gift funds, employment details | No | Secondary vitals — answer them when the borrower’s file has them; “unknown” is a valid answer |
+
+<Tip>
+
+The fewer assumptions the better: if the borrower’s credit is a foreign credit
+report rather than a U.S. FICO, pick the profile (not a guessed number) — NEXUS
+then prioritizes lenders that actually accept foreign credit.
+
+</Tip>
+
+### Saving and re-running
+
+Every scenario is stored the moment you create it and shows up on the
+**Scenarios** page, where you can open it, re-run the analysis after a detail
+changes, or start a Voice Scenario and “Run Again” from a results page.
+Duplicating a scenario to use as a template is planned — the **Duplicate** item
+in each scenario&apos;s menu is currently marked **Coming soon**; while it is
+disabled, copy the details manually or re-enter them (Voice makes this fast).
+
+<Screenshot
+  title="Manual scenario intake form"
+  alt="The New Scenario form showing the core vitals at the top and conditional sections that expand by income documentation type."
+  script={`1. Sign in and open /scenarios/new.
+2. Capture the full form at 1440x900 with income documentation type set to Bank Statement, showing the conditional bank-statement section expanded and the "core vitals complete" state.`}
+/>
+
+<TryIt href="/scenarios/new" label="Open the form" feature="manual-scenario" />
+
+<Mistake>
+
+Adding borrower PII in the **borrower reference** field. That field is designed
+to be anonymized (e.g. “Miami DSCR deal – July”). Real borrower identity is not
+stored in scenarios.
+
+</Mistake>
+
+<Note>
+
+The Manual Scenario form and Voice Scenario capture exactly the same scenario
+data. Choose by convenience, not capability — a scenario built either way runs
+against the same engine and the same lender catalog.
+
+</Note>
