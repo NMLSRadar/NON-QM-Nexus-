@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLenderAccessInfo, getRepository } from "@/lib/session";
+import { getEffectivePostureProfiles } from "@/lib/lenderPosture";
 import { runChatPipeline } from "@/lib/ai/chatPipeline";
 import { logChatTurn, recordUnansweredQuestion } from "@/lib/ai/chatFeedback";
 import { fuzzyMatchNames } from "@/domain/chat/normalize";
@@ -85,10 +86,14 @@ export async function POST(request: Request) {
   }
 
   const catalog = await repo.getCatalog(org); // same tier-gated catalog the rest of the app uses
+  // Editorial posture directory (seed + this org's overrides, under RLS) —
+  // display/advisory context only; the pipeline never feeds it to matching.
+  const postureProfiles = await getEffectivePostureProfiles(supabase);
 
   try {
     const { answer, parsed, log } = await runChatPipeline(question, catalog, {
       priorUserMessages: userMessages.slice(0, -1).map((m) => m.content),
+      postureProfiles,
     });
 
     // Pending-review awareness: a lender that exists on the platform but

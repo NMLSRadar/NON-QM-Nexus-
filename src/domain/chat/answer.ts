@@ -1,6 +1,16 @@
 import type { ProgramCatalog } from "../analyze";
 import { SAMPLE_DATA_LABEL } from "../types/enums";
+import {
+  EDITORIAL_DISCLAIMER,
+  POSTURE_LABELS,
+  PRICING_TENDENCY_EXPLAINER,
+  findMentionedProfiles,
+  resolvePostureProfile,
+  type GuidelinePosture,
+  type LenderFlexibilityProfile,
+} from "../lenderPosture";
 import { COLLOQUIAL_NOTES } from "./normalizationDictionary";
+import { findExceptionCandidates } from "./postureTools";
 import {
   createScenarioDraftLink,
   defineTerm,
@@ -36,6 +46,14 @@ export interface AnswerRow {
   effectiveDate: string;
   isSampleData: boolean;
   caveats: string[];
+  /** Editorial posture sidenote — display only, NEVER an eligibility input,
+   * never rendered inside a guideline citation. Absent = no profile on
+   * record → no badge, no inference. */
+  posture?: GuidelinePosture;
+  postureLabel?: string;
+  /** "editorial" rows come from the posture layer, carry no guideline
+   * citation, and are excluded from the sources drawer. */
+  sourceType?: "editorial" | "guideline";
 }
 
 export interface AnswerSource {
@@ -160,8 +178,20 @@ function emptyAnswer(answer: string, activity: ToolActivity[]): ChatAnswer {
   return { answer, answered: false, rows: [], assumptions: [], caveats: [], sources: [], followUps: [], toolActivity: activity };
 }
 
+export interface ComposeOptions {
+  /** The org's effective posture directory (seed + org overrides). Editorial
+   * display context only — never an eligibility input. */
+  postureProfiles?: LenderFlexibilityProfile[];
+  asOf?: Date;
+}
+
 /** Standing entry point: deterministic Stage B composition. */
-export function composeAnswer(q: ParsedQuery, catalog: ProgramCatalog): ChatAnswer {
+export function composeAnswer(q: ParsedQuery, catalog: ProgramCatalog, opts: ComposeOptions = {}): ChatAnswer {
+  const answer = composeCore(q, catalog, opts);
+  return decorateWithPosture(answer, opts.postureProfiles ?? []);
+}
+
+function composeCore(q: ParsedQuery, catalog: ProgramCatalog, opts: ComposeOptions): ChatAnswer {
   switch (q.intent) {
     case "superlative_lookup":
     case "threshold_lookup":
@@ -172,16 +202,36 @@ export function composeAnswer(q: ParsedQuery, catalog: ProgramCatalog): ChatAnsw
       return composeTriage(q, catalog);
     case "program_detail":
     case "comparison":
-      return composeLenderFacts(q, catalog);
+      return composeLenderFacts(q, catalog, opts);
     case "process_help":
       return composeProcessHelp(q, catalog);
+    case "exception_guidance":
+      return composeExceptionGuidance(q, catalog, opts);
     case "definition":
       return composeDefinition(q);
     case "app_navigation":
       return composeNavigation(q);
     case "out_of_scope":
-      return composeOutOfScope(q);
+      return composeOutOfScope(q, opts);
   }
+}
+
+/** Attach posture sidenote badges to guideline rows where a profile exists.
+ * No profile on record → no badge, no inference (silence, not a guess).
+ * Adds the editorial disclaimer once when any badge was applied. */
+function decorateWithPosture(answer: ChatAnswer, profiles: LenderFlexibilityProfile[]): ChatAnswer {
+  if (profiles.length === 0 || answer.rows.length === 0) return answer;
+  let any = false;
+  const rows = answer.rows.map((row) => {
+    if (row.sourceType === "editorial" || row.posture) return row; // already posture-carrying
+    const profile = resolvePostureProfile(row.lenderName, profiles);
+    if (!profile) return row;
+    any = true;
+    return { ...row, posture: profile.posture, postureLabel: POSTURE_LABELS[profile.posture] };
+  });
+  if (!any) return answer;
+  const caveats = answer.caveats.includes(EDITORIAL_DISCLAIMER) ? answer.caveats : [...answer.caveats, `Posture badges: ${EDITORIAL_DISCLAIMER}`];
+  return { ...answer, rows, caveats };
 }
 
 // ── Ranked (superlative / threshold) ────────────────────────────────────────
@@ -450,15 +500,23 @@ function composeTriage(q: ParsedQuery, catalog: ProgramCatalog): ChatAnswer {
 
 // ── Program detail / comparison ─────────────────────────────────────────────
 
-function composeLenderFacts(q: ParsedQuery, catalog: ProgramCatalog): ChatAnswer {
+function composeLenderFacts(q: ParsedQuery, catalog: ProgramCatalog, opts: ComposeOptions = {}): ChatAnswer {
   const lenderNames = q.entities.lenderNames ?? [];
   if (q.entities.unknownLenderName) {
     const out = emptyAnswer(
-      `${q.entities.unknownLenderName} isn't in your library — it may be outside your current plan tier, or not tracked yet. I only answer from your library's data, so I can't quote its guidelines.${
+      `${q.entities.unknownLenderName} isn't in your library — its guidelines aren't loaded yet, so I can't quote them.${
         lenderNames.length > 0 ? ` I can tell you about ${lenderNames.join(" and ")}.` : ""
       }`,
       []
     );
+    // A REAL lender with no verified guidelines can still carry a posture
+    // note — clearly editorial, never a stand-in for guideline facts.
+    const profile = resolvePostureProfile(q.entities.unknownLenderName, opts.postureProfiles ?? []);
+    if (profile) {
+      out.caveats.push(
+        `Posture note (editorial): ${profile.canonicalName} is flagged "${POSTURE_LABELS[profile.posture]}" — ${profile.postureNotes} ${EDITORIAL_DISCLAIMER} Last reviewed: ${profile.lastReviewedAt ?? "never"}.`
+      );
+    }
     out.followUps.push(...(lenderNames.length > 0 ? [`Just ${lenderNames[0]}`] : ["Ask about a lender in your library"]), "Run a full scenario");
     return out;
   }
@@ -649,7 +707,7 @@ function composeNavigation(q: ParsedQuery): ChatAnswer {
 
 // ── Out of scope / guardrails ───────────────────────────────────────────────
 
-function composeOutOfScope(q: ParsedQuery): ChatAnswer {
+function composeOutOfScope(q: ParsedQuery, opts: ComposeOptions = {}): ChatAnswer {
   switch (q.guardrailFlag) {
     case "misrepresentation":
       return emptyAnswer(
@@ -667,14 +725,169 @@ function composeOutOfScope(q: ParsedQuery): ChatAnswer {
         []
       );
     case "pricing":
-      return emptyAnswer(
-        "I don't have live pricing or rates — no rate claims from me. Guideline eligibility I can do; for pricing, check with the lender's AE.",
-        []
-      );
+      return composePricing(q, opts);
+    case "approval":
+      return composeApprovalDecline(q, opts);
     default:
       return emptyAnswer(
         "That's outside what I cover — I answer questions about the lenders, programs, and guidelines in your library. Try me on a scenario or a guideline lookup.",
         []
       );
   }
+}
+
+/** Pricing questions get the directional guideline-tightness explanation and
+ * posture where on record — never a rate, point, or price figure, and never
+ * a price ranking (Part 2, §5.4). */
+function composePricing(q: ParsedQuery, opts: ComposeOptions): ChatAnswer {
+  const profiles = opts.postureProfiles ?? [];
+  const mentioned = findMentionedProfiles(q.normalizedText, profiles);
+  const out = emptyAnswer(
+    `I don't quote or estimate pricing — no rates or figures from me. What I can say directionally: ${PRICING_TENDENCY_EXPLAINER}`,
+    []
+  );
+  for (const profile of mentioned) {
+    const tendency =
+      profile.pricingTendency === "typically_better_priced"
+        ? "typically better priced"
+        : profile.pricingTendency === "typically_more_aggressive"
+          ? "typically carries a flexibility premium"
+          : profile.pricingTendency === "typically_mid"
+            ? "typically mid-market"
+            : "pricing tendency not on record";
+    out.caveats.push(
+      `Posture note (editorial): ${profile.canonicalName} is flagged "${POSTURE_LABELS[profile.posture]}" — ${tendency}. ${EDITORIAL_DISCLAIMER} Last reviewed: ${profile.lastReviewedAt ?? "never"}.`
+    );
+  }
+  out.followUps.push("Which lenders fit my scenario?", "Run a full scenario");
+  return out;
+}
+
+/** Approval predictions are never made — for any lender, real or demo.
+ * Named lenders with a posture profile get the editorial note plus the
+ * compensating-factors condition; "considers exceptions," never "will
+ * approve." */
+function composeApprovalDecline(q: ParsedQuery, opts: ComposeOptions): ChatAnswer {
+  const out = emptyAnswer(
+    "I can't predict whether a lender approves a file — no one can promise that, and I won't. What I can do: run the facts against published guidelines (the full scenario tools), and tell you how strong the file's compensating factors are.",
+    []
+  );
+  const mentioned = findMentionedProfiles(q.normalizedText, opts.postureProfiles ?? []);
+  for (const profile of mentioned) {
+    out.caveats.push(
+      `Posture note (editorial): ${profile.canonicalName} is flagged "${POSTURE_LABELS[profile.posture]}" — it ${profile.exceptionsConsidered ? "considers exceptions through its AE when the file carries compensating factors (reserves beyond the requirement, LTV under the cap, DTI cushion, clean credit/housing history)" : "is not typically exception-driven"}. That is never a commitment. ${EDITORIAL_DISCLAIMER} Last reviewed: ${profile.lastReviewedAt ?? "never"}.`
+    );
+  }
+  out.followUps.push("Run full scenario", "What compensating factors do I have?");
+  out.cta = { label: "Run full scenario", url: createScenarioDraftLink(q.entities).url };
+  return out;
+}
+
+// ── Exception guidance (Part 2, §5.3) ───────────────────────────────────────
+
+const COMPENSATING_CONDITION =
+  "None of them grant exceptions on the ask alone — they weigh compensating factors, and the heaviest are reserves well past the requirement (12+ months against a 3- or 6-month minimum is very strong), LTV meaningfully under the cap, a DTI cushion, and clean credit and housing history.";
+
+const EXCEPTION_STANDING_CAVEAT =
+  "An exception is discretionary, requires AE or credit-committee review, and pricing may differ from the published matrix.";
+
+/** Three parts, in order, every time: the editorial list, the compensating-
+ * factors condition stated as a condition, and — when a scenario is in
+ * context — what this file actually has. */
+function composeExceptionGuidance(q: ParsedQuery, catalog: ProgramCatalog, opts: ComposeOptions): ChatAnswer {
+  const profiles = opts.postureProfiles ?? [];
+  const result = findExceptionCandidates(catalog, profiles, q.entities, opts.asOf);
+  const activity: ToolActivity[] = [
+    { tool: "find_exception_candidates", rowCount: result.candidates.length },
+    { tool: "score_compensating_factors", rowCount: result.assessment.assessment.factors.length },
+  ];
+
+  if (result.candidates.length === 0) {
+    const out = emptyAnswer(
+      "No lenders in your library carry an exception-friendly posture profile yet, so I can't rank exception appetite. Exceptions always run through the lender's AE with compensating factors — never guaranteed.",
+      activity
+    );
+    out.followUps.push("View AE contacts", "Ask an admin to maintain lender posture profiles");
+    out.cta = { label: "View AE contacts", url: "/ae" };
+    return out;
+  }
+
+  const names = result.candidates.map((c) => c.canonicalName);
+  const namesShort = names.length > 6 ? `${names.slice(0, 6).join(", ")}, and ${names.length - 6} more` : names.join(", ");
+  const channels = [...new Set(result.candidates.map((c) => c.exceptionChannel).filter(Boolean))];
+
+  // Part 1 — the list.
+  let answer = `${names.length} lender${names.length === 1 ? " is" : "s are"} flagged exception-friendly in your posture profiles — ${namesShort}. Exceptions there run through ${channels.length ? channels.join(" / ") : "the AE"}. `;
+  // Part 2 — the condition, stated as a condition, not a footnote.
+  answer += COMPENSATING_CONDITION;
+
+  const assumptions: string[] = [];
+  const caveats: string[] = [];
+
+  // Part 3 — what this file actually has, when a scenario is in context.
+  if (result.assessment.hasAnyDocumentedFact) {
+    const a = result.assessment.assessment;
+    const present = a.factors.filter((f) => f.present).slice(0, 3);
+    const topGap = a.missingHighValueFactors[0];
+    const bits: string[] = [];
+    for (const f of present) {
+      bits.push(`${f.explanation.replace(/\.$/, "")} (${f.strength.replace(/_/g, " ")})`);
+    }
+    if (bits.length > 0) {
+      answer += ` On your current scenario: ${bits.join("; ")}.`;
+    } else {
+      answer += " On your current scenario, none of the stated facts yet register as a compensating factor.";
+    }
+    if (topGap) {
+      const gapFactor = a.factors.find((f) => f.type === topGap);
+      answer += ` The single biggest lift: ${topGap.replace(/_/g, " ")}${gapFactor && gapFactor.actualValue !== "not documented" ? ` (currently ${gapFactor.actualValue})` : " — not documented yet"}.`;
+    }
+    if (result.assessment.measuredAgainst) {
+      assumptions.push(
+        `File strength measured against ${result.assessment.measuredAgainst.lenderName} — ${result.assessment.measuredAgainst.programName}${result.assessment.measuredAgainst.isSampleData ? " (sample)" : ""}, the current best match for the stated facts.`
+      );
+    }
+    assumptions.push("The assessment describes file strength only — it is not a likelihood of approval.");
+  }
+
+  const stale = result.candidates.filter((c) => c.isStale);
+  if (stale.length > 0) {
+    caveats.push(
+      `Possibly stale profiles (last review older than the review window): ${stale.map((s) => s.canonicalName).join(", ")} — flagged for admin review.`
+    );
+  }
+  const reviewedDates = [...new Set(result.candidates.map((c) => c.lastReviewedAt).filter(Boolean))] as string[];
+  caveats.push(`${EDITORIAL_DISCLAIMER} Last reviewed: ${reviewedDates.length ? reviewedDates.join(", ") : "never"}.`);
+  caveats.push(EXCEPTION_STANDING_CAVEAT);
+
+  const out: ChatAnswer = {
+    answer,
+    answered: true,
+    rows: result.candidates.map((c) => ({
+      lenderName: c.canonicalName,
+      programName: "Posture profile",
+      programId: `posture:${c.canonicalName.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
+      value: c.exceptionChannel ? `via ${c.exceptionChannel}` : undefined,
+      gatingConditions: ["requires compensating factors"],
+      guidelineVersion: "editorial",
+      effectiveDate: c.lastReviewedAt ?? "unreviewed",
+      isSampleData: false,
+      caveats: c.isStale ? ["possibly stale"] : [],
+      posture: c.posture,
+      postureLabel: POSTURE_LABELS[c.posture],
+      sourceType: "editorial" as const,
+    })),
+    assumptions,
+    caveats,
+    // Editorial rows are never guideline sources — sources stays empty
+    // unless a guideline-side row contributed.
+    sources: [],
+    followUps: ["Run full scenario", "Draft exception request", "How do I get an exception submitted?"],
+    toolActivity: activity,
+    clarifyingQuestion: q.missingCriticalFields.includes("latePattern")
+      ? "Was it a 1x30, 2x30, or a 60-day late — and how many months ago? Severity and timing change which lenders work."
+      : undefined,
+    cta: { label: "Run full scenario", url: createScenarioDraftLink(q.entities).url },
+  };
+  return out;
 }

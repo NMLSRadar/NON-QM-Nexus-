@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Trophy, ChevronDown, Sparkles, CheckCircle2, AlertTriangle, Lock, XCircle } from "lucide-react";
 import { SampleDataBadge, StatusBadge, Stat, Pill, fmtPct, fmtUsd } from "@/components/ui";
+import { LenderPostureBadge } from "@/components/lender-posture-badge";
+import type { GuidelinePosture } from "@/domain/lenderPosture";
 import type { ProgramEvaluation } from "@/domain/types/results";
 import type { MatchStatus } from "@/domain/types/enums";
 import { whyThisLender, potentialIssues, aiNarrative } from "@/domain/matching/narrative";
@@ -135,6 +137,7 @@ function LenderCard({
   onToggle,
   disabled,
   runnerUpName,
+  posture,
 }: {
   rank: number;
   e: ProgramEvaluation;
@@ -142,6 +145,8 @@ function LenderCard({
   onToggle: () => void;
   disabled: boolean;
   runnerUpName?: string;
+  /** Editorial posture badge — display only, never affects rank/score. */
+  posture?: GuidelinePosture;
 }) {
   const [expanded, setExpanded] = useState(false);
   const tone = TONE_BY_STATUS[e.status];
@@ -166,6 +171,7 @@ function LenderCard({
             <div className="flex items-center gap-2 flex-wrap">
               <p className="font-bold text-ink-primary">{e.lenderName}</p>
               <StarRating score={e.matchScore} />
+              <LenderPostureBadge posture={posture} />
               {isBestMatch ? (
                 <Pill tone="gold">
                   <Trophy className="h-3 w-3 mr-1 inline" /> Best Match
@@ -446,8 +452,14 @@ function CompareTable({ items }: { items: ProgramEvaluation[] }) {
 export function BestLenderMatches({
   evaluations,
   tierLevel,
+  postureByLender,
 }: {
   evaluations: ProgramEvaluation[];
+  /** Editorial posture sidenotes keyed by lender name (Part 2 §4.1) —
+   * display badges only, resolved AFTER matching finished; absent key =
+   * no profile on record = no badge (never inferred). Never a scoring or
+   * sort input here. */
+  postureByLender?: Record<string, GuidelinePosture>;
   /** The viewer's subscription tier (0 = no active plan). When there are
    * zero evaluations AND tierLevel is 0, the empty state isn't "no lenders
    * matched this scenario" — it's "there's nothing to match against yet
@@ -525,6 +537,7 @@ export function BestLenderMatches({
               onToggle={() => toggle(e.programId)}
               disabled={selectedIds.length >= MAX_COMPARE}
               runnerUpName={i === 0 ? eligible[1]?.lenderName : undefined}
+              posture={postureByLender?.[e.lenderName]}
             />
           );
         })}

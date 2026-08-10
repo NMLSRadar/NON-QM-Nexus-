@@ -37,9 +37,11 @@ The pipeline is **fully functional with no AI provider configured** — the dete
 
 ### Intents
 
-`superlative_lookup` · `availability_lookup` · `threshold_lookup` · `scenario_triage` · `program_detail` · `comparison` · `process_help` · `definition` · `app_navigation` · `out_of_scope`
+`superlative_lookup` · `availability_lookup` · `threshold_lookup` · `scenario_triage` · `program_detail` · `comparison` · `process_help` · `exception_guidance` · `definition` · `app_navigation` · `out_of_scope`
 
-Guardrail flags (`misrepresentation`, `protected_class`, `legal_tax_advice`, `pricing`) force a decline with a legitimate alternative where one exists.
+Guardrail flags (`misrepresentation`, `protected_class`, `legal_tax_advice`, `pricing`, `approval`) force a decline with a legitimate alternative where one exists. Pricing declines include the directional guideline-tightness explainer (never a figure); approval declines include the compensating-factors framing.
+
+`exception_guidance` (Part 2) routes "who gives exceptions / who's flexible / who will actually do this" to the editorial posture layer + the deterministic compensating-factors engine, answering in three fixed parts: the org-scoped posture list (badged, with `lastReviewedAt`), the compensating-factors condition, and — when a scenario is in context — the file's actual factor assessment with its single biggest gap. Tools: `get_lender_posture`, `score_compensating_factors`, `find_exception_candidates` (`src/domain/chat/postureTools.ts`); posture rows are `sourceType: 'editorial'`, never guideline sources. See `docs/lender-posture.md`.
 
 ### Normalization dictionary
 

@@ -5,7 +5,11 @@ import { analyzeScenario } from "@/domain/analyze";
 import { getCurrentOrganizationId, getLenderAccessInfo, getRepository } from "@/lib/session";
 import { Card, MetricTile, StatusBadge, SectionHeading, LinkButton, Pill, fmtUsd } from "@/components/ui";
 import type { MatchStatus } from "@/domain/types/enums";
+import { createClient } from "@/lib/supabase/server";
+import { getEffectivePostureProfiles } from "@/lib/lenderPosture";
+import { resolvePostureProfile, type GuidelinePosture } from "@/domain/lenderPosture";
 import { BestLenderMatches } from "./best-lender-matches";
+import { ExceptionReadiness } from "./exception-readiness";
 import { DocumentNeeds } from "./document-needs";
 import { ScenarioActivity } from "./scenario-activity";
 import { SponsoredAeContacts } from "./sponsored-ae-contacts";
@@ -27,6 +31,17 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
   const catalog = access.tierLevel === 0 ? await repo.getCatalog(org) : await repo.getCatalogForMatching(org);
   const analysis = analyzeScenario(scenario, catalog);
   const best = analysis.evaluations[0];
+
+  // Editorial posture layer (Part 2) — display/advisory only. Loaded AFTER
+  // analyzeScenario has produced final statuses and scores: posture can
+  // never be an input to eligibility or ranking.
+  const supabase = await createClient().catch(() => null);
+  const postureProfiles = await getEffectivePostureProfiles(supabase);
+  const postureByLender: Record<string, GuidelinePosture> = {};
+  for (const name of new Set(analysis.evaluations.map((e) => e.lenderName))) {
+    const profile = resolvePostureProfile(name, postureProfiles);
+    if (profile) postureByLender[name] = profile.posture; // no profile → no badge, no inference
+  }
 
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
@@ -146,7 +161,7 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
               description="Every applicable lender program, ranked by real match score — sorted automatically."
             />
             <div className="mt-4">
-              <BestLenderMatches evaluations={analysis.evaluations} tierLevel={access.tierLevel} />
+              <BestLenderMatches evaluations={analysis.evaluations} tierLevel={access.tierLevel} postureByLender={postureByLender} />
             </div>
           </Card>
 
@@ -180,6 +195,16 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
               employment, ownership, citizenship, property use, or loan purpose.
             </p>
           </Card>
+
+          {/* Exception Readiness (Part 2 §4.2) — renders only when the result
+              isn't clean AND an exception-friendly (editorial posture) lender
+              is in the match set. */}
+          <ExceptionReadiness
+            scenario={scenario}
+            calc={analysis.calculation}
+            evaluations={analysis.evaluations}
+            postureProfiles={postureProfiles}
+          />
 
           <p className="text-xs text-ink-secondary border-t border-surface-border pt-4">{analysis.disclaimer}</p>
         </div>

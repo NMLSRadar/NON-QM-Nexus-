@@ -24,3 +24,13 @@ All seeds live in `src/data/` and are flagged `isSampleData: true`, which drives
 ## Organization administration
 
 Org admins manage users and roles (memberships), organization settings, AI-integration authorization, lender visibility, data retention, and can read the org's audit log. Role capabilities are enforced by RLS policies (`supabase/rls-policies.sql`).
+
+## Lender posture profiles (editorial layer)
+
+Admin → **Lender Posture** maintains the flexibility/exception layer described in `docs/lender-posture.md`. These are editorial market-experience reads on real lenders — not guidelines, and never an eligibility input.
+
+- Edit posture (exception-friendly / moderate / rigid), pricing *tendency* (directional only — never a figure), notes, and the exception channel; "Save + mark reviewed" stamps `lastReviewedAt`.
+- Profiles unreviewed for 180+ days are flagged **possibly stale** here and in assistant answers — review them on that cadence at minimum, and after any known lender policy shift.
+- Platform-level edits set the default every org inherits; an org admin's override (same table, RLS-scoped) fully replaces the default for that org only.
+- Verify legal entity names on first load and keep aliases current ("Greenbox"/"GBX", "Home Xpress"), so chat fuzzy-matching resolves to one record.
+- The assistant logs when an answer was carried by posture data (`postureSourced`) — watch for editorial data doing guideline work, and load real guidelines where that happens.

@@ -22,7 +22,8 @@ export type ChatIntent =
   | "scenario_triage" // partial borrower facts -> candidate programs
   | "program_detail" // facts about one named lender/program
   | "comparison" // A vs B
-  | "process_help" // exceptions, turn times, how-to
+  | "process_help" // turn times, how-to
+  | "exception_guidance" // who's flexible / who gives exceptions / posture + compensating factors
   | "definition" // industry terminology
   | "app_navigation" // where is X in the product
   | "out_of_scope";
@@ -74,6 +75,8 @@ export interface ParsedEntities {
   features?: string[];
   /** Months of self-employment stated ("self-employed 18 months"). */
   selfEmploymentMonths?: number;
+  /** Months of reserves stated ("4 months reserves"). */
+  reservesMonths?: number;
   /** Fuzzy-matched lender names found in the question (resolved against the
    * caller's catalog when parse is given the known-name list). */
   lenderNames?: string[];
@@ -99,6 +102,7 @@ export interface ParsedQuery {
    * question or an honest "here's what I understood" preamble. */
   confidence: number;
   /** Set when the question edges toward misrepresentation / advice we must
-   * decline (occupancy fraud, protected class, legal/tax advice). */
-  guardrailFlag?: "misrepresentation" | "protected_class" | "legal_tax_advice" | "pricing";
+   * decline (occupancy fraud, protected class, legal/tax advice, pricing
+   * quotes, approval predictions). */
+  guardrailFlag?: "misrepresentation" | "protected_class" | "legal_tax_advice" | "pricing" | "approval";
 }

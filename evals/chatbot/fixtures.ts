@@ -177,10 +177,14 @@ export const GOLDEN_SET: GoldenFixture[] = [
   {
     id: "triage-two-lates",
     question: "I have a borrower who has two mortgage lates, what lender has flexible guidelines for mortgage lates?",
-    expectedIntent: "scenario_triage",
+    // "flexible guidelines" routes to exception guidance (Part 2): the
+    // posture list + compensating-factors condition, plus the one allowed
+    // clarifying question about late severity/timing.
+    expectedIntent: "exception_guidance",
     expectAnswered: true,
     expectClarifyingQuestion: true,
-    expectTools: ["quick_evaluate"],
+    expectTools: ["find_exception_candidates", "score_compensating_factors"],
+    expectFacts: ["compensating factors", "market experience"],
   },
   {
     id: "triage-1x30-660-cashout",
@@ -207,18 +211,22 @@ export const GOLDEN_SET: GoldenFixture[] = [
   {
     id: "soft-exceptions",
     question: "Where can I find more flexible non-QM lenders who allow for exceptions?",
-    expectedIntent: "availability_lookup",
+    expectedIntent: "exception_guidance",
     expectAnswered: true,
-    expectLenders: ["Horizon", "Harbor"],
-    forbidLenders: ["Evergreen"], // exceptionPolicy: none
+    // Answered from the editorial posture layer: list + compensating-factors
+    // condition + editorial disclaimer, never from guideline data alone.
+    expectLenders: ["Greenbox Loans", "Acra Lending"],
+    forbidLenders: ["Evergreen"],
+    expectFacts: ["compensating factors", "market experience", "reserves"],
+    expectTools: ["find_exception_candidates"],
   },
   {
     id: "soft-which-exceptions",
     question: "Which lenders allow exceptions?",
-    expectedIntent: "availability_lookup",
+    expectedIntent: "exception_guidance",
     expectAnswered: true,
-    expectFacts: ["AE"],
-    expectLenders: ["Horizon", "Harbor"],
+    expectFacts: ["AE", "compensating factors", "market experience"],
+    expectLenders: ["Greenbox Loans", "Orion Lending"],
   },
   {
     id: "soft-fastest",

@@ -149,6 +149,10 @@ function extractEntities(text: string, opts: ParseOptions): ParsedEntities {
   if (/\bstated\b/.test(text)) features.push("stated");
   if (features.length > 0) e.features = features;
 
+  // Reserves ("4 months reserves", "12 mos of reserves")
+  const reserves = text.match(/(\d{1,2})\s*(?:months?|mos?)\s*(?:of\s*)?reserves?\b/);
+  if (reserves?.[1] != null) e.reservesMonths = parseInt(reserves[1], 10);
+
   // Self-employment tenure ("self-employed 18 months", "self employed for a year")
   const seMonths = text.match(/self[- ]?employed?\s*(?:for)?\s*(\d{1,2})\s*months?/);
   const seYears = text.match(/self[- ]?employed?\s*(?:for)?\s*(?:(\d)|a|one)\s*years?/);
@@ -240,8 +244,15 @@ function detectGuardrail(text: string): ParsedQuery["guardrailFlag"] {
   if (/legal advice|is (this|that) legal|licensing requirement|compliance question|tax advice|deduct(ible)?\b.*tax|\btrid\b|respa\b/.test(text)) {
     return "legal_tax_advice";
   }
-  if (/\brate\b(?!.?term)|\bpricing\b|\bpoints?\b.*\bcost\b|what.*rate|par rate|price out/.test(text) && !/rate_term/.test(text)) {
+  if (
+    /\brate\b(?!.?term)|\bpricing\b|\bpoints?\b.*\bcost\b|what.*rate|par rate|price out|\bcheap(er|est)?\b|priced? (better|lower)|better priced|why is .* (cheaper|better priced)/.test(text) &&
+    !/rate_term/.test(text)
+  ) {
     return "pricing";
+  }
+  // Approval predictions are never given — for any lender, real or demo.
+  if (/will (they|[a-z][a-z\s]+?) approve\b|will (this|it|i|we) (get )?approved?\b|chances? of (approval|getting approved)|approval odds|likely to approve/.test(text)) {
+    return "approval";
   }
   return undefined;
 }
@@ -261,18 +272,30 @@ function classifyIntent(text: string, e: ParsedEntities, metric: MetricDetection
     if (/how is\b.*\b(calculated|computed|figured)\b/.test(text)) return "definition";
   }
 
+  // Process help: the exception PROCESS ("how do I submit one"), turn times,
+  // submissions — checked before exception_guidance so a how-to stays a how-to.
+  if (/how do i (get|submit|request)\b.*exception|exception submitted|fastest to close|turn ?times?|how long.*close|submit (a )?(loan|file|scenario)\b/.test(text)) {
+    return "process_help";
+  }
+
+  // Exception guidance: WHO is flexible / gives exceptions / works outside
+  // the box — answered from the editorial posture layer + compensating
+  // factors, never from guideline data alone (Part 2, §5.1).
+  if (
+    /\bexceptions?\b|\bflexib(le|ility)\b|\blenient\b|who will (actually )?do\b|who actually does\b|outside (the )?(guidelines?|box)\b|\bone[- ]off\b|make an exception\b|compensating factors?\b/.test(
+      text
+    )
+  ) {
+    return "exception_guidance";
+  }
+
   // Availability phrased as "where can I find lenders that ..." — takes
   // precedence over the app-navigation "where do I" pattern.
-  if (/where can i find\b.*\b(lenders?|flexible|exception)/.test(text)) return "availability_lookup";
+  if (/where can i find\b.*\blenders?\b/.test(text)) return "availability_lookup";
 
   // App navigation: where/how inside the product
   if (/where (do|can) i (upload|find|see|view|download)|how do i (duplicate|delete|share|save|create|start|run) (a |an |the )?(scenario|p&l|pnl|document|report)|where is the\b/.test(text)) {
     return "app_navigation";
-  }
-
-  // Process help: exceptions process, turn times, submissions
-  if (/how do i (get|submit|request)\b.*exception|exception submitted|fastest to close|turn ?times?|how long.*close|submit (a )?(loan|file|scenario)\b/.test(text)) {
-    return "process_help";
   }
 
   // Comparison: two named lenders, or explicit vs
@@ -312,7 +335,7 @@ function missingCritical(intent: ChatIntent, metric: MetricDetection | undefined
     // hugely (purchase full-doc vs cash-out DSCR) — worth one question.
     missing.push("loanPurpose");
   }
-  if (intent === "scenario_triage" && e.creditEvents?.includes("mortgage_lates") && !e.latePattern) {
+  if ((intent === "scenario_triage" || intent === "exception_guidance") && e.creditEvents?.includes("mortgage_lates") && !e.latePattern) {
     // Late severity/timing (1x30 vs 1x60, and how recent) changes which
     // lenders qualify — worth the one allowed clarifying question.
     missing.push("latePattern");

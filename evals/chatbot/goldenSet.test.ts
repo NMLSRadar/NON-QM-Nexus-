@@ -3,6 +3,7 @@ import { sampleLenders, samplePrograms } from "@/data/sampleLenders";
 import { sampleRules } from "@/data/sampleRules";
 import type { ProgramCatalog } from "@/domain/analyze";
 import type { ChatAnswer } from "@/domain/chat/answer";
+import { mergePostureProfiles } from "@/domain/lenderPosture";
 import { runChatPipeline } from "@/lib/ai/chatPipeline";
 import { GOLDEN_SET } from "./fixtures";
 
@@ -21,6 +22,7 @@ import { GOLDEN_SET } from "./fixtures";
  */
 
 const catalog: ProgramCatalog = { lenders: sampleLenders, programs: samplePrograms, rules: sampleRules };
+const postureProfiles = mergePostureProfiles([]);
 
 const KNOWN_LENDER_WORDS = new Set(
   sampleLenders.flatMap((l) => l.name.toLowerCase().split(/[\s()-]+/)).filter((w) => w.length > 3)
@@ -43,7 +45,12 @@ function answerText(a: ChatAnswer): string {
 function hallucinatedLenderNames(a: ChatAnswer): string[] {
   const text = answerText(a);
   const candidates = text.match(/\b([A-Z][a-zA-Z&'-]*(?:\s+[A-Z][a-zA-Z&'-]*)*\s+(?:Lending|Funding|Capital|Mortgage|Financial|Bancorp|Partners|Finance|Wholesale))\b/g) ?? [];
-  const knownFull = sampleLenders.map((l) => l.name.toLowerCase().replace(/\s*\(sample\)\s*$/i, ""));
+  const knownFull = [
+    ...sampleLenders.map((l) => l.name.toLowerCase().replace(/\s*\(sample\)\s*$/i, "")),
+    // Posture directory names ARE tool-grounded (get_lender_posture /
+    // find_exception_candidates return them) — not hallucinations.
+    ...postureProfiles.flatMap((p) => [p.canonicalName.toLowerCase(), ...p.aliases.map((a) => a.toLowerCase())]),
+  ];
   return candidates.filter((c) => {
     const lower = c.toLowerCase();
     if (knownFull.some((k) => k.includes(lower) || lower.includes(k))) return false;
@@ -61,6 +68,7 @@ describe("chatbot golden set", () => {
       const { answer, parsed, log } = await runChatPipeline(fixture.question, catalog, {
         enableNarration: false,
         priorUserMessages: fixture.priorUserMessages,
+        postureProfiles,
       });
 
       // Intent (graded in aggregate below, recorded per fixture here)
@@ -101,7 +109,15 @@ describe("chatbot golden set", () => {
           expect(row.guidelineVersion, `${row.programName} missing guideline version`).toBeTruthy();
           expect(row.effectiveDate, `${row.programName} missing effective date`).toBeTruthy();
         }
-        expect(answer.sources.length, "answered replies with rows must carry sources").toBeGreaterThan(0);
+        // Editorial (posture) rows are never guideline sources; only replies
+        // with guideline-sourced rows must carry citations, and editorial
+        // replies must instead carry the editorial disclaimer.
+        const hasGuidelineRows = answer.rows.some((r) => r.sourceType !== "editorial");
+        if (hasGuidelineRows) {
+          expect(answer.sources.length, "answered replies with guideline rows must carry sources").toBeGreaterThan(0);
+        } else {
+          expect(answer.caveats.join(" ")).toMatch(/market experience/i);
+        }
       }
       // Sample data must be labeled inline when present
       if (answer.rows.some((r) => r.isSampleData)) {

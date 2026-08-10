@@ -17,6 +17,9 @@ interface AnswerRow {
   effectiveDate: string;
   isSampleData: boolean;
   caveats: string[];
+  posture?: "exception_based" | "moderate" | "rigid";
+  postureLabel?: string;
+  sourceType?: "editorial" | "guideline";
 }
 interface AnswerSource {
   lenderName: string;
@@ -290,9 +293,27 @@ function AssistantBubble({
                 {a.rows.map((row) => (
                   <tr key={row.programId} className="border-t border-white/5 align-top">
                     <td className="py-1 pr-2">
-                      <Link href={`/programs?program=${encodeURIComponent(row.programId)}`} className="text-amber-200 hover:underline">
-                        {row.lenderName}
-                      </Link>
+                      {row.sourceType === "editorial" ? (
+                        <span className="text-amber-200">{row.lenderName}</span>
+                      ) : (
+                        <Link href={`/programs?program=${encodeURIComponent(row.programId)}`} className="text-amber-200 hover:underline">
+                          {row.lenderName}
+                        </Link>
+                      )}
+                      {row.postureLabel && (
+                        <span
+                          title="Internal guidance based on market experience — not a lender guideline or commitment."
+                          className={`ml-1 rounded-full border px-1.5 text-[9px] ${
+                            row.posture === "exception_based"
+                              ? "border-emerald-400/40 text-emerald-300"
+                              : row.posture === "rigid"
+                                ? "border-slate-400/40 text-slate-300"
+                                : "border-amber-400/40 text-amber-300"
+                          }`}
+                        >
+                          {row.postureLabel}
+                        </span>
+                      )}
                       <span className="block text-slate-400">
                         {row.programName}
                         {row.isSampleData && (
@@ -304,7 +325,7 @@ function AssistantBubble({
                     </td>
                     <td className="py-1 pr-2 font-medium text-white">{row.value ?? "—"}</td>
                     <td className="py-1 text-slate-400">
-                      {row.guidelineVersion} · eff. {row.effectiveDate}
+                      {row.sourceType === "editorial" ? "editorial" : `${row.guidelineVersion} · eff. ${row.effectiveDate}`}
                     </td>
                   </tr>
                 ))}

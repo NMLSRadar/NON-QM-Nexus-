@@ -36,6 +36,16 @@ The site chatbot no longer sends a free-text prompt and trusts the reply. It run
 - Guardrails decline misrepresentation framing (with the legitimate alternative), protected-class reasoning, legal/tax advice, and rate/pricing claims.
 - The eval suite (`evals/chatbot/`) enforces grounding, zero hallucinated entities, correct refusals, prompt-injection resistance, and tenant isolation in CI; prompt files are versioned (`prompts/chatbot/`, `PROMPT_VERSION` logged per turn).
 
+## Editorial posture vs. guidelines; exception language (Part 2)
+
+The lender-posture layer (`docs/lender-posture.md`) is editorial market-experience data about real lenders. Safety rules, all enforced by tests:
+
+- **Separation**: posture never appears in a guideline citation block, rule result, or sources drawer (chat rows are tagged `sourceType: 'editorial'` and excluded from sources); `src/domain/matching|rules|calc` and `analyze.ts` have no import path to it, and flipping posture leaves every rule outcome and match score identical (`tests/domain/postureIsolation.test.ts`).
+- **Exception language**: "considers exceptions" / "documented exception process" — never "will approve," "should be fine," or any approval probability. Approval questions get a decline plus the compensating-factors framing. Exception answers always state that compensating factors are the condition, and the assessment engine's output is file strength, never approval likelihood.
+- **Pricing**: no rate/point/price figures anywhere from this layer — the directional guideline-tightness explainer only, with the volatility caveat; lenders are never ranked by price.
+- **Real-lender accuracy bar**: a guideline claim about a real lender requires a loaded, verified guideline version. Posture metadata is not that — with no verified guidelines, the answer is "not in your library yet" plus the labeled posture note.
+- Every posture surface carries the editorial disclaimer + `lastReviewedAt`; stale profiles (>180 days) are flagged; posture-carried answers are logged distinctly (`postureSourced`).
+
 ## Provider abstraction
 
 `getAiProvider()` selects Anthropic or OpenAI from `AI_PROVIDER`; keys come from server-side env only. Provider-specific code stays behind the `AiProvider` interface; prompts live in version-controlled source files.

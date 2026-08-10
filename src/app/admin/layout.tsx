@@ -11,6 +11,7 @@ const ADMIN_NAV = [
   { href: "/admin/documents", label: "Documents" },
   { href: "/admin/monitoring", label: "Guideline Monitoring" },
   { href: "/admin/assistant-questions", label: "Assistant Questions" },
+  { href: "/admin/lender-posture", label: "Lender Posture" },
   { href: "/admin/discounts", label: "Discounts" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/teams", label: "Team Subscriptions" },

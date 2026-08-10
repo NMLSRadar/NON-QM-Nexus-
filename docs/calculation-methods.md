@@ -85,3 +85,22 @@ Programs may define an LTV matrix (`minFico`, optional occupancy, `maxLtv`, opti
 - Currency: 2 decimal places, ROUND_HALF_UP
 - DSCR: 3 decimal places
 - Division by zero always yields `null` (shown as "—"), never Infinity/NaN
+
+## Compensating factors (`compensatingFactors/`) — 2026-08-10
+
+Deterministic file-strength assessment (no LLM in scoring; describes file strength, never approval likelihood). Each factor is measured against the program's own limits and tiered `none / slight / moderate / strong / very_strong`:
+
+| Factor | Formula | Tiers |
+|---|---|---|
+| LTV cushion | `maxAllowableLTV − requestedLTV` (points) | 1–4 slight · 5–9 moderate · 10+ strong |
+| Reserves surplus | `actual ÷ required` months | >1x slight · ≥1.5x moderate · ≥2x strong · ≥4x **or** 12+ months at ≥1.5x very strong |
+| DTI cushion | `maxDTI − calculatedDTI` (points) | 1–2 slight · 3–7 moderate · 8+ strong |
+| FICO cushion | `actualFICO − minFICO` | 5–19 slight · 20–39 moderate · 40+ strong |
+| Housing history | lates in lookback | 0x30x24 strong · 0x30x12 moderate · any late none |
+| Credit depth | 4 qualitative flags rolled into one tier | all clean strong; any bad flag none |
+| Seasoning surplus | months beyond program minimum | 1–5 slight · 6–11 moderate · 12+ strong |
+| Residual income | income − obligations ($/month) | org-configurable tiers (defaults $2.5k/$5k/$10k) |
+| Tenure | months beyond program minimum | 12–23 slight · 24+ moderate |
+| Payment shock | proposed ÷ current payment | ≤1.0x strong · ≤1.25x moderate · ≤1.5x slight |
+
+**Weights** (`weights.ts`, documented constant): reserves 3.0 > LTV cushion 2.5 > housing history / credit depth / DTI 2.0 > FICO / seasoning / residual / payment shock 1.5 > tenure 1.0. Overall strength = Σ weight×tier-value ÷ **Σ all weights** — undocumented factors contribute zero to the numerator but stay in the denominator, so **unknown data never scores favorably**. Thresholds: ≥0.5 strong, ≥0.3 moderate, ≥0.15 developing, else weak.

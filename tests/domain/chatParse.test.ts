@@ -132,10 +132,10 @@ describe("parseChatQuery — intent routing (acceptance corpus)", () => {
     expect(p.entities.creditEvents).toBeDefined();
   });
 
-  it("scenario triage: two mortgage lates", () => {
+  it("flexible-guidelines lates question routes to exception guidance (Part 2)", () => {
     const p = expectIntent(
       "I have a borrower who has two mortgage lates, what lender has flexible guidelines for mortgage lates?",
-      "scenario_triage"
+      "exception_guidance"
     );
     expect(p.entities.creditEvents).toContain("mortgage_lates");
     // No severity/timing given → the one allowed clarifying question
@@ -156,9 +156,9 @@ describe("parseChatQuery — intent routing (acceptance corpus)", () => {
     expect(p.entities.selfEmploymentMonths).toBe(18);
   });
 
-  it("soft: flexible non-QM lenders with exceptions", () => {
+  it("soft: flexible non-QM lenders with exceptions routes to exception guidance", () => {
     const p = parseChatQuery("Where can I find more flexible non-QM lenders who allow for exceptions?");
-    expect(p.intent).toBe("availability_lookup");
+    expect(p.intent).toBe("exception_guidance");
     expect(p.entities.features).toContain("exceptions");
   });
 

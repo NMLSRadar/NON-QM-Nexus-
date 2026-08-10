@@ -3,6 +3,7 @@ import type { ProgramCatalog } from "@/domain/analyze";
 import { composeAnswer, type ChatAnswer } from "@/domain/chat/answer";
 import { parseChatQuery, type ParseOptions } from "@/domain/chat/parse";
 import type { ParsedQuery } from "@/domain/chat/types";
+import type { LenderFlexibilityProfile } from "@/domain/lenderPosture";
 import { NARRATION_SYSTEM_PROMPT, PROMPT_VERSION } from "../../../prompts/chatbot/narration.v2.0";
 import { asUntrustedData, getAiProvider } from "./provider";
 
@@ -37,6 +38,9 @@ export const chatAnswerSchema = z.object({
       effectiveDate: z.string(),
       isSampleData: z.boolean(),
       caveats: z.array(z.string()),
+      posture: z.enum(["exception_based", "moderate", "rigid"]).optional(),
+      postureLabel: z.string().optional(),
+      sourceType: z.enum(["editorial", "guideline"]).optional(),
     })
   ),
   assumptions: z.array(z.string()),
@@ -96,6 +100,9 @@ export interface ChatTurnLog {
   toolsCalled: Array<{ tool: string; rowCount: number }>;
   answered: boolean;
   narrationUsed: boolean;
+  /** true when editorial posture data carried part of the answer — logged
+   * distinctly so admins can see how often editorial data is load-bearing. */
+  postureSourced: boolean;
   latencyMs: number;
   model?: string;
 }
@@ -114,7 +121,7 @@ export interface ChatPipelineResult {
 export async function runChatPipeline(
   question: string,
   catalog: ProgramCatalog,
-  opts: { enableNarration?: boolean; priorUserMessages?: string[] } = {}
+  opts: { enableNarration?: boolean; priorUserMessages?: string[]; postureProfiles?: LenderFlexibilityProfile[] } = {}
 ): Promise<ChatPipelineResult> {
   const started = Date.now();
   // "(Sample)" suffixes are display labels, not part of the name a user
@@ -137,7 +144,7 @@ export async function runChatPipeline(
     }
   }
 
-  const deterministic = composeAnswer(parsed, catalog);
+  const deterministic = composeAnswer(parsed, catalog, { postureProfiles: opts.postureProfiles });
 
   let answer = deterministic;
   let narrationUsed = false;
@@ -170,6 +177,10 @@ export async function runChatPipeline(
     }
   }
 
+  const postureSourced =
+    answer.rows.some((r) => r.posture != null || r.sourceType === "editorial") ||
+    answer.caveats.some((c) => c.includes("editorial") || c.includes("market experience"));
+
   const log: ChatTurnLog = {
     promptVersion: PROMPT_VERSION,
     intent: parsed.intent,
@@ -178,6 +189,7 @@ export async function runChatPipeline(
     toolsCalled: answer.toolActivity,
     answered: answer.answered,
     narrationUsed,
+    postureSourced,
     latencyMs: Date.now() - started,
     model,
   };
