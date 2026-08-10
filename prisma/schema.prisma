@@ -801,7 +801,6 @@ model SignupTriggerError {
 }
 
 // ---------------------------------------------------------------------------
-<<<<<<< HEAD
 // Activity & beta-testing analytics (2026-08-10, supabase/activity-tracking.sql).
 // ONE table feeds the entire /admin/activity "Active Users & Beta Testers"
 // screen: last login, last activity, total logins, scenario count, features
@@ -823,7 +822,6 @@ model UserActivityEvent {
   @@index([userId, occurredAt])
   @@index([occurredAt])
   @@map("user_activity_events")
-=======
 // Beta Tester Feedback — see supabase/beta-feedback.sql for the authoritative
 // DDL, RLS, and the ensure_beta_survey_for_me() SECURITY DEFINER created here.
 // One row per user (unique user_id = "no duplicate surveys"). trial_started_at
@@ -855,5 +853,5 @@ model BetaTesterSurvey {
   updatedAt            DateTime @updatedAt @map("updated_at")
 
   @@map("beta_tester_surveys")
->>>>>>> d944c1d (feat: automated beta-tester feedback survey (Day 3 questionnaire + Day 5 follow-up))
+
 }
