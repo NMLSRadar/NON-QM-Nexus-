@@ -93,3 +93,32 @@ export const SORTS: { key: ActivitySort; label: string }[] = [
 ];
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Event TYPE union + labels. The type union also exists in @/lib/activity
+// (server); the VALUE constants must live here (pure, client-safe) so the
+// client <table> component never imports that server module. Keep in sync
+// with src/lib/activity.ts's ACTIVITY_EVENT_TYPES.
+export const ACTIVITY_EVENT_TYPES = [
+  "login",
+  "scenario_submitted",
+  "voice_scenario",
+  "ai_assistant",
+  "lender_list",
+  "programs",
+  "doc_needs",
+  "products",
+] as const;
+
+export type ActivityEventType = (typeof ACTIVITY_EVENT_TYPES)[number];
+
+/** Human labels for the admin timeline + "Top feature" column. */
+export const ACTIVITY_LABELS: Record<ActivityEventType, string> = {
+  login: "Logged in",
+  scenario_submitted: "Submitted a scenario",
+  voice_scenario: "Used Voice Scenario",
+  ai_assistant: "Used AI Assistant",
+  lender_list: "Viewed lender list",
+  programs: "Viewed programs",
+  doc_needs: "Viewed doc needs",
+  products: "Viewed products",
+};

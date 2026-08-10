@@ -21,18 +21,6 @@ export const ACTIVITY_EVENT_TYPES = [
 
 export type ActivityEventType = (typeof ACTIVITY_EVENT_TYPES)[number];
 
-/** Human labels for the admin timeline + "Top feature" column. */
-export const ACTIVITY_LABELS: Record<ActivityEventType, string> = {
-  login: "Logged in",
-  scenario_submitted: "Submitted a scenario",
-  voice_scenario: "Used Voice Scenario",
-  ai_assistant: "Used AI Assistant",
-  lender_list: "Viewed lender list",
-  programs: "Viewed programs",
-  doc_needs: "Viewed doc needs",
-  products: "Viewed products",
-};
-
 export function isActivityEventType(value: string): value is ActivityEventType {
   return (ACTIVITY_EVENT_TYPES as readonly string[]).includes(value);
 }

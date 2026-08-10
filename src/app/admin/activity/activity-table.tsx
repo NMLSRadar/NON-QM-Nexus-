@@ -4,10 +4,9 @@ import { useRouter } from "next/navigation";
 import { useTransition, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { setBetaTester } from "./actions";
-import { ACTIVITY_LABELS, type ActivityEventType } from "@/lib/activity";
 import { formatRelative, formatAbsolute, formatDay } from "@/lib/relativeTime";
 import type { ActivityUserRow, ActivityStatus } from "./types";
-import { STATUS_LABELS } from "./types";
+import { STATUS_LABELS, ACTIVITY_LABELS, type ActivityEventType } from "./types";
 
 const STATUS_TONE: Record<
   ActivityStatus,

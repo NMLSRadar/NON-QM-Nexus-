@@ -2,7 +2,6 @@ import Link from "next/link";
 import { UsersRound } from "lucide-react";
 import { requirePlatformAdmin } from "@/lib/admin";
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
-import { ACTIVITY_LABELS, ACTIVITY_EVENT_TYPES } from "@/lib/activity";
 import { Card } from "@/components/ui";
 import { ActivityTable } from "./activity-table";
 import { ActivitySearch } from "./search-box";
@@ -14,6 +13,8 @@ import {
   FILTERS,
   SORTS,
   DAY_MS,
+  ACTIVITY_LABELS,
+  ACTIVITY_EVENT_TYPES,
 } from "./types";
 
 export const dynamic = "force-dynamic";
