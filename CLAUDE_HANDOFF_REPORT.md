@@ -19,14 +19,13 @@ The code was deployed only AFTER the database migration was applied.
    metadata failing no longer takes down the assistant or the results page.
 2. **RLS policies corrected.** Removed the bogus `organization_id = auth.uid()`
    clause. Policies now use the repo's established pattern
-   (`EXISTS (memberships org membership where user_id = auth.uid()) OR
-   public.is_platform_admin()`) with matching `WITH CHECK`. Migration is
-   transaction-wrapped, adds FKs (`lender_id → lenders`, `user_id → users`) and
-   a partial unique index `(organization_id, lender_id) WHERE deleted_at IS
-   NULL` (unambiguous org-override resolution). Because the tables were already
-   created by hand, an idempotent fix script was provided
-   (`supabase/chatbot-precision-fix.sql`) — still needs to be run once in the
-   Supabase SQL editor.
+   (`organization_id IN (user_org_ids()) OR platform-catalog org OR
+   public.is_platform_admin()` for reads; membership EXISTS for writes) with
+   matching `WITH CHECK`. Migration is transaction-wrapped, adds FKs
+   (`lender_id → lenders`, `user_id → users`) and a partial unique index
+   `(organization_id, lender_id) WHERE deleted_at IS NULL` (unambiguous
+   org-override resolution). **Applied to production and verified 7/7**
+   (unique index, 3 FKs, RLS enabled on all 3 tables).
 3. **LLM narration eval tier added** — `npm run eval:chatbot:llm` runs ~12
    fixtures through the real provider and asserts grounding / no-price /
    no-approval / injection-discard. Separately triggered (needs an API key).
