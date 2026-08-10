@@ -218,9 +218,9 @@ export function TutorialSectionFrame({
   title,
   summary,
   updatedAt,
-  loggedIn,
-  done,
-  onToggleProgress,
+  loggedIn = false,
+  done = false,
+  onToggleProgress = () => {},
   hidden = false,
   children,
 }: {
@@ -228,9 +228,9 @@ export function TutorialSectionFrame({
   title: string;
   summary: string;
   updatedAt?: string;
-  loggedIn: boolean;
-  done: boolean;
-  onToggleProgress: () => void;
+  loggedIn?: boolean;
+  done?: boolean;
+  onToggleProgress?: () => void;
   hidden?: boolean;
   children: React.ReactNode;
 }) {

@@ -177,8 +177,6 @@ export default async function TutorialPageRoute() {
               summary={s.meta.summary}
               updatedAt={s.updatedAt}
               loggedIn={authed}
-              done={false}
-              onToggleProgress={() => {}}
             >
               {contents[i]}
             </TutorialSectionFrame>
