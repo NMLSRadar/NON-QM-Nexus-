@@ -10,6 +10,7 @@ import { DocumentNeeds } from "./document-needs";
 import { ScenarioActivity } from "./scenario-activity";
 import { SponsoredAeContacts } from "./sponsored-ae-contacts";
 import { ExceptionReadiness } from "@/components/exception-readiness";
+import { ScenarioChatContext } from "@/components/scenario-chat-context";
 import { resolveAlias } from "@/domain/lenderPosture";
 import type { GuidelinePosture } from "@/domain/lenderPosture";
 
@@ -37,8 +38,25 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
   const postureByLender = new Map<string, GuidelinePosture | null>();
   for (const p of postureProfiles) postureByLender.set(resolveAlias(p.lenderId), p.posture);
 
+  // Context-awareness: share this scenario's key facts with the chat assistant
+  // so a question asked from here is answered in that scenario's context.
+  const chatContextSummary = [
+    scenario.loanPurpose?.replace(/_/g, " "),
+    scenario.occupancy?.replace(/_/g, " "),
+    scenario.propertyType?.replace(/_/g, " "),
+    scenario.state,
+    scenario.fico != null ? `fico ${scenario.fico}` : undefined,
+    analysis.calculation.ltv?.value != null ? `ltv ${analysis.calculation.ltv.value}%` : undefined,
+    scenario.requestedLoanAmount != null ? `loan $${Math.round(scenario.requestedLoanAmount).toLocaleString()}` : undefined,
+    scenario.incomeDocType?.replace(/_/g, " "),
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
+      {/* Headless — tells the AI assistant widget to use this scenario's facts */}
+      <ScenarioChatContext summary={chatContextSummary} />
       {/* Header */}
       <div className="space-y-3">
         <Link href="/scenarios" className="inline-flex items-center gap-1 text-sm text-ink-secondary hover:text-brand-700 transition-colors">
@@ -163,27 +181,60 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
 
           <Card className="p-6">
             <SectionHeading title="How to make this work — restructuring options" />
-            {analysis.restructuring.length === 0 ? (
-              <p className="mt-3 text-sm text-ink-secondary">No restructuring options identified that would unlock additional programs.</p>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {analysis.restructuring.map((o, i) => (
-                  <div key={i} className="rounded-control border border-surface-border p-4">
-                    <p className="text-sm font-semibold text-ink-primary">{o.changedVariable}</p>
-                    <p className="text-sm text-ink-secondary">
-                      <span className="line-through">{o.currentValue}</span> →{" "}
-                      <span className="font-medium text-ink-primary">{o.suggestedValue}</span>
-                    </p>
-                    <p className="text-sm text-ink-secondary mt-1">{o.rationale}</p>
-                    <p className="text-xs text-emerald-700 mt-1">Potentially unlocks: {o.programsPotentiallyUnlocked.join("; ")}</p>
-                    {o.remainingConcerns.length > 0 && (
-                      <p className="text-xs text-amber-700 mt-1">Remaining concerns: {o.remainingConcerns.join(" · ")}</p>
-                    )}
-                    <p className="text-xs text-ink-secondary mt-1">Required verification: {o.requiredVerification.join(" · ")}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+            {(() => {
+              const eligibility = analysis.restructuring.filter((o) => o.kind !== "exception_strengthening");
+              const strengthening = analysis.restructuring.filter((o) => o.kind === "exception_strengthening");
+              return (
+                <>
+                  {eligibility.length === 0 ? (
+                    <p className="mt-3 text-sm text-ink-secondary">No restructuring options identified that would unlock additional programs.</p>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {eligibility.map((o, i) => (
+                        <div key={i} className="rounded-control border border-surface-border p-4">
+                          <p className="text-sm font-semibold text-ink-primary">{o.changedVariable}</p>
+                          <p className="text-sm text-ink-secondary">
+                            <span className="line-through">{o.currentValue}</span> →{" "}
+                            <span className="font-medium text-ink-primary">{o.suggestedValue}</span>
+                          </p>
+                          <p className="text-sm text-ink-secondary mt-1">{o.rationale}</p>
+                          <p className="text-xs text-emerald-700 mt-1">Potentially unlocks: {o.programsPotentiallyUnlocked.join("; ")}</p>
+                          {o.remainingConcerns.length > 0 && (
+                            <p className="text-xs text-amber-700 mt-1">Remaining concerns: {o.remainingConcerns.join(" · ")}</p>
+                          )}
+                          <p className="text-xs text-ink-secondary mt-1">Required verification: {o.requiredVerification.join(" · ")}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {strengthening.length > 0 && (
+                    <div className="mt-5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">
+                        Strengthens an exception request (not eligibility)
+                      </p>
+                      <p className="mt-0.5 text-xs text-ink-secondary">
+                        These changes don&apos;t create eligibility on their own, but they strengthen a case-by-case exception
+                        request for lenders willing to weigh compensating factors.
+                      </p>
+                      <div className="mt-3 space-y-3">
+                        {strengthening.map((o, i) => (
+                          <div key={i} className="rounded-control border border-amber-500/25 bg-amber-500/5 p-4">
+                            <p className="text-sm font-semibold text-ink-primary">{o.changedVariable}</p>
+                            <p className="text-sm text-ink-secondary">
+                              <span className="line-through">{o.currentValue}</span> →{" "}
+                              <span className="font-medium text-ink-primary">{o.suggestedValue}</span>
+                            </p>
+                            <p className="text-sm text-ink-secondary mt-1">{o.rationale}</p>
+                            <p className="text-xs text-amber-700 mt-1">Would help: {o.programsPotentiallyUnlocked.join("; ")}</p>
+                            <p className="text-xs text-ink-secondary mt-1">Required verification: {o.requiredVerification.join(" · ")}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
             <p className="text-xs text-ink-secondary/70 mt-3">
               Restructuring options are honest structural changes only. Never misrepresent occupancy, income, assets,
               employment, ownership, citizenship, property use, or loan purpose.

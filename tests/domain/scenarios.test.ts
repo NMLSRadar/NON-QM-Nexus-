@@ -88,7 +88,15 @@ describe("scenario regression harness (§24)", () => {
         expect(e.disclaimer).toContain("Preliminary scenario analysis only");
       }
       for (const o of result.restructuring) {
-        expect(o.programsPotentiallyUnlockedIds).toHaveLength(o.programsPotentiallyUnlocked.length);
+        // Eligibility options must carry a real unlock ID per program they
+        // unlock. Exception-strengthening options (chatbot Part 2 §4.3) are
+        // deliberately NOT eligibility unlocks — they carry no unlock IDs and
+        // are never fed into the eligible_with_restructuring display upgrade.
+        if (o.kind === "exception_strengthening") {
+          expect(o.programsPotentiallyUnlockedIds).toHaveLength(0);
+        } else {
+          expect(o.programsPotentiallyUnlockedIds).toHaveLength(o.programsPotentiallyUnlocked.length);
+        }
       }
     }
   });

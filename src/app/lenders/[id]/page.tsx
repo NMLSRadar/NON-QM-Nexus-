@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getCurrentOrganizationId, getRepository, getLenderAccessInfo } from "@/lib/session";
 import { PageHeader, Card, Pill, SampleDataBadge, MetricTile, fmtUsd, fmtPct } from "@/components/ui";
 import { getWordmarkStyle } from "@/domain/lenderBrandStyle";
+import { postureForLenderName } from "@/domain/lenderPosture";
+import { LenderPostureBadge } from "@/components/lender-posture-badge";
 import { ProgramCitation } from "./program-citation";
 import { AeSection } from "./ae-section";
 import { LenderNotes } from "./lender-notes";
@@ -32,6 +34,7 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
         .sort((a, b) => compareAlphabetically(a.name, b.name))
     : [];
   const style = getWordmarkStyle(lender.name);
+  const posture = postureForLenderName(await repo.listLenderFlexibilityProfiles(org), lender.name);
 
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-5">
@@ -57,6 +60,7 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
         }
         subtitle={
           <span className="flex items-center gap-2">
+            <LenderPostureBadge posture={posture} />
             <Pill tone={lender.tierLevel === 1 ? "gold" : "neutral"}>{TIER_LABEL[lender.tierLevel] ?? `Tier ${lender.tierLevel}`}</Pill>
             {lender.isSampleData && <SampleDataBadge />}
             {!lender.active && <Pill tone="rose">Inactive</Pill>}

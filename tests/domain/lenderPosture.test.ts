@@ -87,4 +87,17 @@ describe("lender posture layer", () => {
       baseline.evaluations.map((e) => `${e.programId}:${e.status}:${e.matchScore}`),
     );
   });
+
+  it("org-override: Org A reclassifying a lender does not affect Org B (spec §7)", () => {
+    const orgA = seedProfiles("org_a").map((p) =>
+      p.lenderId === "Greenbox Loans" ? { ...p, posture: "rigid" as const, pricingTendency: "typically_better_priced" as const } : p,
+    );
+    const orgB = seedProfiles("org_b"); // Org B keeps the seed default
+
+    expect(postureForLenderName(orgA, "Greenbox Loans")).toBe("rigid");
+    expect(postureForLenderName(orgB, "Greenbox Loans")).toBe("exception_based");
+    // Full isolation: Org A's override is invisible to Org B and vice-versa.
+    expect(postureForLenderName(orgA, "Logan Finance")).toBe("rigid");
+    expect(postureForLenderName(orgB, "Logan Finance")).toBe("rigid");
+  });
 });

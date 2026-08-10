@@ -19,7 +19,18 @@ interface Variant {
   rationale: string;
   requiredVerification: string[];
   mutate: (s: Scenario) => Scenario;
+  /** The file-strength dimension this variant improves, when it can ALSO
+   * strengthen an exception request (cushion) rather than only create
+   * eligibility (chatbot Part 2 §4.3). */
+  dimension?: "ltv" | "reserves" | "dti";
 }
+
+/** Keywords that identify a failed rule as belonging to a cushion dimension. */
+const DIMENSION_KEYWORDS: Record<NonNullable<Variant["dimension"]>, RegExp> = {
+  ltv: /\b(ltv|loan[- ]to[- ]value|loan amount|down[- ]?payment|leverage)\b/,
+  reserves: /\b(reserve|months? of.*reserve|liquid)\b/,
+  dti: /\b(dti|debt[- ]to[- ]income|debt|liabilit)\b/,
+};
 
 /**
  * Scenario restructuring engine.
@@ -45,6 +56,8 @@ export function generateRestructuringOptions(
       )
       .map(({ program }) => program.id),
   );
+  const baselineIneligible = programs.filter(({ program }) => !baselineEligible.has(program.id));
+  const lenderByProgram = new Map(programs.map(({ program, lender }) => [program.id, lender]));
 
   const variants = buildVariants(scenario);
   const options: RestructuringOption[] = [];
@@ -77,7 +90,42 @@ export function generateRestructuringOptions(
         remainingConcerns: dedupe(remaining).slice(0, 6),
         requiredVerification: variant.requiredVerification,
         rationale: variant.rationale,
+        kind: "eligibility",
       });
+    }
+
+    // Exception-strengthening (Part 2 §4.3): a cushion move on ltv/reserves/dti
+    // that does NOT unlock eligibility still strengthens an exception request
+    // for programs that remain ineligible precisely on that dimension. Labeled
+    // as strengthening, never as creating eligibility.
+    if (variant.dimension) {
+      const keyword = DIMENSION_KEYWORDS[variant.dimension];
+      const strengthened: string[] = [];
+      for (const { program } of baselineIneligible) {
+        const lender = lenderByProgram.get(program.id);
+        if (!lender) continue;
+        const evaluation = evaluateProgram(modified, calc, program, lender, rules, asOf);
+        // Keep programs that are STILL not eligible (so we never claim this
+        // creates eligibility) but whose failed rules are on the improved
+        // dimension — i.e. the cushion move would strengthen their exception.
+        if (!ELIGIBLE_STATUSES.includes(evaluation.status) && evaluation.failedRules.some((f) => keyword.test(f.userExplanation.toLowerCase()))) {
+          strengthened.push(`${lender.name} — ${program.name}`);
+        }
+      }
+
+      if (strengthened.length > 0) {
+        options.push({
+          changedVariable: `Exception strength — ${variant.changedVariable}`,
+          currentValue: variant.currentValue,
+          suggestedValue: variant.suggestedValue,
+          programsPotentiallyUnlocked: strengthened,
+          programsPotentiallyUnlockedIds: [], // not an eligibility unlock
+          remainingConcerns: [],
+          requiredVerification: variant.requiredVerification,
+          rationale: `${variant.rationale} This does not create eligibility here, but it strengthens an exception request for lenders willing to weigh compensating factors.`,
+          kind: "exception_strengthening",
+        });
+      }
     }
   }
 
@@ -100,6 +148,7 @@ function buildVariants(s: Scenario): Variant[] {
           suggestedValue: `${target}% LTV ($${newLoan.toLocaleString()})`,
           rationale: `Reducing LTV to ${target}% may satisfy stricter LTV caps and lower reserve requirements.`,
           requiredVerification: ["Source and season the additional down-payment funds."],
+          dimension: "ltv",
           mutate: (x) => ({ ...x, requestedLoanAmount: newLoan }),
         });
       }
@@ -132,6 +181,7 @@ function buildVariants(s: Scenario): Variant[] {
       suggestedValue: `$${reduced.toLocaleString()}/mo after documented payoff`,
       rationale: "Paying off revolving/installment debt at or before closing lowers DTI.",
       requiredVerification: ["Document payoff of specific accounts; confirm assets remain sufficient for down payment and reserves."],
+      dimension: "dti",
       mutate: (x) => ({ ...x, monthlyLiabilities: reduced }),
     });
   }
@@ -182,6 +232,7 @@ function buildVariants(s: Scenario): Variant[] {
       suggestedValue: "Add retirement/other verifiable assets to the reserve calculation",
       rationale: "Documenting additional eligible assets (often at a haircut) can satisfy reserve requirements.",
       requiredVerification: ["Recent statements for each added account; confirm the program's haircut for retirement funds."],
+      dimension: "reserves",
       mutate: (x) => ({ ...x, otherEligibleAssets: (x.otherEligibleAssets ?? 0) + Math.round((x.retirementAssets ?? 0) * 0.6) }),
     });
   }

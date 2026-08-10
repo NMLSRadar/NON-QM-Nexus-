@@ -113,6 +113,11 @@ export interface RestructuringOption {
   remainingConcerns: string[];
   requiredVerification: string[];
   rationale: string;
+  /** "eligibility" (default) = a change that may unlock eligibility.
+   * "exception_strengthening" = a change that strengthens an exception request
+   * (cushion) without necessarily creating eligibility — never presented as
+   * creating eligibility (chatbot Part 2 §4.3). */
+  kind?: "eligibility" | "exception_strengthening";
 }
 
 export interface NeedsListItem {

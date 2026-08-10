@@ -47,10 +47,19 @@ export function AiAssistantWidget() {
   const [sending, setSending] = useState(false);
   const [activity, setActivity] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [contextSummary, setContextSummary] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMessages(loadHistory());
+    // Context-awareness: when opened from a scenario page, that scenario's
+    // facts are shared so answers use it as context. Said so once.
+    const onContext = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      if (detail) setContextSummary(detail);
+    };
+    window.addEventListener("nonqm:chat-context", onContext);
+    return () => window.removeEventListener("nonqm:chat-context", onContext);
   }, []);
 
   useEffect(() => {
@@ -67,9 +76,17 @@ export function AiAssistantWidget() {
     }
   }, [messages, open]);
 
+  const contextApplied = useRef(false);
+
   async function send(text: string) {
-    const trimmed = text.trim();
+    let trimmed = text.trim();
     if (!trimmed || sending) return;
+    // Apply the scenario context (once) so the orchestrator's entity
+    // extraction picks up the scenario's facts.
+    if (contextSummary && !contextApplied.current) {
+      trimmed = `[Context: ${contextSummary}] ${trimmed}`;
+      contextApplied.current = true;
+    }
     setError(null);
     setActivity("Checking programs…");
     const next: ChatMessage[] = [...messages, { role: "user", content: trimmed }];
@@ -148,6 +165,11 @@ export function AiAssistantWidget() {
                   ))}
                 </div>
                 <p className="pt-1 text-[10px] leading-relaxed text-slate-500">{STANDING_DISCLAIMER}</p>
+              </div>
+            )}
+            {contextSummary && !contextApplied.current && (
+              <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200">
+                Using this scenario&apos;s facts as context — ask how it fits a lender.
               </div>
             )}
             {messages.map((m, i) =>

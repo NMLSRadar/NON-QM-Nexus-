@@ -395,7 +395,7 @@ function IneligibleLenderCard({ e, posture }: { e: ProgramEvaluation; posture?: 
   );
 }
 
-function CompareTable({ items }: { items: ProgramEvaluation[] }) {
+function CompareTable({ items, postureFor }: { items: ProgramEvaluation[]; postureFor: (name: string) => GuidelinePosture | null }) {
   const rows: Array<{ label: string; render: (e: ProgramEvaluation) => React.ReactNode }> = [
     { label: "Status", render: (e) => <StatusBadge status={e.status} /> },
     { label: "Match score", render: (e) => `${e.matchScore}/100` },
@@ -418,6 +418,7 @@ function CompareTable({ items }: { items: ProgramEvaluation[] }) {
               <th key={e.programId} className="text-left text-xs p-3 border-b border-surface-border bg-brand-50/40">
                 <p className="font-semibold text-ink-primary">{e.programName}</p>
                 <p className="font-normal text-ink-secondary">{e.lenderName}</p>
+                <LenderPostureBadge posture={postureFor(e.lenderName)} />
               </th>
             ))}
           </tr>
@@ -522,7 +523,7 @@ export function BestLenderMatches({
           <p className="text-xs font-semibold text-ink-secondary uppercase tracking-wide mb-2">
             Side-by-side ({selected.length}/{MAX_COMPARE})
           </p>
-          <CompareTable items={selected} />
+          <CompareTable items={selected} postureFor={postureFor} />
         </div>
       )}
 
