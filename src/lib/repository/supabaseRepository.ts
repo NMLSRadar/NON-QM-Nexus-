@@ -101,6 +101,28 @@ function rowToProgram(row: ProgramRow): Program {
   };
 }
 
+/** Map a lender_flexibility_profiles row to the domain LenderFlexibilityProfile. */
+function mapPostureProfile(
+  organizationId: string,
+  r: Record<string, unknown>,
+): LenderFlexibilityProfile {
+  return {
+    id: String(r.id),
+    organizationId,
+    lenderId: String(r.lender_id),
+    posture: r.posture as LenderFlexibilityProfile["posture"],
+    postureNotes: (r.posture_notes as string | null) ?? undefined,
+    pricingTendency: (r.pricing_tendency as LenderFlexibilityProfile["pricingTendency"]) ?? "unknown",
+    exceptionsConsidered: Boolean(r.exceptions_considered),
+    exceptionChannel: (r.exception_channel as string | null) ?? undefined,
+    typicalCompensatingFactorsRequired: (r.typical_compensating_factors_required as string[]) ?? [],
+    source: (r.source as LenderFlexibilityProfile["source"]) ?? "org_editorial",
+    isVerified: Boolean(r.is_verified),
+    lastReviewedAt: (r.last_reviewed_at as string | null) ?? null,
+    confidence: (r.confidence as LenderFlexibilityProfile["confidence"]) ?? "low",
+  };
+}
+
 interface RuleRow {
   id: string;
   organization_id: string;
@@ -384,30 +406,24 @@ export class SupabaseRepository implements Repository {
   }
 
   async listLenderFlexibilityProfiles(organizationId: string): Promise<import("@/domain/lenderPosture").LenderFlexibilityProfile[]> {
+    // Resolve order: the org's own overrides, then the shared platform-catalog
+    // defaults maintained by admins, then the seed defaults.
+    const own = await this.queryPostureProfiles(organizationId);
+    if (own.length > 0) return own.map((r) => mapPostureProfile(organizationId, r));
+    const shared = await this.queryPostureProfiles(PLATFORM_CATALOG_ORGANIZATION_ID);
+    if (shared.length > 0) return shared.map((r) => mapPostureProfile(organizationId, r));
+    return seedProfiles(organizationId); // org-editable defaults
+  }
+
+  private async queryPostureProfiles(org: string): Promise<Array<Record<string, unknown>>> {
     const { data, error } = await this.supabase
       .from("lender_flexibility_profiles")
       .select("*")
-      .eq("organization_id", organizationId)
+      .eq("organization_id", org)
       .is("deleted_at", null)
       .order("created_at", { ascending: true });
     if (error) throw new Error(`Failed to list lender flexibility profiles: ${error.message}`);
-    const rows = (data ?? []) as Array<Record<string, unknown>>;
-    if (rows.length === 0) return seedProfiles(organizationId); // org-editable defaults
-    return rows.map((r) => ({
-      id: String(r.id),
-      organizationId: organizationId,
-      lenderId: String(r.lender_id),
-      posture: r.posture as LenderFlexibilityProfile["posture"],
-      postureNotes: (r.posture_notes as string | null) ?? undefined,
-      pricingTendency: (r.pricing_tendency as LenderFlexibilityProfile["pricingTendency"]) ?? "unknown",
-      exceptionsConsidered: Boolean(r.exceptions_considered),
-      exceptionChannel: (r.exception_channel as string | null) ?? undefined,
-      typicalCompensatingFactorsRequired: (r.typical_compensating_factors_required as string[]) ?? [],
-      source: (r.source as LenderFlexibilityProfile["source"]) ?? "org_editorial",
-      isVerified: Boolean(r.is_verified),
-      lastReviewedAt: (r.last_reviewed_at as string | null) ?? null,
-      confidence: (r.confidence as LenderFlexibilityProfile["confidence"]) ?? "low",
-    }));
+    return (data ?? []) as Array<Record<string, unknown>>;
   }
 
   async recordChatFeedback(

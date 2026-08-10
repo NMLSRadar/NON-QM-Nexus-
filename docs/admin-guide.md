@@ -52,3 +52,20 @@ dedup). Review this queue to find where the guideline or help library is missing
 data, then fix the gap (load a guideline, add a help topic, or enable a
 structured field). Resolving a row (`resolved_at` / `resolved_by`) marks the gap
 closed. This is how the assistant's precision improves as the library grows.
+
+### Admin pages (chatbot precision)
+
+- **`/admin/lender-posture`** — manage the org-editable lender posture profiles
+  (posture, pricing tendency, exceptions considered + channel, notes). Written
+  to the platform catalog organization so every subscriber org inherits them
+  (they can override per-org). Profiles older than 180 days are flagged
+  "possibly stale" inline; use "Mark reviewed" to refresh `lastReviewedAt`.
+- **`/admin/program-fields`** — edit the chatbot-precision structured fields on
+  any program (`mortgageLateTolerance`, `creditEventSeasoning`,
+  `exceptionPolicy`, `estimatedTurnTimes`, `borrowerEligibility`,
+  `propertyEligibility`, first-time LTV/FICO treatments). Written
+  read-modify-write into the program's `config` JSONB. An unpopulated field
+  makes the assistant say it's unpopulated — it never infers. Follow the same
+  review discipline as other guideline data.
+- **`/admin/chat-unanswered`** — the unanswered-questions queue: review the
+  gaps and mark them resolved, closing the loop with the guideline maintainers.
