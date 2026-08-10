@@ -88,6 +88,10 @@ export function applyProgramFilters(catalog: ProgramCatalog, filters: ProgramFil
         if (!ok) return false;
       }
     }
+    // A borrower at this FICO can actually use the program ("who goes to a
+    // 600 FICO" is a real filter, not a doc-type dump). minFico 0 means the
+    // guideline sets no numeric floor, which trivially includes the borrower.
+    if (filters.fico != null && p.minFico > 0 && p.minFico > filters.fico) return false;
     if (filters.sampleOnly && !p.isSampleData) return false;
     if (filters.query) {
       const q = filters.query.toLowerCase();

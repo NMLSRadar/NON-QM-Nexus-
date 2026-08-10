@@ -98,6 +98,7 @@ function runTools(parsed: ParsedQuery, opts: ChatOrchestratorOptions): { ctx: To
     citizenship: entities.citizenship,
     vesting: entities.vesting,
     features: entities.features,
+    fico: entities.fico, // "who goes to a 600 FICO" is a real filter
   };
 
   const add = (r: GroundedToolResult) => {
@@ -217,19 +218,23 @@ function renderDeterministic(ctx: ToolContext, opts: ChatOrchestratorOptions): A
       const rank = ctx.rank;
       if (rank && rank.fieldCaptured && rank.rows.length > 0) {
         const top = rank.rows[0]!;
+        const noun = metricNoun(parsed.targetMetric!);
+        const dirRaw = parsed.direction === "min" ? "lowest" : "highest";
+        const dir = dirRaw[0]!.toUpperCase() + dirRaw.slice(1);
         const tieNote = rank.ties.length > 1 ? ` (tied with ${rank.ties.length - 1} other program${rank.ties.length > 2 ? "s" : ""})` : "";
         const sampleTag = top.isSampleData ? " (sample)" : "";
         const label = top.valueLabel ?? `${top.value}${metricSuffix(parsed.targetMetric!)}`;
-        const answer = `Lowest ${metricLabel(parsed.targetMetric!)} in your library is ${label} — ${top.lenderName}${sampleTag}, ${top.programName}${tieNote}.` +
-          (top.gating.length ? ` Requires ${top.gating.join(", ")}.` : "");
+        const answer =
+          `${dir} ${noun}: ${label} — ${top.programName} (${top.lenderName})${sampleTag}${tieNote}.` +
+          (top.gating.length ? ` Needs ${top.gating.join(", ")}.` : "");
         const rows = rank.rows.map(toRow).filter((r): r is ForecastRow => r !== null);
         return {
           answer,
           rows,
           assumptions,
-          caveats: [`What would change this: ${parsed.missingCriticalFields.join(", ") || "occupancy, purpose, or FICO band"}.`],
-          sources: rows.map((r) => ({ lenderName: r.lenderName, programName: r.programName, guidelineVersion: r.guidelineVersion, effectiveDate: r.effectiveDate, lastVerifiedDate: r.lastVerifiedDate, isSampleData: r.isSampleData })),
-          followUps: [`View ${top.programName}`, "Compare these programs in a full scenario"],
+          caveats: ["occupancy, purpose, or FICO band can change the ceiling."],
+          sources: capSources(rows, 8).map((r) => ({ lenderName: r.lenderName, programName: r.programName, guidelineVersion: r.guidelineVersion, effectiveDate: r.effectiveDate, lastVerifiedDate: r.lastVerifiedDate, isSampleData: r.isSampleData })),
+          followUps: ["Want me to compare the top 3?", "Run this in a full scenario"],
           cta: defaultCta,
           answered: true,
         };
@@ -239,14 +244,27 @@ function renderDeterministic(ctx: ToolContext, opts: ChatOrchestratorOptions): A
     case "availability_lookup": {
       const search = ctx.search;
       if (search && search.rows.length > 0) {
-        const names = search.rows.map((r) => `${r.programName} (${r.lenderName}${r.isSampleData ? ", sample" : ""})`).join("; ");
+        const limit = 5;
+        const top = search.rows.slice(0, limit);
+        const extra = search.rows.length - top.length;
+        const lines = top
+          .map((r) => `• ${r.programName} (${r.lenderName}${r.isSampleData ? ", sample" : ""})`)
+          .join("\n");
+        const countPhrase =
+          search.rows.length === 1 ? "Yes — 1 program matches that." : `Yes — ${search.rows.length} programs match that.`;
+        const listLead =
+          search.rows.length === 1
+            ? `\n${lines}`
+            : search.rows.length > limit
+              ? `\n\nBest options:\n${lines}\n…and ${extra} more.`
+              : `\n\nBest options:\n${lines}`;
         return {
-          answer: `In your library: ${names}. Eligibility still depends on the full scenario.`,
-          rows: search.rows.map(toRow).filter((r): r is ForecastRow => r !== null),
+          answer: `${countPhrase}${listLead}\n\nEligibility still depends on the full scenario — want me to compare the top 3?`,
+          rows: [],
           assumptions,
-          caveats: ["Availability confirms the lender supports the feature — it is not an eligibility determination."],
-          sources: search.rows.map((r) => ({ lenderName: r.lenderName, programName: r.programName, guidelineVersion: r.guidelineVersion, effectiveDate: r.effectiveDate, lastVerifiedDate: r.lastVerifiedDate, isSampleData: r.isSampleData })),
-          followUps: ["Run one of these in a full scenario"],
+          caveats: [],
+          sources: capSources(search.rows, 8).map((r) => ({ lenderName: r.lenderName, programName: r.programName, guidelineVersion: r.guidelineVersion, effectiveDate: r.effectiveDate, lastVerifiedDate: r.lastVerifiedDate, isSampleData: r.isSampleData })),
+          followUps: ["Want me to compare the top 3?", "Run this in a full scenario"],
           cta: defaultCta,
           answered: true,
         };
@@ -257,25 +275,25 @@ function renderDeterministic(ctx: ToolContext, opts: ChatOrchestratorOptions): A
       const evals = ctx.evals;
       if (evals && evals.length > 0) {
         const eligible = evals.filter((e) => ["strong_match", "eligible", "eligible_with_restructuring", "conditional", "manual_review"].includes(e.status));
-        const rows = eligible.map((e) => ({
+        const rows = eligible.slice(0, 4).map((e) => ({
           programId: e.programId,
           lenderName: e.lenderName,
           programName: e.programName,
           value: null,
           valueLabel: e.status.replace(/_/g, " "),
-          gating: e.failedRules.map((f) => f.userExplanation).slice(0, 2),
+          gating: e.failedRules.map((f) => f.userExplanation).slice(0, 1),
           isSampleData: e.isSampleData,
           fieldNotCaptured: false,
         }));
         const names = eligible.slice(0, 3).map((e) => `${e.programName} (${e.lenderName})`).join(", ");
         return {
           answer: eligible.length
-            ? `Based on what you've told me, ${names} ${eligible.length === 1 ? "is" : "are"} worth running in a full scenario. Missing details (FICO, occupancy, property type) change this — run it to confirm.`
+            ? `A few worth running: ${names}. Missing details (FICO, occupancy, property type) can change this — a full run will confirm.`
             : "Nothing in your library cleanly fits what you've described so far — missing details would change this.",
           rows,
           assumptions,
-          caveats: ["Partial facts only; the full scenario engine is the authority."],
-          sources: rows.map((r) => ({ lenderName: r.lenderName, programName: r.programName, isSampleData: r.isSampleData })),
+          caveats: [],
+          sources: capSources(rows, 6).map((r) => ({ lenderName: r.lenderName, programName: r.programName, isSampleData: r.isSampleData })),
           followUps: ["Run full scenario", "Add the missing borrower vitals"],
           cta: defaultCta,
           answered: true,
@@ -295,7 +313,7 @@ function renderDeterministic(ctx: ToolContext, opts: ChatOrchestratorOptions): A
           fileAssessment = ` On your current scenario: ${cf}.`;
         }
         return {
-          answer: `${except.length} lender${except.length === 1 ? "" : "s"} in your library ${except.length === 1 ? "is" : "are"} flagged exception-friendly — ${names}. Exceptions there run through the AE, and none of them grant exceptions on the ask alone: they weigh compensating factors (reserves well past the requirement, LTV meaningfully under the cap, low DTI, clean housing history).${fileAssessment}`,
+          answer: `${except.length} lender${except.length === 1 ? "" : "s"} are flagged exception-friendly — ${names}. Exceptions there run through the AE, and none of them grant exceptions on the ask alone: they weigh compensating factors (reserves well past the requirement, LTV meaningfully under the cap, low DTI, clean housing history).${fileAssessment}`,
           rows: [],
           assumptions: [],
           caveats: [EDITORIAL_DISCLAIMER],
@@ -398,6 +416,38 @@ function metricSuffix(metric: string): string {
   if (metric === "min_loan_amount" || metric === "max_loan_amount") return " loan amount";
   if (metric === "min_seasoning") return " months";
   return "";
+}
+
+/** Human noun for a metric, so answers read naturally ("highest LTV", "lowest
+ * down payment") instead of "lowest Min down payment". */
+function metricNoun(metric: string): string {
+  switch (metric) {
+    case "min_down_payment":
+      return "down payment";
+    case "max_ltv":
+      return "LTV";
+    case "min_fico":
+      return "min FICO";
+    case "max_dti":
+      return "DTI";
+    case "min_dscr":
+      return "min DSCR";
+    case "min_reserves":
+      return "reserve requirement";
+    case "min_loan_amount":
+      return "minimum loan amount";
+    case "max_loan_amount":
+      return "maximum loan amount";
+    case "min_seasoning":
+      return "seasoning";
+    default:
+      return metric.replace(/_/g, " ");
+  }
+}
+
+/** Keep the sources drawer compact — no more "Sources (20)". */
+function capSources<T>(rows: T[], limit: number): T[] {
+  return rows.slice(0, limit);
 }
 
 function fieldNotCapturedNonAnswer(metric?: string): NonAnswer {

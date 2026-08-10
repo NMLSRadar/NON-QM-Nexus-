@@ -22,6 +22,10 @@ export interface ProgramFilters {
   features?: string[];
   /** Fuzzy/normalized lender or program name substring. */
   query?: string;
+  /** Only include programs whose min FICO is at or below this (a borrower with
+   * this FICO can use the program). Makes "who goes to a 600 FICO" a real
+   * filter instead of a dump of every program of that doc type. */
+  fico?: number;
   /** Only include sample-data programs — for demo-only drill-downs. */
   sampleOnly?: boolean;
   /** Exclude sample-data programs (default). */
