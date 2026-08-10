@@ -3,7 +3,6 @@
 // by the survey's secure token (service-role, server-only) or by an admin
 // session; no function here trusts client-supplied row ids.
 import { randomBytes } from "crypto";
-import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   BETA_SURVEY_QUESTIONS,
@@ -197,7 +196,12 @@ function topByCount(items: Array<string | null>, top = 1): string[] {
 
 export function aggregateFeedback(rows: SurveySummaryRow[]): FeedbackAggregate {
   const sent = rows.filter((r) => r.day3_email_sent_at || r.day3_email_id);
-  const opened = rows.filter((r) => r.opened_at || r.status !== "NOT_SENT" && r.status !== "SENT");
+  // "Opened" means the tester actually opened the survey link (or went past
+  // opening into answering) — a FOLLOW_UP_SENT status alone does NOT mean
+  // they opened it (the follow-up goes out to sent-but-never-opened testers).
+  const opened = rows.filter(
+    (r) => r.opened_at || ["OPENED", "STARTED", "PARTIALLY_COMPLETED", "COMPLETED"].includes(r.status)
+  );
   const completed = rows.filter((r) => r.status === "COMPLETED");
   const r = (q: string) => rows.map((row) => (typeof row.responses?.[q] === "number" ? (row.responses[q] as number) : null));
 
