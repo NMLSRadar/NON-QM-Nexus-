@@ -801,6 +801,7 @@ model SignupTriggerError {
 }
 
 // ---------------------------------------------------------------------------
+<<<<<<< HEAD
 // Activity & beta-testing analytics (2026-08-10, supabase/activity-tracking.sql).
 // ONE table feeds the entire /admin/activity "Active Users & Beta Testers"
 // screen: last login, last activity, total logins, scenario count, features
@@ -822,4 +823,37 @@ model UserActivityEvent {
   @@index([userId, occurredAt])
   @@index([occurredAt])
   @@map("user_activity_events")
+=======
+// Beta Tester Feedback — see supabase/beta-feedback.sql for the authoritative
+// DDL, RLS, and the ensure_beta_survey_for_me() SECURITY DEFINER created here.
+// One row per user (unique user_id = "no duplicate surveys"). trial_started_at
+// is the exact trial start date (copied from trial_redemptions.activated_at)
+// and is the ONLY basis for the Day-3 / Day-5 automation timing. responses is
+// JSONB { question_id: value } autosaved incrementally so a partially-completed
+// survey resumes where it left off. day3_email_id / (day5_follow_up_sent_at +
+// day5_email_id) are idempotency markers so a repeated cron never double-sends.
+// Prisma mirror only — the app writes via the Supabase service client.
+// ---------------------------------------------------------------------------
+model BetaTesterSurvey {
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @unique @map("user_id") @db.Uuid
+  trialRedemptionId    String?  @unique @map("trial_redemption_id") @db.Uuid
+  trialStartedAt       DateTime @map("trial_started_at")
+  status               String   @default("NOT_SENT")
+  token                String   @unique
+  day3EmailSentAt      DateTime? @map("day3_email_sent_at")
+  day3EmailId          String?  @map("day3_email_id")
+  openedAt             DateTime? @map("opened_at")
+  startedAt            DateTime? @map("started_at")
+  lastAnsweredAt       DateTime? @map("last_answered_at")
+  completedAt          DateTime? @map("completed_at")
+  completionPercentage Int      @default(0) @map("completion_percentage")
+  day5FollowUpSentAt   DateTime? @map("day5_follow_up_sent_at")
+  day5EmailId          String?  @map("day5_email_id")
+  responses            Json     @default("{}")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("beta_tester_surveys")
+>>>>>>> d944c1d (feat: automated beta-tester feedback survey (Day 3 questionnaire + Day 5 follow-up))
 }

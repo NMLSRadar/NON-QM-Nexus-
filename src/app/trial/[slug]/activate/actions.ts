@@ -40,4 +40,15 @@ export async function sendTrialActivationEmailIfNeeded(): Promise<void> {
   } catch (err) {
     console.error("sendTrialActivationEmailIfNeeded threw:", err);
   }
+
+  // Beta Tester Feedback: record the exact trial start date the moment a
+  // trial begins by creating the tester's survey row (idempotent per user).
+  // Fail-soft — this must never block a tester reaching the dashboard, and
+  // the Day-3/Day-5 cron backfills any row this misses.
+  try {
+    const supabase = await createClient();
+    await supabase.rpc("ensure_beta_survey_for_me");
+  } catch (err) {
+    console.error("ensure_beta_survey_for_me failed (survey will be backfilled by cron):", err);
+  }
 }

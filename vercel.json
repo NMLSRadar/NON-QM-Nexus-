@@ -12,6 +12,10 @@
     {
       "path": "/api/cron/trial-emails",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/beta-feedback",
+      "schedule": "0 14 * * *"
     }
   ]
 }

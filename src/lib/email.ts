@@ -15,6 +15,10 @@ const FROM_ADDRESS = "NON-QM Nexus <noreply@nonqmnexus.com>";
 export interface SendEmailResult {
   ok: boolean;
   error?: string;
+  /** Resend's message id, present on a successful send — used by callers as
+   * an idempotency key (e.g. the beta-feedback cron stores it and never
+   * re-sends the same email type once it's present). */
+  id?: string;
 }
 
 export async function sendTransactionalEmail(params: {
@@ -60,7 +64,18 @@ export async function sendTransactionalEmail(params: {
       return { ok: false, error: `Email provider returned ${res.status}` };
     }
 
-    return { ok: true };
+    // Resend responds { id: "...", from, to, ... } on success — capture the
+    // message id for idempotency-aware callers. Best-effort: if the body
+    // isn't parseable we still treat the send as ok.
+    let id: string | undefined;
+    try {
+      const json = (await res.json()) as { id?: string };
+      if (json?.id) id = json.id;
+    } catch {
+      // ignore — some providers return an empty 200 body
+    }
+
+    return { ok: true, id };
   } catch (err) {
     console.error("sendTransactionalEmail threw:", err);
     return { ok: false, error: "Failed to reach email provider." };

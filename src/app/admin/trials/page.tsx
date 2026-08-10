@@ -6,6 +6,7 @@ import { CopyLinkButton } from "./copy-link-button";
 import { RedemptionRowActions } from "./redemption-row-actions";
 import { AdminOverrideForm } from "./admin-override-form";
 import { InviteBetaForm } from "./invite-beta-form";
+import { BetaFeedbackSection } from "./beta-feedback-section";
 
 export const dynamic = "force-dynamic";
 
@@ -281,6 +282,12 @@ export default async function AdminTrialsPage({ searchParams }: { searchParams: 
           </table>
         </div>
       </Card>
+
+      {/* Beta Tester Feedback — automated Day-3 questionnaire + Day-5
+          follow-up, with per-tester status/completion and aggregate
+          analytics. Self-contained section; trial management above is
+          untouched. */}
+      <BetaFeedbackSection />
     </div>
   );
 }
