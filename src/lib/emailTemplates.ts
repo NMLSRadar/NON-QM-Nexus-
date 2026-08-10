@@ -413,6 +413,50 @@ export function bulkMembershipInvoiceSentEmail(params: {
   };
 }
 
+/** Beta-invitation email (2026-08-10) — sent when a platform admin
+ * hand-picks a loan officer for a trial campaign from the admin Trials
+ * panel. The recipient does NOT need an account yet: `type:"invite"`
+ * recipients click through, choose a password, and their trial starts
+ * automatically; `type:"magiclink"` recipients (already have an account)
+ * are signed in and their trial starts immediately. Chat-banned tools —
+ * rendered inline (no external asset), matching the on-brand black/gold
+ * transactional style. */
+export function trialInviteEmail(params: {
+  campaignName: string;
+  campaignSlug: string;
+  trialDurationDays: number;
+  requiresAccountCreation: boolean;
+  link: string;
+  inviterEmail: string;
+}): { subject: string; html: string } {
+  const roleLine = params.requiresAccountCreation
+    ? "You’ve been invited to beta-test it. Use the link below to create your account — your trial starts automatically as soon as you do. No credit card, nothing to cancel."
+    : "Your beta trial is ready. Use the link below to sign in — your trial starts automatically.";
+  return {
+    subject: `Beta invitation: ${params.trialDurationDays}-day NON-QM Nexus trial`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; color: #e5e7eb; background: #080808; border: 1px solid #b88a2b; border-radius: 16px; padding: 28px;">
+        <p style="margin:0 0 8px;color:#d7b45b;font-size:12px;letter-spacing:.12em;text-transform:uppercase">NON-QM Nexus</p>
+        <h1 style="margin:0 0 16px;color:#fff;font-size:22px;line-height:1.25">Your ${params.trialDurationDays}-day beta trial is ready</h1>
+        <p style="color:#d1d5db;line-height:1.6;font-size:14px">
+          <strong>${params.inviterEmail}</strong> invited you to beta-test <strong>${params.campaignName}</strong> on
+          NON-QM Nexus — the platform for evaluating non-QM scenarios against live lender guidelines.
+        </p>
+        <p style="color:#d1d5db;line-height:1.6;font-size:14px">${roleLine}</p>
+        <p style="margin:28px 0;text-align:center">
+          <a href="${params.link}" style="background:#d4af52;color:#080808;text-decoration:none;font-weight:700;padding:13px 20px;border-radius:8px;font-size:14px;display:inline-block">${params.requiresAccountCreation ? "Create your account" : "Sign in to start your trial"}</a>
+        </p>
+        <p style="color:#9ca3af;font-size:13px;line-height:1.5">
+          Full access lasts ${params.trialDurationDays} days. No credit card is on file and you won’t be automatically
+          charged — you’ll only choose a plan if you want to keep access after the trial ends.
+        </p>
+        <p style="color:#6b7280;font-size:12px;line-height:1.5;margin-top:20px">
+          If you weren’t expecting this invitation, you can safely ignore this email. If you have questions, just reply to it.
+        </p>
+      </div>`,
+  };
+}
+
 function formatCentsForEmail(cents: number): string {
   const dollars = cents / 100;
   return `$${dollars % 1 === 0 ? dollars.toLocaleString("en-US") : dollars.toFixed(2)}`;

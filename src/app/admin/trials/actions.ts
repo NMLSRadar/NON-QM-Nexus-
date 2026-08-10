@@ -2,6 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePlatformAdmin } from "@/lib/admin";
+import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
+import { sendTransactionalEmail } from "@/lib/email";
+import { trialInviteEmail } from "@/lib/emailTemplates";
 
 /** Creates a new named trial campaign (spec Phase 5). */
 export async function createTrialCampaign(formData: FormData): Promise<{ error?: string }> {
@@ -48,6 +51,116 @@ export async function createTrialCampaign(formData: FormData): Promise<{ error?:
 
   revalidatePath("/admin/trials");
   return {};
+}
+
+/** Sends a beta-invitation email to a loan officer who does NOT need to
+ * sign up first (streamlined beta flow, 2026-08-10). Admin types an
+ * email + picks a campaign; the invite goes out automatically and the
+ * recipient creates their account (or signs in) from the email link.
+ *
+ * New invitees get a Supabase `invite` link (the account is created for
+ * them; they choose a password). Existing accounts get a `magiclink`
+ * sign-in link. In both cases the link lands on
+ * /trial/[slug]/invite-accept, where the trial is activated once a
+ * session exists — so a beta tester never has to register on the site
+ * first.
+ */
+export async function inviteBetaTester(
+  emailInput: string,
+  campaignSlugInput: string
+): Promise<{ error?: string; message?: string }> {
+  const { userId: actorUserId } = await requirePlatformAdmin();
+  const email = emailInput.trim().toLowerCase();
+  if (!email) return { error: "Enter an email address." };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Enter a valid email address." };
+  const slug = campaignSlugInput.trim();
+  if (!slug) return { error: "Choose a trial campaign." };
+
+  const service = createServiceRoleClient();
+
+  const { data: campaign, error: campaignError } = await service
+    .from("trial_campaigns")
+    .select("id, name, slug, trial_duration_days")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (campaignError) return { error: campaignError.message };
+  if (!campaign) return { error: "That trial campaign doesn’t exist or isn’t active." };
+
+  // Skip if this email has already used a trial anywhere on the platform.
+  const { data: existingRedemption } = await service
+    .from("trial_redemptions")
+    .select("id")
+    .eq("normalized_email", email)
+    .maybeSingle();
+  if (existingRedemption) {
+    return { error: `${email} already has a trial on this platform. Send them a normal sign-in link instead.` };
+  }
+
+  // Does an account already exist for this email?
+  const { data: existingUser } = await service.from("users").select("id").ilike("email", email).maybeSingle();
+
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://nonqmnexus.com").replace(/\/$/, "");
+  const redirectTo = `${appUrl}/trial/${encodeURIComponent(slug)}/invite-accept?m=${existingUser ? "existing" : "new"}`;
+
+  let actionLink: string | null = null;
+  let usedType: "invite" | "magiclink" | null = null;
+
+  if (!existingUser) {
+    const { data: invited, error: inviteErr } = await service.auth.admin.generateLink({
+      type: "invite",
+      email,
+      options: { redirectTo },
+    });
+    if (invited?.properties?.action_link) {
+      actionLink = invited.properties.action_link;
+      usedType = "invite";
+    } else {
+      // The email might exist in auth.users even when the public.users row
+      // didn't turn up — fall back to a sign-in link for that case.
+      const { data: signedIn, error: fallbackErr } = await service.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+        options: { redirectTo: `${appUrl}/trial/${encodeURIComponent(slug)}/invite-accept?m=existing` },
+      });
+      if (fallbackErr) return { error: fallbackErr.message };
+      if (!signedIn?.properties?.action_link) return { error: "Could not create an invitation link." };
+      actionLink = signedIn.properties.action_link;
+      usedType = "magiclink";
+    }
+  } else {
+    const { data: signedIn, error: linkErr } = await service.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+      options: { redirectTo },
+    });
+    if (linkErr) return { error: linkErr.message };
+    if (!signedIn?.properties?.action_link) return { error: "Could not create a sign-in link." };
+    actionLink = signedIn.properties.action_link;
+    usedType = "magiclink";
+  }
+
+  const inviterRow = await service.from("users").select("email").eq("id", actorUserId).maybeSingle();
+  const { subject, html } = trialInviteEmail({
+    campaignName: campaign.name as string,
+    campaignSlug: campaign.slug as string,
+    trialDurationDays: campaign.trial_duration_days as number,
+    requiresAccountCreation: usedType === "invite",
+    link: actionLink,
+    inviterEmail: (inviterRow.data?.email as string | undefined) ?? "",
+  });
+
+  const sendResult = await sendTransactionalEmail({ to: email, subject, html });
+  if (!sendResult.ok) {
+    return { error: `The invite wasn’t sent: ${sendResult.error}` };
+  }
+
+  return {
+    message:
+      usedType === "invite"
+        ? `Invite sent to ${email}. They’ll create their account from the email, and the ${campaign.name} trial starts automatically.`
+        : `Invite sent to ${email}. They’ll sign in from the email, and the ${campaign.name} trial starts automatically.`,
+  };
 }
 
 export async function setCampaignActive(campaignId: string, isActive: boolean): Promise<void> {

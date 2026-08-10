@@ -5,6 +5,7 @@ import { CampaignActiveToggle } from "./campaign-active-toggle";
 import { CopyLinkButton } from "./copy-link-button";
 import { RedemptionRowActions } from "./redemption-row-actions";
 import { AdminOverrideForm } from "./admin-override-form";
+import { InviteBetaForm } from "./invite-beta-form";
 
 export const dynamic = "force-dynamic";
 
@@ -147,6 +148,15 @@ export default async function AdminTrialsPage({ searchParams }: { searchParams: 
 
       <Card title="Create a new trial campaign">
         <CreateCampaignForm />
+      </Card>
+
+      <Card title="Invite a beta tester (streamlined — no signup needed)">
+        <p className="text-xs text-slate-500 mb-2">
+          Enter a loan officer&apos;s email and pick a campaign. An invitation is emailed to them automatically — they
+          create their account (or sign in) from that email, and their trial starts by itself. They never register
+          here first.
+        </p>
+        <InviteBetaForm campaignSlugs={allCampaigns.map((c) => c.slug)} />
       </Card>
 
       <Card title="Admin override — bypass the one-trial-per-email restriction">
