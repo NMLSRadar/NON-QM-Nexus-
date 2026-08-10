@@ -56,6 +56,37 @@ const CASES: Array<{ q: string; simple: boolean; expectAnswered: boolean; skipLe
   { q: "What's the max LTV for a lender named MadeUp Capital?", simple: true, expectAnswered: false },
   { q: "Can I just call it owner-occupied?", simple: true, expectAnswered: false },
   { q: "What's the exact interest rate for DSCR at 75% LTV?", simple: true, expectAnswered: true, skipLeadCheck: true },
+
+  // ── Cash-out refinance ────────────────────────────────────────────────────
+  { q: "Who allows cash-out on bank statements?", simple: true, expectAnswered: true },
+  { q: "What's the highest LTV on a cash-out refi with bank statements?", simple: true, expectAnswered: true },
+  { q: "Who does cash-out DSCR?", simple: true, expectAnswered: true },
+  { q: "What's the highest LTV on a DSCR cash-out?", simple: true, expectAnswered: true },
+
+  // ── Foreign national scenarios ────────────────────────────────────────────
+  { q: "Which lenders do foreign national on an investment property?", simple: true, expectAnswered: true },
+  { q: "What's the max LTV for a foreign national DSCR?", simple: true, expectAnswered: true },
+  { q: "Do any lenders do foreign national bank statements?", simple: true, expectAnswered: false }, // honest non-answer
+  { q: "Foreign national with no US credit — who works?", simple: true, expectAnswered: true },
+  { q: "What is the Foreign National Investor program?", simple: true, expectAnswered: true, skipLeadCheck: true },
+
+  // ── Multi-property / investor queries ─────────────────────────────────────
+  { q: "Experienced investor with 3 rentals, 75% LTV DSCR — who works?", simple: true, expectAnswered: true },
+  { q: "Who does DSCR for an experienced investor with multiple properties?", simple: true, expectAnswered: true },
+  { q: "Who does DSCR on a 4-unit?", simple: true, expectAnswered: true },
+  { q: "Do any lenders allow 5-8 units with DSCR?", simple: true, expectAnswered: false }, // honest non-answer
+  { q: "Who allows LLC vesting on an investment property?", simple: true, expectAnswered: true },
+
+  // ── Other program / borrower types ────────────────────────────────────────
+  { q: "Who offers asset depletion?", simple: true, expectAnswered: true },
+  { q: "Who does P&L only?", simple: true, expectAnswered: false }, // honest non-answer (not in catalog)
+  { q: "Who does WVOE?", simple: true, expectAnswered: false }, // honest non-answer (not in catalog)
+  { q: "Who uses 12-month bank statements for a self-employed borrower?", simple: true, expectAnswered: true },
+  { q: "ITIN borrower at 85% LTV — who works?", simple: true, expectAnswered: true },
+  { q: "Borrower has 2x30x12 mortgage lates — who's flexible?", simple: true, expectAnswered: true },
+  { q: "Tell me about the DSCR Flex program.", simple: true, expectAnswered: true, skipLeadCheck: true },
+  { q: "Who's fastest to close?", simple: true, expectAnswered: true, skipLeadCheck: true },
+  { q: "Which lenders take a 1099 borrower?", simple: true, expectAnswered: true },
 ];
 
 describe("chatbot response style (FAST · ACCURATE · HUMAN · EASY TO READ)", () => {
