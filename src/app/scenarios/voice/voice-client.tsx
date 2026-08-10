@@ -90,6 +90,19 @@ function getNativeSpeechPlugin(): NativeSpeechPlugin | undefined {
   return capacitor.Plugins?.SpeechRecognition;
 }
 
+/** MediaRecorder fallback — the path that makes Voice Scenario work inside
+ * the installed home-screen PWA on iOS, where Apple WebKit does not expose
+ * `webkitSpeechRecognition` in standalone mode. Records audio and sends it
+ * to /api/speech/transcribe (OpenAI Whisper) for server-side transcription. */
+function canUseMediaRecorder(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    typeof MediaRecorder !== "undefined" &&
+    typeof navigator !== "undefined" &&
+    !!navigator.mediaDevices?.getUserMedia
+  );
+}
+
 /* ---------------------- manual overrides on top of speech ---------------------- */
 interface Overrides {
   loanPurpose?: LoanPurpose;
@@ -243,6 +256,9 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   const recognitionRef = useRef<RecognitionLike | null>(null);
   const nativeListenerRef = useRef<NativeListenerHandle | null>(null);
   const nativeInterimRef = useRef("");
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recorderChunksRef = useRef<Blob[]>([]);
+  const recorderStreamRef = useRef<MediaStream | null>(null);
   const lastAttemptedRef = useRef<string | null>(null);
   const inFlightRef = useRef(false);
   const hasFailedRef = useRef(false);
@@ -266,7 +282,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   const [additionalInfoResolved, setAdditionalInfoResolved] = useState(false);
 
   useEffect(() => {
-    setSupported(getNativeSpeechPlugin() !== undefined || getRecognitionCtor() !== undefined);
+    setSupported(getNativeSpeechPlugin() !== undefined || getRecognitionCtor() !== undefined || canUseMediaRecorder());
   }, []);
 
   // One-tap auto-start: when embedded on the homepage, the caller reveals
@@ -443,8 +459,14 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
 
     const Ctor = getRecognitionCtor();
     if (!Ctor) {
+      // No Web Speech API (e.g. iOS standalone PWA) — fall back to
+      // recording + server-side transcription.
+      if (canUseMediaRecorder()) {
+        await startRecorder();
+        return;
+      }
       setMicError(
-        "Voice recognition isn't available in this browser. Open nonqmnexus.com in Chrome or Edge, or type the scenario below. The iPhone app uses its native microphone service.",
+        "Voice capture isn’t available in this browser. Open nonqmnexus.com in a recent Safari, Chrome, or Edge, or type the scenario below.",
       );
       return;
     }
@@ -485,6 +507,19 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   }
 
   async function stopListening() {
+    if (recorderRef.current) {
+      try {
+        recorderRef.current.stop();
+      } catch {
+        // already stopped
+      }
+      recorderRef.current = null;
+      recorderStreamRef.current?.getTracks().forEach((track) => track.stop());
+      recorderStreamRef.current = null;
+      setListening(false);
+      return;
+    }
+
     const native = getNativeSpeechPlugin();
     if (native) {
       const finalPhrase = nativeInterimRef.current;
@@ -505,10 +540,70 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
     setListening(false);
   }
 
+  /** MediaRecorder fallback: start recording the mic; the transcript is
+   * produced on stop via /api/speech/transcribe (Whisper). */
+  async function startRecorder() {
+    setMicError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recorderChunksRef.current = [];
+      recorderStreamRef.current = stream;
+      const rec = new MediaRecorder(stream);
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) recorderChunksRef.current.push(e.data);
+      };
+      rec.onstop = () => {
+        void finalizeRecording();
+      };
+      recorderRef.current = rec;
+      rec.start();
+      setListening(true);
+    } catch (err) {
+      setListening(false);
+      const code = err instanceof Error ? err.name : String(err);
+      setMicError(
+        /denied|permission|notallowed|notallowederror/i.test(code)
+          ? "Microphone access was blocked. Allow microphone access for this app in your device settings, then tap the mic again."
+          : "Voice capture could not start. Allow microphone access and try again, or type the scenario below.",
+      );
+    }
+  }
+
+  /** Upload the recorded clip and append its transcript. */
+  async function finalizeRecording() {
+    const chunks = recorderChunksRef.current;
+    recorderChunksRef.current = [];
+    if (chunks.length === 0) return;
+    const blob = new Blob(chunks, { type: chunks[0]?.type || "audio/mp4" });
+    if (blob.size === 0) return;
+
+    try {
+      const form = new FormData();
+      form.append("file", blob, blob.type.includes("webm") ? "recording.webm" : blob.type.includes("wav") ? "recording.wav" : "recording.mp4");
+      const res = await fetch("/api/speech/transcribe", { method: "POST", body: form });
+      const data = (await res.json()) as { text?: string; error?: string };
+      if (res.ok && data.text?.trim()) {
+        setTranscript((current) => `${current}${current && !current.endsWith(" ") ? " " : ""}${data.text!.trim()} `);
+      } else if (!res.ok) {
+        setMicError(data.error || "Couldn’t transcribe your speech. You can type the scenario below instead.");
+      }
+    } catch {
+      setMicError("Couldn’t transcribe your speech. Check your connection and try again, or type the scenario below.");
+    }
+  }
+
   useEffect(() => () => {
     recognitionRef.current?.stop();
     void nativeListenerRef.current?.remove();
     void getNativeSpeechPlugin()?.stop().catch(() => undefined);
+    if (recorderRef.current) {
+      try {
+        recorderRef.current.stop();
+      } catch {
+        // ignore
+      }
+    }
+    recorderStreamRef.current?.getTracks().forEach((track) => track.stop());
   }, []);
 
   /* -------- spoken assistant replies (off by default; muted while listening) -------- */
@@ -572,6 +667,9 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         hasFailedRef.current = true;
       }
     });
+    // stopListening is intentionally not a dependency: it's a stable,
+    // unmount-safe helper used to stop capture right before submission.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effective, canAnalyze, isPending, router, additionalInfoResolved, additionalInfoPromptShown]);
 
   function handleAddAdditionalInfo() {
@@ -657,8 +755,8 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
     <div className="space-y-5">
       {supported === false && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-200 text-sm p-3">
-          Voice recognition is not available in this browser. You can type or paste the scenario below; everything else
-          works the same. The iPhone app uses its native microphone and speech-recognition service.
+          Voice capture isn’t supported in this browser. You can type or paste the scenario below — everything else works
+          the same.
         </div>
       )}
 

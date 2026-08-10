@@ -12,6 +12,32 @@ body {
   overflow-x: hidden;
 }
 
+/* Prevent the document from ever exceeding the viewport width. In an
+   installed PWA on iOS, a single child wider than the screen can widen
+   the layout viewport and make the WHOLE app render zoomed-out ("too
+   wide"). `overflow-x: clip` fixes that without disabling the sticky
+   header (unlike `hidden`, which turns the root into a scroll container
+   and breaks position: sticky against the viewport). */
+html {
+  overflow-x: clip;
+}
+@supports not (overflow: clip) {
+  html {
+    overflow-x: hidden;
+  }
+}
+
+/* iPhone notch / home-indicator handling for the standalone PWA: with
+   viewport-fit=cover the layout extends under the status bar and the
+   rounded screen corners, so the sticky header and the footer must pad
+   for the safe area or their content sits underneath it. */
+.premium-site-header {
+  padding-top: env(safe-area-inset-top);
+}
+body > footer {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 /* ---------------------------------------------------------------------
    Premium black/gold theme primitives — used by the global header and by
    the Homepage / Lenders / Scenarios page bodies. Kept as plain CSS
