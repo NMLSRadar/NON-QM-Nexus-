@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition, useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { setBetaTester } from "./actions";
+import { useEffect, useTransition, useState } from "react";
+import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { setBetaTester, deleteUser } from "./actions";
 import { formatRelative, formatAbsolute, formatDay } from "@/lib/relativeTime";
 import type { ActivityUserRow, ActivityStatus } from "./types";
 import { STATUS_LABELS, ACTIVITY_LABELS, type ActivityEventType } from "./types";
@@ -32,6 +32,19 @@ export function ActivityTable({ rows, emptyMessage }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [, startTransition] = useTransition();
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Escape anywhere cancels an open delete confirmation.
+  useEffect(() => {
+    if (!confirmingDeleteId) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setConfirmingDeleteId(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [confirmingDeleteId]);
 
   function toggle(id: string) {
     setExpanded((prev) => {
@@ -52,6 +65,26 @@ export function ActivityTable({ rows, emptyMessage }: Props) {
       startTransition(() => router.refresh());
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleDeleteUser(id: string) {
+    setDeletingId(id);
+    setDeleteError(null);
+    try {
+      const result = await deleteUser(id);
+      if (result?.error) {
+        setDeleteError(result.error);
+        setDeletingId(null);
+        return;
+      }
+      setConfirmingDeleteId(null);
+      setDeletingId(null);
+      startTransition(() => router.refresh());
+    } catch (err) {
+      console.error("Delete failed:", err);
+      setDeleteError("Delete failed — please retry.");
+      setDeletingId(null);
     }
   }
 
@@ -90,6 +123,18 @@ export function ActivityTable({ rows, emptyMessage }: Props) {
                   onToggle={() => toggle(u.id)}
                   onToggleBeta={(beta) => toggleBeta(u.id, beta)}
                   betaBusy={busy}
+                  confirmingDelete={confirmingDeleteId === u.id}
+                  deleting={deletingId === u.id}
+                  deleteError={deleteError}
+                  onRequestDelete={() => {
+                    setDeleteError(null);
+                    setConfirmingDeleteId(u.id);
+                  }}
+                  onCancelDelete={() => {
+                    setConfirmingDeleteId(null);
+                    setDeleteError(null);
+                  }}
+                  onConfirmDelete={() => handleDeleteUser(u.id)}
                 />
               );
             })}
@@ -106,12 +151,24 @@ function ActivityRow({
   onToggle,
   onToggleBeta,
   betaBusy,
+  confirmingDelete,
+  deleting,
+  deleteError,
+  onRequestDelete,
+  onCancelDelete,
+  onConfirmDelete,
 }: {
   u: ActivityUserRow;
   isOpen: boolean;
   onToggle: () => void;
   onToggleBeta: (beta: boolean) => void;
   betaBusy: boolean;
+  confirmingDelete: boolean;
+  deleting: boolean;
+  deleteError: string | null;
+  onRequestDelete: () => void;
+  onCancelDelete: () => void;
+  onConfirmDelete: () => void;
 }) {
   const tone = STATUS_TONE[u.status];
   const name = u.displayName?.trim();
@@ -264,6 +321,56 @@ function ActivityRow({
                   </ul>
                 )}
               </div>
+            </div>
+
+            {/* Danger zone — delete user (two-step inline confirm) */}
+            <div className="mt-5 border-t border-rose-500/15 pt-4">
+              {u.isPlatformAdmin ? (
+                <p className="text-xs text-slate-500">
+                  Protected — platform administrator accounts can&apos;t be deleted. Demote them first in Admin → Users.
+                </p>
+              ) : confirmingDelete ? (
+                <div
+                  role="alertdialog"
+                  aria-label={`Confirm deleting ${u.email}`}
+                  className="max-w-2xl space-y-3 rounded-lg border border-rose-500/30 bg-rose-500/[0.07] p-4"
+                >
+                  <p className="text-sm text-slate-200">
+                    Permanently delete <span className="font-semibold text-white">{u.email}</span>? This removes their
+                    sign-in, subscription, trial, scenarios, documents, and personal organization.
+                    <span className="font-semibold text-rose-300"> This cannot be undone.</span>
+                  </p>
+                  {deleteError ? <p className="text-xs text-rose-300">{deleteError}</p> : null}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={onCancelDelete}
+                      disabled={deleting}
+                      className="rounded-md border border-white/15 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:border-white/30 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onConfirmDelete}
+                      disabled={deleting}
+                      className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 disabled:opacity-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                      {deleting ? "Deleting…" : "Delete permanently"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onRequestDelete}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-xs font-medium text-rose-300 transition-colors hover:border-rose-400/60 hover:bg-rose-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  Delete user
+                </button>
+              )}
             </div>
           </td>
         </tr>

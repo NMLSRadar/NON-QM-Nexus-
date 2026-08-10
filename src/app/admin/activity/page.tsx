@@ -25,6 +25,7 @@ interface RawUser {
   id: string;
   email: string;
   created_at: string;
+  platform_admin: boolean;
   is_beta_tester: boolean;
   beta_granted_at: string | null;
   user_profiles: { display_name: string | null; nmls_id: string | null } | Array<{ display_name: string | null; nmls_id: string | null }> | null;
@@ -126,7 +127,7 @@ export default async function AdminActivityPage({
     service
       .from("users")
       .select(
-        "id, email, created_at, is_beta_tester, beta_granted_at, user_profiles(display_name, nmls_id), user_subscriptions(plan:membership_plans(name, tier_level), canceled_at, is_trial, trial_activated_at, trial_expires_at, started_at, source, current_period_end)"
+        "id, email, created_at, platform_admin, is_beta_tester, beta_granted_at, user_profiles(display_name, nmls_id), user_subscriptions(plan:membership_plans(name, tier_level), canceled_at, is_trial, trial_activated_at, trial_expires_at, started_at, source, current_period_end)"
       )
       .is("deleted_at", null),
     service.from("user_activity_summary").select("*"),
@@ -148,6 +149,7 @@ export default async function AdminActivityPage({
       nmlsId: profile?.nmls_id ?? null,
       createdAt: u.created_at,
       isBeta: u.is_beta_tester,
+      isPlatformAdmin: Boolean(u.platform_admin),
       betaGrantedAt: u.beta_granted_at,
       planName: plan?.name ?? null,
       tierLevel: plan ? (plan.tier_level ?? null) : null,

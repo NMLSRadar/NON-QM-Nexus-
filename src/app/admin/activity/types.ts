@@ -34,6 +34,7 @@ export interface ActivityUserRow {
   email: string;
   displayName: string | null;
   nmlsId: string | null;
+  isPlatformAdmin: boolean;
   createdAt: string;
   isBeta: boolean;
   betaGrantedAt: string | null;
