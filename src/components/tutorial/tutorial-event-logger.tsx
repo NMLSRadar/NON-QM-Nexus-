@@ -64,8 +64,10 @@ export function TutorialEventLogger({ slugs }: { slugs: string[] }) {
     );
 
     const observed: Element[] = [];
+    const escapeSlug =
+      typeof CSS !== "undefined" && typeof CSS.escape === "function" ? (s: string) => CSS.escape(s) : (s: string) => s.replace(/"/g, '\\"');
     for (const slug of slugs) {
-      const el = document.querySelector<HTMLElement>(`[data-section-slug="${CSS.escape(slug)}"]`);
+      const el = document.querySelector<HTMLElement>(`[data-section-slug="${escapeSlug(slug)}"]`);
       if (el) {
         observer.observe(el);
         observed.push(el);

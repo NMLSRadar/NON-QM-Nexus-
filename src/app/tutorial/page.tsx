@@ -72,6 +72,7 @@ function loadSections(): LoadedSection[] {
             (fm.slug ? "" : ` — got ${Object.keys(fm).join(", ") || "no frontmatter"}`)
         );
       }
+      const rawUpdatedAt = fm.updated_at as unknown;
       return {
         meta: {
           slug: fm.slug,
@@ -80,7 +81,9 @@ function loadSections(): LoadedSection[] {
           keywords: Array.isArray(fm.keywords) ? fm.keywords.map(String) : [],
         },
         order: fm.order,
-        updatedAt: fm.updated_at ?? "",
+        // gray-matter (js-yaml) parses unquoted dates into Date objects —
+        // always coerce to a plain display string before it reaches React.
+        updatedAt: rawUpdatedAt instanceof Date ? rawUpdatedAt.toISOString().slice(0, 10) : String(rawUpdatedAt ?? ""),
         feature: fm.feature ?? "",
         body: content,
         file,
