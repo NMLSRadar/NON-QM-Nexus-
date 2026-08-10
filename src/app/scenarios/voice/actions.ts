@@ -19,7 +19,7 @@ export async function createScenarioFromVoice(extraction: VoiceExtraction): Prom
   if (!assessment.complete) {
     return { message: `Still missing: ${assessment.missing.join(", ")}. ${assessment.questions.slice(0, 2).join(" ")}` };
   }
-  return createScenario(buildScenarioInput(extraction, assessment));
+  return createScenario(buildScenarioInput(extraction, assessment), { extraActivity: "voice_scenario" });
 }
 
 /**

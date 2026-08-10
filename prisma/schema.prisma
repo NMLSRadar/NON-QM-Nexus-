@@ -60,6 +60,11 @@ model User {
   id        String   @id @default(uuid()) @db.Uuid // mirrors Supabase auth.users id
   email     String   @unique
   platformAdmin Boolean @default(false) @map("platform_admin")
+  // Beta tester flag (2026-08-10, supabase/activity-tracking.sql) —
+  // orthogonal to trial/paid status: a beta tester can also be trial or
+  // paid. Shown as a small secondary chip next to the subscription status.
+  isBetaTester Boolean  @default(false) @map("is_beta_tester")
+  betaGrantedAt DateTime? @map("beta_granted_at")
   // Stripe customer id — created lazily on first checkout attempt so a user
   // who never subscribes never gets a Stripe customer record.
   stripeCustomerId String? @unique @map("stripe_customer_id")
@@ -70,6 +75,7 @@ model User {
   profile      UserProfile?
   memberships  Membership[]
   subscription UserSubscription?
+  activityEvents UserActivityEvent[]
 
   @@map("users")
 }
@@ -792,4 +798,28 @@ model SignupTriggerError {
   emailDomainOnly String?  @map("email_domain_only")
 
   @@map("signup_trigger_errors")
+}
+
+// ---------------------------------------------------------------------------
+// Activity & beta-testing analytics (2026-08-10, supabase/activity-tracking.sql).
+// ONE table feeds the entire /admin/activity "Active Users & Beta Testers"
+// screen: last login, last activity, total logins, scenario count, features
+// used, days idle, top feature are all DERIVED from this table (via the
+// user_activity_summary / user_activity_timeline views) — never stored in
+// per-feature columns. Every row joins to the existing users.id.
+// ---------------------------------------------------------------------------
+model UserActivityEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  // login | scenario_submitted | voice_scenario | ai_assistant |
+  // lender_list | programs | doc_needs | products
+  eventType  String   @map("event_type")
+  occurredAt DateTime @default(now()) @map("occurred_at")
+  metadata   Json?    @db.Json
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, occurredAt])
+  @@index([occurredAt])
+  @@map("user_activity_events")
 }

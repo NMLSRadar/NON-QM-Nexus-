@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { scenarioInputSchema, friendlyValidationMessage, type ScenarioInput } from "@/domain/validation/scenarioSchema";
 import { getCurrentOrganizationId, getRepository } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
+import { recordActivity, type ActivityEventType } from "@/lib/activity";
 import type { Scenario } from "@/domain/types/scenario";
 
 export interface CreateScenarioState {
@@ -25,7 +26,10 @@ export interface CreateScenarioState {
  * and persist the scenario. The organization ID always comes from the server
  * session (never from the client) to preserve tenant isolation.
  */
-export async function createScenario(payload: ScenarioInput): Promise<CreateScenarioState> {
+export async function createScenario(
+  payload: ScenarioInput,
+  opts: { extraActivity?: ActivityEventType } = {}
+): Promise<CreateScenarioState> {
   const parsed = scenarioInputSchema.safeParse(payload);
   if (!parsed.success) {
     return {
@@ -55,5 +59,14 @@ export async function createScenario(payload: ScenarioInput): Promise<CreateScen
 
   const repo = await getRepository();
   await repo.saveScenario(scenario);
+
+  // Activity (best-effort, never blocks): a submitted scenario, plus an
+  // optional second event for the voice path (voice_scenario) so the admin
+  // screen can tell voice submissions apart from form submissions.
+  await recordActivity(supabase, user.id, "scenario_submitted");
+  if (opts.extraActivity) {
+    await recordActivity(supabase, user.id, opts.extraActivity);
+  }
+
   return { redirectTo: `/scenarios/${scenario.id}` };
 }

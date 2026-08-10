@@ -1,8 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { LOGIN_RECORDED_COOKIE } from "@/middleware";
 
 const credentialsSchema = z.object({
   email: z.string().email("Enter a valid email address."),
@@ -66,6 +68,10 @@ export async function signUp(_prevState: AuthActionState, formData: FormData): P
 }
 
 export async function signOut() {
+  // Clear the middleware login-record cookie so this sign-out's next sign-in
+  // counts as a fresh `login` activity event again.
+  const cookieStore = await cookies();
+  cookieStore.set(LOGIN_RECORDED_COOKIE, "", { maxAge: 0, path: "/" });
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");

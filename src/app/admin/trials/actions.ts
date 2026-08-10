@@ -155,6 +155,17 @@ export async function inviteBetaTester(
     return { error: `The invite wasn’t sent: ${sendResult.error}` };
   }
 
+  // Beta tester flag: an invited LO is by definition a beta tester. Existing
+  // accounts are stamped now; brand-new invitees are stamped automatically
+  // when their trial activates (activate_trial(..., p_is_beta => true)), since
+  // their public.users row doesn't exist yet at invite time.
+  if (existingUser) {
+    await service
+      .from("users")
+      .update({ is_beta_tester: true, beta_granted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("id", existingUser.id as string);
+  }
+
   return {
     message:
       usedType === "invite"

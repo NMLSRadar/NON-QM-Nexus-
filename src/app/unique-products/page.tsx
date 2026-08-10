@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, BriefcaseBusiness, Building2, GraduationCap, HeartPulse, House, Landmark, ShieldCheck } from "lucide-react";
 import { UNIQUE_PRODUCT_CATEGORIES } from "@/domain/uniqueProducts";
+import { recordPageView } from "@/lib/activity";
 
 const icons = {
   JUMBO_AUS: Landmark,
@@ -11,7 +12,8 @@ const icons = {
   NO_RATIO_PRIMARY_RESIDENCE: House,
 } as const;
 
-export default function UniqueProductsPage() {
+export default async function UniqueProductsPage() {
+  await recordPageView("products");
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 min-h-full space-y-8 rounded-b-3xl bg-[#050505] px-4 py-6 sm:px-6 sm:py-8">
       <section className="relative overflow-hidden rounded-3xl border border-amber-500/25 bg-[#0a0a0b] p-6 sm:p-10">

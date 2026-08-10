@@ -1,10 +1,12 @@
 import { getCurrentOrganizationId, getRepository, getLenderAccessInfo } from "@/lib/session";
+import { recordPageView } from "@/lib/activity";
 import { compareAlphabetically } from "@/app/programs/program-directory-utils";
 import { LenderDirectory, type DirectoryLender } from "./lender-directory";
 
 export const dynamic = "force-dynamic";
 
 export default async function LendersPage() {
+  await recordPageView("lender_list");
   const repo = await getRepository();
   const org = await getCurrentOrganizationId();
   const [allLenders, programs, access] = await Promise.all([repo.listAllLenders(org), repo.listPrograms(org), getLenderAccessInfo()]);

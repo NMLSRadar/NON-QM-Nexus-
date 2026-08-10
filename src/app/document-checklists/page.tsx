@@ -3,6 +3,7 @@ import { ClipboardCheck } from "lucide-react";
 import { buildDocumentChecklistSections } from "./sections";
 import { DocumentChecklistCard } from "./checklist-card";
 import { pageMetadata } from "@/lib/seo";
+import { recordPageView } from "@/lib/activity";
 
 // Matches every other page in this app: force-dynamic, never force-static.
 // The root layout renders auth-aware nav (Supabase-backed) on every page,
@@ -22,7 +23,8 @@ export const metadata: Metadata = pageMetadata({
   path: "/document-checklists",
 });
 
-export default function DocumentChecklistsPage() {
+export default async function DocumentChecklistsPage() {
+  await recordPageView("doc_needs");
   const sections = buildDocumentChecklistSections();
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">

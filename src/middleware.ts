@@ -33,6 +33,31 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Activity: record one `login` event per authenticated browser session,
+  // gated by a cookie so middleware (which runs on every request, including
+  // prefetches and API calls) records it exactly once. The cookie is cleared
+  // on sign-out (src/app/login/actions.ts) so the next login logs again. A
+  // cookie mismatch (a different user on the same browser) also re-records.
+  // Best-effort inside a try/catch — analytics never blocks a request.
+  if (user && request.cookies.get(LOGIN_RECORDED_COOKIE)?.value !== user.id) {
+    try {
+      await supabase.from("user_activity_events").insert({
+        user_id: user.id,
+        event_type: "login",
+        occurred_at: new Date().toISOString(),
+        metadata: null,
+      });
+      response.cookies.set(LOGIN_RECORDED_COOKIE, user.id, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 60 * 24 * 30,
+      });
+    } catch {
+      // leave the cookie unset — the next request retries naturally
+    }
+  }
+
   const isProtected = PROTECTED_PREFIXES.some((p) => request.nextUrl.pathname.startsWith(p));
 
   if (isProtected && !user) {
@@ -43,6 +68,10 @@ export async function middleware(request: NextRequest) {
 
   return response;
 }
+
+// Cookie guarding the one-login-event-per-browser-session record above.
+// Cleared in src/app/login/actions.ts's signOut.
+export const LOGIN_RECORDED_COOKIE = "nqn_act_login";
 
 export const config = {
   matcher: [

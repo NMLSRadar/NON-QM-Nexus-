@@ -51,6 +51,10 @@ export function InviteAcceptClient({
       p_company_name: profile.companyName || null,
       p_nmls_number: profile.nmlsNumber || null,
       p_state: profile.state || null,
+      // This page is reached only via an admin beta-invite link — the invitee
+      // IS a beta tester, so flag them (the ordinary /trial/[slug] signup does
+      // not pass this and stays non-beta).
+      p_is_beta: true,
     });
 
     if (actErr) {

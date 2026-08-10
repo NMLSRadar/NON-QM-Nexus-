@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Database, LockKeyhole, ShieldCheck } from "lucide-react";
 import { getCurrentOrganizationId, getLenderAccessInfo, getRepository } from "@/lib/session";
+import { recordPageView } from "@/lib/activity";
 import { Card } from "@/components/ui";
 import { ProgramDirectory } from "./program-directory";
 import { canonicalizePrograms } from "./program-directory-utils";
@@ -8,6 +9,7 @@ import { canonicalizePrograms } from "./program-directory-utils";
 export const dynamic = "force-dynamic";
 
 export default async function ProgramsPage() {
+  await recordPageView("programs");
   const repo = await getRepository();
   const org = await getCurrentOrganizationId();
   const [lenders, programs, access] = await Promise.all([

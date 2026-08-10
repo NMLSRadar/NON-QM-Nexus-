@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLenderAccessInfo, getRepository } from "@/lib/session";
+import { recordActivity } from "@/lib/activity";
 import { getAiProvider, asUntrustedData, type AiMessage } from "@/lib/ai/provider";
 import {
   ASSISTANT_SYSTEM_PROMPT,
@@ -99,6 +100,8 @@ export async function POST(request: Request) {
   try {
     const provider = getAiProvider();
     const reply = await provider.complete({ messages: aiMessages, maxTokens: 1200, temperature: 0.2 });
+    // Best-effort activity write — never delays or fails the reply.
+    await recordActivity(supabase, user.id, "ai_assistant");
     return Response.json({ reply });
   } catch (err) {
     console.error("AI assistant error:", err);
