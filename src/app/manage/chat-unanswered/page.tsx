@@ -1,4 +1,4 @@
-import { requirePlatformAdmin } from "@/lib/admin";
+import { requireOrgOrPlatformAdmin } from "@/lib/orgOrPlatformAdmin";
 import { Card } from "@/components/ui";
 import { ResolveButton } from "./resolve-button";
 
@@ -16,13 +16,17 @@ interface UnansweredRow {
 
 const REASON_LABEL: Record<string, string> = { non_answer: "Non-answer", thumbs_down: "Thumbs-down" };
 
-export default async function AdminChatUnansweredPage() {
-  const { supabase } = await requirePlatformAdmin();
-  const { data, error } = await supabase
+export default async function ManageChatUnansweredPage() {
+  const { supabase, scope } = await requireOrgOrPlatformAdmin();
+  const isPlatform = scope.kind === "platform";
+
+  let query = supabase
     .from("chat_unanswered_questions")
     .select("id, question, intent, reason, organization_id, created_at, resolved_at")
     .order("created_at", { ascending: false })
     .limit(200);
+  if (!isPlatform) query = query.eq("organization_id", scope.organizationId);
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
 
   const rows = (data ?? []) as UnansweredRow[];
@@ -36,7 +40,7 @@ export default async function AdminChatUnansweredPage() {
         <p className="text-sm text-slate-500">
           Every chatbot non-answer and thumbs-down lands here. This is the flywheel: review the gaps, fix them in the
           guideline library (load a guideline, add a help topic, or enable a structured field), then mark the row
-          resolved.
+          resolved. {isPlatform ? "Platform admin view — showing every org." : "Showing your organization&apos;s queue."}
         </p>
       </div>
 

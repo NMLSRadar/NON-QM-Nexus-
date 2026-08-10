@@ -67,6 +67,14 @@ catalog — no LLM, no API keys. Metrics: intent accuracy ≥ 95%, grounding 100
 correct-refusal 100%, hallucinated-entity rate 0, completeness 100%. See
 `evals/chatbot/README.md`.
 
+**LLM narration tier** (`npm run eval:chatbot:llm`): the deterministic suite
+can't exercise Stage B narration (the path that can hallucinate), so a
+separately-triggered script runs ~12 fixtures through the **actual configured
+provider** and asserts: no lender/program outside tool output, no price figures,
+no approval language, and that prompt-injection embedded in guideline data is
+discarded. It is not part of the default test run (needs an API key + spends
+tokens) and prints SKIPPED when no provider is configured.
+
 ## Logging, feedback, and the unanswered-questions queue
 
 - Every turn is logged to `ai_requests` (intent, tools, row counts, prompt

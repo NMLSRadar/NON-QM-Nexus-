@@ -16,6 +16,7 @@
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run tests/integration",
     "test:chatbot": "vitest run evals/chatbot/chatbotEval.test.ts tests/domain/chatNormalize.test.ts tests/domain/chatParse.test.ts tests/domain/chatTools.test.ts tests/domain/chatOrchestrate.test.ts tests/domain/compensatingFactors.test.ts tests/domain/lenderPosture.test.ts",
+    "eval:chatbot:llm": "tsx evals/chatbot/llmEval.ts",
     "seed:check": "tsx scripts/seed-check.ts",
     "check:email-dns": "node scripts/check-email-dns.mjs",
     "prisma:generate": "prisma generate",

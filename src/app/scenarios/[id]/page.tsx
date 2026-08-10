@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, FileEdit, RotateCw, Layers, Clock } from "lucide-react";
 import { analyzeScenario } from "@/domain/analyze";
 import { getCurrentOrganizationId, getLenderAccessInfo, getRepository } from "@/lib/session";
+import type { Repository } from "@/lib/store";
 import { Card, MetricTile, StatusBadge, SectionHeading, LinkButton, Pill, fmtUsd } from "@/components/ui";
 import type { MatchStatus } from "@/domain/types/enums";
 import { BestLenderMatches } from "./best-lender-matches";
@@ -34,7 +35,14 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
 
   // Editorial posture profiles (chatbot Part 2) — advisory only, never a
   // scoring input. Keyed by canonical lender name for the match-card badges.
-  const postureProfiles = await repo.listLenderFlexibilityProfiles(org);
+  // Posture is optional metadata: a read failure degrades to no badges, never
+  // breaks the results page.
+  let postureProfiles: Awaited<ReturnType<Repository["listLenderFlexibilityProfiles"]>> = [];
+  try {
+    postureProfiles = await repo.listLenderFlexibilityProfiles(org);
+  } catch (err) {
+    console.error("Posture profile read failed on scenario page — degrading to no badges:", err);
+  }
   const postureByLender = new Map<string, GuidelinePosture | null>();
   for (const p of postureProfiles) postureByLender.set(resolveAlias(p.lenderId), p.posture);
 

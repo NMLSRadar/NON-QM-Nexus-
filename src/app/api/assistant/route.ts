@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLenderAccessInfo, getRepository } from "@/lib/session";
+import type { Repository } from "@/lib/store";
 import { getAiProvider } from "@/lib/ai/provider";
 import { runChatAssistant, PROMPT_VERSION } from "@/lib/ai/chatbot/orchestrate";
 import type { AssistantReply } from "@/lib/ai/chatbot/answerSchema";
@@ -85,7 +86,14 @@ export async function POST(request: Request) {
   }
 
   const catalog = await repo.getCatalog(org); // tier-gated, tenant-scoped
-  const postureProfiles = await repo.listLenderFlexibilityProfiles(org);
+  // Posture is OPTIONAL editorial metadata — a failure to read it must degrade
+  // to no badges, never take down the assistant (posture is advisory only).
+  let postureProfiles: Awaited<ReturnType<Repository["listLenderFlexibilityProfiles"]>> = [];
+  try {
+    postureProfiles = await repo.listLenderFlexibilityProfiles(org);
+  } catch (err) {
+    console.error("Posture profile read failed — degrading to empty:", err);
+  }
 
   // The provider is optional: without one (or if it fails), the orchestrator
   // degrades to the deterministic renderer, which is fully grounded.

@@ -23,7 +23,7 @@ export interface StructuredFieldInput {
 
 export async function updateProgramStructuredFields(programId: string, input: StructuredFieldInput): Promise<void> {
   const { supabase } = await requirePlatformAdmin();
-  const { data, error: readError } = await supabase.from("programs").select("config").eq("id", programId).single();
+  const { data, error: readError } = await supabase.from("programs").select("config, version").eq("id", programId).single();
   if (readError) throw new Error(readError.message);
   const config = { ...(data.config as Record<string, unknown>) };
 
@@ -42,7 +42,19 @@ export async function updateProgramStructuredFields(programId: string, input: St
   setOrClear("firstTimeInvestorTreatment", input.first_time_investor_treatment);
   setOrClear("firstTimeHomebuyerTreatment", input.first_time_homebuyer_treatment);
 
-  const { error: writeError } = await supabase.from("programs").update({ config }).eq("id", programId);
+  // Optimistic concurrency: only write if the version we read is still current,
+  // so two admins editing the same program can't silently clobber each other.
+  const expectedVersion = data.version as number;
+  const nextVersion = (expectedVersion ?? 1) + 1;
+  const { data: updated, error: writeError } = await supabase
+    .from("programs")
+    .update({ config, version: nextVersion })
+    .eq("id", programId)
+    .eq("version", expectedVersion)
+    .select("id");
   if (writeError) throw new Error(writeError.message);
+  if (!updated || updated.length === 0) {
+    throw new Error("This program was edited by someone else — refresh and re-apply your changes.");
+  }
   revalidatePath("/admin/program-fields");
 }
