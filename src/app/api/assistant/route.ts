@@ -1,29 +1,30 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLenderAccessInfo, getRepository } from "@/lib/session";
-import { getAiProvider, asUntrustedData, type AiMessage } from "@/lib/ai/provider";
-import {
-  ASSISTANT_SYSTEM_PROMPT,
-  buildGuidelineContext,
-  buildLenderIntelligenceContext,
-  buildPendingReviewContext,
-  extractAssistantVitals,
-} from "@/lib/ai/assistantContext";
+import { getAiProvider } from "@/lib/ai/provider";
+import { runChatAssistant, PROMPT_VERSION } from "@/lib/ai/chatbot/orchestrate";
+import type { AssistantReply } from "@/lib/ai/chatbot/answerSchema";
 
 export const dynamic = "force-dynamic";
 
-const MAX_HISTORY_MESSAGES = 8; // caps context/cost; the assistant doesn't need unlimited chat history
 const MAX_MESSAGE_LENGTH = 1200;
+const MAX_HISTORY_MESSAGES = 8;
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
 
+/**
+ * POST /api/assistant — two-stage chatbot pipeline.
+ *
+ * Stage A (deterministic parse) + tool layer + Stage B (grounded narration)
+ * replace the old single-prompt free-text call. Auth, org resolution, tier
+ * gating, and tenant scoping are unchanged — the catalog passed to the
+ * orchestrator is the caller's own tier-gated catalog, so the tools can never
+ * return a row the caller can't see. Response is the structured AssistantReply
+ * (answer contract), never free-form prose.
+ */
 export async function POST(request: Request) {
-  // A Route Handler is not a page — getCurrentOrganizationId()'s
-  // redirect("/login") (meant for server-rendered pages) would not
-  // produce a proper HTTP response here, so auth/org resolution is
-  // done directly against the session instead.
   const supabase = await createClient();
   const {
     data: { user },
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
   }
 
   const rawMessages = Array.isArray(body.messages) ? body.messages : [];
-  const messages = rawMessages
+  const messages: ChatMessage[] = rawMessages
     .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
     .slice(-MAX_HISTORY_MESSAGES)
     .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_MESSAGE_LENGTH) }));
@@ -63,45 +64,64 @@ export async function POST(request: Request) {
     return Response.json({ error: "No message provided" }, { status: 400 });
   }
 
-  // Same tier-gating as the rest of the app (Programs page, scenario
-  // matching): an account with no active subscription genuinely has zero
-  // lender data to answer from. Short-circuit with a clear, accurate
-  // reply instead of spending an LLM call only to have the model say "I
-  // don't have that data" with no explanation of why — the actual reason
-  // is account status, not a guideline-content gap, and the assistant on
-  // its own can't tell those two situations apart from an empty catalog.
+  // Same tier-gating as the rest of the app: an account with no active
+  // subscription genuinely has zero lender data to answer from. Short-circuit
+  // with an honest, structured non-answer instead of spending a tool/LLM call.
   const access = await getLenderAccessInfo();
   if (access.tierLevel === 0) {
-    return Response.json({
-      reply:
-        "This account doesn't have an active subscription, so there's no lender guideline data available to me yet — that's an account issue, not missing data on our end. Subscribing to any plan unlocks the real, human-verified lender catalog immediately, and I'll be able to answer from it right away.",
-    });
-  }
-
-  const catalog = await repo.getCatalog(org); // same tier-gated catalog the rest of the app uses
-  const context = buildGuidelineContext(catalog);
-  const pendingReview = await repo.listPendingReviewLenderPrograms(org);
-  const pendingContext = buildPendingReviewContext(pendingReview);
-  // AE-intelligence layer: qualitative routing (exceptions, deposit
-  // utilization, DSCR first-time classification, specialty tags) computed
-  // deterministically from the live catalog + conversation vitals.
-  const vitals = extractAssistantVitals(messages);
-  const intelligenceContext = buildLenderIntelligenceContext(catalog, vitals);
-
-  const aiMessages: AiMessage[] = [
-    {
-      role: "system",
-      content: `${ASSISTANT_SYSTEM_PROMPT}\n\n${asUntrustedData("lender_guideline_catalog", context)}\n\n${asUntrustedData("pending_review_lender_programs", pendingContext)}\n\n${asUntrustedData("lender_intelligence", intelligenceContext)}`,
-    },
-    ...messages,
-  ];
-
-  try {
-    const provider = getAiProvider();
-    const reply = await provider.complete({ messages: aiMessages, maxTokens: 1200, temperature: 0.2 });
+    const reply: AssistantReply = {
+      answer:
+        "This account doesn't have an active subscription, so there's no lender guideline data available to me yet — that's an account issue, not missing data on our end. Subscribing to any plan unlocks the real, human-verified lender catalog immediately.",
+      rows: [],
+      assumptions: [],
+      caveats: [],
+      sources: [],
+      followUps: ["View plans"],
+      cta: { label: "View plans", href: "/pricing" },
+      answered: false,
+      nonAnswer: "No active subscription — no lender data available.",
+    };
     return Response.json({ reply });
-  } catch (err) {
-    console.error("AI assistant error:", err);
-    return Response.json({ error: "The assistant is temporarily unavailable — please try again in a moment." }, { status: 502 });
   }
+
+  const catalog = await repo.getCatalog(org); // tier-gated, tenant-scoped
+  const postureProfiles = await repo.listLenderFlexibilityProfiles(org);
+
+  // The provider is optional: without one (or if it fails), the orchestrator
+  // degrades to the deterministic renderer, which is fully grounded.
+  let provider: ReturnType<typeof getAiProvider> | null = null;
+  try {
+    provider = getAiProvider();
+  } catch {
+    provider = null;
+  }
+
+  const run = await runChatAssistant({
+    catalog,
+    postureProfiles,
+    provider,
+    messages,
+    orgId: org,
+  });
+
+  // Log the turn (spec §6): parsed intent, tools, row counts, prompt version,
+  // provider, whether deterministic. Never borrower PII.
+  try {
+    await supabase.from("ai_requests").insert({
+      organization_id: org,
+      user_id: user.id,
+      provider: provider?.name ?? "deterministic",
+      model: provider?.name ?? "deterministic",
+      prompt_version: PROMPT_VERSION,
+      facts_supplied: { intent: run.log.intent, tools: run.log.tools, toolRows: run.log.toolResults.map((r) => ({ tool: r.tool, rowCount: r.rowCount })) },
+      response: run.reply.answer,
+    });
+  } catch (err) {
+    console.error("Failed to log assistant turn:", err);
+  }
+
+  return Response.json({
+    reply: run.reply,
+    meta: { intent: run.log.intent, usedDeterministic: run.log.usedDeterministic, grounded: run.log.grounded },
+  });
 }

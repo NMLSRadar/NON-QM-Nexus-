@@ -85,3 +85,40 @@ Programs may define an LTV matrix (`minFico`, optional occupancy, `maxLtv`, opti
 - Currency: 2 decimal places, ROUND_HALF_UP
 - DSCR: 3 decimal places
 - Division by zero always yields `null` (shown as "—"), never Infinity/NaN
+
+## Compensating factors (`compensatingFactors/score.ts`)
+
+A **deterministic** engine (no LLM) that scores the strength of a file's
+compensating factors for exception-based lending. It describes file strength,
+never a likelihood of approval and never lender behavior.
+
+### Factor formulas and tiers
+
+| Factor | Computation | Strength tiers |
+|---|---|---|
+| LTV cushion | `maxAllowableLTV − requestedLTV` (pts) | 1–4 slight · 5–9 moderate · 10+ strong |
+| Reserves surplus | `actualMonths ÷ requiredMonths` + absolute months | ≥1.5x moderate · ≥2x strong · ≥4x or 12+ months very strong |
+| DTI cushion | `maxAllowableDTI − calculatedDTI` (pts) | 3–7 moderate · 8+ strong |
+| FICO cushion | `actualFICO − programMinFICO` | 20–39 moderate · 40+ strong |
+| Housing history | mortgage/rental lates in lookback | 0x30x24 strong |
+| Credit depth | no derogatories/collections, low util, seasoned tradelines | 3+ flags moderate · 4 strong |
+| Seasoning surplus | months beyond program min | ≥12 strong |
+| Residual income | qualifying income − total obligations | org-configurable thresholds |
+| Tenure | months beyond min self-employment | ≥24 moderate |
+| Payment shock | proposed ÷ current housing payment | ≤1.0x strong · ≤1.25x moderate |
+
+### Weights
+
+`COMPENSATING_FACTOR_WEIGHTS` (sums to 1): reserves 0.25, LTV cushion 0.20,
+housing history 0.15, DTI cushion 0.15, FICO cushion 0.10, credit depth 0.06,
+seasoning 0.05, residual income 0.02, tenure 0.01, payment shock 0.01.
+
+**Rationale:** reserves surplus and LTV cushion carry the most weight — reserves
+highest of all — because they are the strongest, most easily documented signals
+of a file that can absorb risk. Perfect credit/housing history and DTI cushion
+are next. The remaining factors are supporting. A borrower carrying 12+ months
+of reserves against a 3- or 6-month requirement is one of the strongest
+positions on a file and is surfaced prominently.
+
+Overall strength: weighted score ≥0.65 strong · ≥0.4 moderate · ≥0.2 developing
+· else weak. Unknown/missing data never scores favorable.

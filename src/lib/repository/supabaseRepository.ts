@@ -3,6 +3,7 @@ import type { Repository } from "@/lib/store";
 import type { Lender, Program, Rule } from "@/domain/types/program";
 import type { Scenario } from "@/domain/types/scenario";
 import type { ProgramCatalog } from "@/domain/analyze";
+import { type LenderFlexibilityProfile, seedProfiles } from "@/domain/lenderPosture";
 import { getEffectivePlan } from "./membership";
 import { PLATFORM_CATALOG_ORGANIZATION_ID } from "@/lib/platformCatalog";
 
@@ -380,6 +381,67 @@ export class SupabaseRepository implements Repository {
       programName: p.name,
       incomeDocTypes: p.config.incomeDocTypes ?? [],
     }));
+  }
+
+  async listLenderFlexibilityProfiles(organizationId: string): Promise<import("@/domain/lenderPosture").LenderFlexibilityProfile[]> {
+    const { data, error } = await this.supabase
+      .from("lender_flexibility_profiles")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(`Failed to list lender flexibility profiles: ${error.message}`);
+    const rows = (data ?? []) as Array<Record<string, unknown>>;
+    if (rows.length === 0) return seedProfiles(organizationId); // org-editable defaults
+    return rows.map((r) => ({
+      id: String(r.id),
+      organizationId: organizationId,
+      lenderId: String(r.lender_id),
+      posture: r.posture as LenderFlexibilityProfile["posture"],
+      postureNotes: (r.posture_notes as string | null) ?? undefined,
+      pricingTendency: (r.pricing_tendency as LenderFlexibilityProfile["pricingTendency"]) ?? "unknown",
+      exceptionsConsidered: Boolean(r.exceptions_considered),
+      exceptionChannel: (r.exception_channel as string | null) ?? undefined,
+      typicalCompensatingFactorsRequired: (r.typical_compensating_factors_required as string[]) ?? [],
+      source: (r.source as LenderFlexibilityProfile["source"]) ?? "org_editorial",
+      isVerified: Boolean(r.is_verified),
+      lastReviewedAt: (r.last_reviewed_at as string | null) ?? null,
+      confidence: (r.confidence as LenderFlexibilityProfile["confidence"]) ?? "low",
+    }));
+  }
+
+  async recordChatFeedback(
+    organizationId: string,
+    userId: string,
+    input: import("@/lib/store").ChatFeedbackInput
+  ): Promise<void> {
+    const { error } = await this.supabase.from("chat_feedback").insert({
+      organization_id: organizationId,
+      user_id: userId,
+      question: input.question,
+      answer: input.answer ?? null,
+      rating: input.rating,
+      reason: input.reason ?? null,
+      intent: input.intent ?? null,
+      prompt_version: input.promptVersion ?? null,
+    });
+    if (error) throw new Error(`Failed to record chat feedback: ${error.message}`);
+  }
+
+  async recordChatUnanswered(
+    organizationId: string,
+    userId: string,
+    input: import("@/lib/store").ChatUnansweredInput
+  ): Promise<void> {
+    const { error } = await this.supabase.from("chat_unanswered_questions").insert({
+      organization_id: organizationId,
+      user_id: userId,
+      question: input.question,
+      intent: input.intent ?? null,
+      reason: input.reason ?? null,
+      normalization: input.normalization ?? null,
+    });
+    if (error) throw new Error(`Failed to record unanswered question: ${error.message}`);
   }
 
   async listPrograms(organizationId: string, tierOverride?: number): Promise<Program[]> {

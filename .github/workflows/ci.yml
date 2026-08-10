@@ -28,5 +28,11 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Chatbot eval gate (precision)
+        # The chatbot precision gate: intent accuracy >= 95%, grounding 100%,
+        # correct-refusal 100%, hallucination 0. Fails the build on any
+        # grounding, hallucination, or tenant-isolation regression.
+        run: npm run test:chatbot
+
       - name: Build
         run: npm run build

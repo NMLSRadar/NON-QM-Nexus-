@@ -9,6 +9,9 @@ import { BestLenderMatches } from "./best-lender-matches";
 import { DocumentNeeds } from "./document-needs";
 import { ScenarioActivity } from "./scenario-activity";
 import { SponsoredAeContacts } from "./sponsored-ae-contacts";
+import { ExceptionReadiness } from "@/components/exception-readiness";
+import { resolveAlias } from "@/domain/lenderPosture";
+import type { GuidelinePosture } from "@/domain/lenderPosture";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +30,12 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
   const catalog = access.tierLevel === 0 ? await repo.getCatalog(org) : await repo.getCatalogForMatching(org);
   const analysis = analyzeScenario(scenario, catalog);
   const best = analysis.evaluations[0];
+
+  // Editorial posture profiles (chatbot Part 2) — advisory only, never a
+  // scoring input. Keyed by canonical lender name for the match-card badges.
+  const postureProfiles = await repo.listLenderFlexibilityProfiles(org);
+  const postureByLender = new Map<string, GuidelinePosture | null>();
+  for (const p of postureProfiles) postureByLender.set(resolveAlias(p.lenderId), p.posture);
 
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
@@ -146,7 +155,7 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
               description="Every applicable lender program, ranked by real match score — sorted automatically."
             />
             <div className="mt-4">
-              <BestLenderMatches evaluations={analysis.evaluations} tierLevel={access.tierLevel} />
+              <BestLenderMatches evaluations={analysis.evaluations} tierLevel={access.tierLevel} postureByLender={postureByLender} />
             </div>
           </Card>
 
@@ -180,6 +189,11 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
               employment, ownership, citizenship, property use, or loan purpose.
             </p>
           </Card>
+
+          {/* Exception Readiness — appears only when the scenario is
+              conditional/manual-review/ineligible AND an exception-based lender
+              is in the match set (see component). Advisory only. */}
+          <ExceptionReadiness scenario={scenario} analysis={analysis} postureProfiles={postureProfiles} />
 
           <p className="text-xs text-ink-secondary border-t border-surface-border pt-4">{analysis.disclaimer}</p>
         </div>

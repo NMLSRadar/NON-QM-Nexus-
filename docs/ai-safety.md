@@ -29,3 +29,37 @@ Every AI call records (see `ai_requests` in the schema): prompt version, provide
 ## Provider abstraction
 
 `getAiProvider()` selects Anthropic or OpenAI from `AI_PROVIDER`; keys come from server-side env only. Provider-specific code stays behind the `AiProvider` interface; prompts live in version-controlled source files.
+
+## Chatbot exception-language rules (Part 2)
+
+The chatbot's exception guidance (`exception_guidance` intent) has hard language
+rules enforced by the prompt, the deterministic renderer, and the eval suite:
+
+- **Never state or imply a named lender will grant an exception.** Allowed:
+  "considers exceptions" / "has a documented exception process." Forbidden:
+  "will approve," "should be fine," "they'll do it."
+- **Exceptions are always conditioned on compensating factors** — reserves well
+  past the requirement, LTV meaningfully under the cap, low DTI, clean housing
+  history. No exception is ever presented as granted on the ask alone.
+- **No pricing figures, ever.** Directional language only (tighter guidelines
+  generally correlate with better pricing), with the volatility caveat. No rate,
+  point, or price figure.
+- These rules are asserted in the eval suite (`evals/chatbot/golden.ts` g33–g36)
+  and fail the build if any response contains a price figure or an approval
+  promise.
+
+## Editorial vs guideline separation
+
+`lender_flexibility_profiles` (see `docs/lender-posture.md`) is **editorial
+metadata, not guideline data**. Structurally enforced:
+
+- Posture rows are tagged `sourceType: 'editorial'` and may never appear in a
+  guideline citation block, a rule result, or the source panel.
+- Posture is **never a scoring input** — the matching engine does not read these
+  tables, so posture cannot change a match status or score by construction.
+- A guideline question about a real lender with no verified guidelines loaded is
+  answered "no verified guidelines in the library yet," never inferred from
+  posture.
+- The editorial disclaimer (*"Internal guidance based on market experience — not
+  a lender guideline or commitment"*) is attached to every posture-sourced
+  answer, distinct from the sample-data disclaimer.

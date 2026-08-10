@@ -586,6 +586,81 @@ model AiRequest {
   @@map("ai_requests")
 }
 
+// ---------------------------------------------------------------------------
+// Chatbot precision plumbing (chatbot upgrade spec §5 / Part 2 §2 + §8).
+// ---------------------------------------------------------------------------
+
+/// Editorial/experiential lender-flexibility metadata — NEVER guideline data.
+/// Org-scoped, versioned, soft-deletable. Every value is org-editable and
+/// org-overridable. `source: 'org_editorial'` + `isVerified: false` by default;
+/// never rendered inside a guideline citation block and never allowed to drive
+/// a match score or eligibility determination (see docs/lender-posture.md).
+model LenderFlexibilityProfile {
+  id                              String   @id @default(uuid()) @db.Uuid
+  organizationId                  String   @map("organization_id") @db.Uuid
+  lenderId                        String   @map("lender_id") @db.Uuid
+  posture                         String @map("posture") // exception_based | moderate | rigid
+  postureNotes                    String?  @map("posture_notes")
+  pricingTendency                 String   @default("unknown") @map("pricing_tendency")
+  exceptionsConsidered            Boolean  @default(false) @map("exceptions_considered")
+  exceptionChannel                String?  @map("exception_channel")
+  typicalCompensatingFactorsRequired String[] @default([]) @map("typical_compensating_factors_required")
+  source                          String   @default("org_editorial") @map("source")
+  isVerified                      Boolean  @default(false) @map("is_verified")
+  lastReviewedAt                  DateTime? @map("last_reviewed_at")
+  confidence                      String   @default("low") @map("confidence") // low | medium | high
+  createdBy                       String?  @map("created_by") @db.Uuid
+  updatedBy                       String?  @map("updated_by") @db.Uuid
+  createdAt                       DateTime @default(now()) @map("created_at")
+  updatedAt                       DateTime @updatedAt @map("updated_at")
+  deletedAt                       DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, lenderId])
+  @@map("lender_flexibility_profiles")
+}
+
+/// One row per non-answer or thumbs-down the assistant produced — the flywheel
+/// that feeds gaps back to the same admins who maintain the guideline library.
+/// Stores intent + question + tool row counts only; never borrower PII.
+model ChatUnansweredQuestion {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  question       String
+  intent         String?
+  reason         String? // non-answer | thumbs_down
+  normalization  String?  // normalized question text (for dedup)
+  resolvedAt     DateTime? @map("resolved_at")
+  resolvedBy     String?  @map("resolved_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@map("chat_unanswered_questions")
+}
+
+/// Explicit thumbs up/down feedback on a chat answer, with an optional reason.
+model ChatFeedback {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  question       String
+  answer         String?
+  rating         Boolean  @map("rating") // true = up, false = down
+  reason         String?
+  intent         String?
+  promptVersion  String?  @map("prompt_version")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@map("chat_feedback")
+}
+
 model FeatureFlag {
   id             String  @id @default(uuid()) @db.Uuid
   organizationId String? @map("organization_id") @db.Uuid // null = platform-wide

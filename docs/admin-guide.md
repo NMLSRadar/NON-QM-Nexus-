@@ -24,3 +24,31 @@ All seeds live in `src/data/` and are flagged `isSampleData: true`, which drives
 ## Organization administration
 
 Org admins manage users and roles (memberships), organization settings, AI-integration authorization, lender visibility, data retention, and can read the org's audit log. Role capabilities are enforced by RLS policies (`supabase/rls-policies.sql`).
+
+## AI Assistant admin tasks
+
+### Lender posture profiles (flexibility)
+
+`lender_flexibility_profiles` holds org-editable editorial metadata about
+lenders: posture (`exception_based` / `moderate` / `rigid`), pricing tendency,
+whether exceptions are considered and via what channel, and typical compensating
+factors required. On first load the org sees the seed defaults
+(`src/domain/lenderPosture.ts`); edit them to reflect this org's actual read on
+each lender.
+
+- Every row is labeled editorial and is **never** a guideline or a scoring
+  input — it only powers the posture badge and exception guidance.
+- **Review cadence:** keep `lastReviewedAt` current. Profiles older than 180
+  days are flagged "possibly stale" and shown in the admin dashboard for review.
+- Real lender names carry posture metadata only; their actual guidelines stay
+  empty until a verified guideline version is loaded. A guideline question about
+  a lender with no verified guidelines is answered "not in the library yet."
+
+### Unanswered-questions queue (chatbot flywheel)
+
+Every chatbot non-answer and every thumbs-down lands in
+`chat_unanswered_questions` (org-scoped, with intent + normalized question for
+dedup). Review this queue to find where the guideline or help library is missing
+data, then fix the gap (load a guideline, add a help topic, or enable a
+structured field). Resolving a row (`resolved_at` / `resolved_by`) marks the gap
+closed. This is how the assistant's precision improves as the library grows.

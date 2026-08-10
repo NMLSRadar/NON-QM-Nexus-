@@ -538,6 +538,60 @@ export interface Program {
   /** DSCR-specific distinction: whether the IO payment may be used in the ratio. */
   ioDscrPaymentAllowed?: boolean;
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Chatbot-precision structured fields (chatbot upgrade spec §5). Every field
+  // is OPTIONAL = "not yet populated for this program". An unpopulated field
+  // must make the assistant say so plainly — never inferred, never skipped
+  // silently. Populate ONLY from a cited, reviewed guideline/editorial source.
+  // ─────────────────────────────────────────────────────────────────────────
+  /** Structured mortgage-late tolerance — turns "two mortgage lates, who's
+   * flexible?" into a deterministic filter (see also maxMortgageLatesCategory
+   * / maxMortgageLates30x12, the earlier fields). */
+  mortgageLateTolerance?: {
+    maxLates30?: number;
+    maxLates60?: number;
+    maxLates90?: number;
+    lookbackMonths?: number;
+    ltvOrFicoAdjustment?: string;
+  };
+  /** Per-event credit seasoning in months (BK7/BK13 discharge-or-filing, FC,
+   * SS, DIL, modification, forbearance). undefined = not captured. */
+  creditEventSeasoning?: Partial<Record<
+    "bk7" | "bk13" | "foreclosure" | "short_sale" | "dil" | "modification" | "forbearance",
+    number
+  >>;
+  /** Exception appetite — structured, admin-populated. Optional. */
+  exceptionPolicy?: "none" | "case_by_case" | "documented_program";
+  exceptionNotes?: string;
+  /** Estimated turn times — clearly ESTIMATES, dated. "Fastest to close" is
+   * answerable from here or explicitly declined. */
+  estimatedTurnTimes?: {
+    clearance?: string;
+    ctc?: string;
+    lastUpdated?: string;
+  };
+  /** Explicit borrower-eligibility booleans (ITIN/FN/non-permanent resident
+   * + vesting). Never inferred from citizenshipEligible membership. */
+  borrowerEligibility?: {
+    itin?: boolean;
+    foreignNational?: boolean;
+    nonPermanentResident?: boolean;
+    vestingOptions?: string[];
+  };
+  /** Explicit property-eligibility booleans. */
+  propertyEligibility?: {
+    nonWarrantableCondo?: boolean;
+    condotel?: boolean;
+    rural?: boolean;
+    str?: boolean;
+    mixedUse?: boolean;
+  };
+  /** First-time borrower treatment with LTV/FICO deltas (current headroom to
+   * the existing firstTimeInvestorAllowed fields is fine — this is the
+   * explicit delta form). */
+  firstTimeInvestorTreatment?: { ltvAdjustment?: number; ficoAdjustment?: number };
+  firstTimeHomebuyerTreatment?: { ltvAdjustment?: number; ficoAdjustment?: number };
+
   guidelineVersionId: string;
   guidelineVersionLabel: string;
   effectiveDate: string;

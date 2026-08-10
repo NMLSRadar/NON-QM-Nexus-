@@ -13,7 +13,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx", "src/**/*.test.ts"],
+    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx", "src/**/*.test.ts", "evals/**/*.test.ts"],
     // Default reporter for normal human-readable output, plus a guard that
     // only activates when REQUIRE_INTEGRATION=1 (see
     // tests/integration/requireIntegrationReporter.ts): it fails the process

@@ -22,3 +22,26 @@ Submit to run the preliminary analysis immediately.
 ## What the results mean (and don't)
 
 Results are preliminary, based on configured rules and demonstration or configured guidelines. Guidelines change; lender overlays may apply; exceptions are not guaranteed; pricing is not included; final eligibility and approval always remain with the lender. Verify the current guideline before submission.
+
+## AI Assistant (chat, lower-right)
+
+The assistant answers lender/guideline questions from your current, tier-gated
+catalog. Ask it loosely — it handles typos and shorthand ("who has the lowest
+down payment for DCSR?", "2x30x12", "BK7").
+
+- **Answers are structured**: a direct answer first, an evidence table of the
+  lender/program/value that matched, any assumptions made, what would change the
+  answer, a Sources drawer (the exact guideline versions used), and suggested
+  follow-ups.
+- **Precise non-answers**: if the library doesn't capture a field, the assistant
+  says so rather than guessing. Sample/demo programs are labeled `(sample)`
+  inline. Exception/pricing answers carry directional guidance only — never a
+  guarantee and never a quoted rate.
+- **Feedback**: thumbs up/down on any answer. A thumbs-down or an unanswered
+  question feeds an admin queue so the guideline library can be improved.
+- **Next step**: answers that need the full engine include a "Run full scenario"
+  link that pre-fills the scenario builder from what you've discussed.
+- **Start fresh**: the reset button clears your chat history.
+
+Guidance is preliminary — verify the current guideline version before
+submission; final eligibility rests with the lender.

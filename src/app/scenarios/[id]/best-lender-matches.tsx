@@ -7,6 +7,9 @@ import { SampleDataBadge, StatusBadge, Stat, Pill, fmtPct, fmtUsd } from "@/comp
 import type { ProgramEvaluation } from "@/domain/types/results";
 import type { MatchStatus } from "@/domain/types/enums";
 import { whyThisLender, potentialIssues, aiNarrative } from "@/domain/matching/narrative";
+import type { GuidelinePosture } from "@/domain/lenderPosture";
+import { resolveAlias } from "@/domain/lenderPosture";
+import { LenderPostureBadge } from "@/components/lender-posture-badge";
 
 const MAX_COMPARE = 4;
 /** Never show more than this many near-match/ineligible lenders — product
@@ -82,7 +85,7 @@ function StarRating({ score }: { score: number }) {
  * spec's membership-tier protection rule: the card stays visible and still
  * counts as an eligible match, but every guideline detail (stats, why-this-
  * lender, AI analysis, restrictions) is hidden behind an upgrade prompt. */
-function LockedLenderCard({ e, rank }: { e: ProgramEvaluation; rank: number }) {
+function LockedLenderCard({ e, rank, posture }: { e: ProgramEvaluation; rank: number; posture?: GuidelinePosture | null }) {
   const isBestMatch = rank === 0 && (e.status === "strong_match" || e.status === "eligible");
   return (
     <div
@@ -96,6 +99,7 @@ function LockedLenderCard({ e, rank }: { e: ProgramEvaluation; rank: number }) {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <p className="font-bold text-ink-primary">{e.lenderName}</p>
+              <LenderPostureBadge posture={posture} />
               {isBestMatch ? (
                 <Pill tone="gold">
                   <Trophy className="h-3 w-3 mr-1 inline" /> Best Match
@@ -135,6 +139,7 @@ function LenderCard({
   onToggle,
   disabled,
   runnerUpName,
+  posture,
 }: {
   rank: number;
   e: ProgramEvaluation;
@@ -142,6 +147,7 @@ function LenderCard({
   onToggle: () => void;
   disabled: boolean;
   runnerUpName?: string;
+  posture?: GuidelinePosture | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const tone = TONE_BY_STATUS[e.status];
@@ -165,6 +171,7 @@ function LenderCard({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <p className="font-bold text-ink-primary">{e.lenderName}</p>
+              <LenderPostureBadge posture={posture} />
               <StarRating score={e.matchScore} />
               {isBestMatch ? (
                 <Pill tone="gold">
@@ -356,7 +363,7 @@ function LenderCard({
  * spec section 3-4). Always clearly labeled and always explains the exact
  * disqualifying reason(s), drawn from this program's own real failed
  * rules — never invented. */
-function IneligibleLenderCard({ e }: { e: ProgramEvaluation }) {
+function IneligibleLenderCard({ e, posture }: { e: ProgramEvaluation; posture?: GuidelinePosture | null }) {
   const reasons = e.failedRules.length > 0 ? e.failedRules.map((r) => r.userExplanation) : potentialIssues(e);
   return (
     <div className="rounded-card border border-rose-100 bg-rose-50/30 p-5">
@@ -364,6 +371,7 @@ function IneligibleLenderCard({ e }: { e: ProgramEvaluation }) {
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-bold text-ink-primary">{e.lenderName}</p>
+            <LenderPostureBadge posture={posture} />
             {e.isSampleData ? <SampleDataBadge /> : null}
           </div>
           <p className="text-sm text-ink-secondary">{e.programName}</p>
@@ -446,6 +454,7 @@ function CompareTable({ items }: { items: ProgramEvaluation[] }) {
 export function BestLenderMatches({
   evaluations,
   tierLevel,
+  postureByLender,
 }: {
   evaluations: ProgramEvaluation[];
   /** The viewer's subscription tier (0 = no active plan). When there are
@@ -458,6 +467,10 @@ export function BestLenderMatches({
    * engine to a brand-new, not-yet-subscribed account. Also controls which
    * eligible lender cards render locked (lenderTierLevel > tierLevel). */
   tierLevel?: number;
+  /** Editorial posture per canonical lender name (chatbot Part 2 §4.1). A
+   * lender with no profile key is absent from the map and renders NO badge
+   * (silence, never an inferred badge). Never affects eligibility/score. */
+  postureByLender?: Map<string, GuidelinePosture | null>;
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   // Evaluations arrive from analyzeScenario already ranked with guideline
@@ -475,6 +488,7 @@ export function BestLenderMatches({
   const effectiveTier = tierLevel ?? Number.POSITIVE_INFINITY;
   const selectableEligible = eligible.filter((e) => e.lenderTierLevel <= effectiveTier);
   const selected = selectableEligible.filter((e) => selectedIds.includes(e.programId));
+  const postureFor = (name: string): GuidelinePosture | null => postureByLender?.get(resolveAlias(name)) ?? null;
 
   function toggle(id: string) {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : prev.length < MAX_COMPARE ? [...prev, id] : prev));
@@ -515,7 +529,7 @@ export function BestLenderMatches({
       <div className="space-y-4">
         {eligible.map((e, i) => {
           const locked = e.lenderTierLevel > effectiveTier;
-          if (locked) return <LockedLenderCard key={e.programId} e={e} rank={i} />;
+          if (locked) return <LockedLenderCard key={e.programId} e={e} rank={i} posture={postureFor(e.lenderName)} />;
           return (
             <LenderCard
               key={e.programId}
@@ -525,6 +539,7 @@ export function BestLenderMatches({
               onToggle={() => toggle(e.programId)}
               disabled={selectedIds.length >= MAX_COMPARE}
               runnerUpName={i === 0 ? eligible[1]?.lenderName : undefined}
+              posture={postureFor(e.lenderName)}
             />
           );
         })}
@@ -543,7 +558,7 @@ export function BestLenderMatches({
           </div>
           <div className="space-y-3">
             {displayedIneligible.map((e) => (
-              <IneligibleLenderCard key={e.programId} e={e} />
+              <IneligibleLenderCard key={e.programId} e={e} posture={postureFor(e.lenderName)} />
             ))}
           </div>
         </div>

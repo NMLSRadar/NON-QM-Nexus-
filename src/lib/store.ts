@@ -1,9 +1,28 @@
 import type { Lender, Program, Rule } from "@/domain/types/program";
 import type { Scenario } from "@/domain/types/scenario";
 import type { ProgramCatalog } from "@/domain/analyze";
+import type { LenderFlexibilityProfile } from "@/domain/lenderPosture";
 import { sampleLenders, samplePrograms } from "@/data/sampleLenders";
 import { sampleRules } from "@/data/sampleRules";
 import { sampleScenarios } from "@/data/sampleScenarios";
+import { seedProfiles } from "@/domain/lenderPosture";
+
+/** Input for the chatbot feedback / unanswered-questions flywheel. */
+export interface ChatFeedbackInput {
+  question: string;
+  answer?: string;
+  rating: boolean; // true = up, false = down
+  reason?: string;
+  intent?: string;
+  promptVersion?: string;
+}
+
+export interface ChatUnansweredInput {
+  question: string;
+  intent?: string;
+  reason?: "non_answer" | "thumbs_down";
+  normalization?: string;
+}
 
 /**
  * Repository interface for the demo application.
@@ -45,6 +64,14 @@ export interface Repository {
    * review" instead of having zero awareness that a pending lender
    * exists at all (see Brokers First Funding integration, 2026-07-28). */
   listPendingReviewLenderPrograms(organizationId: string): Promise<Array<{ lenderName: string; programName: string; incomeDocTypes: string[] }>>;
+  /** The org's EDITORIAL lender-flexibility profiles (chatbot Part 2). Returns
+   * the org-editable defaults when the org hasn't customized any yet. These are
+   * advisory metadata, never guideline data — see docs/lender-posture.md. */
+  listLenderFlexibilityProfiles(organizationId: string): Promise<LenderFlexibilityProfile[]>;
+  /** Record explicit thumbs up/down feedback (flywheel). */
+  recordChatFeedback(organizationId: string, userId: string, input: ChatFeedbackInput): Promise<void>;
+  /** Record a non-answer / thumbs-down into the admin's unanswered queue. */
+  recordChatUnanswered(organizationId: string, userId: string, input: ChatUnansweredInput): Promise<void>;
 }
 
 const DEMO_ORG = "org_demo";
@@ -103,6 +130,19 @@ class InMemoryRepository implements Repository {
   async listPendingReviewLenderPrograms(organizationId: string): Promise<Array<{ lenderName: string; programName: string; incomeDocTypes: string[] }>> {
     this.assertOrg(organizationId);
     return []; // demo store has no verification-status concept; nothing pending by construction
+  }
+
+  async listLenderFlexibilityProfiles(organizationId: string): Promise<LenderFlexibilityProfile[]> {
+    this.assertOrg(organizationId);
+    return seedProfiles(organizationId);
+  }
+
+  async recordChatFeedback(_organizationId: string, _userId: string, _input: ChatFeedbackInput): Promise<void> {
+    // Demo store: no-op (feedback is a production persistence concern).
+  }
+
+  async recordChatUnanswered(_organizationId: string, _userId: string, _input: ChatUnansweredInput): Promise<void> {
+    // Demo store: no-op.
   }
 
   // Tenant guard even in the demo store: callers must always scope by org.
