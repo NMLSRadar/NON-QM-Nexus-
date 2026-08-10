@@ -1,13 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLenderAccessInfo, getRepository } from "@/lib/session";
-import { getAiProvider, asUntrustedData, type AiMessage } from "@/lib/ai/provider";
-import {
-  ASSISTANT_SYSTEM_PROMPT,
-  buildGuidelineContext,
-  buildLenderIntelligenceContext,
-  buildPendingReviewContext,
-  extractAssistantVitals,
-} from "@/lib/ai/assistantContext";
+import { runChatPipeline } from "@/lib/ai/chatPipeline";
+import { logChatTurn, recordUnansweredQuestion } from "@/lib/ai/chatFeedback";
+import { fuzzyMatchNames } from "@/domain/chat/normalize";
+import type { ChatAnswer } from "@/domain/chat/answer";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +15,17 @@ interface ChatMessage {
   content: string;
 }
 
+/**
+ * AI assistant endpoint — 2026-08-10 precision upgrade.
+ *
+ * Replaces the single-prompt free-text implementation with the two-stage
+ * pipeline (src/lib/ai/chatPipeline.ts): deterministic Stage A parse →
+ * intent-routed tool calls against the caller's tier-gated catalog →
+ * schema-validated structured answer. The LLM, when configured, only
+ * rephrases the one-line answer prose and its output is discarded unless it
+ * survives a grounding check — the endpoint is fully functional (and fully
+ * grounded) with no AI provider configured at all.
+ */
 export async function POST(request: Request) {
   // A Route Handler is not a page — getCurrentOrganizationId()'s
   // redirect("/login") (meant for server-rendered pages) would not
@@ -59,49 +66,72 @@ export async function POST(request: Request) {
     .slice(-MAX_HISTORY_MESSAGES)
     .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_MESSAGE_LENGTH) }));
 
-  if (messages.length === 0) {
+  const userMessages = messages.filter((m) => m.role === "user");
+  const question = userMessages[userMessages.length - 1]?.content;
+  if (!question) {
     return Response.json({ error: "No message provided" }, { status: 400 });
   }
 
   // Same tier-gating as the rest of the app (Programs page, scenario
   // matching): an account with no active subscription genuinely has zero
-  // lender data to answer from. Short-circuit with a clear, accurate
-  // reply instead of spending an LLM call only to have the model say "I
-  // don't have that data" with no explanation of why — the actual reason
-  // is account status, not a guideline-content gap, and the assistant on
-  // its own can't tell those two situations apart from an empty catalog.
+  // lender data to answer from. Short-circuit with a clear, accurate reply
+  // instead of running the pipeline against an empty catalog — the actual
+  // reason is account status, not a guideline-content gap.
   const access = await getLenderAccessInfo();
   if (access.tierLevel === 0) {
-    return Response.json({
-      reply:
-        "This account doesn't have an active subscription, so there's no lender guideline data available to me yet — that's an account issue, not missing data on our end. Subscribing to any plan unlocks the real, human-verified lender catalog immediately, and I'll be able to answer from it right away.",
-    });
+    const reply =
+      "This account doesn't have an active subscription, so there's no lender guideline data available to me yet — that's an account issue, not missing data on our end. Subscribing to any plan unlocks the lender catalog immediately, and I'll be able to answer from it right away.";
+    return Response.json({ reply, answer: null });
   }
 
   const catalog = await repo.getCatalog(org); // same tier-gated catalog the rest of the app uses
-  const context = buildGuidelineContext(catalog);
-  const pendingReview = await repo.listPendingReviewLenderPrograms(org);
-  const pendingContext = buildPendingReviewContext(pendingReview);
-  // AE-intelligence layer: qualitative routing (exceptions, deposit
-  // utilization, DSCR first-time classification, specialty tags) computed
-  // deterministically from the live catalog + conversation vitals.
-  const vitals = extractAssistantVitals(messages);
-  const intelligenceContext = buildLenderIntelligenceContext(catalog, vitals);
-
-  const aiMessages: AiMessage[] = [
-    {
-      role: "system",
-      content: `${ASSISTANT_SYSTEM_PROMPT}\n\n${asUntrustedData("lender_guideline_catalog", context)}\n\n${asUntrustedData("pending_review_lender_programs", pendingContext)}\n\n${asUntrustedData("lender_intelligence", intelligenceContext)}`,
-    },
-    ...messages,
-  ];
 
   try {
-    const provider = getAiProvider();
-    const reply = await provider.complete({ messages: aiMessages, maxTokens: 1200, temperature: 0.2 });
-    return Response.json({ reply });
+    const { answer, parsed, log } = await runChatPipeline(question, catalog, {
+      priorUserMessages: userMessages.slice(0, -1).map((m) => m.content),
+    });
+
+    // Pending-review awareness: a lender that exists on the platform but
+    // hasn't passed guideline review is acknowledged as known-but-unverified,
+    // never given numbers.
+    const pendingReview = await repo.listPendingReviewLenderPrograms(org);
+    const finalAnswer: ChatAnswer = appendPendingReviewCaveat(answer, question, pendingReview);
+
+    logChatTurn(log);
+    if (!finalAnswer.answered) {
+      await recordUnansweredQuestion(supabase, {
+        organizationId: org,
+        userId: user.id,
+        question,
+        intent: parsed.intent,
+        reason: "non_answer",
+        detail: finalAnswer.answer,
+      });
+    }
+
+    // `reply` keeps a plain-text rendering for any legacy consumer; the
+    // widget renders the structured `answer` object.
+    return Response.json({ reply: finalAnswer.answer, answer: finalAnswer });
   } catch (err) {
     console.error("AI assistant error:", err);
     return Response.json({ error: "The assistant is temporarily unavailable — please try again in a moment." }, { status: 502 });
   }
+}
+
+function appendPendingReviewCaveat(
+  answer: ChatAnswer,
+  question: string,
+  pending: Array<{ lenderName: string; programName: string; incomeDocTypes: string[] }>
+): ChatAnswer {
+  if (pending.length === 0) return answer;
+  const { matches } = fuzzyMatchNames(question, [...new Set(pending.map((p) => p.lenderName))]);
+  if (matches.length === 0) return answer;
+  const caveats = [...answer.caveats];
+  for (const m of matches) {
+    const programs = pending.filter((p) => p.lenderName === m.name);
+    caveats.push(
+      `${m.name} is on the platform (${programs.map((p) => p.programName).join(", ")}) but its guidelines are still pending review — no numeric guideline is verified for it yet.`
+    );
+  }
+  return { ...answer, caveats };
 }

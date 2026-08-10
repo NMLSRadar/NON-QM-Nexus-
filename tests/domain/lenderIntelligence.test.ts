@@ -271,7 +271,9 @@ describe("Assistant system prompt — AE upgrade contract", () => {
     expect(lower).toContain("own line");
     expect(lower).toContain("blank line");
     expect(lower).toContain("run-on");
-    expect(lower).toContain("never name more than 3");
+    // Rule 48's cap phrasing: strongest 3 for broad questions, up to 5 for a
+    // concrete scenario with at least 5 genuinely supported programs.
+    expect(lower).toContain("strongest 3 options for a broad question");
     for (const level of ["high confidence", "medium confidence", "ae review recommended", "exception request"]) {
       expect(lower, level).toContain(level);
     }

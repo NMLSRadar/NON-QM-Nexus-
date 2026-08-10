@@ -26,6 +26,16 @@ Sensitive documents are not sent to any AI provider unless **all** of: the integ
 
 Every AI call records (see `ai_requests` in the schema): prompt version, provider + model, deterministic facts supplied, response, timestamp, user, scenario, and whether the user accepted or edited the output.
 
+## The assistant chatbot (2026-08-10 precision upgrade)
+
+The site chatbot no longer sends a free-text prompt and trusts the reply. It runs a two-stage pipeline (see `docs/chatbot.md`):
+
+- **Stage A** (intent/entity parsing) and **Stage B** (answer composition from tool calls) are fully deterministic — no model computes an eligibility number or recalls a lender fact. Superlatives are ranked in the domain layer with tie sets.
+- The LLM's only job is **rephrasing the one-line answer prose for tone**. Its output is discarded unless it passes `verifyNarrationGrounding` (no lender names or numbers absent from the tool results; no approval/pricing language) — a hallucination cannot reach the user.
+- Tenant scoping is structural: the pipeline receives only the caller's tier-gated catalog from `repo.getCatalog(org)`.
+- Guardrails decline misrepresentation framing (with the legitimate alternative), protected-class reasoning, legal/tax advice, and rate/pricing claims.
+- The eval suite (`evals/chatbot/`) enforces grounding, zero hallucinated entities, correct refusals, prompt-injection resistance, and tenant isolation in CI; prompt files are versioned (`prompts/chatbot/`, `PROMPT_VERSION` logged per turn).
+
 ## Provider abstraction
 
 `getAiProvider()` selects Anthropic or OpenAI from `AI_PROVIDER`; keys come from server-side env only. Provider-specific code stays behind the `AiProvider` interface; prompts live in version-controlled source files.

@@ -136,6 +136,56 @@ export interface FiveToEightUnitLtvMatrixEntry {
   maxLtvCashOut: number;
 }
 
+/** Credit-event types tracked for seasoning (chatbot precision fields,
+ * 2026-08-10). Discharge vs filing are separate BK13 facts on purpose. */
+export type CreditEventType =
+  | "bk7_discharge"
+  | "bk13_discharge"
+  | "bk13_filing"
+  | "foreclosure"
+  | "short_sale"
+  | "deed_in_lieu"
+  | "modification"
+  | "forbearance";
+
+export interface CreditEventSeasoningEntry {
+  months: number;
+  /** LTV reduction (percentage points) applied inside the seasoning window
+   * where the guideline allows the event with a penalty instead of a wait. */
+  ltvReduction?: number;
+  minFico?: number;
+  notes?: string;
+}
+
+/** Structured housing-late tolerance ("1x30x12 allowed with LLPA"). */
+export interface MortgageLateTolerance {
+  maxLates30?: number;
+  maxLates60?: number;
+  maxLates90?: number;
+  lookbackMonths: number;
+  /** LTV reduction (percentage points) when lates are present but tolerated. */
+  ltvReduction?: number;
+  /** FICO floor increase when lates are present but tolerated. */
+  ficoFloorIncrease?: number;
+  notes?: string;
+}
+
+export interface ExceptionPolicy {
+  type: "none" | "case_by_case" | "documented_program";
+  notes?: string;
+  /** AE contact reference for exception routing (name/email), admin-entered. */
+  aeContact?: string;
+}
+
+export interface EstimatedTurnTimes {
+  underwritingDaysMin?: number;
+  underwritingDaysMax?: number;
+  clearToCloseDaysMin?: number;
+  clearToCloseDaysMax?: number;
+  /** ISO date the estimate was last refreshed — always displayed with it. */
+  lastUpdated: string;
+}
+
 export interface Program {
   id: string;
   lenderId: string;
@@ -524,6 +574,26 @@ export interface Program {
   businessBankStatementRules?: string;
   /** Any additional per-business-type factor rules or exceptions, as cited. */
   expenseFactorNotes?: string;
+
+  // ── Chatbot precision fields (2026-08-10 AI assistant upgrade, spec §5).
+  //    Same convention as every optional overlay above: undefined = "not yet
+  //    captured for this program" — the chatbot must say the field is
+  //    unpopulated, never skip the program silently and never infer a value.
+  //    Populate ONLY from a real, cited guideline / admin entry. ─────────────
+  /** Structured mortgage-late tolerance — turns "two mortgage lates, who's
+   * flexible?" into a deterministic filter. Richer sibling of the existing
+   * maxMortgageLates30x12 / maxMortgageLatesCategory fields (all may
+   * coexist; the most specific populated field wins for a given question). */
+  mortgageLateTolerance?: MortgageLateTolerance;
+  /** Per-credit-event seasoning requirements in months (BK7, BK13 discharge
+   * vs filing, foreclosure, short sale, DIL, modification, forbearance). */
+  creditEventSeasoning?: Partial<Record<CreditEventType, CreditEventSeasoningEntry>>;
+  /** Exception appetite as a structured, admin-populated fact — never a
+   * reputation recalled from model memory. */
+  exceptionPolicy?: ExceptionPolicy;
+  /** Turn-time estimates. Always presented as estimates with their
+   * last-updated date; "who's fastest" is only answerable from these. */
+  estimatedTurnTimes?: EstimatedTurnTimes;
 
   // Structured discoverability and specialty-program facts. These remain
   // guideline data only when populated from a cited, reviewed source.

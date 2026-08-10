@@ -15,6 +15,14 @@ Submit to run the preliminary analysis immediately.
 5. **How to make this work** — honest restructuring options (lower LTV, debt payoff, documentation-method changes, seasoning waits …) with the programs each change would unlock and the verification it requires. The platform will never suggest misrepresenting occupancy, income, assets, employment, ownership, citizenship, property use, or loan purpose.
 6. **Document needs list** — generated from the scenario's structure; required vs. if-applicable items with reasons.
 
+## The guideline assistant (chat)
+
+The chat widget (lower-right) answers ad-hoc guideline questions from **your library's data only** — "who has the lowest down payment for DSCR?", "who does ITIN?", "what does 2x30x12 mean?". Answers lead with the finding, then an evidence table (lender · program · value · gating conditions · guideline version/effective date, with sample data badged), assumptions actually made, what would change the answer, and a sources drawer. Ranked questions ("lowest/highest") are computed server-side and ties are reported as ties.
+
+When the library can't answer — the field isn't captured, or no program qualifies — the assistant says so plainly instead of guessing, and the question lands in an admin queue so the gap gets filled. Use the thumbs to flag a bad answer; use the "Run full scenario" link when a question needs the real engine — it opens the scenario builder prefilled with what you described. Chat history persists in your browser; "start fresh" clears it.
+
+The assistant never quotes rates or pricing, never promises approval, and never helps restate a file as something it isn't.
+
 ## Exporting
 
 `GET /api/scenarios/{id}/analysis` returns the full analysis as JSON. Print-friendly output comes from the results page; PDF reports are on the roadmap.
