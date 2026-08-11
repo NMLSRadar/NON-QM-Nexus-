@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run tests/integration",
+    "invite:e2e": "node scripts/e2e-invite.mjs",
     "seed:check": "tsx scripts/seed-check.ts",
     "check:email-dns": "node scripts/check-email-dns.mjs",
     "prisma:generate": "prisma generate",
