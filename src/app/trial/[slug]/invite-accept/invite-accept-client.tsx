@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { sendTrialActivationEmailIfNeeded } from "../activate/actions";
 import { consumeTrialInvite } from "./actions";
 
-type Status = "establishing" | "setup" | "login" | "checkemail" | "activating" | "success" | "error";
+type Status = "establishing" | "setup" | "login" | "profile" | "checkemail" | "activating" | "success" | "error";
 
 /**
  * Invite-accept flow (streamlined beta, 2026-08-10). The page is reached
@@ -49,14 +49,17 @@ export function InviteAcceptClient({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [checkEmailMessage, setCheckEmailMessage] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
   const normalizedInviteEmail = inviteEmail.toLowerCase().trim();
 
   /** Activate the (now signed-in) user's trial via activate_trial, stamped
    * as a beta tester. Called after a new invitee confirms+returns, or right
-   * after an existing account signs in. */
-  async function activate(profile: Record<string, string>) {
+   * after an existing account signs in. Merges the caller's profile with any
+   * collected earlier (the setup form, or the profile step). */
+  async function activate(profileArg?: Record<string, string>) {
+    const effective = { ...profile, ...(profileArg || {}) };
     setStatus("activating");
     const supabase = createClient();
     const {
@@ -76,11 +79,11 @@ export function InviteAcceptClient({
     const { data, error: actErr } = await supabase.rpc("activate_trial", {
       p_campaign_slug: campaignSlug,
       p_normalized_email: user.email.toLowerCase().trim(),
-      p_first_name: profile.firstName || null,
-      p_last_name: profile.lastName || null,
-      p_company_name: profile.companyName || null,
-      p_nmls_number: profile.nmlsNumber || null,
-      p_state: profile.state || null,
+      p_first_name: effective.firstName || null,
+      p_last_name: effective.lastName || null,
+      p_company_name: effective.companyName || null,
+      p_nmls_number: effective.nmlsNumber || null,
+      p_state: effective.state || null,
       // Reached only via an admin beta-invite link — the invitee IS a beta
       // tester, so flag them (the ordinary /trial/[slug] signup does not pass
       // this and stays non-beta).
@@ -111,6 +114,80 @@ export function InviteAcceptClient({
     }, 2500);
   }
 
+  /** Activate, but first make sure any campaign-required profile fields are
+   * present (the activate_trial RPC rejects with "An NMLS number is required
+   * for this trial campaign" / "A company name is required…" otherwise).
+   * Existing accounts may already have them on their public.users profile —
+   * prefill from there; if anything required is still missing, show the
+   * profile step instead of activating. */
+  async function activateWithRequiredCheck(profileArg?: Record<string, string>) {
+    const merged = { ...profile, ...(profileArg || {}) };
+    const needsCompany = requireCompany && !merged.companyName;
+    const needsNmls = requireNmls && !merged.nmlsNumber;
+    if (!needsCompany && !needsNmls) {
+      await activate(merged);
+      return;
+    }
+    // Best-effort prefill from the signed-in user's own profile row.
+    let stored: Record<string, string> = {};
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: row } = await supabase
+          .from("users")
+          .select("first_name,last_name,company_name,nmls_number,state")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (row) {
+          stored = {
+            firstName: row.first_name || "",
+            lastName: row.last_name || "",
+            companyName: row.company_name || "",
+            nmlsNumber: row.nmls_number || "",
+            state: row.state || "",
+          };
+        }
+      }
+    } catch {
+      // best-effort — the profile step will just ask for the fields
+    }
+    const withStored = { ...stored, ...merged };
+    setProfile(withStored);
+    if ((requireCompany && !withStored.companyName) || (requireNmls && !withStored.nmlsNumber)) {
+      setStatus("profile");
+      return;
+    }
+    await activate(withStored);
+  }
+
+  function handleProfileSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    const form = new FormData(e.currentTarget);
+    const p = {
+      firstName: String(form.get("firstName") ?? "").trim(),
+      lastName: String(form.get("lastName") ?? "").trim(),
+      companyName: String(form.get("companyName") ?? "").trim(),
+      nmlsNumber: String(form.get("nmlsNumber") ?? "").trim(),
+      state: String(form.get("state") ?? "").trim().toUpperCase(),
+    };
+    if (requireCompany && !p.companyName) {
+      setError("A company name is required for this trial.");
+      setSubmitting(false);
+      return;
+    }
+    if (requireNmls && !p.nmlsNumber) {
+      setError("An NMLS number is required for this trial.");
+      setSubmitting(false);
+      return;
+    }
+    setProfile(p);
+    setSubmitting(false);
+    void activate(p);
+  }
+
   useEffect(() => {
     const supabase = createClient();
 
@@ -130,7 +207,7 @@ export function InviteAcceptClient({
 
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session) {
-        await activate({});
+        await activateWithRequiredCheck();
       } else {
         // No session: show the create-account (new) or sign-in (existing) UI.
         setStatus(flowMode === "existing" ? "login" : "setup");
@@ -179,6 +256,9 @@ export function InviteAcceptClient({
       setSubmitting(false);
       return;
     }
+    // Keep the collected profile so activation (after email confirmation)
+    // passes the campaign-required fields to activate_trial.
+    setProfile(profile);
 
     const { data: signUpData, error: signUpErr } = await createClient().auth.signUp({
       email: inviteEmail,
@@ -230,7 +310,7 @@ export function InviteAcceptClient({
       setError(signInErr.message);
       return;
     }
-    await activate({});
+    await activateWithRequiredCheck();
   }
 
   async function handleMagicLink() {
@@ -465,6 +545,67 @@ export function InviteAcceptClient({
 
             <button type="button" onClick={() => { setError(null); setStatus("setup"); }} className="block mx-auto text-xs text-slate-500 hover:text-slate-300 underline">
               New here? Create your account
+            </button>
+          </form>
+        )}
+
+        {status === "profile" && (
+          <form onSubmit={handleProfileSubmit} className="space-y-4">
+            <div className="text-center space-y-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300">
+                Almost there
+              </span>
+              <h1 className="text-xl font-bold text-white">A few details before your trial starts</h1>
+              <p className="text-sm text-slate-400">
+                This {campaignName} campaign needs a bit more info. No credit card.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="profile-firstName" className="block text-xs font-medium text-slate-300 mb-1">
+                  First name
+                </label>
+                <input id="profile-firstName" name="firstName" defaultValue={profile.firstName} className="w-full rounded-md border border-amber-500/25 bg-black/40 px-3 py-2 text-sm text-white" />
+              </div>
+              <div>
+                <label htmlFor="profile-lastName" className="block text-xs font-medium text-slate-300 mb-1">
+                  Last name
+                </label>
+                <input id="profile-lastName" name="lastName" defaultValue={profile.lastName} className="w-full rounded-md border border-amber-500/25 bg-black/40 px-3 py-2 text-sm text-white" />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="profile-companyName" className="block text-xs font-medium text-slate-300 mb-1">
+                Company name{requireCompany ? "" : " (optional)"}
+              </label>
+              <input id="profile-companyName" name="companyName" required={requireCompany} defaultValue={profile.companyName} className="w-full rounded-md border border-amber-500/25 bg-black/40 px-3 py-2 text-sm text-white" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="profile-nmlsNumber" className="block text-xs font-medium text-slate-300 mb-1">
+                  NMLS number{requireNmls ? "" : " (optional)"}
+                </label>
+                <input id="profile-nmlsNumber" name="nmlsNumber" required={requireNmls} defaultValue={profile.nmlsNumber} className="w-full rounded-md border border-amber-500/25 bg-black/40 px-3 py-2 text-sm text-white" />
+              </div>
+              <div>
+                <label htmlFor="profile-state" className="block text-xs font-medium text-slate-300 mb-1">
+                  Primary state (optional)
+                </label>
+                <input id="profile-state" name="state" maxLength={2} placeholder="FL" defaultValue={profile.state} className="w-full rounded-md border border-amber-500/25 bg-black/40 px-3 py-2 text-sm text-white" />
+              </div>
+            </div>
+
+            {error ? <p className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded p-2">{error}</p> : null}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="gold-button gold-cta-glow w-full rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
+            >
+              {submitting ? "Starting your trial…" : `Start my ${trialDurationDays}-day trial`}
             </button>
           </form>
         )}

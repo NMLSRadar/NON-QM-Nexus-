@@ -138,7 +138,7 @@ const sha = (s) => createHash("sha256").update(s).digest("hex");
 async function issueInvite(email, slug, existing) {
   const { data: camp, error: ce } = await svc
     .from("trial_campaigns")
-    .select("id,name,slug,trial_duration_days")
+    .select("id,name,slug,trial_duration_days,require_nmls_number,require_company_name")
     .eq("slug", slug)
     .eq("is_active", true)
     .single();
@@ -247,7 +247,8 @@ async function scenarioNewInvitee(label, slug) {
   console.log("confirm → session tokens:", sess.access_token ? "ok" : "NO (" + (sess.status || sess.finalUrl) + ")");
   if (!sess.access_token) { results.push({ label, ok: false, why: "no session after confirm" }); return; }
   console.log("   confirmation redirect landed back on invite-accept:", (sess.finalUrl || "").includes("invite-accept"));
-  const act = await activate({ access_token: sess.access_token, refresh_token: sess.refresh_token }, slug, null);
+  const nmls = s.camp.require_nmls_number ? "E2E12345" : null;
+  const act = await activate({ access_token: sess.access_token, refresh_token: sess.refresh_token }, slug, nmls);
   console.log("activate_trial:", act.error ? "ERR " + act.error.message : "ok, expires=" + (Array.isArray(act.data) ? act.data[0]?.expires_at : JSON.stringify(act.data)));
   await consumeInvite(s.token);
   const fin = await verifyFinal(email, s.token);
@@ -264,7 +265,7 @@ async function scenarioExistingInvitee(label, via) {
   const pw = "E2epass-" + randomBytes(4).toString("hex");
   const cu = await svc.auth.admin.createUser({ email, password: pw, email_confirm: true });
   if (cu.error) { results.push({ label, ok: false, why: "createUser " + cu.error.message }); return; }
-  const { link, token } = await issueInvite(email, CAMPAIGN_SLUG, true);
+  const { link, token, camp } = await issueInvite(email, CAMPAIGN_SLUG, true);
   const page = await (await fetch(link)).text();
   console.log("invite-accept (existing) renders:", /gold-theme|invited|Sign in/i.test(page) ? "ok" : "unexpected");
   let session = null;
@@ -284,7 +285,7 @@ async function scenarioExistingInvitee(label, via) {
     if (!session.access_token) { results.push({ label, ok: false, why: "no session from magic link" }); return; }
     session = { access_token: session.access_token, refresh_token: session.refresh_token };
   }
-  const act = await activate(session, CAMPAIGN_SLUG, null);
+  const act = await activate(session, CAMPAIGN_SLUG, camp.require_nmls_number ? "E2E12345" : null);
   console.log("activate_trial:", act.error ? "ERR " + act.error.message : "ok");
   await consumeInvite(token);
   const fin = await verifyFinal(email, token);
