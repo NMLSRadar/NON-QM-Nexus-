@@ -5,7 +5,7 @@ import { requirePlatformAdmin } from "@/lib/admin";
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { sendTransactionalEmail } from "@/lib/email";
 import { trialInviteEmail } from "@/lib/emailTemplates";
-import { generateTrialInviteToken, hashTrialInviteToken, trialInviteExpiresAt } from "@/lib/trialInvites";
+import { generateTrialInviteToken, hashTrialInviteToken, trialInviteExpiresAt, normalizeAllowedDomains } from "@/lib/trialInvites";
 
 /** Creates a new named trial campaign (spec Phase 5). */
 export async function createTrialCampaign(formData: FormData): Promise<{ error?: string }> {
@@ -25,9 +25,14 @@ export async function createTrialCampaign(formData: FormData): Promise<{ error?:
   const startsAtRaw = String(formData.get("startsAt") ?? "").trim();
   const endsAtRaw = String(formData.get("endsAt") ?? "").trim();
   const allowedDomainsRaw = String(formData.get("allowedEmailDomains") ?? "").trim();
-  const allowedEmailDomains = allowedDomainsRaw
-    ? allowedDomainsRaw.split(",").map((d) => d.trim()).filter(Boolean)
-    : null;
+  const allowedEmailDomainsNorm = normalizeAllowedDomains(
+    allowedDomainsRaw
+      ? allowedDomainsRaw.split(",")
+      : null
+  );
+  // null = any domain allowed (empty list would be equivalent in the RPC, but
+  // keep the column semantics tidy).
+  const allowedEmailDomains = allowedEmailDomainsNorm.length ? allowedEmailDomainsNorm : null;
   const requireOnePerEmail = formData.get("requireOnePerEmail") === "on";
   const requireNmls = formData.get("requireNmls") === "on";
   const requireCompany = formData.get("requireCompany") === "on";
@@ -87,12 +92,23 @@ export async function inviteBetaTester(
 
   const { data: campaign, error: campaignError } = await service
     .from("trial_campaigns")
-    .select("id, name, slug, trial_duration_days")
+    .select("id, name, slug, trial_duration_days, allowed_email_domains")
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
   if (campaignError) return { error: campaignError.message };
   if (!campaign) return { error: "That trial campaign doesn’t exist or isn’t active." };
+
+  // Domain gate up front (the activate_trial RPC enforces this too, but an
+  // invite should never be sent to someone who can't activate). Normalizes
+  // legacy bad values (raw emails stored as domains — see normalizeAllowedDomains).
+  const allowedDomains = normalizeAllowedDomains(campaign.allowed_email_domains as string[] | null);
+  const inviteeDomain = (email.split("@")[1] ?? "").toLowerCase();
+  if (allowedDomains.length > 0 && !allowedDomains.includes(inviteeDomain)) {
+    return {
+      error: `${email} isn’t on an allowed domain for the ${campaign.name} campaign (allowed: ${allowedDomains.join(", ")}). No invite was sent.`,
+    };
+  }
 
   // Skip if this email has already used a trial anywhere on the platform.
   const { data: existingRedemption } = await service

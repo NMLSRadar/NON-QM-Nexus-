@@ -29,3 +29,16 @@ export function hashTrialInviteToken(rawToken: string): string {
 export function trialInviteExpiresAt(from: Date = new Date()): Date {
   return new Date(from.getTime() + TRIAL_INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 }
+
+/** Normalize a campaign's allowed_email_domains so they are always bare,
+ * lowercase domains — never raw email addresses. Legacy/bad data stored an
+ * email ("rozz@teamsanz.com") where a domain belonged, which made the
+ * activate_trial RPC's domain check fail for EVERY invitee on the campaign
+ * ("This trial campaign is restricted to specific email domains"). An entry
+ * containing "@" is interpreted as its domain part (after "@"). */
+export function normalizeAllowedDomains(values: readonly string[] | null | undefined): string[] {
+  return (values ?? [])
+    .map((v) => String(v).trim().toLowerCase().replace(/^www\./, ""))
+    .map((v) => (v.includes("@") ? v.split("@")[1] ?? "" : v))
+    .filter((v) => v.length > 0 && v.includes(".") && !v.includes(" "));
+}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
-import { hashTrialInviteToken } from "@/lib/trialInvites";
+import { hashTrialInviteToken, normalizeAllowedDomains } from "@/lib/trialInvites";
 import { InviteAcceptClient } from "./invite-accept-client";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +13,7 @@ interface TrialCampaignRow {
   trial_duration_days: number;
   require_nmls_number: boolean;
   require_company_name: boolean;
+  allowed_email_domains: string[] | null;
 }
 
 interface TrialInviteRow {
@@ -63,7 +64,7 @@ export default async function InviteAcceptPage({
   const { data: invite, error } = await service
     .from("trial_invites")
     .select(
-      "id, email, expires_at, accepted_at, revoked_at, campaign:trial_campaigns(id, name, slug, is_active, trial_duration_days, require_nmls_number, require_company_name)"
+      "id, email, expires_at, accepted_at, revoked_at, campaign:trial_campaigns(id, name, slug, is_active, trial_duration_days, require_nmls_number, require_company_name, allowed_email_domains)"
     )
     .eq("token_hash", tokenHash)
     .maybeSingle<TrialInviteRow>();
@@ -88,6 +89,15 @@ export default async function InviteAcceptPage({
   }
   if (!invite.campaign.is_active) {
     return <InviteLinkError reason="This invitation campaign is no longer active." />;
+  }
+  const allowedDomains = normalizeAllowedDomains(invite.campaign.allowed_email_domains);
+  const inviteeDomain = (invite.email.trim().toLowerCase().split("@")[1] ?? "").toLowerCase();
+  if (allowedDomains.length > 0 && !allowedDomains.includes(inviteeDomain)) {
+    return (
+      <InviteLinkError
+        reason={`This trial campaign is restricted to specific email domains, and ${inviteeDomain} isn't on the allowed list (${allowedDomains.join(", ")}). Contact the person who invited you.`}
+      />
+    );
   }
 
   // Does an account exist for this email? Decides whether the client shows
