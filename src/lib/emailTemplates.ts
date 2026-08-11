@@ -415,12 +415,12 @@ export function bulkMembershipInvoiceSentEmail(params: {
 
 /** Beta-invitation email (2026-08-10) — sent when a platform admin
  * hand-picks a loan officer for a trial campaign from the admin Trials
- * panel. The recipient does NOT need an account yet: `type:"invite"`
- * recipients click through, choose a password, and their trial starts
- * automatically; `type:"magiclink"` recipients (already have an account)
- * are signed in and their trial starts immediately. Chat-banned tools —
- * rendered inline (no external asset), matching the on-brand black/gold
- * transactional style. */
+ * panel. The recipient does NOT need an account yet: the emailed link is a
+ * plain app URL carrying an app-generated token (…?token=<raw>), validated
+ * server-side on /trial/[slug]/invite-accept, where they either create
+ * their account (choose a password) or sign in, and the trial starts
+ * automatically either way. Chat-banned tools — rendered inline (no
+ * external asset), matching the on-brand black/gold transactional style. */
 export function trialInviteEmail(params: {
   campaignName: string;
   campaignSlug: string;

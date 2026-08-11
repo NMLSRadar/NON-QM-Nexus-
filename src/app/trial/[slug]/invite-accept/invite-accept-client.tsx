@@ -4,15 +4,35 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { sendTrialActivationEmailIfNeeded } from "../activate/actions";
+import { consumeTrialInvite } from "./actions";
 
-type Status = "establishing" | "setup" | "activating" | "success" | "error";
+type Status = "establishing" | "setup" | "login" | "checkemail" | "activating" | "success" | "error";
 
+/**
+ * Invite-accept flow (streamlined beta, 2026-08-10). The page is reached
+ * only with a valid, server-validated app-invite token (see page.tsx); this
+ * client gets a pre-validated immutable inviteEmail + starting mode.
+ *
+ * - New invitee: create account (choose password) → a Supabase confirmation
+ *   email goes out (this project requires email confirmation) → they return
+ *   here → session exists → trial activates.
+ * - Existing account: sign in (password) or a magic sign-in link → session
+ *   exists → trial activates.
+ * - Either path may also arrive already signed-in (e.g. they were logged in,
+ *   or are returning from a confirmation/sign-in redirect that carried the
+ *   session tokens in the URL hash) → the trial activates immediately.
+ *
+ * The activation is always gated on the signed-in email matching the invite
+ * email — an invite can't be redeemed by a different logged-in account.
+ */
 export function InviteAcceptClient({
   campaignSlug,
   campaignName,
   trialDurationDays,
   requireNmls,
   requireCompany,
+  inviteToken,
+  inviteEmail,
   mode,
 }: {
   campaignSlug: string;
@@ -20,17 +40,22 @@ export function InviteAcceptClient({
   trialDurationDays: number;
   requireNmls: boolean;
   requireCompany: boolean;
+  inviteToken: string;
+  inviteEmail: string;
   mode: "new" | "existing";
 }) {
   const [status, setStatus] = useState<Status>("establishing");
+  const [flowMode, setFlowMode] = useState<"new" | "existing">(mode);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
+  const [checkEmailMessage, setCheckEmailMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Activate the trial for the current (now signed-in) user. Called after
-  // a new invitee chooses a password, or immediately after an existing
-  // account signs in via its magic link.
+  const normalizedInviteEmail = inviteEmail.toLowerCase().trim();
+
+  /** Activate the (now signed-in) user's trial via activate_trial, stamped
+   * as a beta tester. Called after a new invitee confirms+returns, or right
+   * after an existing account signs in. */
   async function activate(profile: Record<string, string>) {
     setStatus("activating");
     const supabase = createClient();
@@ -42,6 +67,11 @@ export function InviteAcceptClient({
       setMessage("We couldn’t confirm your account from this link. Try signing in directly.");
       return;
     }
+    if (user.email.toLowerCase().trim() !== normalizedInviteEmail) {
+      setStatus("error");
+      setMessage(`This invite is for ${inviteEmail}. Sign out and open the invite link again from that account.`);
+      return;
+    }
 
     const { data, error: actErr } = await supabase.rpc("activate_trial", {
       p_campaign_slug: campaignSlug,
@@ -51,9 +81,9 @@ export function InviteAcceptClient({
       p_company_name: profile.companyName || null,
       p_nmls_number: profile.nmlsNumber || null,
       p_state: profile.state || null,
-      // This page is reached only via an admin beta-invite link — the invitee
-      // IS a beta tester, so flag them (the ordinary /trial/[slug] signup does
-      // not pass this and stays non-beta).
+      // Reached only via an admin beta-invite link — the invitee IS a beta
+      // tester, so flag them (the ordinary /trial/[slug] signup does not pass
+      // this and stays non-beta).
       p_is_beta: true,
     });
 
@@ -69,6 +99,10 @@ export function InviteAcceptClient({
         ? `Full access until ${new Date(data[0].expires_at).toLocaleDateString()}.`
         : "Full access has started."
     );
+    // Consume the invite token so a used invite link can't be redeemed again.
+    consumeTrialInvite(inviteToken, campaignSlug).catch(() => {
+      // best-effort — never block activation on the token cleanup
+    });
     sendTrialActivationEmailIfNeeded().catch(() => {
       // best-effort — never block the redirect on email delivery
     });
@@ -81,9 +115,10 @@ export function InviteAcceptClient({
     const supabase = createClient();
 
     async function establishSession() {
-      // Same hash-token pattern as the trial activation page: parse the
-      // magic-link / invite-link tokens ourselves instead of relying on
-      // SDK auto-detection, which can race the cookie-backed SSR client.
+      // Same hash-token pattern as the trial activation / reset-password
+      // pages: parse the confirmation / sign-in tokens ourselves instead of
+      // relying only on SDK auto-detection, which can race the cookie-backed
+      // @supabase/ssr client.
       const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
       const params = new URLSearchParams(hash);
       const access_token = params.get("access_token");
@@ -94,20 +129,11 @@ export function InviteAcceptClient({
       }
 
       const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        setStatus("error");
-        setMessage("We couldn’t verify your invitation link. It may have expired — ask for a new invite.");
-        return;
-      }
-
-      setEmail(sessionData.session.user.email ?? "");
-
-      if (mode === "existing") {
-        // Existing account, signed in via magic link — activate immediately.
+      if (sessionData.session) {
         await activate({});
       } else {
-        // New invitee: they must choose a password before the trial lands.
-        setStatus("setup");
+        // No session: show the create-account (new) or sign-in (existing) UI.
+        setStatus(flowMode === "existing" ? "login" : "setup");
       }
     }
 
@@ -116,9 +142,16 @@ export function InviteAcceptClient({
       setMessage("Something went wrong verifying your link. Please try again.");
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, campaignSlug]);
+  }, []);
 
-  function handleSetupSubmit(e: React.FormEvent<HTMLFormElement>) {
+  /** Build the return URL (keeps the validated invite token so the post
+   * confirmation/sign-in return re-lands on this validated page with a
+   * session) for both signUp and magic-link flows. */
+  function returnUrl(): string {
+    return `${window.location.origin}/trial/${campaignSlug}/invite-accept?token=${encodeURIComponent(inviteToken)}`;
+  }
+
+  async function handleSetupSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
@@ -126,6 +159,7 @@ export function InviteAcceptClient({
     const password = String(form.get("password") ?? "");
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
+      setSubmitting(false);
       return;
     }
     const profile = {
@@ -137,25 +171,105 @@ export function InviteAcceptClient({
     };
     if (requireCompany && !profile.companyName) {
       setError("A company name is required for this trial.");
+      setSubmitting(false);
       return;
     }
     if (requireNmls && !profile.nmlsNumber) {
       setError("An NMLS number is required for this trial.");
+      setSubmitting(false);
       return;
     }
 
-    createClient()
-      .auth.updateUser({ password, data: { first_name: profile.firstName || null, last_name: profile.lastName || null, company_name: profile.companyName || null, nmls_number: profile.nmlsNumber || null, state: profile.state || null } })
-      .then(async ({ error: updateErr }) => {
-        if (updateErr) {
-          setError(updateErr.message);
-          return;
-        }
-        await activate(profile);
-      })
-      .catch(() => {
-        setError("We couldn’t set your password. Please try again.");
+    const { error: signUpErr } = await createClient().auth.signUp({
+      email: inviteEmail,
+      password,
+      options: { emailRedirectTo: returnUrl() },
+    });
+    setSubmitting(false);
+
+    if (signUpErr) {
+      setError(signUpErr.message);
+      // The address may already be registered in auth (e.g. an earlier
+      // broken invite created it) even though we derived "new" — surface a
+      // path over to the sign-in form rather than a dead end.
+      if (/already registered|already been registered/i.test(signUpErr.message)) {
+        setFlowMode("existing");
+      }
+      return;
+    }
+
+    setCheckEmailMessage(
+      `We sent a confirmation link to ${inviteEmail}. Click it to confirm your account and start your ${trialDurationDays}-day ${campaignName} trial.`
+    );
+    setStatus("checkemail");
+  }
+
+  async function handleLoginSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    const form = new FormData(e.currentTarget);
+    const password = String(form.get("password") ?? "");
+    const { error: signInErr } = await createClient().auth.signInWithPassword({
+      email: inviteEmail,
+      password,
+    });
+    setSubmitting(false);
+    if (signInErr) {
+      setError(signInErr.message);
+      return;
+    }
+    await activate({});
+  }
+
+  async function handleMagicLink() {
+    setError(null);
+    setSubmitting(true);
+    const { error } = await createClient().auth.signInWithOtp({
+      email: inviteEmail,
+      options: { emailRedirectTo: returnUrl() },
+    });
+    setSubmitting(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    setCheckEmailMessage(`We sent a sign-in link to ${inviteEmail}. Click it to start your ${trialDurationDays}-day ${campaignName} trial.`);
+    setStatus("checkemail");
+  }
+
+  /** Resend the appropriate email for the current flow: a confirmation link
+   * for new invitees, a sign-in link for existing accounts. */
+  async function handleResend() {
+    setError(null);
+    setSubmitting(true);
+    const supabase = createClient();
+    if (flowMode === "new") {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: inviteEmail,
+        options: { emailRedirectTo: returnUrl() },
       });
+      setSubmitting(false);
+      if (error) {
+        setError(error.message);
+        setStatus("setup");
+        return;
+      }
+      setCheckEmailMessage(`We resent a confirmation link to ${inviteEmail}.`);
+    } else {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: inviteEmail,
+        options: { emailRedirectTo: returnUrl() },
+      });
+      setSubmitting(false);
+      if (error) {
+        setError(error.message);
+        setStatus("login");
+        return;
+      }
+      setCheckEmailMessage(`We resent a sign-in link to ${inviteEmail}.`);
+    }
   }
 
   return (
@@ -183,6 +297,21 @@ export function InviteAcceptClient({
           </div>
         )}
 
+        {status === "checkemail" && (
+          <div className="text-center space-y-3">
+            <p className="text-sm font-semibold text-white">Check your email</p>
+            <p className="text-sm text-slate-400">{checkEmailMessage}</p>
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={handleResend}
+              className="mx-auto block text-xs text-slate-500 hover:text-slate-300 underline disabled:opacity-60"
+            >
+              Didn’t get it? Resend
+            </button>
+          </div>
+        )}
+
         {status === "setup" && (
           <form onSubmit={handleSetupSubmit} className="space-y-4">
             <div className="text-center space-y-1">
@@ -191,7 +320,7 @@ export function InviteAcceptClient({
               </span>
               <h1 className="text-xl font-bold text-white">Create your account to start your trial</h1>
               <p className="text-sm text-slate-400">
-                Your {trialDurationDays}-day {campaignName} trial starts as soon as you finish. No credit card.
+                Your {trialDurationDays}-day {campaignName} trial starts as soon as you confirm. No credit card.
               </p>
             </div>
 
@@ -199,7 +328,7 @@ export function InviteAcceptClient({
               <label htmlFor="invite-email" className="block text-xs font-medium text-slate-300 mb-1">
                 Email
               </label>
-              <input id="invite-email" value={email} readOnly className="w-full rounded-md border border-amber-500/25 bg-black/40 px-3 py-2 text-sm text-slate-400" />
+              <input id="invite-email" value={inviteEmail} readOnly className="w-full rounded-md border border-amber-500/25 bg-black/40 px-3 py-2 text-sm text-slate-400" />
             </div>
 
             <div>
@@ -248,7 +377,14 @@ export function InviteAcceptClient({
             </div>
 
             {error ? (
-              <p className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded p-2">{error}</p>
+              <div className="space-y-2">
+                <p className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded p-2">{error}</p>
+                {flowMode === "existing" && (
+                  <button type="button" onClick={() => { setError(null); setStatus("login"); }} className="block text-xs text-amber-300 hover:underline">
+                    That email may already have an account — sign in instead
+                  </button>
+                )}
+              </div>
             ) : null}
 
             <button
@@ -257,6 +393,67 @@ export function InviteAcceptClient({
               className="gold-button gold-cta-glow w-full rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
             >
               {submitting ? "Creating your account…" : `Create account & start ${trialDurationDays}-day trial`}
+            </button>
+
+            <button type="button" onClick={() => { setError(null); setStatus("login"); }} className="block mx-auto text-xs text-slate-500 hover:text-slate-300 underline">
+              Already have an account? Sign in
+            </button>
+          </form>
+        )}
+
+        {status === "login" && (
+          <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <div className="text-center space-y-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300">
+                You’ve been invited
+              </span>
+              <h1 className="text-xl font-bold text-white">Sign in to start your trial</h1>
+              <p className="text-sm text-slate-400">
+                Your {trialDurationDays}-day {campaignName} trial starts as soon as you’re signed in. No credit card.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="login-email" className="block text-xs font-medium text-slate-300 mb-1">
+                Email
+              </label>
+              <input id="login-email" value={inviteEmail} readOnly className="w-full rounded-md border border-amber-500/25 bg-black/40 px-3 py-2 text-sm text-slate-400" />
+            </div>
+
+            <div>
+              <label htmlFor="login-password" className="block text-xs font-medium text-slate-300 mb-1">
+                Password
+              </label>
+              <input id="login-password" name="password" type="password" required autoComplete="current-password" className="w-full rounded-md border border-amber-500/25 bg-black/40 px-3 py-2 text-sm text-white" />
+            </div>
+
+            {error ? <p className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded p-2">{error}</p> : null}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="gold-button gold-cta-glow w-full rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
+            >
+              {submitting ? "Signing in…" : "Sign in & start trial"}
+            </button>
+
+            <div className="flex items-center gap-3 text-xs text-slate-500">
+              <span className="h-px flex-1 bg-slate-700/60" />
+              or
+              <span className="h-px flex-1 bg-slate-700/60" />
+            </div>
+
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={handleMagicLink}
+              className="w-full rounded-xl border border-amber-500/30 bg-black/40 px-4 py-2.5 text-sm font-medium text-amber-300 hover:bg-black/60 disabled:opacity-60"
+            >
+              Email me a sign-in link
+            </button>
+
+            <button type="button" onClick={() => { setError(null); setStatus("setup"); }} className="block mx-auto text-xs text-slate-500 hover:text-slate-300 underline">
+              New here? Create your account
             </button>
           </form>
         )}

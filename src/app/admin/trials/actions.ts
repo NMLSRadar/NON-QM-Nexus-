@@ -5,6 +5,7 @@ import { requirePlatformAdmin } from "@/lib/admin";
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { sendTransactionalEmail } from "@/lib/email";
 import { trialInviteEmail } from "@/lib/emailTemplates";
+import { generateTrialInviteToken, hashTrialInviteToken, trialInviteExpiresAt } from "@/lib/trialInvites";
 
 /** Creates a new named trial campaign (spec Phase 5). */
 export async function createTrialCampaign(formData: FormData): Promise<{ error?: string }> {
@@ -58,12 +59,18 @@ export async function createTrialCampaign(formData: FormData): Promise<{ error?:
  * email + picks a campaign; the invite goes out automatically and the
  * recipient creates their account (or signs in) from the email link.
  *
- * New invitees get a Supabase `invite` link (the account is created for
- * them; they choose a password). Existing accounts get a `magiclink`
- * sign-in link. In both cases the link lands on
- * /trial/[slug]/invite-accept, where the trial is activated once a
- * session exists — so a beta tester never has to register on the site
- * first.
+ * New invitees get a plain app link carrying an app-generated token
+ * (…?token=<raw>) validated server-side against public.trial_invites
+ * (SHA-256 hash). This replaced the earlier Supabase admin `invite`/
+ * `magiclink` link (2026-08-11), whose hosted verify redirect
+ * inconsistently failed to hand a session back on the invite-accept
+ * page — leaving invitees stuck on "We couldn't verify your invitation
+ * link" and then a dead-end "Invalid login credentials" at login.
+ *
+ * The invite token is single-purpose and short-lived (7 days). Existing
+ * pending invites for the same (email, campaign) are rotated (new token
+ * + expiry) so "Send beta invite" again idempotently resends without
+ * piling up rows or colliding with the active-pending unique index.
  */
 export async function inviteBetaTester(
   emailInput: string,
@@ -97,55 +104,54 @@ export async function inviteBetaTester(
     return { error: `${email} already has a trial on this platform. Send them a normal sign-in link instead.` };
   }
 
-  // Does an account already exist for this email?
+  // Does an account already exist for this email? Determines whether the
+  // invite-accept page shows "create your account" or "sign in".
   const { data: existingUser } = await service.from("users").select("id").ilike("email", email).maybeSingle();
 
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://nonqmnexus.com").replace(/\/$/, "");
-  const redirectTo = `${appUrl}/trial/${encodeURIComponent(slug)}/invite-accept?m=${existingUser ? "existing" : "new"}`;
+  // Issue an app-generated token. Only the SHA-256 hash is stored; the raw
+  // token appears exactly once, in the emailed link.
+  const rawToken = generateTrialInviteToken();
+  const tokenHash = hashTrialInviteToken(rawToken);
+  const expiresAt = trialInviteExpiresAt();
 
-  let actionLink: string | null = null;
-  let usedType: "invite" | "magiclink" | null = null;
+  // Rotate any existing active pending invite for (email, campaign) so a
+  // re-invite resends cleanly instead of colliding with the unique index.
+  const { data: pendingInvite } = await service
+    .from("trial_invites")
+    .select("id")
+    .eq("normalized_email", email)
+    .eq("campaign_id", campaign.id)
+    .is("accepted_at", null)
+    .is("revoked_at", null)
+    .maybeSingle();
 
-  if (!existingUser) {
-    const { data: invited, error: inviteErr } = await service.auth.admin.generateLink({
-      type: "invite",
-      email,
-      options: { redirectTo },
-    });
-    if (invited?.properties?.action_link) {
-      actionLink = invited.properties.action_link;
-      usedType = "invite";
-    } else {
-      // The email might exist in auth.users even when the public.users row
-      // didn't turn up — fall back to a sign-in link for that case.
-      const { data: signedIn, error: fallbackErr } = await service.auth.admin.generateLink({
-        type: "magiclink",
-        email,
-        options: { redirectTo: `${appUrl}/trial/${encodeURIComponent(slug)}/invite-accept?m=existing` },
-      });
-      if (fallbackErr) return { error: fallbackErr.message };
-      if (!signedIn?.properties?.action_link) return { error: "Could not create an invitation link." };
-      actionLink = signedIn.properties.action_link;
-      usedType = "magiclink";
-    }
+  if (pendingInvite) {
+    const { error: rotateErr } = await service
+      .from("trial_invites")
+      .update({ token_hash: tokenHash, expires_at: expiresAt.toISOString(), created_by: actorUserId })
+      .eq("id", pendingInvite.id as string);
+    if (rotateErr) return { error: rotateErr.message };
   } else {
-    const { data: signedIn, error: linkErr } = await service.auth.admin.generateLink({
-      type: "magiclink",
+    const { error: insertErr } = await service.from("trial_invites").insert({
+      campaign_id: campaign.id,
       email,
-      options: { redirectTo },
+      normalized_email: email,
+      token_hash: tokenHash,
+      expires_at: expiresAt.toISOString(),
+      created_by: actorUserId,
     });
-    if (linkErr) return { error: linkErr.message };
-    if (!signedIn?.properties?.action_link) return { error: "Could not create a sign-in link." };
-    actionLink = signedIn.properties.action_link;
-    usedType = "magiclink";
+    if (insertErr) return { error: insertErr.message };
   }
+
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://nonqmnexus.com").replace(/\/$/, "");
+  const actionLink = `${appUrl}/trial/${encodeURIComponent(campaign.slug as string)}/invite-accept?token=${rawToken}`;
 
   const inviterRow = await service.from("users").select("email").eq("id", actorUserId).maybeSingle();
   const { subject, html } = trialInviteEmail({
     campaignName: campaign.name as string,
     campaignSlug: campaign.slug as string,
     trialDurationDays: campaign.trial_duration_days as number,
-    requiresAccountCreation: usedType === "invite",
+    requiresAccountCreation: !existingUser,
     link: actionLink,
     inviterEmail: (inviterRow.data?.email as string | undefined) ?? "",
   });
@@ -167,10 +173,9 @@ export async function inviteBetaTester(
   }
 
   return {
-    message:
-      usedType === "invite"
-        ? `Invite sent to ${email}. They’ll create their account from the email, and the ${campaign.name} trial starts automatically.`
-        : `Invite sent to ${email}. They’ll sign in from the email, and the ${campaign.name} trial starts automatically.`,
+    message: existingUser
+      ? `Invite sent to ${email}. They’ll sign in from the email, and the ${campaign.name} trial starts automatically.`
+      : `Invite sent to ${email}. They’ll create their account from the email, and the ${campaign.name} trial starts automatically.`,
   };
 }
 

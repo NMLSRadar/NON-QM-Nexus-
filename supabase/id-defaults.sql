@@ -32,6 +32,7 @@ alter table shared_links          alter column id set default gen_random_uuid();
 -- now tracked in schema.prisma so this can't recur silently).
 alter table trial_campaigns       alter column id set default gen_random_uuid();
 alter table trial_redemptions     alter column id set default gen_random_uuid();
+alter table trial_invites         alter column id set default gen_random_uuid();
 alter table ae_profiles           alter column id set default gen_random_uuid();
 alter table ae_profile_events     alter column id set default gen_random_uuid();
 alter table ae_placements         alter column id set default gen_random_uuid();
