@@ -10,8 +10,10 @@ import { getProgramConfigRuntimeIssues } from "@/lib/repository/supabaseReposito
 // deploy build. It still runs fully whenever the suite executes with creds
 // (local dev / CI). Only a genuine ingestion bug (any error OTHER than a
 // creds/URL gap) is rethrown.
-async function loadPlanetPrograms(): Promise<typeof import("../../scripts/ingest_planet_home_2026_08_06.mjs").programs | null> {
+type PlanetPrograms = (lenderId: string) => any;
+async function loadPlanetPrograms(): Promise<PlanetPrograms | null> {
   try {
+    // @ts-expect-error The raw ESM ingestion module has no declarations.
     return (await import("../../scripts/ingest_planet_home_2026_08_06.mjs")).programs;
   } catch (err) {
     const msg = String((err as Error)?.message ?? "");

@@ -90,15 +90,27 @@ export default async function InviteAcceptPage({
     return <InviteLinkError reason="This invitation campaign is no longer active." />;
   }
 
-  // Does an account already exist for this email? Decides whether the client
-  // shows "create your account" or "sign in".
+  // Does an account exist for this email? Decides whether the client shows
+  // "create your account" or "sign in". Check BOTH public.users AND the
+  // auth.users row itself: a legacy invite can leave a confirmed auth.users
+  // account with no public.users row yet (orphaned), which must be treated as
+  // an EXISTING invitee — otherwise they're shown "create your account" on an
+  // already-registered, already-confirmed email, and Supabase silently sends
+  // NO confirmation email (nothing to confirm), stranding them on "Check your
+  // email". (2026-08-11 matthew@easemortgage.com incident.)
   const normalizedEmail = invite.email.trim().toLowerCase();
   const { data: existingUser } = await service
     .from("users")
     .select("id")
     .ilike("email", normalizedEmail)
     .maybeSingle();
-  const mode: "new" | "existing" = existingUser ? "existing" : "new";
+  const { data: existingAuth } = await service
+    .schema("auth")
+    .from("users")
+    .select("id")
+    .ilike("email", normalizedEmail)
+    .maybeSingle();
+  const mode: "new" | "existing" = existingUser || existingAuth ? "existing" : "new";
 
   return (
     <InviteAcceptClient

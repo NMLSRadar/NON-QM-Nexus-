@@ -180,7 +180,7 @@ export function InviteAcceptClient({
       return;
     }
 
-    const { error: signUpErr } = await createClient().auth.signUp({
+    const { data: signUpData, error: signUpErr } = await createClient().auth.signUp({
       email: inviteEmail,
       password,
       options: { emailRedirectTo: returnUrl() },
@@ -195,6 +195,17 @@ export function InviteAcceptClient({
       if (/already registered|already been registered/i.test(signUpErr.message)) {
         setFlowMode("existing");
       }
+      return;
+    }
+
+    // If the email already has a CONFIRMED account, signUp returns the existing
+    // user with NO confirmation email sent (there is literally nothing to
+    // confirm). Never leave them stuck on "Check your email" — send them to
+    // sign in instead. (2026-08-11 matthew@easemortgage.com incident.)
+    if (signUpData?.user?.email_confirmed_at) {
+      setFlowMode("existing");
+      setError(`An account already exists for ${inviteEmail}. Sign in to start your trial.`);
+      setStatus("login");
       return;
     }
 
