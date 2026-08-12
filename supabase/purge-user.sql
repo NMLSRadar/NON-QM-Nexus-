@@ -1,4 +1,4 @@
--- Non-QM Nexus — complete account purge + signup-trigger hardening.
+-- Non-QM Nexus — complete account purge + signup-trigger hardening (v2, parse-safe).
 --
 -- WHY THIS FILE EXISTS (matthew@easemortgage.com, 2026-08-12):
 -- Deleting a user from the Supabase AUTH dashboard only removes auth.users.
@@ -20,8 +20,8 @@
 --      can no longer silently block account creation; it is logged to
 --      signup_trigger_errors (domain only, no full email) and signup proceeds.
 --
--- The call below is commented out — uncomment and run after the functions are
--- created, or call it separately once.
+-- The call below is commented out — run it as its own query after this
+-- script succeeds:
 --
 --   select purge_user_by_email('matthew@easemortgage.com');
 
@@ -38,6 +38,8 @@ declare
   v_email text := lower(trim(p_email));
   v_uid uuid;
   v_auth_uid uuid;
+  v_tbl text;
+  v_col text;
   n bigint;
   result jsonb := '{}'::jsonb;
 begin
@@ -48,78 +50,71 @@ begin
   select id into v_uid from public.users where lower(email) = v_email limit 1;
   select id into v_auth_uid from auth.users where lower(email) = v_email limit 1;
 
-  -- App tables keyed by user_id
-  declare
-    _t record;
-  begin
-    for _t in select * from (values
-      ('user_profiles','user_id'), ('memberships','user_id'),
-      ('user_subscriptions','user_id'), ('trial_redemptions','user_id'),
-      ('beta_tester_surveys','user_id'), ('audit_logs','user_id'),
-      ('ai_requests','user_id')
-    ) as t(tbl text, col text) loop
+  create temp table if not exists tmp_purge_targets (tbl text, col text) on commit drop;
+  truncate tmp_purge_targets;
+
+  -- App tables keyed by user_id (children of users.id)
+  insert into tmp_purge_targets values
+    ('user_profiles','user_id'), ('memberships','user_id'),
+    ('user_subscriptions','user_id'), ('trial_redemptions','user_id'),
+    ('beta_tester_surveys','user_id'), ('audit_logs','user_id'),
+    ('ai_requests','user_id');
+
+  for v_tbl, v_col in select tbl, col from tmp_purge_targets loop
+    if v_uid is not null and to_regclass(format('public.%I', v_tbl)) is not null then
       begin
-        if v_uid is not null and to_regclass(format('public.%I', _t.tbl)) is not null then
-          execute format('delete from public.%I where %I = %L', _t.tbl, _t.col, v_uid);
-          get diagnostics n = row_count;
-          result := result || jsonb_build_object(_t.tbl, n);
-        end if;
+        execute format('delete from public.%I where %I = %L::uuid', v_tbl, v_col, v_uid);
+        get diagnostics n = row_count;
+        result := result || jsonb_build_object(v_tbl, n);
       exception when others then
-        result := result || jsonb_build_object(_t.tbl, format('skipped: %s', sqlerrm));
+        result := result || jsonb_build_object(v_tbl, format('skipped: %s', sqlerrm));
       end;
-    end loop;
-  end;
+    end if;
+  end loop;
 
   -- Tables keyed by email / normalized email
-  declare
-    _t record;
-  begin
-    for _t in select * from (values
-      ('trial_redemptions','normalized_email'), ('trial_invites','normalized_email'),
-      ('org_invites','email'), ('outreach_contacts','email'),
-      ('email_suppressions','email'), ('ae_profiles','email'),
-      ('ae_placements','email'), ('lenders','contact_email')
-    ) as t(tbl text, col text) loop
-      begin
-        if to_regclass(format('public.%I', _t.tbl)) is not null then
-          execute format('delete from public.%I where lower(%I) = %L', _t.tbl, _t.col, v_email);
-          get diagnostics n = row_count;
-          result := result || jsonb_build_object(_t.tbl, n);
-        end if;
-      exception when others then
-        result := result || jsonb_build_object(_t.tbl, format('skipped: %s', sqlerrm));
-      end;
-    end loop;
-  end;
+  truncate tmp_purge_targets;
+  insert into tmp_purge_targets values
+    ('trial_redemptions','normalized_email'), ('trial_invites','normalized_email'),
+    ('org_invites','email'), ('outreach_contacts','email'),
+    ('email_suppressions','email'), ('ae_profiles','email'),
+    ('ae_placements','email'), ('lenders','contact_email');
 
-  -- Null out creator stamps so the users row can be removed even if org-owned
-  -- records (scenarios, lenders, programs, ...) reference it.
+  for v_tbl, v_col in select tbl, col from tmp_purge_targets loop
+    if to_regclass(format('public.%I', v_tbl)) is not null then
+      begin
+        execute format('delete from public.%I where lower(%I::text) = %L', v_tbl, v_col, v_email);
+        get diagnostics n = row_count;
+        result := result || jsonb_build_object(v_tbl, n);
+      exception when others then
+        result := result || jsonb_build_object(v_tbl, format('skipped: %s', sqlerrm));
+      end;
+    end if;
+  end loop;
+
+  -- Null out creator stamps so the users row can be removed even when
+  -- org-owned records (scenarios, lenders, programs, ...) reference it.
   if v_uid is not null then
-    for _t in select * from (values
+    truncate tmp_purge_targets;
+    insert into tmp_purge_targets values
       ('scenarios','created_by'), ('lenders','created_by'),
       ('programs','created_by'), ('guideline_versions','created_by'),
-      ('trial_campaigns','created_by')
-    ) as t(tbl text, col text) loop
-      begin
-        if to_regclass(format('public.%I', _t.tbl)) is not null then
-          execute format('update public.%I set %I = null where %I = %L', _t.tbl, _t.col, _t.col, v_uid);
-          get diagnostics n = row_count;
-          result := result || jsonb_build_object(format('%s.stamps_nulled', _t.tbl), n);
-        end if;
-      exception when others then
-        result := result || jsonb_build_object(format('%s.stamps_nulled', _t.tbl), format('skipped: %s', sqlerrm));
-      end;
-    end loop;
-  end if;
+      ('trial_campaigns','created_by');
 
-  -- User-created share links (created_by is NOT NULL — delete, don't null)
-  if v_uid is not null and to_regclass('public.shared_links') is not null then
-    begin
-      execute format('delete from public.shared_links where created_by = %L', v_uid);
-      get diagnostics n = row_count; result := result || jsonb_build_object('shared_links', n);
-    exception when others then
-      result := result || jsonb_build_object('shared_links', format('skipped: %s', sqlerrm));
-    end;
+    for v_tbl, v_col in select tbl, col from tmp_purge_targets loop
+      if to_regclass(format('public.%I', v_tbl)) is not null then
+        begin
+          execute format('update public.%I set %I = null where %I = %L::uuid', v_tbl, v_col, v_col, v_uid);
+        exception when others then null; end;
+      end if;
+    end loop;
+
+    -- User-created share links (created_by is NOT NULL — delete, don't null)
+    if to_regclass('public.shared_links') is not null then
+      begin
+        execute format('delete from public.shared_links where created_by = %L::uuid', v_uid);
+      exception when others then null; end;
+    end if;
   end if;
 
   -- Auth tables (must be deleted before public.users for FK order)
@@ -160,10 +155,6 @@ $$;
 
 -- ===========================================================================
 -- 2) Hardened handle_new_user: a stale/blocking row must NEVER fail signup.
---    Same exception safety net the invite branch already has. The insert into
---    public.users for the NORMAL path is wrapped so that a leftover row for
---    the email (unique violation) is logged (domain only) and signup continues
---    instead of aborting the auth transaction. Invite branch unchanged.
 -- ===========================================================================
 create or replace function public.handle_new_user()
 returns trigger
@@ -221,8 +212,6 @@ begin
 
       update org_invites set accepted_at = now() where id = invite.id;
 
-      -- Invited signup: membership created in the inviting org, organization
-      -- auto-creation skipped entirely.
       return new;
     end if;
    exception when others then
@@ -232,11 +221,11 @@ begin
    end;
   end if;
 
-  -- Normal signup (no invite token, or an invalid one). Original behavior,
-  -- BUT wrapped in the same safety net: a stale public.users row for this
-  -- email (unique violation on users.email) must not abort account creation —
-  -- log it (domain only) and let the auth account stand; the app/support can
-  -- then purge properly via purge_user_by_email().
+  -- Normal signup (no invite token, or an invalid one). Wrapped in the same
+  -- safety net: a stale public.users row for this email (unique violation on
+  -- users.email) must not abort account creation — log it (domain only) and
+  -- let the auth account stand; the app/support can then purge properly via
+  -- purge_user_by_email().
   begin
     insert into public.users (id, email, updated_at)
     values (new.id, new.email, now())
