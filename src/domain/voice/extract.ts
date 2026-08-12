@@ -394,13 +394,19 @@ const CITIZENSHIP_RE = new RegExp(
   [
     // ITIN Borrower — unambiguous phonetic/speech-to-text variants (never
     // gated by context, always high confidence): spelled letter-by-letter
-    // ("I-T-I-N"), "eye-tin", "individual taxpayer identification number"
+    // ("I-T-I-N"), "eye-tin", the spoken "aye-tin" renderings that STT
+    // writes as "ayten"/"ay tin"/"ay tine"/name-like "eitan"/"aitan"
+    // (added 2026-08-12 — operators reported ITIN spoken as "ayten"/"Eitan"
+    // not registering; treated as unconditional like the rest of this group,
+    // accepting the rare borrower-literally-named-Eitan false positive, same
+    // precedent as bare "ead"/"c09"/"h1b"), "individual taxpayer
+    // identification number"
     // (with or without "individual"/"number"), "tax ID borrower", "no
     // social security number" (and common negation phrasings of the same),
     // "ITIN instead of an SSN". The ambiguous "I-10"/"I ten"/"eye ten"
     // surface form is captured separately below (itinAmbiguous) so it can
     // be context-gated before being trusted.
-    String.raw`(?<itin>\bi[\s.-]*t[\s.-]*i[\s.-]*n\b|\beye[\s-]*tin\b|\bitin\s+(?:borrower|loan|instead)\b|\btax\s?id\s+borrower\b|\bindividual taxpayer id(?:entification)?(?:\s+number)?\b|\btaxpayer identification number\b|\btax identification number\b|\bno\s+social security number\b|\b(?:does\s?n['o]?t|do\s+not|doesn['o]?t)\s+have\s+a\s+social security number\b|\bwithout\s+a\s+social security number\b)`,
+    String.raw`(?<itin>\bi[\s.-]*t[\s.-]*i[\s.-]*n\b|\beye[\s-]*tin\b|\bay[\s-]*(?:ten|10|tin|tan|teen)\b|\bey[\s-]*(?:ten|10|tin|tan)\b|\beitan\b|\baitan\b|\bayatin\b|\beyatin\b|\bayetin\b|\beyetin\b|\bitin\s+(?:borrower|loan|instead)\b|\btax\s?id\s+borrower\b|\bindividual taxpayer id(?:entification)?(?:\s+number)?\b|\btaxpayer identification number\b|\btax identification number\b|\bno\s+social security number\b|\b(?:does\s?n['o]?t|do\s+not|doesn['o]?t)\s+have\s+a\s+social security number\b|\bwithout\s+a\s+social security number\b)`,
     // ITIN Borrower — the ambiguous "I-10"/"I ten"/"eye ten" form, matched
     // separately so it can be context-gated (see the disambiguation pass
     // right after this regex definition) rather than trusted outright. Note
