@@ -4,7 +4,7 @@ import path from "node:path";
 import matter from "gray-matter";
 import remarkGfm from "remark-gfm";
 import { compileMDX } from "next-mdx-remote/rsc";
-import { BookOpen, Rocket, PlayCircle, ShieldCheck } from "lucide-react";
+import { BookOpen, Rocket, ShieldCheck } from "lucide-react";
 import { pageMetadata } from "@/lib/seo";
 import { createClient } from "@/lib/supabase/server";
 import { buildMdxComponents } from "@/components/tutorial/mdx-components";
@@ -14,6 +14,7 @@ import {
   type TutorialSectionMeta,
 } from "@/components/tutorial/tutorial-page";
 import { TutorialEventLogger } from "@/components/tutorial/tutorial-event-logger";
+import { TutorialVideoModal } from "@/components/tutorial/tutorial-video-modal";
 
 // Public page. The root layout renders auth-aware chrome (Supabase session)
 // on every page, so this page stays force-dynamic exactly like every other
@@ -155,12 +156,7 @@ export default async function TutorialPageRoute() {
             >
               <Rocket className="h-4 w-4" aria-hidden /> Quick Start (3 steps)
             </a>
-            <a
-              href="#voice-scenario"
-              className="gold-outline-button inline-flex min-h-[48px] items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold"
-            >
-              <PlayCircle className="h-4 w-4" aria-hidden /> Watch the 2-minute tour
-            </a>
+            <TutorialVideoModal />
           </div>
           <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-slate-500">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden />
