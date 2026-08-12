@@ -280,12 +280,15 @@ export function InviteAcceptClient({
 
     // If the email already has a CONFIRMED account, signUp returns the existing
     // user with NO confirmation email sent (there is literally nothing to
-    // confirm). Never leave them stuck on "Check your email" — send them to
-    // sign in instead. (2026-08-11 matthew@easemortgage.com incident.)
+    // confirm) AND the password they just chose was NOT applied to that
+    // account. Sending them to a sign-in form is a dead end: they try the new
+    // password, get "Invalid login credentials", and are stuck — the exact
+    // matthew@easemortgage.com failure (2026-08-11, resurgent 2026-08-12).
+    // Permanent fix: automatically email a magic sign-in link so the invite
+    // flows through regardless of what password (if any) that account has.
     if (signUpData?.user?.email_confirmed_at) {
       setFlowMode("existing");
-      setError(`An account already exists for ${inviteEmail}. Sign in to start your trial.`);
-      setStatus("login");
+      await handleMagicLink();
       return;
     }
 
@@ -307,7 +310,12 @@ export function InviteAcceptClient({
     });
     setSubmitting(false);
     if (signInErr) {
-      setError(signInErr.message);
+      setError(
+        signInErr.message +
+          (signInErr.message === "Invalid login credentials"
+            ? " If this account was created through an invitation, you may not have a password yet — use “Email me a sign-in link” below."
+            : "")
+      );
       return;
     }
     await activateWithRequiredCheck();
@@ -392,6 +400,18 @@ export function InviteAcceptClient({
           <div className="text-center space-y-3">
             <p className="text-sm font-semibold text-white">Check your email</p>
             <p className="text-sm text-slate-400">{checkEmailMessage}</p>
+            {flowMode === "existing" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setStatus("login");
+                }}
+                className="block mx-auto text-xs text-slate-500 hover:text-slate-300 underline"
+              >
+                I know my password — sign in instead
+              </button>
+            )}
             <button
               type="button"
               disabled={submitting}

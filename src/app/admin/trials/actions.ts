@@ -121,8 +121,23 @@ export async function inviteBetaTester(
   }
 
   // Does an account already exist for this email? Determines whether the
-  // invite-accept page shows "create your account" or "sign in".
+  // invite-accept page shows "create your account" or "sign in". Check BOTH
+  // the public users table and Supabase auth: a users row can be missing for a
+  // legit auth account (handle_new_user trigger-failure class), which used to
+  // mislabel real accounts as "new" — the invitee then "created" an account
+  // that already existed, their chosen password was never applied, and they
+  // could never sign in (matthew@easemortgage.com, 2026-08-11 and 2026-08-12).
   const { data: existingUser } = await service.from("users").select("id").ilike("email", email).maybeSingle();
+  let hasAuthAccount = false;
+  try {
+    const { data: authUsers } = await service.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    hasAuthAccount = ((authUsers?.users ?? []) as Array<{ email?: string | null }>).some(
+      (u) => (u.email ?? "").toLowerCase() === email
+    );
+  } catch (err) {
+    console.error("inviteBetaTester: auth user lookup failed (users table used as fallback)", err);
+  }
+  const existingAccount = Boolean(existingUser) || hasAuthAccount;
 
   // Issue an app-generated token. Only the SHA-256 hash is stored; the raw
   // token appears exactly once, in the emailed link.
@@ -167,7 +182,7 @@ export async function inviteBetaTester(
     campaignName: campaign.name as string,
     campaignSlug: campaign.slug as string,
     trialDurationDays: campaign.trial_duration_days as number,
-    requiresAccountCreation: !existingUser,
+    requiresAccountCreation: !existingAccount,
     link: actionLink,
     inviterEmail: (inviterRow.data?.email as string | undefined) ?? "",
   });
@@ -189,7 +204,7 @@ export async function inviteBetaTester(
   }
 
   return {
-    message: existingUser
+    message: existingAccount
       ? `Invite sent to ${email}. They’ll sign in from the email, and the ${campaign.name} trial starts automatically.`
       : `Invite sent to ${email}. They’ll create their account from the email, and the ${campaign.name} trial starts automatically.`,
   };
