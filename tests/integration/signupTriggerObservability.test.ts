@@ -23,7 +23,7 @@
 // use it and hits a real 23503 foreign_key_violation.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
 import { generateInviteToken, hashInviteToken } from "@/lib/invites";
 import { probeTeamSchemaReady } from "./teamMembershipSchemaProbe";
 
@@ -101,7 +101,7 @@ describe.skipIf(!hasCredentials)("Signup trigger observability — corrupted inv
     // 2. Corrupt it: delete the org this one invite references, bypassing FK
     //    enforcement only for this single statement on a single dedicated
     //    Postgres session (never touches any other concurrent connection).
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.$executeRawUnsafe("SET session_replication_role = replica");
       await tx.$executeRawUnsafe(`DELETE FROM organizations WHERE id = '${orgId}'::uuid`);
       await tx.$executeRawUnsafe("SET session_replication_role = DEFAULT");
