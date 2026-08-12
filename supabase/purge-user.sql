@@ -57,7 +57,7 @@ begin
   insert into tmp_purge_targets values
     ('user_profiles','user_id'), ('memberships','user_id'),
     ('user_subscriptions','user_id'), ('trial_redemptions','user_id'),
-    ('beta_tester_surveys','user_id'), ('audit_logs','user_id'),
+    ('beta_tester_surveys','user_id'),
     ('ai_requests','user_id');
 
   for v_tbl, v_col in select tbl, col from tmp_purge_targets loop
@@ -91,6 +91,16 @@ begin
       end;
     end if;
   end loop;
+
+  -- Audit trail for this user (actor_user_id is nullable — delete their logs)
+  if v_uid is not null and to_regclass('public.audit_logs') is not null then
+    begin
+      execute format('delete from public.audit_logs where actor_user_id = %L::uuid', v_uid);
+      get diagnostics n = row_count; result := result || jsonb_build_object('audit_logs', n);
+    exception when others then
+      result := result || jsonb_build_object('audit_logs', format('skipped: %s', sqlerrm));
+    end;
+  end if;
 
   -- Null out creator stamps so the users row can be removed even when
   -- org-owned records (scenarios, lenders, programs, ...) reference it.
