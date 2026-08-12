@@ -119,7 +119,10 @@ export function normalizeTranscript(raw: string): string {
   );
   s = s.replace(new RegExp(`[\\w$%]+,?\\s*(?:${CORRECTION_MARKERS})\\b,?\\s*`, "gi"), "");
   s = s.replace(/,/g, " , "); // remaining commas become separators
-  s = s.replace(/([a-z0-9])([.!?;])/g, "$1 $2"); // detach sentence punctuation
+  // Detach sentence punctuation without splitting a decimal amount such as
+  // "1.25 million" into "1 .25 million". A period followed by a digit is a
+  // decimal point; every other period is sentence punctuation.
+  s = s.replace(/([a-z0-9])([!?;]|\.(?!\d))/g, "$1 $2");
   // A DIGIT directly followed by the spoken word "thousand" ("105
   // thousand", "1960 thousand") — must run BEFORE wordsToDigits() below,
   // which tokenizes on whitespace and only recognizes a fully spelled-out
@@ -157,11 +160,27 @@ export function normalizeTranscript(raw: string): string {
   // their space-separated equivalents, instead of surviving as one
   // unconverted token.
   s = s.replace(/-(dollars?|range|purchase|value|price|mark|units?|plex)\b/g, " $1");
-  // "one point two million" / "1 point 2 thousand" -> integer, BEFORE the word-number pass
+  // Spoken decimals with a scale, including multiple fractional digits:
+  // "one point two million", "2 point 3 million", and
+  // "1 point 25 million". Run BEFORE the word-number pass.
   s = s.replace(
-    new RegExp(`\\b(${UNIT_WORD}|\\d+)\\s+point\\s+(${UNIT_WORD}|\\d)\\s+(million|thousand)\\b`, "g"),
-    (_m, a: string, b: string, scale: string) =>
-      String(Math.round((unitToNumber(a) + unitToNumber(b) / 10) * (scale === "million" ? 1_000_000 : 1_000)))
+    new RegExp(`\\b(${UNIT_WORD}|\\d+)\\s+point\\s+((?:(?:${UNIT_WORD})[\\s-]*){1,4}|\\d{1,4})\\s+(million|thousand)\\b`, "g"),
+    (_m, whole: string, fraction: string, scale: string) => {
+      const fractionDigits = /^\d+$/.test(fraction.trim())
+        ? fraction.trim()
+        : fraction.trim().split(/[\s-]+/).map((token) => String(unitToNumber(token))).join("");
+      const amount = unitToNumber(whole) + Number(`0.${fractionDigits}`);
+      return String(Math.round(amount * (scale === "million" ? 1_000_000 : 1_000)));
+    }
+  );
+  // Speech recognition often formats spoken money as "$4 million". Expand
+  // digit-based million amounts AFTER spoken-point phrases are handled but
+  // BEFORE wordsToDigits(), because that routine intentionally does not treat
+  // "$4" as a number-word token. This also preserves "$1.25 million".
+  s = s.replace(
+    /(\$\s*)?(\d+(?:\.\d+)?)\s*(?:million|mil\b|mm\b)/g,
+    (_m, dollar: string | undefined, n: string) =>
+      `${dollar ? "$" : ""}${Math.round(parseFloat(n) * 1_000_000)}`
   );
   s = wordsToDigits(s);
   // "1 point 2" / "1.2 million" / "850 k"

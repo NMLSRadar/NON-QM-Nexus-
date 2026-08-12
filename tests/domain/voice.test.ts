@@ -18,6 +18,15 @@ describe("voice extraction: number normalization", () => {
     expect(normalizeTranscript("680k loan")).toContain("680000 loan");
     expect(normalizeTranscript("seven hundred twenty credit score")).toContain("720 credit score");
   });
+
+  it("expands dollar-prefixed and decimal million variations", () => {
+    expect(normalizeTranscript("a $4 million property")).toContain("$4000000 property");
+    expect(normalizeTranscript("a 1.25 million property")).toContain("1250000 property");
+    expect(normalizeTranscript("a $2.3 million property")).toContain("$2300000 property");
+    expect(normalizeTranscript("a 2 point 3 million property")).toContain("2300000 property");
+    expect(normalizeTranscript("a one point two five million property")).toContain("1250000 property");
+    expect(normalizeTranscript("a 1 point 25 million property")).toContain("1250000 property");
+  });
 });
 
 describe("voice extraction: a full 8-vital utterance", () => {
@@ -57,6 +66,26 @@ describe("voice extraction: phrasing coverage", () => {
     expect(x.fico?.value).toBe(720);
     expect(x.propertyValue?.value).toBe(1_200_000);
     expect(x.loanAmount?.value).toBe(900_000);
+  });
+  it("captures the reported $4 million property phrasing and derives the correct loan", () => {
+    const x = extractFromTranscript(
+      "Good afternoon. I have a U.S. citizen who is looking to purchase a $4 million home using 12 months of business bank statements. This is for a primary residence and their credit score is 760. They are looking to put 20% down on a $4 million property."
+    );
+    expect(x.propertyValue?.value).toBe(4_000_000);
+    expect(assess(x).derived.loanAmount).toBe(3_200_000);
+  });
+  it.each([
+    ["purchase price is 1.25 million", 1_250_000],
+    ["a 2 point 3 million property", 2_300_000],
+    ["a two point three million home", 2_300_000],
+    ["a $2.3 million purchase", 2_300_000],
+  ])("captures million-value variation: %s", (phrase, expected) => {
+    expect(extractFromTranscript(phrase).propertyValue?.value).toBe(expected);
+  });
+  it("captures a decimal-million loan amount independently of property value", () => {
+    const x = extractFromTranscript("property value is $2 million and the requested loan amount is 1.25 million");
+    expect(x.propertyValue?.value).toBe(2_000_000);
+    expect(x.loanAmount?.value).toBe(1_250_000);
   });
   it("does not mistake a dollar amount for a FICO score", () => {
     const x = extractFromTranscript("price 750000 , 700 fico");
