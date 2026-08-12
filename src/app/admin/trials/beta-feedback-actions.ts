@@ -60,11 +60,18 @@ export async function sendDay3SurveyEmailNow(opts: {
     redemption = { email: rd.email as string, first_name: (rd.first_name as string | null) ?? null };
     const { data: s } = await supabase.from("beta_tester_surveys").select("*").eq("user_id", rd.user_id).maybeSingle();
     if (!s) {
-      survey = (await ensureSurveyForRedemption(supabase, {
-        id: rd.id as string,
-        user_id: rd.user_id as string,
-        activated_at: rd.activated_at as string,
-      })) as unknown as Record<string, unknown>;
+      try {
+        survey = (await ensureSurveyForRedemption(supabase, {
+          id: rd.id as string,
+          user_id: rd.user_id as string,
+          activated_at: rd.activated_at as string,
+        })) as unknown as Record<string, unknown>;
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : "Could not create the survey record for this tester.",
+        };
+      }
     } else {
       survey = s;
     }

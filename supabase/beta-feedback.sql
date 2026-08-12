@@ -23,7 +23,7 @@ create table if not exists public.beta_tester_surveys (
   id uuid primary key default gen_random_uuid(),
   -- The owning user. Unique -> a user/account can only ever have ONE survey
   -- (the "do not create duplicate surveys" requirement).
-  user_id uuid not null references public.users(id) on delete cascade,
+  user_id uuid not null unique references public.users(id) on delete cascade,
   trial_redemption_id uuid unique references public.trial_redemptions(id) on delete set null,
   -- EXACT trial start date, copied from trial_redemptions.activated_at.
   trial_started_at timestamptz not null,

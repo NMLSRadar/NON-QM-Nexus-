@@ -28,6 +28,28 @@ export interface SweepDeps {
 
 const DAY = 24 * 60 * 60 * 1000;
 
+interface RedemptionRow {
+  id: string;
+  user_id: string;
+  email: string;
+  first_name: string | null;
+  activated_at: string;
+  revoked_at: string | null;
+  converted_at: string | null;
+}
+
+interface LoopCtx {
+  supabase: SupabaseClient;
+  byUser: Map<string, Record<string, unknown>>;
+  appUrl: string;
+  now: number;
+  nowIso: string;
+  sendEmail: SendEmailFn;
+  day3Sent: number;
+  day5Sent: number;
+  failures: SweepResult["failures"];
+}
+
 /**
  * One sweep over every eligible trial redemption. Idempotent per email type
  * (marker columns + resend message id) so re-running the sweep — from a retry,
@@ -41,6 +63,9 @@ const DAY = 24 * 60 * 60 * 1000;
  *                 from the follow-up queue; partial/open/sent-but-unopened
  *                 testers DO receive it, via the same token URL that resumes
  *                 their progress).
+ *
+ * One bad redemption (missing fields, DB error on its row) is recorded in
+ * `failures` and never aborts the rest of the sweep.
  */
 export async function runBetaFeedbackSweep(
   supabase: SupabaseClient,
@@ -65,7 +90,7 @@ export async function runBetaFeedbackSweep(
   // Eligible = any tester who started a trial and was not admin-revoked.
   // Converted / expired users still count: their feedback on the trial
   // experience is exactly what we want.
-  const eligible = (redemptions ?? []).filter((r) => !r.revoked_at);
+  const eligible = ((redemptions ?? []) as RedemptionRow[]).filter((r) => !r.revoked_at);
   const userIds = eligible.map((r) => r.user_id);
   const emptyUuid = "00000000-0000-0000-0000-000000000000";
 
@@ -87,72 +112,88 @@ export async function runBetaFeedbackSweep(
     ensured += 1;
   }
 
-  let day3Sent = 0;
-  let day5Sent = 0;
-  const failures: SweepResult["failures"] = [];
+  const ctx: LoopCtx = {
+    supabase,
+    byUser,
+    appUrl,
+    now,
+    nowIso: new Date(now).toISOString(),
+    sendEmail,
+    day3Sent: 0,
+    day5Sent: 0,
+    failures: [],
+  };
 
   for (const r of eligible) {
-    const survey = byUser.get(r.user_id) as Record<string, unknown> | undefined;
-    if (!survey || typeof survey.token !== "string") continue;
-
-    const activatedMs = new Date(r.activated_at as string).getTime();
-    const surveyUrl = `${appUrl}/survey/${survey.token}`;
-    const nowIso = new Date(now).toISOString();
-
-    // DAY 3 — exactly 3 days after the trial began.
-    if (
-      !survey.day3_email_sent_at &&
-      !survey.day3_email_id &&
-      survey.status !== "COMPLETED" &&
-      now - activatedMs >= 3 * DAY
-    ) {
-      const { subject, html } = betaFeedbackDay3Email({ firstName: (r.first_name as string | null) ?? null, surveyUrl });
-      const result = await sendEmail({ to: r.email as string, subject, html });
-      if (result.ok) {
-        const { error } = await supabase
-          .from("beta_tester_surveys")
-          .update({
-            day3_email_sent_at: nowIso,
-            day3_email_id: result.id ?? null,
-            status: "SENT",
-            updated_at: nowIso,
-          })
-          .eq("token", survey.token);
-        if (!error) day3Sent += 1;
-        else failures.push({ redemptionId: r.id as string, type: "day3_marker", error: error.message });
-      } else {
-        failures.push({ redemptionId: r.id as string, type: "day3", error: result.error ?? "unknown" });
-      }
-    }
-
-    // DAY 5 follow-up — Day 5 of the ORIGINAL trial, only if Day 3 went out
-    // and the survey was not completed in the meantime.
-    if (
-      survey.day3_email_sent_at &&
-      !survey.day5_follow_up_sent_at &&
-      !survey.day5_email_id &&
-      survey.status !== "COMPLETED" &&
-      now - activatedMs >= 5 * DAY
-    ) {
-      const { subject, html } = betaFollowUpDay5Email({ firstName: (r.first_name as string | null) ?? null, surveyUrl });
-      const result = await sendEmail({ to: r.email as string, subject, html });
-      if (result.ok) {
-        const { error } = await supabase
-          .from("beta_tester_surveys")
-          .update({
-            day5_follow_up_sent_at: nowIso,
-            day5_email_id: result.id ?? null,
-            status: "FOLLOW_UP_SENT",
-            updated_at: nowIso,
-          })
-          .eq("token", survey.token);
-        if (!error) day5Sent += 1;
-        else failures.push({ redemptionId: r.id as string, type: "day5_marker", error: error.message });
-      } else {
-        failures.push({ redemptionId: r.id as string, type: "day5", error: result.error ?? "unknown" });
-      }
+    try {
+      await processRedemption(r, ctx);
+    } catch (err) {
+      ctx.failures.push({ redemptionId: r.id, type: "redemption", error: err instanceof Error ? err.message : String(err) });
     }
   }
 
-  return { checked: eligible.length, surveysEnsured: ensured, day3Sent, day5Sent, failures };
+  return { checked: eligible.length, surveysEnsured: ensured, day3Sent: ctx.day3Sent, day5Sent: ctx.day5Sent, failures: ctx.failures };
+}
+
+async function processRedemption(r: RedemptionRow, ctx: LoopCtx): Promise<void> {
+  const { supabase, byUser, appUrl, now, nowIso, sendEmail } = ctx;
+  const survey = byUser.get(r.user_id) as Record<string, unknown> | undefined;
+  if (!survey || typeof survey.token !== "string") return;
+
+  const activatedMs = new Date(r.activated_at).getTime();
+  const surveyUrl = `${appUrl}/survey/${survey.token}`;
+
+  // DAY 3 — exactly 3 days after the trial began.
+  if (
+    !survey.day3_email_sent_at &&
+    !survey.day3_email_id &&
+    survey.status !== "COMPLETED" &&
+    now - activatedMs >= 3 * DAY
+  ) {
+    const { subject, html } = betaFeedbackDay3Email({ firstName: r.first_name, surveyUrl });
+    const result = await sendEmail({ to: r.email, subject, html });
+    if (result.ok) {
+      const { error } = await supabase
+        .from("beta_tester_surveys")
+        .update({
+          day3_email_sent_at: nowIso,
+          day3_email_id: result.id ?? null,
+          status: "SENT",
+          updated_at: nowIso,
+        })
+        .eq("token", survey.token);
+      if (!error) ctx.day3Sent += 1;
+      else ctx.failures.push({ redemptionId: r.id, type: "day3_marker", error: error.message });
+    } else {
+      ctx.failures.push({ redemptionId: r.id, type: "day3", error: result.error ?? "unknown" });
+    }
+  }
+
+  // DAY 5 follow-up — Day 5 of the ORIGINAL trial, only if Day 3 went out
+  // and the survey was not completed in the meantime.
+  if (
+    survey.day3_email_sent_at &&
+    !survey.day5_follow_up_sent_at &&
+    !survey.day5_email_id &&
+    survey.status !== "COMPLETED" &&
+    now - activatedMs >= 5 * DAY
+  ) {
+    const { subject, html } = betaFollowUpDay5Email({ firstName: r.first_name, surveyUrl });
+    const result = await sendEmail({ to: r.email, subject, html });
+    if (result.ok) {
+      const { error } = await supabase
+        .from("beta_tester_surveys")
+        .update({
+          day5_follow_up_sent_at: nowIso,
+          day5_email_id: result.id ?? null,
+          status: "FOLLOW_UP_SENT",
+          updated_at: nowIso,
+        })
+        .eq("token", survey.token);
+      if (!error) ctx.day5Sent += 1;
+      else ctx.failures.push({ redemptionId: r.id, type: "day5_marker", error: error.message });
+    } else {
+      ctx.failures.push({ redemptionId: r.id, type: "day5", error: result.error ?? "unknown" });
+    }
+  }
 }

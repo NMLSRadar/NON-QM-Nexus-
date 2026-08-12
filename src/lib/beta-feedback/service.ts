@@ -75,7 +75,7 @@ export async function ensureSurveyForRedemption(
   redemption: RedemptionStub
 ): Promise<BetaSurveyRow> {
   const token = generateSurveyToken();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("beta_tester_surveys")
     .upsert(
       {
@@ -90,18 +90,19 @@ export async function ensureSurveyForRedemption(
     )
     .select("*")
     .single();
-  if (!data) {
-    // The conflict means the row already exists (or a rare token collision) —
-    // re-read it so we never create a duplicate.
-    const { data: existing } = await supabase
-      .from("beta_tester_surveys")
-      .select("*")
-      .eq("user_id", redemption.user_id)
-      .maybeSingle();
-    if (existing) return existing as BetaSurveyRow;
-    throw new Error("beta_tester_surveys.upsert returned no row");
-  }
-  return data as BetaSurveyRow;
+  if (data) return data as BetaSurveyRow;
+  // No row came back — either the row already exists (a concurrent create, or
+  // a previous attempt) or the database rejected the request. Re-read by
+  // user_id before surfacing the real error so the message is actionable
+  // (e.g. the missing UNIQUE constraint on user_id → PostgreSQL 42P10).
+  const { data: existing } = await supabase
+    .from("beta_tester_surveys")
+    .select("*")
+    .eq("user_id", redemption.user_id)
+    .maybeSingle();
+  if (existing) return existing as BetaSurveyRow;
+  console.error("ensureSurveyForRedemption failed", { redemptionId: redemption.id, error: error?.message });
+  throw new Error(`Could not create the survey row: ${error?.message ?? "no row returned"} (user ${redemption.user_id})`);
 }
 
 // ---------------------------------------------------------------------------
