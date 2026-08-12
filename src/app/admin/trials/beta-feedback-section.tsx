@@ -15,6 +15,8 @@ import {
   type SurveySummaryRow,
 } from "@/lib/beta-feedback/service";
 import { BetaFeedbackDetail } from "./beta-feedback-detail";
+import { SendSurveyNowButton } from "./send-survey-now-button";
+import { SendSurveyEmailForm } from "./send-survey-email-form";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -123,6 +125,12 @@ export async function BetaFeedbackSection() {
             </div>
           </div>
 
+          {/* Manual send — the everyday counterpart to the Day-3 cron */}
+          <div className="rounded-lg border border-slate-700 bg-[#111113] p-4 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#d4af37]">Send the questionnaire email now</p>
+            <SendSurveyEmailForm />
+          </div>
+
           {/* Per-tester table */}
           <div className="overflow-x-auto bg-white rounded-lg border border-slate-200">
             <table className="w-full text-sm">
@@ -169,8 +177,12 @@ export async function BetaFeedbackSection() {
                         </span>
                       </td>
                       <td className="px-3 py-2.5 text-xs text-slate-600">{s.completion_percentage}%</td>
-                      <td className="px-3 py-2.5 text-xs text-slate-600">
-                        {s.day3_email_sent_at ? new Date(s.day3_email_sent_at).toLocaleDateString() : "Not sent"}
+                      <td className="px-3 py-2.5 text-xs text-slate-600 whitespace-nowrap">
+                        {s.day3_email_sent_at ? (
+                          new Date(s.day3_email_sent_at).toLocaleDateString()
+                        ) : (
+                          <SendSurveyNowButton surveyId={s.id} alreadySent={false} />
+                        )}
                       </td>
                       <td className="px-3 py-2.5 text-xs text-slate-600">
                         {s.day5_follow_up_sent_at ? new Date(s.day5_follow_up_sent_at).toLocaleDateString() : s.status === "COMPLETED" ? "Completed — n/a" : "Not sent"}
