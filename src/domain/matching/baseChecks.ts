@@ -354,17 +354,25 @@ export function baseProgramChecks(
       ok ? `${scenario.citizenship} borrowers are eligible.` : `${scenario.citizenship} borrowers are not eligible for this program.`));
 
     // Per-citizenship income-documentation restriction — a program can
-    // bundle several doc types under one row while only actually
-    // extending a specific citizenship to a SUBSET of them (see
-    // Program.citizenshipDocTypeRestrictions). Only evaluated when the
-    // citizenship check above already passed (this only ever TIGHTENS an
-    // already-eligible citizenship, never substitutes for the base check)
-    // and the scenario specifies which doc type it wants.
+    // bundle several doc types under one row while only actually extending
+    // a specific citizenship to a SUBSET of them. ITIN is intentionally
+    // closed-by-default here: citizenshipEligible=["itin"] proves only the
+    // borrower classification, not that ITIN may be combined with every
+    // general documentation type on the row. A non-DSCR ITIN match therefore
+    // requires the requested doc type to be expressly listed. DSCR has its
+    // own stricter dedicated combination flags below.
     if (ok && scenario.incomeDocType) {
       const restriction = program.citizenshipDocTypeRestrictions?.[scenario.citizenship];
-      if (restriction && !restriction.includes(scenario.incomeDocType)) {
+      const itinDocUnconfirmed =
+        scenario.citizenship === "itin" &&
+        scenario.incomeDocType !== "dscr" &&
+        !restriction?.includes(scenario.incomeDocType);
+      const expresslyRestrictedOut = Boolean(restriction && !restriction.includes(scenario.incomeDocType));
+      if (itinDocUnconfirmed || expresslyRestrictedOut) {
         out.push(result(`${p}:citdoc`, "Citizenship-specific documentation eligibility", "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
-          `${scenario.citizenship} borrowers are eligible for this program generally, but this lender's current guideline does not extend that eligibility to ${scenario.incomeDocType.replace(/_/g, " ")} qualification specifically (only: ${restriction.join(", ").replace(/_/g, " ")}).`));
+          restriction
+            ? `${scenario.citizenship} borrowers are eligible for this program generally, but this lender's current guideline does not extend that eligibility to ${scenario.incomeDocType.replace(/_/g, " ")} qualification specifically (only: ${restriction.join(", ").replace(/_/g, " ")}).`
+            : `This program has not been expressly confirmed for the ITIN + ${scenario.incomeDocType.replace(/_/g, " ")} combination. ITIN eligibility and general documentation eligibility cannot be combined by inference.`));
       }
     }
   }
@@ -405,8 +413,8 @@ export function baseProgramChecks(
       out.push(result(`${p}:itindscr`, `${combinationLabel} combination`, "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
         `This program's current matrix expressly denies combining ITIN classification with ${isNoRatio ? "no-ratio DSCR" : "DSCR"} qualification — ITIN and DSCR are separate product lines here.`));
     } else {
-      out.push(result(`${p}:itindscr`, `${combinationLabel} combination`, "borrower", RuleOutcome.ManualReview, RuleSeverity.Soft,
-        `Guideline confirmation required: this program has not yet had ITIN + ${isNoRatio ? "no-ratio DSCR" : "DSCR"} combination eligibility confirmed against its current matrix — never assume it just because ITIN and DSCR each appear separately.`));
+      out.push(result(`${p}:itindscr`, `${combinationLabel} combination`, "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
+        `This program is not a confirmed ITIN + ${isNoRatio ? "no-ratio DSCR" : "DSCR"} option. ITIN eligibility and DSCR eligibility cannot be combined by inference.`));
     }
   }
 

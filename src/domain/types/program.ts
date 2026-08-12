@@ -237,12 +237,12 @@ export interface Program {
    * the other two). When set for a citizenship key, ONLY the listed doc
    * types are eligible for that citizenship on this program — this
    * TIGHTENS beyond the program's general incomeDocTypes, never loosens
-   * it. Omit a citizenship key entirely when the guideline draws no such
-   * distinction (citizenship eligibility then applies across the
-   * program's full incomeDocTypes list, the existing default behavior) —
-   * never default it to "all doc types" OR "no doc types", either of
-   * which would misrepresent an undocumented restriction. See
-   * baseChecks.ts's citizenship-doc-type-restriction check.
+   * it. For ITIN specifically, non-DSCR combinations are closed by default:
+   * omitting the `itin` key means no ITIN/document combination has been
+   * expressly confirmed, so the program is not recommended for an ITIN
+   * scenario. ITIN + DSCR is governed by the dedicated confirmation flags.
+   * Other citizenship classes retain the normal open-by-default behavior
+   * when their key is omitted. See baseChecks.ts.
    */
   citizenshipDocTypeRestrictions?: Partial<Record<Citizenship, IncomeDocType[]>>;
   /**

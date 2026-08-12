@@ -78,12 +78,13 @@ describe("1. ITIN borrower, investment property, DSCR", () => {
     expect(r?.severity).toBe(RuleSeverity.Hard);
   });
 
-  it("never silently assumes eligibility when itinDscrEligible is unconfirmed (undefined) — manual review, not a pass", () => {
+  it("hard-fails when itinDscrEligible is unconfirmed so ordinary DSCR lenders are not recommended", () => {
     const program = baseProgram({ minDscr: 1.0 }); // itinDscrEligible left undefined
     const scenario = baseScenario();
     const r = itinDscrResult(program, scenario);
-    expect(r?.outcome).toBe(RuleOutcome.ManualReview);
-    expect(r?.userExplanation.toLowerCase()).toMatch(/guideline confirmation required/);
+    expect(r?.outcome).toBe(RuleOutcome.Fail);
+    expect(r?.severity).toBe(RuleSeverity.Hard);
+    expect(r?.userExplanation.toLowerCase()).toMatch(/not a confirmed itin/);
   });
 
   it("hard-fails when the matrix expressly denies the combination (itinDscrEligible=false), even though citizenship and doc type independently match", () => {

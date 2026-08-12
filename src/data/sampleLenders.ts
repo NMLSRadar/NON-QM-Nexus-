@@ -122,6 +122,7 @@ export const samplePrograms: Program[] = [
     propertyTypes: ["single_family", "condo", "townhome", "pud"],
     eligibleStates: "ALL",
     citizenshipEligible: ["itin"],
+    citizenshipDocTypeRestrictions: { itin: ["full_doc", "bank_statement"] },
     vestingEligible: ["individual", "joint_tenants"],
     minLoanAmount: 100_000,
     maxLoanAmount: 1_000_000,

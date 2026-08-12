@@ -162,8 +162,18 @@ describe("Lien position hard matching filter", () => {
   });
 
   it("a same lender's first-lien bank-statement program never appears for a second-lien-specific request (no accidental duplicate/repeat)", () => {
-    const firstLienBankStatement = baseProgram({ id: "p-first", lienPosition: undefined, incomeDocTypes: ["bank_statement"] });
-    const secondLienBankStatement = baseProgram({ id: "p-second", lienPosition: "standalone_second", incomeDocTypes: ["bank_statement"] });
+    const firstLienBankStatement = baseProgram({
+      id: "p-first",
+      lienPosition: undefined,
+      incomeDocTypes: ["bank_statement"],
+      citizenshipDocTypeRestrictions: { itin: ["bank_statement"] },
+    });
+    const secondLienBankStatement = baseProgram({
+      id: "p-second",
+      lienPosition: "standalone_second",
+      incomeDocTypes: ["bank_statement"],
+      citizenshipDocTypeRestrictions: { itin: ["bank_statement"] },
+    });
     const scenario = baseScenario({ lienPosition: "standalone_second", incomeDocType: "bank_statement" });
 
     const firstResults = baseProgramChecks(scenario, calc, firstLienBankStatement);
@@ -199,13 +209,25 @@ describe("Per-citizenship income-documentation restriction (citizenshipDocTypeRe
     expect(citDocResult?.severity).toBe(RuleSeverity.Hard);
   });
 
-  it("no restriction present (undefined) means no additional restriction — every bundled doc type stays eligible", () => {
+  it("an ITIN program without explicit doc-type confirmation hard-fails every non-DSCR doc type", () => {
     const program = baseProgram({ incomeDocTypes: ["bank_statement", "full_doc", "asset_depletion"] }); // no citizenshipDocTypeRestrictions
     for (const doc of ["bank_statement", "full_doc", "asset_depletion"] as const) {
       const scenario = baseScenario({ incomeDocType: doc });
       const results = baseProgramChecks(scenario, calc, program);
-      expect(results.some((r) => r.ruleId.endsWith(":citdoc"))).toBe(false);
+      const citDocResult = results.find((r) => r.ruleId.endsWith(":citdoc"));
+      expect(citDocResult?.outcome).toBe(RuleOutcome.Fail);
+      expect(citDocResult?.severity).toBe(RuleSeverity.Hard);
     }
+  });
+
+  it("does not impose ITIN's closed-by-default rule on other citizenship classes", () => {
+    const program = baseProgram({
+      citizenshipEligible: ["us_citizen"],
+      incomeDocTypes: ["bank_statement", "full_doc"],
+    });
+    const scenario = baseScenario({ citizenship: "us_citizen", incomeDocType: "bank_statement" });
+    const results = baseProgramChecks(scenario, calc, program);
+    expect(results.some((r) => r.ruleId.endsWith(":citdoc"))).toBe(false);
   });
 
   it("the restriction never applies when the citizenship itself is already ineligible (base citizenship check wins, no double-fail)", () => {
