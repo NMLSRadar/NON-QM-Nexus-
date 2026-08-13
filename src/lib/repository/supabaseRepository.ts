@@ -1,10 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 import type { Repository } from "@/lib/store";
 import type { Lender, Program, Rule } from "@/domain/types/program";
 import type { Scenario } from "@/domain/types/scenario";
 import type { ProgramCatalog } from "@/domain/analyze";
 import { getEffectivePlan } from "./membership";
 import { PLATFORM_CATALOG_ORGANIZATION_ID } from "@/lib/platformCatalog";
+import { canonicalizePrograms } from "@/app/programs/program-directory-utils";
 
 /** The top subscription tier (Enterprise) — passing this as a tier
  * override effectively lifts the `.lte("tier_level", tier)` gate so every
@@ -464,12 +466,18 @@ export async function getVerifiedLenderCount(supabase: SupabaseClient): Promise<
  * The real, live count of verified Non-QM programs in the platform catalog —
  * the same "live numbers" contract as getVerifiedLenderCount (launch-hardening
  * spec, Section 5). Reuses listPrograms's own verified-only filtering at
- * MAX_TIER_LEVEL so it counts every catalog program regardless of tier —
- * exactly the number the /programs directory page shows, so the marketing
- * copy ("N non-QM programs") can never drift from reality.
+ * MAX_TIER_LEVEL and the directory page's canonicalization, and runs against
+ * the SERVICE ROLE (not anon/RLS) so an anonymous homepage visitor sees the
+ * exact same total a signed-in member sees on /programs — never a smaller
+ * RLS-truncated count. One definition of "verified", everywhere.
  */
 export async function getVerifiedProgramCount(supabase: SupabaseClient): Promise<number> {
-  const repo = new SupabaseRepository(supabase);
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
+  const repo = new SupabaseRepository(admin);
   const programs = await repo.listPrograms(PLATFORM_CATALOG_ORGANIZATION_ID, MAX_TIER_LEVEL);
-  return programs.length;
+  return canonicalizePrograms(programs).length;
 }
