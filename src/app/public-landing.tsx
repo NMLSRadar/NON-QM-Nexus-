@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  BarChart3,
   ClipboardCheck,
   Mic,
   Mic2,
@@ -96,7 +95,6 @@ export function PublicLanding() {
           iconClass="nexus-home-feature-icon--blue"
           title="Voice Intake"
           href="/scenarios/voice"
-          cta="View all"
         >
           <p className="nexus-home-feature-desc">
             Capture complex scenarios naturally with AI-powered voice intake.
@@ -110,7 +108,7 @@ export function PublicLanding() {
                 <i /><i /><i /><i /><i /><i /><i /><i />
               </span>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="nexus-home-tags mt-3">
               <Tag label="Loan Purpose" value="DSCR Investor" />
               <Tag label="Property Type" value="SFR" />
               <Tag label="Credit Score" value="680" />
@@ -125,6 +123,7 @@ export function PublicLanding() {
           title="Guideline-first ranking"
           href="/scenarios"
           cta="View all"
+          art={<RankArt />}
         >
           <p className="nexus-home-feature-desc">
             Our engine evaluates thousands of data points to surface the best-fitting non-QM programs.
@@ -141,7 +140,6 @@ export function PublicLanding() {
           iconClass="nexus-home-feature-icon--gold"
           title="Document checklists"
           href="/document-checklists"
-          cta="View all"
         >
           <p className="nexus-home-feature-desc">
             Instant, program-specific checklists so you collect the right docs the first time.
@@ -191,41 +189,47 @@ export function PublicLanding() {
 
 /* Small primitives -------------------------------------------------------- */
 
+function RankArt() {
+  return (
+    <span className="nexus-home-art-bars" aria-hidden="true">
+      {[34, 52, 70, 44, 88].map((h, i) => (
+        <i key={i} style={{ height: `${h}%` }} />
+      ))}
+    </span>
+  );
+}
+
 function FeatureCard({
   icon,
   iconClass,
   title,
   href,
   cta,
+  art,
   children,
 }: {
   icon: React.ReactNode;
   iconClass: string;
   title: string;
   href: string;
-  cta: string;
+  cta?: string;
+  art?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <article className="nexus-home-feature">
       <div className="flex items-start justify-between">
         <span className={`nexus-home-feature-icon ${iconClass}`}>{icon}</span>
-        <BarChart3IconHint />
+        {art ? <span className="nexus-home-feature-art">{art}</span> : null}
       </div>
       <h2 className="nexus-home-feature-title">{title}</h2>
       {children}
-      <Link href={href} className="nexus-home-feature-cta">
-        {cta} <ArrowRight className="h-3.5 w-3.5" />
-      </Link>
+      {cta ? (
+        <Link href={href} className="nexus-home-feature-cta">
+          {cta} <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      ) : null}
     </article>
-  );
-}
-
-function BarChart3IconHint() {
-  return (
-    <span className="nexus-home-feature-art" aria-hidden="true">
-      <BarChart3 className="h-10 w-10 opacity-40" />
-    </span>
   );
 }
 
