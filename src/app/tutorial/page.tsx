@@ -14,7 +14,6 @@ import {
   type TutorialSectionMeta,
 } from "@/components/tutorial/tutorial-page";
 import { TutorialEventLogger } from "@/components/tutorial/tutorial-event-logger";
-import { TutorialVideoModal } from "@/components/tutorial/tutorial-video-modal";
 
 // Public page. The root layout renders auth-aware chrome (Supabase session)
 // on every page, so this page stays force-dynamic exactly like every other
@@ -156,7 +155,6 @@ export default async function TutorialPageRoute() {
             >
               <Rocket className="h-4 w-4" aria-hidden /> Quick Start (3 steps)
             </a>
-            <TutorialVideoModal />
           </div>
           <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-slate-500">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden />
