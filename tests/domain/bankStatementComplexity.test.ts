@@ -39,19 +39,29 @@ describe("Bank statement file complexity classifier", () => {
     expect(result.classification).toBe("moderate_complexity");
   });
 
-  it("first-time homebuyer alone (a single moderate flag) is Moderate, not Clean", () => {
+  it("does not treat first-time-homebuyer status as generic complexity at 80% LTV or below", () => {
     const result = classifyBankStatementComplexity(scenario({ firstTimeHomebuyer: true }), calc(75));
+    expect(result.classification).toBe("clean");
+    expect(result.flags.some((flag) => flag.label.includes("First-time homebuyer"))).toBe(false);
+  });
+
+  it("shows the 12-month rental-history notice for a first-time homebuyer above 80% LTV", () => {
+    const result = classifyBankStatementComplexity(scenario({ firstTimeHomebuyer: true }), calc(85));
     expect(result.classification).toBe("moderate_complexity");
+    expect(result.flags).toContainEqual({ label: "First-time homebuyer above 80% LTV", severity: "moderate" });
+    expect(result.explanation).toContain(
+      "The majority of lenders may request 12 months of proof of payment for the borrower's rental history because they are a first-time homebuyer above 80.01% LTV.",
+    );
   });
 
   it("multiple compounding moderate flags classify as High Guideline Complexity", () => {
     const result = classifyBankStatementComplexity(
       scenario({
         fico: 670, // moderate
-        firstTimeHomebuyer: true, // moderate
+        firstTimeHomebuyer: true, // moderate above 80% LTV
         vesting: "llc", // moderate
       }),
-      calc(75),
+      calc(85),
     );
     expect(result.classification).toBe("high_complexity");
   });

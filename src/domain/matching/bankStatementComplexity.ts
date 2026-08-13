@@ -94,7 +94,12 @@ export function classifyBankStatementComplexity(
   } else if (scenario.citizenship === Citizenship.NonPermanentResident) {
     flags.push({ label: "Non-permanent resident borrower", severity: "moderate" });
   }
-  if (scenario.firstTimeHomebuyer) flags.push({ label: "First-time homebuyer", severity: "moderate" });
+  // First-time-homebuyer status is not a generic complication. The relevant
+  // guideline trigger is leverage above 80% LTV, where the lender may require
+  // a documented 12-month rental-payment history.
+  if (scenario.firstTimeHomebuyer && ltv != null && ltv > 80) {
+    flags.push({ label: "First-time homebuyer above 80% LTV", severity: "moderate" });
+  }
   if (scenario.firstTimeInvestor || scenario.investorExperience === "first_time_investor") {
     flags.push({ label: "First-time investor", severity: "moderate" });
   }
@@ -177,13 +182,17 @@ function buildExplanation(classification: BankStatementFileClassification, flags
     .slice(0, 3)
     .map((f) => f.label.toLowerCase());
   const flagText = topFlags.length > 0 ? topFlags.join("; ") : "multiple factors";
+  const hasHighLtvFirstTimeHomebuyer = flags.some((flag) => flag.label === "First-time homebuyer above 80% LTV");
+  const housingHistoryNotice = hasHighLtvFirstTimeHomebuyer
+    ? " The majority of lenders may request 12 months of proof of payment for the borrower's rental history because they are a first-time homebuyer above 80.01% LTV."
+    : "";
   if (classification === "moderate_complexity") {
-    return `This file is classified as Moderate Guideline Complexity because of: ${flagText}. These items may eliminate lenders with more restrictive bank statement guidelines, so guideline flexibility should weigh more heavily than pricing alone.`;
+    return `This file is classified as Moderate Guideline Complexity because of: ${flagText}.${housingHistoryNotice}`;
   }
   if (classification === "high_complexity") {
-    return `This file is classified as High Guideline Complexity because of multiple compounding factors: ${flagText}. A lender with broader Non-QM underwriting flexibility is materially more likely to close this file than a standardized, pricing-led execution.`;
+    return `This file is classified as High Guideline Complexity because of multiple compounding factors: ${flagText}.${housingHistoryNotice} A lender with broader Non-QM underwriting flexibility is materially more likely to close this file than a standardized, pricing-led execution.`;
   }
-  return `This file is recommended for manual review because of a severe or heavily compounding factor: ${flagText}. Confirm eligibility directly with a lender's underwriting/AE team before relying on an automated ranking alone.`;
+  return `This file is recommended for manual review because of a severe or heavily compounding factor: ${flagText}.${housingHistoryNotice} Confirm eligibility directly with a lender's underwriting/AE team before relying on an automated ranking alone.`;
 }
 
 function severityRank(s: ComplexityFlag["severity"]): number {

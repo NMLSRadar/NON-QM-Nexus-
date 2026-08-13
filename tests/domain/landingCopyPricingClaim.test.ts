@@ -40,4 +40,10 @@ describe("landing page copy — pricing is not a ranking factor", () => {
     const source = readSource(join(__dirname, "../../src/app/public-landing.tsx"));
     expect(source).toMatch(/pricing is never a factor/i);
   });
+
+  it("uses the permanent program-availability headline instead of a numeric count", () => {
+    const source = readSource(join(__dirname, "../../src/app/public-landing.tsx"));
+    expect(source).toContain("HUNDREDS OF NON-QM PROGRAMS AT YOUR FINGERTIPS!");
+    expect(source).not.toMatch(/toLocaleString\([^)]*\).*non-QM programs at your fingertips/i);
+  });
 });

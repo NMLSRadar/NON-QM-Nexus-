@@ -71,4 +71,18 @@ describe("classifyScenarioComplexity", () => {
     expect(r.reasons.some((x) => x.includes("FICO"))).toBe(true);
     expect(r.reasons.some((x) => x.includes("Income"))).toBe(true);
   });
+
+  it("labels a non-permanent resident accurately and never as a foreign national", () => {
+    const r = classifyScenarioComplexity(
+      baseScenario({
+        fico: 760,
+        citizenship: "non_permanent_resident",
+        incomeDocType: "full_doc",
+        propertyType: "single_family",
+        occupancy: "primary",
+      }),
+    );
+    expect(r.reasons).toContain("Non-permanent resident");
+    expect(r.reasons).not.toContain("Foreign national");
+  });
 });

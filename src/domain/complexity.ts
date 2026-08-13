@@ -165,8 +165,14 @@ export function classifyScenarioComplexity(s: Scenario): ComplexityResult {
   // Borrower profile
   if (s.firstTimeHomebuyer) add(WEIGHTS.firstTimeHomebuyer, "First-time buyer");
   if (s.firstTimeInvestor || s.investorExperience === "first_time_investor") add(WEIGHTS.firstTimeInvestor, "First-time investor");
-  if (s.citizenship === "itin" || s.citizenship === "foreign_national" || s.citizenship === "non_permanent_resident")
-    add(WEIGHTS.foreignOrItin, s.citizenship === "itin" ? "ITIN borrower" : "Foreign national");
+  if (s.citizenship === "itin" || s.citizenship === "foreign_national" || s.citizenship === "non_permanent_resident") {
+    const citizenshipReason = {
+      itin: "ITIN borrower",
+      foreign_national: "Foreign national",
+      non_permanent_resident: "Non-permanent resident",
+    }[s.citizenship];
+    add(WEIGHTS.foreignOrItin, citizenshipReason);
+  }
   if (s.visaType) add(WEIGHTS.visaRestriction, `${s.visaType} visa`);
   if (s.vesting && (s.vesting === "llc" || s.vesting === "corporation" || s.vesting === "trust"))
     add(WEIGHTS.llcVesting, s.vesting === "trust" ? "Trust vesting" : "Entity vesting");

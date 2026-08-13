@@ -58,8 +58,8 @@ function SignInCta() {
   );
 }
 
-export function PublicLanding({ programCount = null }: { programCount?: number | null }) {
-  const programLine = programCount != null ? `${programCount.toLocaleString("en-US")} non-QM programs at your fingertips.` : "Hundreds of non-QM programs at your fingertips.";
+export function PublicLanding({ programCount: _programCount = null }: { programCount?: number | null }) {
+  const programLine = "HUNDREDS OF NON-QM PROGRAMS AT YOUR FINGERTIPS!";
   return (
     <div className="nexus-landing gold-theme gold-page -mx-4 -my-6 overflow-hidden bg-[#050505] px-4 pb-10 pt-6 sm:px-6 sm:pb-14">
       <section className="nexus-hero relative mx-auto max-w-7xl pt-8 text-center sm:pt-10 lg:pt-12">
