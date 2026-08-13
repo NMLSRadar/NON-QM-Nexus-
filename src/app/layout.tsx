@@ -76,6 +76,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" data-theme={initialTheme} suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+          rel="stylesheet"
+        />
         {/* No-flash theme script: applies the persisted theme to <html> before
             first paint so a light-mode user never sees a dark flash. Reads
             localStorage directly (the authoritative client store). */}

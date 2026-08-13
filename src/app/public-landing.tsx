@@ -96,7 +96,7 @@ export function PublicLanding() {
           iconClass="nexus-home-feature-icon--blue"
           title="Voice Intake"
           href="/scenarios/voice"
-          cta="Start a voice scenario"
+          cta="View all"
         >
           <p className="nexus-home-feature-desc">
             Capture complex scenarios naturally with AI-powered voice intake.
@@ -124,7 +124,7 @@ export function PublicLanding() {
           iconClass="nexus-home-feature-icon--gold"
           title="Guideline-first ranking"
           href="/scenarios"
-          cta="View all matches"
+          cta="View all"
         >
           <p className="nexus-home-feature-desc">
             Our engine evaluates thousands of data points to surface the best-fitting non-QM programs.
@@ -141,7 +141,7 @@ export function PublicLanding() {
           iconClass="nexus-home-feature-icon--gold"
           title="Document checklists"
           href="/document-checklists"
-          cta="View checklists"
+          cta="View all"
         >
           <p className="nexus-home-feature-desc">
             Instant, program-specific checklists so you collect the right docs the first time.
