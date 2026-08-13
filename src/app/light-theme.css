@@ -1467,3 +1467,45 @@ html[data-theme="light"] .gold-page h3 { color: #001a2c; }
   }
   html[data-theme="light"] .nexus-feature-card { transition: none !important; }
 }
+
+/* =============================================================================
+   LIGHT-MODE LEGIBILITY PASS — every rule scoped html[data-theme="light"]
+   so dark mode is byte-for-byte untouched.
+   Fixes surfaces whose dark hex wasn't in the generic flip list, plus
+   tutorial-prose + voice-vitals low-contrast text.
+============================================================================= */
+
+/* Unique-products / tutorial hero cards: remaining dark card surfaces -> ivory ------------------- */
+html[data-theme="light"] .gold-page .bg-\[\#0a0a0b\] { background-color: var(--ivory-card) !important; }
+html[data-theme="light"] .gold-page .bg-\[\#0d0d0f\] { background-color: var(--ivory-card) !important; }
+html[data-theme="light"] .gold-page .bg-\[\#111111\] { background-color: var(--ivory-card) !important; }
+html[data-theme="light"] .gold-page .bg-\[\#101012\] { background-color: var(--ivory-card) !important; }
+html[data-theme="light"] .gold-page .bg-\[\#0b0b0d\] { background-color: var(--ivory-card) !important; }
+html[data-theme="light"] .gold-page .bg-\[\#08090b\] { background-color: var(--ivory-card) !important; }
+html[data-theme="light"] .gold-page .bg-\[\#151411\] { background-color: var(--ivory-card) !important; }
+
+/* Text: slate-400/500 hardcodes on dark surfaces -> deep readable navy on ivory */
+html[data-theme="light"] .gold-page .text-slate-400 { color: #3f4c63 !important; }
+html[data-theme="light"] .gold-page .text-slate-500 { color: #3f4c63 !important; }
+html[data-theme="light"] .gold-page .text-slate-600 { color: #2e3a4f !important; }
+html[data-theme="light"] .gold-page .text-slate-700 { color: #1f2937 !important; }
+
+/* Tutorial prose — originally #cbd5e1/#9aa4b6 etc on dark -> navy on cream */
+html[data-theme="light"] .tutorial-prose,
+html[data-theme="light"] #tutorial-page { color: #2e3a4f !important; }
+html[data-theme="light"] .tutorial-prose > :first-child { margin-top: 0 !important; }
+html[data-theme="light"] .tutorial-prose p { color: #2e3a4f !important; }
+html[data-theme="light"] .tutorial-prose ul,
+html[data-theme="light"] .tutorial-prose ol { color: #2e3a4f !important; }
+html[data-theme="light"] .tutorial-prose li { margin: 0.35rem 0 !important; }
+html[data-theme="light"] .tutorial-prose strong { color: #0b1f3a !important; font-weight: 600; }
+html[data-theme="light"] .tutorial-prose a { color: #8a6a22 !important; }
+html[data-theme="light"] .tutorial-prose code { color: #33455e !important; }
+html[data-theme="light"] .tutorial-prose pre { color: #2e3a4f; }
+
+/* Voice vitals — "Needed"/"Not mentioned" label contrast bump (scoped to the
+   app surface so nothing leaks). */
+html[data-theme="light"] .gold-theme .text-slate-400,
+html[data-theme="light"] .gold-page .text-slate-400 { color: #3f4c63 !important; }
+html[data-theme="light"] .gold-theme .text-slate-500,
+html[data-theme="light"] .gold-page .text-slate-500 { color: #3f4c63 !important; }
