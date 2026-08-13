@@ -6,7 +6,6 @@ import type { Scenario } from "@/domain/types/scenario";
 import type { ProgramCatalog } from "@/domain/analyze";
 import { getEffectivePlan } from "./membership";
 import { PLATFORM_CATALOG_ORGANIZATION_ID } from "@/lib/platformCatalog";
-import { canonicalizePrograms } from "@/app/programs/program-directory-utils";
 
 /** The top subscription tier (Enterprise) — passing this as a tier
  * override effectively lifts the `.lte("tier_level", tier)` gate so every
@@ -463,13 +462,14 @@ export async function getVerifiedLenderCount(supabase: SupabaseClient): Promise<
 }
 
 /**
- * The real, live count of verified Non-QM programs in the platform catalog —
+ * The real, live count of currently-available Non-QM programs in the catalog —
  * the same "live numbers" contract as getVerifiedLenderCount (launch-hardening
- * spec, Section 5). Reuses listPrograms's own verified-only filtering at
- * MAX_TIER_LEVEL and the directory page's canonicalization, and runs against
- * the SERVICE ROLE (not anon/RLS) so an anonymous homepage visitor sees the
- * exact same total a signed-in member sees on /programs — never a smaller
- * RLS-truncated count. One definition of "verified", everywhere.
+ * spec, Section 5). Definition (matches what the /programs directory shows the
+ * owner): ACTIVE, non-sample programs whose LATEST guideline version is usable
+ * (human_verified | imported_pending_review | draft — i.e. NOT superseded /
+ * archived). Runs against the SERVICE ROLE so an anonymous homepage visitor
+ * sees the exact same total a signed-in member sees — never an RLS-truncated
+ * subset. One definition of "program total", everywhere.
  */
 export async function getVerifiedProgramCount(supabase: SupabaseClient): Promise<number> {
   const admin = createClient(
@@ -477,7 +477,35 @@ export async function getVerifiedProgramCount(supabase: SupabaseClient): Promise
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
-  const repo = new SupabaseRepository(admin);
-  const programs = await repo.listPrograms(PLATFORM_CATALOG_ORGANIZATION_ID, MAX_TIER_LEVEL);
-  return canonicalizePrograms(programs).length;
+  const org = PLATFORM_CATALOG_ORGANIZATION_ID;
+
+  // Active catalog programs (service role → every row, no RLS cut).
+  const { data: programs } = await admin
+    .from("programs")
+    .select("id, active, is_sample_data")
+    .eq("organization_id", org)
+    .eq("is_sample_data", false)
+    .is("deleted_at", null);
+
+  // Latest effective guideline version per program.
+  const { data: guidelineVersions } = await admin
+    .from("guideline_versions")
+    .select("program_id, effective_date, verification_status")
+    .eq("organization_id", org);
+  const latestByProgram = new Map<string, { effectiveDate: string; status: string }>();
+  for (const gv of guidelineVersions ?? []) {
+    const existing = latestByProgram.get(gv.program_id);
+    if (!existing || (gv.effective_date ?? "") > (existing.effectiveDate ?? "")) {
+      latestByProgram.set(gv.program_id, { effectiveDate: gv.effective_date, status: gv.verification_status });
+    }
+  }
+
+  const USABLE = new Set(["human_verified", "imported_pending_review", "draft"]);
+  let count = 0;
+  for (const p of programs ?? []) {
+    if (!p.active || p.is_sample_data) continue;
+    const latest = latestByProgram.get(p.id);
+    if (latest && USABLE.has(latest.status)) count += 1;
+  }
+  return count;
 }
