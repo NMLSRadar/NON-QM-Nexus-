@@ -62,7 +62,7 @@ export function DocumentChecklistCard({
         <div><h3 className="text-lg font-bold text-white">{title}</h3><p className="mt-1 text-sm text-slate-400">{description}</p></div>
       </div>
 
-      <div className="mt-4 inline-flex rounded-full border border-amber-500/40 bg-black/40 p-1 text-xs font-semibold">
+      <div className="checklist-segmented-control mt-4 inline-flex rounded-full border border-amber-500/40 bg-black/40 p-1 text-xs font-semibold">
         {(["purchase", "refinance"] as const).map((t) => (
           <button
             key={t}

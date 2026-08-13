@@ -1747,6 +1747,103 @@ html[data-theme="light"] .pricing-membership-card .gold-to-black-button {
   border: 1px solid #f6dd91;
 }
 
+/* Final reference-match polish: segmented controls, status treatments and pricing. */
+html[data-theme="light"] .checklist-segmented-control {
+  padding: 3px !important;
+  border-color: rgba(7,20,38,.12) !important;
+  border-radius: 10px !important;
+  background: #f1eee7 !important;
+  box-shadow: inset 0 1px 2px rgba(7,20,38,.05);
+}
+html[data-theme="light"] .checklist-segmented-control button {
+  min-width: 92px;
+  border-radius: 7px !important;
+  color: var(--nexus-text-muted) !important;
+}
+html[data-theme="light"] .checklist-segmented-control .gold-grad-toggle {
+  color: #fff !important;
+  background: linear-gradient(145deg, #102a47, #071426) !important;
+  box-shadow: 0 4px 12px -7px rgba(7,20,38,.85), inset 0 0 0 1px rgba(230,189,85,.24) !important;
+}
+html[data-theme="light"] .checklist-card__heading h3 { color: var(--nexus-navy) !important; font-size: 1.16rem; letter-spacing: -.015em; }
+html[data-theme="light"] .checklist-card__heading p,
+html[data-theme="light"] .checklist-row__copy > p { line-height: 1.55; }
+html[data-theme="light"] .checklist-row__badge {
+  color: #715315 !important;
+  border-color: rgba(183,138,36,.35) !important;
+  background: #fbf1d7 !important;
+}
+html[data-theme="light"] .checklist-row__badge.border-white\/15 {
+  color: #667386 !important;
+  border-color: rgba(7,20,38,.13) !important;
+  background: #f6f4ef !important;
+}
+html[data-theme="light"] .nexus-category-count {
+  padding: .42rem .7rem;
+  border: 1px solid var(--nexus-border);
+  border-radius: 999px;
+  color: #715315 !important;
+  background: rgba(255,255,255,.8);
+}
+html[data-theme="light"] .nexus-product-status {
+  color: #715315 !important;
+  border-color: rgba(183,138,36,.34) !important;
+  background: #fbf1d7 !important;
+}
+html[data-theme="light"] .nexus-accuracy-callout {
+  position: relative;
+  color: var(--nexus-text-muted) !important;
+  border-color: var(--nexus-border) !important;
+  background: linear-gradient(110deg, #fff, #fbf7ec) !important;
+  box-shadow: 0 12px 32px -28px rgba(7,20,38,.5);
+}
+html[data-theme="light"] .nexus-accuracy-callout::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 14px; bottom: 14px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(#e4c26e, #a97e20);
+}
+html[data-theme="light"] .nexus-accuracy-callout strong { color: #715315 !important; }
+html[data-theme="light"] .nexus-pricing-toggle > span:not(.text-emerald-300) { color: var(--nexus-text-muted) !important; }
+html[data-theme="light"] .nexus-pricing-toggle > span.text-white { color: var(--nexus-navy) !important; }
+html[data-theme="light"] .nexus-pricing-toggle button {
+  border-color: rgba(183,138,36,.5) !important;
+  background: #e9e4d9 !important;
+}
+html[data-theme="light"] .nexus-pricing-toggle button > span { background: var(--nexus-navy-soft) !important; box-shadow: 0 2px 8px rgba(7,20,38,.28) !important; }
+html[data-theme="light"] .nexus-pricing-toggle .text-emerald-300 {
+  color: #715315 !important;
+  border-color: rgba(183,138,36,.35) !important;
+  background: #fbf1d7 !important;
+}
+html[data-theme="light"] .pricing-membership-card .gold-to-black-button,
+html[data-theme="light"] .nexus-teams-panel .gold-to-black-button {
+  color: #071426 !important;
+  background: linear-gradient(180deg, #ead499 0%, #d2ae55 100%) !important;
+  border: 1px solid #f2dfab !important;
+  box-shadow: 0 10px 24px -14px rgba(230,189,85,.66), inset 0 1px 0 rgba(255,255,255,.55) !important;
+}
+html[data-theme="light"] .nexus-teams-panel {
+  background: radial-gradient(circle at 50% 110%, rgba(230,189,85,.11), transparent 38%), linear-gradient(145deg, #102a47, #071426 72%) !important;
+  border-color: rgba(230,189,85,.42) !important;
+  box-shadow: 0 24px 58px -32px rgba(7,20,38,.7), inset 0 0 0 1px rgba(255,255,255,.025) !important;
+}
+html[data-theme="light"] .nexus-teams-panel > div.relative > p.text-slate-300 { color: #d8e0ea !important; }
+html[data-theme="light"] .nexus-teams-panel > div.relative > p.text-slate-500 { color: #aeb9c8 !important; }
+html[data-theme="light"] .nexus-teams-panel .nexus-team-tier {
+  border-color: rgba(230,189,85,.25) !important;
+  background: rgba(255,255,255,.045) !important;
+}
+html[data-theme="light"] .nexus-teams-panel .nexus-team-tier > span {
+  color: #071426 !important;
+  background: #dcc274 !important;
+  box-shadow: 0 8px 18px -12px rgba(230,189,85,.8) !important;
+}
+html[data-theme="light"] .nexus-teams-panel .nexus-team-tier .text-white { color: #fff !important; }
+html[data-theme="light"] .nexus-teams-panel .nexus-team-tier .text-slate-400 { color: #b9c3d1 !important; }
+
 /* Scenario builder and voice intelligence surface. */
 html[data-theme="light"] .nexus-scenario-builder { max-width: none !important; }
 html[data-theme="light"] .nexus-scenario-form fieldset { position: relative; padding: 1.35rem !important; }

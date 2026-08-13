@@ -31,7 +31,7 @@ export default async function UniqueProductsPage() {
             <h2 id="program-types" className="text-2xl font-bold text-white">Choose a Program Type</h2>
             <p className="mt-1 text-sm text-slate-400">Fast lender discovery without running a full scenario.</p>
           </div>
-          <span className="hidden text-sm text-slate-500 sm:block">{UNIQUE_PRODUCT_CATEGORIES.length} verified categories</span>
+          <span className="nexus-category-count hidden text-sm text-slate-500 sm:block">{UNIQUE_PRODUCT_CATEGORIES.length} verified categories</span>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {UNIQUE_PRODUCT_CATEGORIES.map((category, index) => {
@@ -47,7 +47,7 @@ export default async function UniqueProductsPage() {
                   <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-amber-400/35 bg-amber-400/10 text-amber-300">
                     <Icon className="h-6 w-6" />
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300">
+                  <span className="nexus-product-status inline-flex items-center gap-1 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300">
                     <BadgeCheck className="h-3.5 w-3.5" /> Active
                   </span>
                 </div>
@@ -63,7 +63,7 @@ export default async function UniqueProductsPage() {
         </div>
       </section>
 
-      <aside className="rounded-2xl border border-amber-500/20 bg-black/35 p-5 text-sm leading-relaxed text-slate-400">
+      <aside className="nexus-accuracy-callout rounded-2xl border border-amber-500/20 bg-black/35 p-5 text-sm leading-relaxed text-slate-400">
         <strong className="text-amber-300">Built for accuracy:</strong> hybrid programs such as ITIN DSCR and ITIN P&amp;L Only appear only when that exact combination is recorded. Separate ITIN, DSCR, or P&amp;L eligibility is never combined automatically.
       </aside>
     </div>

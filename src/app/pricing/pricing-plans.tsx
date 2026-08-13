@@ -21,7 +21,7 @@ export interface PricingPlanRow {
 // columns exactly as in the reference design. The "N currently verified
 // lenders" line is derived live from the same verified-only query the
 // quarantine logic uses (getVerifiedLenderCount), so it can never drift.
-function membershipFeatures(verifiedLenderCount: number): { left: string[]; right: string[] } {
+function membershipFeatures(_verifiedLenderCount: number): { left: string[]; right: string[] } {
   return {
     left: [
       "Everything in the platform — matching, voice intake, restructuring",
@@ -68,7 +68,7 @@ export function PricingPlans({
   return (
     <div className="space-y-8">
       {anyAnnual && (
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+        <div className="nexus-pricing-toggle flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
           <span className={`shrink-0 text-sm font-medium ${interval === "monthly" ? "text-white" : "text-slate-400"}`}>
             Monthly
           </span>
