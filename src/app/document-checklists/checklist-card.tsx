@@ -56,18 +56,18 @@ export function DocumentChecklistCard({
   const conditionalItems = tab === "purchase" ? conditionalPurchaseItems : conditionalRefinanceItems;
 
   return (
-    <div className="gold-scenario-card rounded-2xl border border-white/10 bg-[#0d0d0f] p-5">
+    <div className="checklist-card gold-scenario-card rounded-2xl p-5">
       <h3 className="text-lg font-bold text-white">{title}</h3>
       <p className="mt-1 text-sm text-slate-400">{description}</p>
 
-      <div className="mt-4 inline-flex rounded-full border border-white/10 bg-black/40 p-1 text-xs font-semibold">
+      <div className="mt-4 inline-flex rounded-full border border-amber-500/40 bg-black/40 p-1 text-xs font-semibold">
         {(["purchase", "refinance"] as const).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`rounded-full px-3 py-1.5 capitalize transition-colors ${
-              tab === t ? "bg-amber-500 text-black" : "text-slate-300 hover:text-white"
+            className={`rounded-full px-3 py-1.5 capitalize transition-all ${
+              tab === t ? "gold-grad-toggle text-black" : "text-slate-300 hover:text-white"
             }`}
           >
             {t === "purchase" ? "Purchase" : "Refinance"}
