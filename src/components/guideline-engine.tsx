@@ -1,61 +1,39 @@
 "use client";
 
 /**
- * GuidelineEngine — the animated centerpiece of the homepage.
+ * GuidelineEngine — the homepage centerpiece, built to match the reference.
  *
- * Recreates the "glass sphere / guideline engine" from the design reference:
- * a transparent sphere whose concentric rings rotate and counter-rotate, small
- * particles travel the orbits, gold light pulses run the connector paths from
- * the "Borrower Scenario — Being Analyzed" node out to the three match-score
- * nodes (#1 98% / #2 94% / #3 91%), the center core "GUIDELINE ENGINE" label
- * breathes a soft glow, and the whole object floats gently.
+ * A large transparent glass sphere sitting on a tiered metallic (gold) base.
+ * Inside the sphere, glowing gold light filaments converge at a center point
+ * labeled "GUIDELINE ENGINE". A floating translucent "Borrower Scenario —
+ * Being Analyzed" card sits to the LEFT of the sphere; three circular gold
+ * badges (#1 98% / #2 94% / #3 91% match) sit to the RIGHT. Everything
+ * animates slowly and calmly (orbit filaments, pulsing light, gentle float),
+ * is GPU-cheap (transform/opacity only), pauses when offscreen or the tab is
+ * hidden, and is fully disabled under prefers-reduced-motion.
  *
- * All motion is pure CSS (transform/opacity/box-shadow) — this component only
- * adds the DOCUMENT/PERF behavior the browser can't express in CSS:
- *  - pauses ALL animation when the element is offscreen (IntersectionObserver)
- *  - pauses when the tab is hidden (visibilitychange)
- *  - never runs when prefers-reduced-motion is set (CSS already disables it;
- *    this also avoids attaching the observer work unnecessarily)
- *  - a "motionless" class forces the static fallback presented to users who
- *    opted out of animation, and is GPU-cheap on small/lower-power devices.
- *
- * Markup + prompts keep every number/label readable at all times; the motion
- * is intentionally slow and calm — "intelligent, premium", not a game HUD.
+ * This component is presentational (markup + CSS animation classes in
+ * light-theme.css); it only adds scroll/tab-driven pausing.
  */
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { FileText, CheckCircle2 } from "lucide-react";
-
-const DOTS = [
-  { r: 1, className: "d1", dur: "46s", delay: "0s" },
-  { r: 2, className: "d2", dur: "30s", delay: "-2s" },
-  { r: 3, className: "d3", dur: "64s", delay: "-8s" },
-  { r: 4, className: "d4", dur: "22s", delay: "-5s" },
-];
+import { useEffect, useRef, useState } from "react";
+import { FileText } from "lucide-react";
 
 const MATCHES = [
-  { rank: 1, pct: 98, className: "m1", delay: "0.1s" },
-  { rank: 2, pct: 94, className: "m2", delay: "0.35s" },
-  { rank: 3, pct: 91, className: "m3", delay: "0.6s" },
+  { rank: 1, pct: 98, top: 6, right: -4, delay: "0.1s" },
+  { rank: 2, pct: 94, top: 40, right: -12, delay: "0.32s" },
+  { rank: 3, pct: 91, bottom: 8, right: -2, delay: "0.54s" },
 ];
 
 export function GuidelineEngine({ className = "" }: { className?: string }) {
   const rootRef = useRef<HTMLDivElement>(null);
-  // "motionless" is the reduced-motion / offscreen / hidden-tab + low-power
-  // fallback. Default false → animation runs; the no-JS and reduced-motion
-  // case is handled by CSS alone (see light-theme.css), which is sufficient —
-  // this state only adds the tab/scroll-driven pause.
   const [motionless, setMotionless] = useState(false);
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root) return;
-    if (typeof IntersectionObserver === "undefined") return;
-    // Pause when the engine leaves the viewport — save GPU on long pages.
+    if (!root || typeof IntersectionObserver === "undefined") return;
     const io = new IntersectionObserver(
       (entries) => {
-        for (const e of entries) {
-          setMotionless(() => !e.isIntersecting);
-        }
+        for (const e of entries) setMotionless(!e.isIntersecting);
       },
       { rootMargin: "120px" }
     );
@@ -76,83 +54,85 @@ export function GuidelineEngine({ className = "" }: { className?: string }) {
       ref={rootRef}
       className={`guideline-engine ${motionless ? "motionless" : ""} ${className}`}
       role="img"
-      aria-label="Animated NON-QM guideline engine matching a borrower scenario to three lender outcomes: 98, 94 and 91 percent match"
+      aria-label="Animated guideline engine: a borrower scenario is analyzed and matched to three lenders — 98, 94 and 91 percent match"
     >
+      {/* The glass sphere */}
       <div className="guideline-engine__sphere guideline-engine__enter">
-        {/* Concentric rings */}
-        <div className="guideline-engine__rings" aria-hidden="true">
+        {/* Interior gold light filaments converging at center */}
+        <svg className="guideline-engine__filaments" viewBox="0 0 100 100" aria-hidden="true">
+          {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle, i) => (
+            <line
+              key={angle}
+              className="guideline-engine__filament"
+              x1="50"
+              y1="50"
+              x2={50 + 46 * Math.cos((angle * Math.PI) / 180)}
+              y2={50 + 46 * Math.sin((angle * Math.PI) / 180)}
+              style={{ animationDelay: `${i * 0.18}s` }}
+            />
+          ))}
+          <circle className="guideline-engine__core-ring" cx="50" cy="50" r="22" />
+        </svg>
+
+        {/* Orbital rings */}
+        <div className="guideline-engine__orbit" aria-hidden="true">
           <span className="guideline-engine__ring r1" />
           <span className="guideline-engine__ring r2" />
           <span className="guideline-engine__ring r3" />
-          <span className="guideline-engine__ring r4" />
-          {DOTS.map((d, i) => (
-            <span
-              key={i}
-              className={`guideline-engine__dot ${d.className}`}
-              style={
-                {
-                  "--dot-size": i % 2 ? "7px" : "5px",
-                  animationDuration: d.dur,
-                  animationDelay: d.delay,
-                } as CSSProperties
-              }
-            />
-          ))}
+          <span className="guideline-engine__dot d1" />
+          <span className="guideline-engine__dot d2" />
+          <span className="guideline-engine__dot d3" />
         </div>
 
-        {/* Animated gold connector paths (drawn as a lazy arc fan). */}
-        <svg className="guideline-engine__paths" viewBox="0 0 100 100" aria-hidden="true">
-          <path className="guideline-engine__path" d="M 34 86 C 30 60, 30 48, 50 50" />
-          <path className="guideline-engine__path" d="M 78 14 C 66 22, 58 32, 53 48" style={{ animationDelay: "0.5s" }} />
-          <path className="guideline-engine__path" d="M 94 46 C 82 50, 70 52, 54 52" style={{ animationDelay: "1.1s" }} />
-          <circle className="guideline-engine__path" cx="50" cy="50" r="22" fill="none" strokeWidth="1" style={{ animationDelay: "1.7s" }} />
-        </svg>
-
-        {/* Center core */}
+        {/* Center label */}
         <div className="guideline-engine__core" aria-hidden="true">
-          <div className="text-center">
-            <SparkCoreIcon />
-            <span className="guideline-engine__core-label">Guideline Engine</span>
-          </div>
+          <span className="guideline-engine__core-label">Guideline Engine</span>
         </div>
+
+        {/* Specular glass highlight */}
+        <span className="guideline-engine__sheen" aria-hidden="true" />
       </div>
 
-      {/* Borrower scenario node */}
+      {/* Tiered metallic base underneath the sphere */}
+      <div className="guideline-engine__base" aria-hidden="true">
+        <span className="guideline-engine__base-tier t1" />
+        <span className="guideline-engine__base-tier t2" />
+        <span className="guideline-engine__base-tier t3" />
+        <span className="guideline-engine__base-glow" />
+      </div>
+
+      {/* Borrower scenario card — LEFT of sphere */}
       <div className="guideline-engine__node scenario" aria-hidden="true">
         <span className="guideline-engine__node-icon">
-          <FileText className="h-4 w-4" />
+          <FileText className="h-5 w-5" />
         </span>
-        <span>
-          <span className="guideline-engine__node-label block">Borrower Scenario</span>
-          <span className="guideline-engine__node-sub block">Being Analyzed…</span>
+        <span className="guideline-engine__node-copy">
+          <span className="guideline-engine__node-label">Borrower Scenario</span>
+          <span className="guideline-engine__node-title">Being Analyzed</span>
         </span>
       </div>
 
-      {/* Match-score nodes */}
+      {/* Three match badges — RIGHT of sphere */}
       {MATCHES.map((m) => (
-        <div key={m.rank} className={`guideline-engine__node ${m.className}`} aria-hidden="true">
-          <span
-            className="guideline-engine__score"
-            style={{ animation: `engine-score-in 820ms cubic-bezier(0.16,1,0.3,1) ${m.delay} both` }}
-          >
-            <span className="text-sm font-extrabold tracking-tight">
-              {m.pct}
-              <span className="text-[9px] ml-px">%</span>
+        <div
+          key={m.rank}
+          className="guideline-engine__match"
+          style={{
+            top: m.top !== undefined ? `${m.top}%` : undefined,
+            bottom: m.bottom !== undefined ? `${m.bottom}%` : undefined,
+            right: `${m.right}%`,
+          }}
+          aria-hidden="true"
+        >
+          <div className="guideline-engine__match-inner" style={{ animationDelay: m.delay }}>
+            <span className="guideline-engine__match-pct">
+              <span className="guideline-engine__match-num">{m.pct}</span>
+              <span className="guideline-engine__match-percent">%</span>
             </span>
-          </span>
-          <span className="leading-tight">
-            <span className="guideline-engine__node-sub block">#{m.rank} Match</span>
-          </span>
+            <span className="guideline-engine__match-label">#{m.rank} · MATCH</span>
+          </div>
         </div>
       ))}
     </div>
-  );
-}
-
-function SparkCoreIcon() {
-  return (
-    <span className="guideline-engine__core-icon mx-auto flex h-9 w-9 items-center justify-center">
-      <CheckCircle2 className="h-7 w-7" />
-    </span>
   );
 }

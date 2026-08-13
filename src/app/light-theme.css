@@ -186,311 +186,385 @@ html[data-theme="dark"] .gold-theme .bg-white {
 }
 
 /* ---------------------------------------------------------------------------
-   GUIDELINE ENGINE — the animated hero centerpiece
+   GUIDELINE ENGINE — the homepage centerpiece, matching the reference.
    ---------------------------------------------------------------------------
-   A living, circular "guideline engine": concentric rings rotating at
-   different speeds/directions, orbital particles, gold light pulses that travel
-   the connector paths between the borrower-scenario node and the match-score
-   nodes, gentle breathing on the whole assembly, and a small entrance
-   sequence. Pure CSS (transform/opacity/box-shadow only) so it stays at 60fps;
-   a tiny client component controls the paused-while-offscreen/respect-position
-   behavior. Fully disabled under prefers-reduced-motion.
+   A large transparent glass sphere on a tiered metallic gold base. Inside the
+   sphere, glowing gold light filaments converge at a center point labeled
+   "GUIDELINE ENGINE"; three orbital rings rotate slowly; a specular sheen
+   sweeps the glass. A floating translucent "Borrower Scenario — Being
+   Analyzed" card sits to the LEFT, and three circular gold match badges
+   (#1 98% / #2 94% / #3 91%) sit to the RIGHT. Pure CSS (transform/opacity/
+   box-shadow only) so it stays at 60fps; the client component pauses it when
+   offscreen/tab-hidden. Fully disabled under prefers-reduced-motion.
 ----------------------------------------------------------------------------- */
-
-/* The outer glass sphere + breathing wrapper. */
 .guideline-engine {
   position: relative;
   isolation: isolate;
-  aspect-ratio: 1 / 1;
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+  padding-top: 24px;
 }
+
+/* The glass sphere. */
 .guideline-engine__sphere {
   position: relative;
-  width: 100%;
-  height: 100%;
+  aspect-ratio: 1 / 1;
   border-radius: 999px;
   background:
-    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.16), transparent 40%),
-    radial-gradient(circle at 50% 50%, rgba(196, 154, 58, 0.12), rgba(11, 20, 36, 0.12) 60%, transparent 72%),
-    linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.16));
-  border: 1px solid rgba(196, 154, 58, 0.35);
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.32), transparent 34%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.06) 0%, rgba(200, 180, 130, 0.10) 60%, rgba(255, 255, 255, 0.02) 74%);
+  border: 1px solid rgba(220, 190, 120, 0.5);
   box-shadow:
-    inset 0 0 60px rgba(196, 154, 58, 0.12),
-    0 30px 70px -30px rgba(169, 132, 44, 0.55);
+    inset 0 0 80px rgba(255, 240, 200, 0.12),
+    inset -24px -24px 60px rgba(11, 20, 36, 0.18),
+    0 40px 80px -34px rgba(169, 132, 44, 0.5);
   overflow: hidden;
 }
 html[data-theme="light"] .guideline-engine__sphere {
   background:
-    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.5), transparent 42%),
-    radial-gradient(circle at 50% 50%, rgba(196, 154, 58, 0.14), rgba(246, 241, 231, 0.7) 60%, transparent 74%),
-    linear-gradient(160deg, rgba(255, 255, 255, 0.6), rgba(240, 233, 218, 0.6));
-  border-color: rgba(169, 132, 44, 0.4);
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.7), transparent 36%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.2) 0%, rgba(212, 180, 106, 0.18) 58%, rgba(255, 255, 255, 0.06) 74%);
+  border-color: rgba(212, 180, 106, 0.6);
   box-shadow:
-    inset 0 0 60px rgba(169, 132, 44, 0.1),
-    0 30px 70px -34px rgba(11, 31, 58, 0.45);
+    inset 0 0 80px rgba(255, 250, 235, 0.6),
+    inset -24px -24px 60px rgba(11, 31, 58, 0.08),
+    0 40px 90px -40px rgba(11, 31, 58, 0.5);
 }
 
-/* Breathing float on the whole sphere. */
-.guideline-engine__sphere {
-  animation: engine-breathe 9s ease-in-out infinite;
+/* Visible glass entrance + gentle breathing. */
+.guideline-engine__sphere.guideline-engine__enter { animation: engine-sphere-enter 900ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes engine-sphere-enter {
+  from { opacity: 0; transform: scale(0.94) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
-@keyframes engine-breathe {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-8px) scale(1.012); }
+/* Breathing handled on the whole engine wrapper (scene-level float). */
+.guideline-engine__sphere { animation: engine-sphere-breathe 10s ease-in-out 900ms infinite; }
+@keyframes engine-sphere-breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
 
-/* Concentric orbit rings — each rotates independently, some CW some CCW. */
-.guideline-engine__rings,
+/* Gold light filaments converging at center. */
+.guideline-engine__filaments {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.guideline-engine__filament {
+  stroke: rgba(240, 205, 120, 0.4);
+  stroke-width: 0.9;
+  stroke-linecap: round;
+  transform-origin: 50px 50px;
+  animation: engine-filament-pulse 5.4s ease-in-out infinite;
+}
+html[data-theme="light"] .guideline-engine__filament { stroke: rgba(169, 132, 44, 0.45); }
+@keyframes engine-filament-pulse {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: 0.85; }
+}
+.guideline-engine__core-ring {
+  fill: none;
+  stroke: rgba(240, 205, 120, 0.5);
+  stroke-width: 1;
+  stroke-dasharray: 6 5;
+  animation: engine-ring-spin 28s linear infinite;
+  transform-origin: 50px 50px;
+}
+html[data-theme="light"] .guideline-engine__core-ring { stroke: rgba(169, 132, 44, 0.5); }
+
+/* Orbital rings + traveling particles. */
 .guideline-engine__orbit {
   position: absolute;
   inset: 0;
+  z-index: 0;
   border-radius: 999px;
+  pointer-events: none;
 }
 .guideline-engine__ring {
   position: absolute;
+  top: 50%;
+  left: 50%;
   border-radius: 999px;
-  border: 1px solid rgba(196, 154, 58, 0.28);
-  transform: translate(-50%, -50%);
-  animation: engine-ring-spin linear infinite;
+  border: 1px solid rgba(220, 190, 120, 0.28);
 }
-html[data-theme="light"] .guideline-engine__ring {
-  border-color: rgba(169, 132, 44, 0.35);
+html[data-theme="light"] .guideline-engine__ring { border-color: rgba(169, 132, 44, 0.35); }
+.guideline-engine__ring.r1 {
+  width: 84%; height: 84%; transform: translate(-50%, -50%);
+  animation: engine-ring-spin 58s linear infinite;
 }
-.guideline-engine__ring.r1 { inset: 8%; animation: engine-ring-spin 46s linear infinite; }
 .guideline-engine__ring.r2 {
-  inset: 20%;
-  border-style: dashed;
-  border-color: rgba(196, 154, 58, 0.2);
-  animation: engine-ring-spin 30s linear infinite reverse;
+  width: 58%; height: 58%; transform: translate(-50%, -50%);
+  border-style: dashed; border-color: rgba(220, 190, 120, 0.24);
+  animation: engine-ring-spin 34s linear infinite reverse;
 }
-.guideline-engine__ring.r3 { inset: 32%; animation: engine-ring-spin 64s linear infinite; }
-.guideline-engine__ring.r4 {
-  inset: 42%;
-  border-color: rgba(196, 154, 58, 0.24);
-  animation: engine-ring-spin 22s linear infinite reverse;
+.guideline-engine__ring.r3 {
+  width: 30%; height: 30%; transform: translate(-50%, -50%);
+  border-color: rgba(220, 190, 120, 0.34);
+  animation: engine-ring-spin 22s linear infinite;
 }
 @keyframes engine-ring-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-/* Orbital particle dots that travel around the rings. Wrappers counter-rotate
-   the ring spin so dots stay as discrete shape highlights, then a child dot
-   pulses. (Cheap: transform-only.) */
 .guideline-engine__dot {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 100%;
-  height: 100%;
-  border-radius: 999px;
-  animation: engine-dot-rotate linear infinite;
+  width: 0;
+  height: 0;
+  animation: engine-dot-spin linear infinite;
 }
 .guideline-engine__dot::before {
   content: "";
   position: absolute;
-  top: -5px;
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  transform: translateX(-50%);
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
   background: #e7c877;
-  box-shadow: 0 0 10px 2px rgba(231, 200, 119, 0.6);
-  animation: engine-dot-pulse 3s ease-in-out infinite;
+  box-shadow: 0 0 10px 2px rgba(231, 200, 119, 0.65);
 }
-.guideline-engine__dot.d1 { animation-duration: 46s; }
-.guideline-engine__dot.d1::before { animation-delay: 0s; }
-.guideline-engine__dot.d2 { animation-duration: 30s; animation-direction: reverse; }
-.guideline-engine__dot.d2::before { animation-delay: 1.2s; }
-.guideline-engine__dot.d3 { animation-duration: 64s; }
-.guideline-engine__dot.d3::before { animation-delay: 2.1s; }
-.guideline-engine__dot.d4 { animation-duration: 22s; animation-direction: reverse; }
-.guideline-engine__dot.d4::before { animation-delay: 0.6s; }
-@keyframes engine-dot-rotate {
-  from { transform: rotate(0deg) translateY(-12px); }
-  to { transform: rotate(360deg) translateY(-12px); }
-}
-@keyframes engine-dot-pulse {
-  0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(0.7); }
-  50% { opacity: 1; transform: translateX(-50%) scale(1.15); }
+.guideline-engine__dot.d1 { animation-duration: 58s; }
+.guideline-engine__dot.d2 { animation-duration: 34s; animation-direction: reverse; }
+.guideline-engine__dot.d3 { animation-duration: 22s; }
+@keyframes engine-dot-spin {
+  from { transform: rotate(0deg) translateY(-37%); opacity: 0.4; }
+  to { transform: rotate(360deg) translateY(-37%); opacity: 1; }
 }
 
-/* Center core — the "GUIDELINE ENGINE" label with a soft breathing glow. */
+/* Center label — "GUIDELINE ENGINE". */
 .guideline-engine__core {
   position: absolute;
   top: 50%;
   left: 50%;
+  z-index: 3;
   transform: translate(-50%, -50%);
   display: grid;
-  width: 46%;
-  aspect-ratio: 1 / 1;
   place-items: center;
+  width: 30%;
+  aspect-ratio: 1 / 1;
   border-radius: 999px;
   text-align: center;
-  background: radial-gradient(circle at 50% 40%, rgba(196, 154, 58, 0.28), rgba(11, 20, 36, 0.4) 70%);
-  border: 1px solid rgba(196, 154, 58, 0.5);
-  box-shadow: inset 0 0 40px rgba(196, 154, 58, 0.18), 0 0 46px -8px rgba(196, 154, 58, 0.55);
+  background: radial-gradient(circle at 50% 42%, rgba(240, 205, 120, 0.30), rgba(11, 20, 36, 0.34) 72%);
+  border: 1px solid rgba(240, 205, 120, 0.55);
+  box-shadow: inset 0 0 30px rgba(240, 205, 120, 0.2), 0 0 44px -8px rgba(240, 205, 120, 0.6);
   animation: engine-core-glow 4.5s ease-in-out infinite;
 }
 html[data-theme="light"] .guideline-engine__core {
-  background: radial-gradient(circle at 50% 40%, rgba(196, 154, 58, 0.22), rgba(255, 255, 255, 0.6) 70%);
-  box-shadow: inset 0 0 40px rgba(169, 132, 44, 0.12), 0 0 42px -10px rgba(169, 132, 44, 0.5);
+  background: radial-gradient(circle at 50% 42%, rgba(212, 180, 106, 0.28), rgba(255, 255, 255, 0.6) 74%);
+  box-shadow: inset 0 0 30px rgba(169, 132, 44, 0.12), 0 0 40px -10px rgba(169, 132, 44, 0.5);
 }
 @keyframes engine-core-glow {
-  0%, 100% { box-shadow: inset 0 0 40px rgba(196, 154, 58, 0.16), 0 0 40px -10px rgba(196, 154, 58, 0.45); }
-  50% { box-shadow: inset 0 0 50px rgba(196, 154, 58, 0.26), 0 0 60px -6px rgba(196, 154, 58, 0.7); }
+  0%, 100% { box-shadow: inset 0 0 30px rgba(240, 205, 120, 0.16), 0 0 38px -10px rgba(240, 205, 120, 0.5); }
+  50% { box-shadow: inset 0 0 44px rgba(240, 205, 120, 0.3), 0 0 60px -4px rgba(240, 205, 120, 0.75); }
 }
-.guideline-engine__core-icon { color: #e7c877; }
 .guideline-engine__core-label {
-  margin-top: 4px;
+  max-width: 80%;
   color: #f3e3b4;
-  font-size: 0.62em;
+  font-size: clamp(0.5rem, 1.4vw, 0.72rem);
   font-weight: 700;
   letter-spacing: 0.14em;
+  line-height: 1.2;
   text-transform: uppercase;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
-html[data-theme="light"] .guideline-engine__core-icon { color: var(--gold-deep); }
-html[data-theme="light"] .guideline-engine__core-label { color: var(--gold-deep); }
+html[data-theme="light"] .guideline-engine__core-label { color: var(--gold-deep); text-shadow: none; }
 
-/* The borrowed-scenario card + the three match-score nodes, positioned
-   around the engine and connected by slow animated gold paths. */
+/* Specular glass highlight sweep. */
+.guideline-engine__sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: 999px;
+  background: linear-gradient(118deg, transparent 30%, rgba(255, 255, 255, 0.22) 45%, rgba(255, 255, 255, 0.03) 52%, transparent 60%);
+  pointer-events: none;
+  animation: engine-sheen-sweep 8s ease-in-out infinite;
+}
+@keyframes engine-sheen-sweep {
+  0%, 100% { transform: translateX(-40%) rotate(8deg); opacity: 0.5; }
+  50% { transform: translateX(40%) rotate(8deg); opacity: 0.85; }
+}
+
+/* Tiered metallic base beneath the sphere. */
+.guideline-engine__base {
+  position: relative;
+  z-index: 5;
+  width: 86%;
+  margin: -7px auto 0;
+  height: 62px;
+  pointer-events: none;
+}
+.guideline-engine__base-tier {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #e7cd7f 0%, #c49a3a 42%, #8a6a22 72%, #6b5217 100%);
+  border: 1px solid rgba(255, 235, 180, 0.35);
+  box-shadow: 0 14px 30px -16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.guideline-engine__base-tier.t1 { bottom: 34px; width: 46%; height: 14px; }
+.guideline-engine__base-tier.t2 { bottom: 12px; width: 72%; height: 18px; }
+.guideline-engine__base-tier.t3 { bottom: -8px; width: 100%; height: 22px; border-radius: 999px 999px 18% 18%; }
+html[data-theme="light"] .guideline-engine__base-tier {
+  background: linear-gradient(180deg, #e7cd7f 0%, #b9872e 45%, #8a6a22 74%, #6b5217 100%);
+}
+.guideline-engine__base-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(240, 205, 120, 0.55), transparent 58%);
+  filter: blur(6px);
+  animation: engine-base-glow 4s ease-in-out infinite;
+}
+@keyframes engine-base-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.85; }
+}
+
+/* Floating translucent borrower-scenario card — LEFT. */
 .guideline-engine__node {
   position: absolute;
-  z-index: 2;
+  z-index: 6;
+  left: -4%;
+  top: 34%;
   display: flex;
   align-items: center;
   gap: 10px;
+  max-width: 190px;
   border-radius: 14px;
-  border: 1px solid rgba(196, 154, 58, 0.45);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(220, 190, 120, 0.5);
+  background: rgba(255, 255, 255, 0.1);
   padding: 10px 12px;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 16px 32px -18px rgba(0, 0, 0, 0.6);
   animation: engine-node-float 6s ease-in-out infinite;
-  box-shadow: 0 12px 28px -18px rgba(0, 0, 0, 0.6);
 }
 html[data-theme="light"] .guideline-engine__node {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.82);
   border-color: rgba(169, 132, 44, 0.55);
-  box-shadow: 0 12px 28px -18px rgba(11, 31, 58, 0.45);
+  box-shadow: 0 16px 32px -18px rgba(11, 31, 58, 0.4);
 }
 @keyframes engine-node-float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
 }
-.guideline-engine__node.scenario { bottom: 2%; left: -4%; animation-delay: 0s; }
-.guideline-engine__node.m1 { top: 6%; right: -6%; animation-delay: 0.8s; }
-.guideline-engine__node.m2 { top: 38%; right: -14%; animation-delay: 1.6s; }
-.guideline-engine__node.m3 { bottom: 30%; right: -8%; animation-delay: 2.4s; }
-
 .guideline-engine__node-icon {
   display: grid;
   flex: 0 0 auto;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   place-items: center;
   border-radius: 9px;
-  background: rgba(196, 154, 58, 0.16);
+  background: rgba(240, 205, 120, 0.16);
   color: #e7c877;
 }
 html[data-theme="light"] .guideline-engine__node-icon {
   background: rgba(169, 132, 44, 0.14);
   color: var(--gold-deep);
 }
+.guideline-engine__node-copy { display: block; }
 .guideline-engine__node-label {
+  display: block;
   color: #aab4c6;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 html[data-theme="light"] .guideline-engine__node-label { color: #6b7890; }
 .guideline-engine__node-title {
+  display: block;
+  margin-top: 1px;
   color: #f2f4f8;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
 }
 html[data-theme="light"] .guideline-engine__node-title { color: var(--ink-navy); }
-.guideline-engine__node-sub {
-  color: #dcc98d;
-  font-size: 9px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-html[data-theme="light"] .guideline-engine__node-sub { color: var(--gold-deep); }
 
-/* Entrance sequence for the whole engine (fires once on load). */
-.guideline-engine__enter {
-  animation: engine-enter 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-@keyframes engine-enter {
-  from { opacity: 0; transform: scale(0.94) translateY(14px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-/* Match-score rings pulse gently. */
-.guideline-engine__score {
-  display: flex;
-  align-items: center;
-  font-variant-numeric: tabular-nums;
-  color: #f4eddc;
-  animation: engine-score-in 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-html[data-theme="light"] .guideline-engine__score { color: var(--ink-navy); }
-@keyframes engine-score-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Guidance paths are SVG strokes that draw/pulse slowly. */
-.guideline-engine__paths {
+/* Three circular gold match badges — RIGHT. */
+.guideline-engine__match {
   position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
+  z-index: 6;
+  width: 74px;
+  height: 74px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  text-align: center;
 }
-.guideline-engine__path {
-  fill: none;
-  stroke: rgba(196, 154, 58, 0.5);
-  stroke-width: 1.4;
-  stroke-linecap: round;
-  animation: engine-path-pulse 3.4s ease-in-out infinite;
+.guideline-engine__match-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.85), rgba(240, 205, 120, 0.25) 55%, rgba(169, 132, 44, 0.5));
+  border: 1.5px solid rgba(240, 205, 120, 0.75);
+  box-shadow: 0 0 18px -4px rgba(240, 205, 120, 0.6), 0 12px 26px -16px rgba(0, 0, 0, 0.5);
+  animation: engine-match-float 6.5s ease-in-out infinite;
 }
-html[data-theme="light"] .guideline-engine__path { stroke: rgba(169, 132, 44, 0.55); }
-@keyframes engine-path-pulse {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 0.9; }
+html[data-theme="light"] .guideline-engine__match-inner {
+  background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.95), rgba(240, 205, 120, 0.4) 60%, rgba(180, 140, 60, 0.55));
+  border-color: rgba(169, 132, 44, 0.8);
+  box-shadow: 0 0 20px -6px rgba(169, 132, 44, 0.7);
 }
+@keyframes engine-match-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.guideline-engine__match-pct { display: inline-flex; align-items: baseline; line-height: 1; }
+.guideline-engine__match-num { font-size: 24px; font-weight: 800; color: #0b1f3a; letter-spacing: -0.02em; }
+.guideline-engine__match-percent { font-size: 12px; font-weight: 800; color: #0b1f3a; margin-left: 1px; }
+.guideline-engine__match-label {
+  margin-top: 2px;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #0b1f3a;
+  text-transform: uppercase;
+}
+html[data-theme="dark"] .guideline-engine__match-num,
+html[data-theme="dark"] .guideline-engine__match-percent,
+html[data-theme="dark"] .guideline-engine__match-label { color: #fff; }
 
 /* Reduced motion: everything solid/static. */
 @media (prefers-reduced-motion: reduce) {
-  .guideline-engine,
   .guideline-engine__sphere,
+  .guideline-engine__filament,
+  .guideline-engine__core-ring,
   .guideline-engine__ring,
   .guideline-engine__dot,
   .guideline-engine__core,
+  .guideline-engine__sheen,
+  .guideline-engine__base-glow,
   .guideline-engine__node,
-  .guideline-engine__path,
-  .guideline-engine__enter,
-  .guideline-engine__score {
+  .guideline-engine__match-inner {
     animation: none !important;
   }
 }
 
-/* Tab hidden / offscreen: pause every animation in the engine (GPU save). */
+/* Tab hidden / offscreen: pause everything in the engine (GPU save). */
 .guideline-engine.motionless * {
   animation-play-state: paused !important;
 }
 
-/* Mobile: shrink engine, hide far nodes to avoid overwhelming small screens,
-   pause all motion (perf) — the "motionless" state is a calm static sphere. */
+/* Mobile: keep the engine centered and readable, hide the far node. */
 @media (max-width: 767px) {
-  .guideline-engine__node.m3 { display: none; }
-  .guideline-engine__node.scenario { left: 0; bottom: -2%; }
-  .guideline-engine__node.m1 { right: -2%; }
-  .guideline-engine__node.m2 { right: -8%; }
+  .guideline-engine { max-width: 340px; padding-top: 12px; }
+  .guideline-engine__node { top: 30%; left: -2%; }
+  .guideline-engine__match { width: 60px; height: 60px; }
+  .guideline-engine__match-num { font-size: 19px; }
+  .guideline-engine__match-percent { font-size: 10px; }
+  .guideline-engine__match-label { font-size: 6px; }
+  .guideline-engine__base { height: 50px; }
 }
-
 /* =============================================================================
    HOMEPAGE — stats bar, hero CTAs, feature-art refinements (both themes)
 ============================================================================= */
@@ -817,5 +891,344 @@ html[data-theme="light"] .gold-page .bg-amber-500\/15 { background-color: rgba(1
   .scenario-complexity,
   .complexity-fill {
     animation: none !important;
+  }
+}
+/* =============================================================================
+   HOMEPAGE (public landing) — faithful reproduction of the reference design.
+   Rendering the hero as light/ivory regardless of theme toggle, so the page
+   always matches the reference image. Feature detail cards are white with
+   drop shadows; highlights row uses soft glass; all accent colors are the
+   champagne gold of the brand. Motion is transform/opacity only and disabled
+   under prefers-reduced-motion, matching the app's motion discipline.
+============================================================================= */
+.nexus-home-light {
+  position: relative;
+  isolation: isolate;
+  min-height: calc(100dvh - 64px);
+  border-radius: 0 0 30px 30px;
+  background:
+    radial-gradient(circle at 78% 22%, rgba(240, 205, 120, 0.12), transparent 34%),
+    radial-gradient(circle at 12% 78%, rgba(240, 205, 120, 0.08), transparent 38%),
+    radial-gradient(circle at 50% 0%, #fdfbf6 0%, #f7f3eb 42%, #ece5d5 100%);
+}
+/* subtle geometric grid */
+.nexus-home-light::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(rgba(11, 31, 58, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 31, 58, 0.022) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: linear-gradient(to bottom, black, transparent 76%);
+}
+
+/* Hero copy column */
+.nexus-home-hero-copy { position: relative; z-index: 2; animation: home-copy-enter 700ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes home-copy-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Badges */
+.nexus-home-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(169, 132, 44, 0.45);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 7px 13px;
+  color: #54461a;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  box-shadow: 0 0 18px -10px rgba(169, 132, 44, 0.6);
+  backdrop-filter: blur(8px);
+}
+.nexus-home-badge svg { color: #a9842c; }
+
+/* Serif headline */
+.nexus-home-headline {
+  margin-top: 20px;
+  max-width: 620px;
+  color: #0a1629;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.1rem, 4.6vw, 4rem);
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 1.06;
+  text-wrap: balance;
+}
+.nexus-home-headline > span { display: block; }
+.nexus-home-gold {
+  margin-top: 6px;
+  background: linear-gradient(96deg, #caa53b 0%, #b38b3f 42%, #8b6b23 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #a9842c;
+}
+.nexus-home-subhead {
+  margin-top: 16px;
+  color: #42506b;
+  font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+  font-weight: 500;
+}
+
+/* CTAs */
+.nexus-home-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 49px;
+  border-radius: 11px;
+  padding: 0 24px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms ease, filter 200ms ease, background-color 200ms ease;
+}
+.nexus-home-cta--gold {
+  background: linear-gradient(100deg, #e0bd5e 0%, #d4af37 34%, #b38b3f 68%, #8b6b23 100%);
+  color: #0a1629;
+  border: 1px solid #caa53b;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 14px 30px -12px rgba(169, 132, 44, 0.7);
+}
+.nexus-home-cta--gold:hover { filter: brightness(1.05); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 16px 34px -10px rgba(169, 132, 44, 0.85); transform: translateY(-2px); }
+.nexus-home-cta--light {
+  background: #fffdf8;
+  color: #6b5217;
+  border: 1px solid rgba(169, 132, 44, 0.6);
+  box-shadow: 0 8px 22px -14px rgba(11, 31, 58, 0.35);
+}
+.nexus-home-cta--light:hover { border-color: #b38b3f; background: #fff; box-shadow: 0 12px 26px -12px rgba(11, 31, 58, 0.4); transform: translateY(-2px); }
+.nexus-home-cta--ghost {
+  background: transparent;
+  color: #54461a;
+  border: 1px solid rgba(169, 132, 44, 0.55);
+}
+.nexus-home-cta--ghost:hover { background: rgba(255, 255, 255, 0.7); border-color: #b38b3f; }
+.nexus-home-cta:focus-visible { outline: 2px solid #8b6b23; outline-offset: 3px; }
+
+/* Engine column */
+.nexus-home-engine { position: relative; z-index: 1; }
+
+/* FEATURE HIGHLIGHTS — middle row */
+.nexus-home-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid rgba(169, 132, 44, 0.28);
+  border-radius: 16px;
+  background: rgba(169, 132, 44, 0.2);
+  box-shadow: 0 12px 32px -18px rgba(11, 31, 58, 0.3);
+  backdrop-filter: blur(8px);
+}
+.nexus-home-highlight {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(255, 253, 248, 0.9);
+  padding: 18px 16px;
+}
+.nexus-home-highlight-icon {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(169, 132, 44, 0.5);
+  background: radial-gradient(circle at 36% 30%, rgba(240, 205, 120, 0.28), rgba(255, 255, 255, 0.4));
+  color: #8b6b23;
+}
+.nexus-home-highlight-text {
+  color: #42506b;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+}
+.nexus-home-highlight-text .value {
+  display: block;
+  color: #0a1629;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.nexus-home-highlight-text { line-height: 1.2; }
+
+/* FEATURE DETAIL CARDS — three white cards with drop shadows */
+.nexus-home-feature {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(169, 132, 44, 0.25);
+  border-radius: 18px;
+  background: #fff;
+  padding: 22px 22px 18px;
+  box-shadow: 0 20px 44px -26px rgba(11, 31, 58, 0.35), 0 2px 6px -2px rgba(11, 31, 58, 0.05);
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms ease, border-color 220ms ease;
+}
+.nexus-home-feature:hover { transform: translateY(-4px); box-shadow: 0 26px 54px -26px rgba(11, 31, 58, 0.42), 0 4px 10px -3px rgba(11, 31, 58, 0.06); border-color: rgba(179, 139, 63, 0.5); }
+.nexus-home-feature-icon {
+  display: inline-flex;
+  width: 50px;
+  height: 50px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(169, 132, 44, 0.5);
+}
+.nexus-home-feature-icon--blue { background: rgba(56, 116, 255, 0.1); color: #2f6bff; border-color: rgba(47, 107, 255, 0.35); }
+.nexus-home-feature-icon--gold { background: rgba(169, 132, 44, 0.1); color: #8b6b23; }
+.nexus-home-feature-art { display: inline-flex; align-items: center; }
+.nexus-home-feature-title {
+  margin-top: 16px;
+  color: #0a1629;
+  font-size: 1.18rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.nexus-home-feature-desc { margin-top: 6px; color: #42506b; font-size: 0.9rem; line-height: 1.5; }
+.nexus-home-feature-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 16px;
+  color: #8b6b23;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: color 160ms ease, gap 160ms ease;
+}
+.nexus-home-feature-cta:hover { color: #5c4515; gap: 10px; }
+
+/* Voice intake: listening row + waveform + tags */
+.nexus-home-listening {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #33455e;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.nexus-home-wave {
+  display: inline-flex;
+  align-items: center;
+  gap: 2.5px;
+  height: 22px;
+  margin-left: auto;
+}
+.nexus-home-wave::before {
+  content: "";
+  width: 3px;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(180deg, #34d399, #10b981);
+  animation: home-wave 0.8s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+.nexus-home-wave::after {
+  content: "";
+  width: 3px;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(180deg, #34d399, #10b981);
+  animation: home-wave 0.7s ease-in-out infinite alternate-reverse;
+  transform-origin: center;
+}
+@keyframes home-wave { from { transform: scaleY(0.35); } to { transform: scaleY(1); } }
+
+.nexus-home-tag {
+  display: block;
+  border: 1px solid rgba(169, 132, 44, 0.22);
+  border-radius: 9px;
+  background: #fdfaf2;
+  padding: 7px 9px;
+  font-size: 0.72rem;
+  color: #42506b;
+}
+.nexus-home-tag .label { color: #8b6b23; font-weight: 700; }
+
+/* Ranking: rows + gold bars */
+.nexus-home-rank { border-bottom: 1px solid rgba(11, 31, 58, 0.08); padding: 4px 0 8px; }
+.nexus-home-rank .rank-name { color: #0a1629; font-weight: 600; }
+.nexus-home-rank .rank-pct { color: #8b6b23; font-weight: 800; }
+.nexus-home-rank .rank-program { display: block; margin-top: 1px; color: #42506b; font-size: 0.72rem; }
+.rank-bar { width: 100%; height: 6px; margin-top: 5px; border-radius: 99px; background: #f0ebe0; overflow: hidden; }
+.rank-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #d4af37, #b38b3f);
+  animation: home-bar-fill 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: left center;
+}
+@keyframes home-bar-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Document checklists: progress ring + list */
+.nexus-home-progress { display: flex; align-items: center; gap: 12px; }
+.nexus-home-progress-ring {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(#c49a3a 0deg 270deg, #efe9db 270deg 360deg);
+}
+.nexus-home-progress-inner {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  text-align: center;
+  line-height: 1.05;
+}
+.nexus-home-progress-inner .done { color: #0a1629; font-size: 0.85rem; font-weight: 800; }
+.nexus-home-progress-inner .pct { color: #8b6b23; font-size: 0.72rem; font-weight: 700; }
+.nexus-home-progress-title { color: #42506b; font-size: 0.82rem; font-weight: 600; }
+
+/* Closing */
+.nexus-home-closing { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.nexus-home-closing p { display: inline-flex; align-items: center; gap: 8px; color: #42506b; font-size: 0.95rem; }
+.nexus-home-closing p svg { color: #b38b3f; }
+.nexus-home-divider { width: min(150px, 18vw); height: 1px; background: linear-gradient(90deg, transparent, rgba(169, 132, 44, 0.55)); }
+.nexus-home-divider:last-child { transform: scaleX(-1); }
+
+/* Responsive */
+@media (max-width: 1023px) {
+  .nexus-home-engine { max-width: 460px; margin-inline: auto; }
+}
+@media (max-width: 767px) {
+  .nexus-home-light { border-radius: 0 0 20px 20px; }
+  .nexus-home-highlights { grid-template-columns: 1fr; }
+  .nexus-home-highlight { justify-content: flex-start; }
+  .nexus-home-headline { font-size: clamp(1.85rem, 9vw, 2.6rem); }
+  .nexus-home-cta { min-height: 46px; padding: 0 18px; font-size: 0.85rem; flex: 1 1 auto; }
+}
+@media (max-width: 420px) {
+  .nexus-home-cta { width: 100%; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .nexus-home-hero-copy,
+  .nexus-home-feature,
+  .nexus-home-cta,
+  .nexus-home-wave::before,
+  .nexus-home-wave::after,
+  .rank-bar-fill {
+    animation: none !important;
+    transition: none !important;
   }
 }
