@@ -29,7 +29,11 @@ export async function signIn(_prevState: AuthActionState, formData: FormData): P
   }
 
   const next = formData.get("next");
-  redirect(typeof next === "string" && next.startsWith("/") ? next : "/scenarios");
+  // After signing in, ALWAYS land on the Voice Scenario tab first (product
+  // requirement 2026-08-13: voice intake is the app's first thing every
+  // time). An explicit `next` (e.g. from a checkout redirect) still wins;
+  // otherwise the default is the voice scenario page.
+  redirect(typeof next === "string" && next.startsWith("/") ? next : "/scenarios/voice");
 }
 
 export async function signUp(_prevState: AuthActionState, formData: FormData): Promise<AuthActionState> {

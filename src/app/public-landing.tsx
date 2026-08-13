@@ -58,7 +58,8 @@ function SignInCta() {
   );
 }
 
-export function PublicLanding() {
+export function PublicLanding({ programCount = null }: { programCount?: number | null }) {
+  const programLine = programCount != null ? `${programCount.toLocaleString("en-US")} non-QM programs at your fingertips.` : "Hundreds of non-QM programs at your fingertips.";
   return (
     <div className="nexus-landing gold-theme gold-page -mx-4 -my-6 overflow-hidden bg-[#050505] px-4 pb-10 pt-6 sm:px-6 sm:pb-14">
       <section className="nexus-hero relative mx-auto max-w-7xl pt-8 text-center sm:pt-10 lg:pt-12">
@@ -83,7 +84,7 @@ export function PublicLanding() {
             <span className="nexus-bolt-wrap" aria-hidden="true">
               <Bolt className="h-5 w-5" fill="currentColor" />
             </span>
-            <span>Hundreds of non-QM programs at your fingertips.</span>
+            <span>{programLine}</span>
           </div>
 
           <p className="nexus-description">

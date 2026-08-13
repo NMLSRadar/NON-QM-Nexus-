@@ -8,6 +8,7 @@ import { ScenarioTable, type ScenarioRowData } from "@/components/scenario-table
 import { HomeVoiceHero } from "@/components/home-voice-hero";
 import { PublicLanding } from "./public-landing";
 import { pageMetadata } from "@/lib/seo";
+import { getVerifiedProgramCount } from "@/lib/repository/supabaseRepository";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,18 @@ export default async function DashboardPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return <PublicLanding />;
+  if (!user) {
+    // The public homepage shows the REAL live catalog program count (not a
+    // hand-maintained "Hundreds" claim) — same verified-only query the
+    // /programs directory and pricing page use, so it can never drift.
+    let programCount: number | null = null;
+    try {
+      programCount = await getVerifiedProgramCount(supabase);
+    } catch {
+      programCount = null; // marketing copy degrades gracefully if DB is unreachable
+    }
+    return <PublicLanding programCount={programCount} />;
+  }
 
   const repo = await getRepository();
   const org = await getCurrentOrganizationId();

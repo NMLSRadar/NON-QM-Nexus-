@@ -1289,3 +1289,181 @@ html[data-theme="light"] .gold-grad-toggle {
   background: linear-gradient(100deg, #e0bd5e 0%, #d4af37 40%, #b38b3f 75%, #8b6b23 100%);
   color: #0a1629 !important;
 }
+
+/* =============================================================================
+   LIGHT MODE VISUAL ENHANCEMENT (2026-08-13) — eye-catching, premium light
+   treatment across the WHOLE app. Dark mode is untouched: every rule here is
+   scoped under html[data-theme="light"] and only elevates the ivory/navy/
+   champagne palette — richer gold gradients, deeper contrast, layered shadows,
+   glass + gold borders, and animated gold sheen on the key surfaces.
+============================================================================= */
+
+/* --- App-wide: deeper, readable ink + warmer ivory body ------------------- */
+html[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(196, 154, 58, 0.06), transparent 38%),
+    radial-gradient(circle at 82% 12%, rgba(196, 154, 58, 0.05), transparent 34%),
+    var(--ivory) !important;
+}
+html[data-theme="light"] .gold-page {
+  background:
+    radial-gradient(circle at 85% 8%, rgba(196, 154, 58, 0.05), transparent 30%),
+    radial-gradient(circle at 8% 92%, rgba(196, 154, 58, 0.04), transparent 34%),
+    var(--ivory) !important;
+}
+
+/* --- Text contrast: muted grays become readable navy --------------------- */
+html[data-theme="light"] .gold-page .text-slate-400 { color: #55627a !important; }
+html[data-theme="light"] .gold-page .text-slate-500 { color: #55627a !important; }
+html[data-theme="light"] .gold-theme .text-slate-400 { color: #55627a !important; }
+html[data-theme="light"] .gold-theme .text-slate-500 { color: #55627a !important; }
+html[data-theme="light"] .gold-theme .text-ink-secondary { color: #42506b !important; }
+
+/* --- Cards: warm white + champagne hairline + layered gold-tinted shadow -- */
+html[data-theme="light"] .gold-theme .bg-white,
+html[data-theme="light"] .gold-theme .bg-surface-card {
+  background: linear-gradient(160deg, #ffffff 0%, #fdfbf6 100%) !important;
+  border-color: rgba(196, 154, 58, 0.32) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 10px 30px -18px rgba(11, 31, 58, 0.28), 0 0 22px -18px rgba(196, 154, 58, 0.4) !important;
+}
+
+/* --- Primary gold buttons: brushed-gold gradient + sheen sweep ------------ */
+html[data-theme="light"] .gold-button,
+html[data-theme="light"] .nexus-primary-cta {
+  background: linear-gradient(135deg, #f2dfa0 0%, #d9b64a 38%, #b98a2e 78%, #8a6a22 100%) !important;
+  background: linear-gradient(135deg, #f2dfa0 0%, #d9b64a 38%, #b98a2e 78%, #8a6a22 100%) !important;
+  color: #0b1f3a !important;
+  border: 1px solid rgba(255, 235, 190, 0.9) !important;
+  border: 1px solid rgba(255, 235, 190, 0.9) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 10px 26px -12px rgba(166, 124, 55, 0.55) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 10px 26px -12px rgba(166, 124, 55, 0.55) !important;
+  position: relative;
+  overflow: hidden;
+}
+html[data-theme="light"] .gold-button::after,
+html[data-theme="light"] .nexus-primary-cta::after {
+  content: "";
+  position: absolute;
+  top: 0; left: -120%;
+  height: 100%;
+  width: 60%;
+  background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+  animation: light-gold-sheen 4.2s ease-in-out infinite;
+}
+@keyframes light-gold-sheen {
+  0% { left: -120%; }
+  55% { left: 120%; }
+  100% { left: 120%; }
+}
+
+/* --- Badges: glass + gold gradient border + glow --------------------------- */
+html[data-theme="light"] .nexus-eyebrow {
+  border: 1px solid rgba(196, 154, 58, 0.55);
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.85), rgba(255, 250, 236, 0.7));
+  color: #5c4515;
+  box-shadow: 0 0 24px -14px rgba(196, 154, 58, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+}
+
+/* --- Headline: deeper navy + gold shimmer on the gold line ----------------- */
+html[data-theme="light"] .nexus-headline { color: #001a2c; }
+html[data-theme="light"] .nexus-gold-copy {
+  background: linear-gradient(100deg, #caa24b 0%, #a67c37 45%, #8a6a2e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 2px rgba(166, 124, 55, 0.2));
+}
+
+/* --- Program callout: gold gradient border + warm glow -------------------- */
+html[data-theme="light"] .nexus-program-callout {
+  border: 1px solid rgba(196, 154, 58, 0.65);
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.9), rgba(255, 246, 226, 0.55), rgba(255, 255, 255, 0.9));
+  color: #5c4515;
+  box-shadow: 0 0 30px -18px rgba(196, 154, 58, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+html[data-theme="light"] .nexus-bolt-wrap { color: #a67c37; filter: drop-shadow(0 0 6px rgba(166, 124, 55, 0.45)); }
+
+/* --- Description: readable navy ------------------------------------------- */
+html[data-theme="light"] .nexus-description { color: #33455e; }
+
+/* --- Feature cards: glass + gold border + hover lift ----------------------- */
+html[data-theme="light"] .nexus-feature-card {
+  background: linear-gradient(150deg, #ffffff 0%, #fdf9f0 100%);
+  border: 1px solid rgba(196, 154, 58, 0.35);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 22px 48px -30px rgba(11, 31, 58, 0.42), 0 0 34px -24px rgba(196, 154, 58, 0.55);
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 260ms ease, border-color 260ms ease;
+}
+html[data-theme="light"] .nexus-feature-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(196, 154, 58, 0.65);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.95) inset, 0 28px 56px -30px rgba(11, 31, 58, 0.5), 0 0 40px -22px rgba(196, 154, 58, 0.7);
+}
+html[data-theme="light"] .nexus-icon-orbit {
+  border: 1px solid rgba(196, 154, 58, 0.7);
+  background: radial-gradient(circle at 36% 30%, rgba(196, 154, 58, 0.22), rgba(255, 255, 255, 0.95) 72%);
+  color: #7a5c1d;
+  box-shadow: 0 0 22px -10px rgba(196, 154, 58, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+html[data-theme="light"] .nexus-feature-card h2 { color: #001a2c; }
+html[data-theme="light"] .nexus-feature-card p { color: #33455e; }
+
+/* --- Card-art miniatures: gold shimmer ------------------------------------------------ */
+html[data-theme="light"] .nexus-audio-wave span {
+  background: linear-gradient(180deg, transparent, #c49a3a, transparent);
+  box-shadow: 0 0 6px rgba(196, 154, 58, 0.5);
+}
+html[data-theme="light"] .nexus-chart-columns span {
+  border: 1px solid rgba(196, 154, 58, 0.55);
+  background: linear-gradient(180deg, rgba(196, 154, 58, 0.35), rgba(196, 154, 58, 0.06));
+}
+html[data-theme="light"] .nexus-chart-line { color: rgba(166, 124, 55, 0.9); filter: drop-shadow(0 0 5px rgba(166, 124, 55, 0.4)); }
+html[data-theme="light"] .nexus-document-stack span {
+  border: 1px solid rgba(196, 154, 58, 0.5);
+  background: linear-gradient(145deg, rgba(196, 154, 58, 0.18), rgba(255, 255, 255, 0.95));
+  color: #7a5c1d;
+  box-shadow: 0 10px 22px -14px rgba(11, 31, 58, 0.35);
+}
+
+/* --- Closing prompt + dividers --------------------------------------------- */
+html[data-theme="light"] .nexus-closing-prompt p { color: #33455e; }
+html[data-theme="light"] .nexus-closing-prompt p svg { color: #a67c37; filter: drop-shadow(0 0 6px rgba(166, 124, 55, 0.5)); }
+html[data-theme="light"] .nexus-divider {
+  background: linear-gradient(90deg, transparent, rgba(196, 154, 58, 0.65));
+  height: 2px;
+}
+
+/* --- Secondary/ghost CTA on light: glass gold ------------------------------ */
+html[data-theme="light"] .nexus-closing-cta {
+  border: 1px solid rgba(196, 154, 58, 0.6);
+  background: rgba(255, 255, 255, 0.7);
+  color: #5c4515;
+  box-shadow: 0 8px 22px -16px rgba(11, 31, 58, 0.25);
+}
+html[data-theme="light"] .nexus-closing-cta:hover {
+  border-color: rgba(196, 154, 58, 0.85);
+  background: #fff;
+  box-shadow: 0 12px 28px -14px rgba(196, 154, 58, 0.5);
+}
+
+/* --- In-app: gold focus rings + inputs ------------------------------------------------ */
+html[data-theme="light"] .gold-theme input:focus,
+html[data-theme="light"] .gold-theme select:focus,
+html[data-theme="light"] .gold-theme textarea:focus {
+  border-color: rgba(196, 154, 58, 0.7) !important;
+  box-shadow: 0 0 0 3px rgba(196, 154, 58, 0.18) !important;
+}
+
+/* --- Section headers / page titles: navy + gold accent --------------------------------- */
+html[data-theme="light"] .gold-page h1,
+html[data-theme="light"] .gold-page h2,
+html[data-theme="light"] .gold-page h3 { color: #001a2c; }
+
+/* Reduced motion: sheen + hover settle to static */
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="light"] .gold-button::after,
+  html[data-theme="light"] .nexus-primary-cta::after {
+    animation: none !important;
+  }
+  html[data-theme="light"] .nexus-feature-card { transition: none !important; }
+}

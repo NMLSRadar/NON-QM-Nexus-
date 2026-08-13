@@ -459,3 +459,17 @@ export async function getVerifiedLenderCount(supabase: SupabaseClient): Promise<
   const lenders = await repo.listLenders(PLATFORM_CATALOG_ORGANIZATION_ID, MAX_TIER_LEVEL);
   return lenders.length;
 }
+
+/**
+ * The real, live count of verified Non-QM programs in the platform catalog —
+ * the same "live numbers" contract as getVerifiedLenderCount (launch-hardening
+ * spec, Section 5). Reuses listPrograms's own verified-only filtering at
+ * MAX_TIER_LEVEL so it counts every catalog program regardless of tier —
+ * exactly the number the /programs directory page shows, so the marketing
+ * copy ("N non-QM programs") can never drift from reality.
+ */
+export async function getVerifiedProgramCount(supabase: SupabaseClient): Promise<number> {
+  const repo = new SupabaseRepository(supabase);
+  const programs = await repo.listPrograms(PLATFORM_CATALOG_ORGANIZATION_ID, MAX_TIER_LEVEL);
+  return programs.length;
+}
