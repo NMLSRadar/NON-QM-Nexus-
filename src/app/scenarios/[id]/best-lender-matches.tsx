@@ -52,17 +52,22 @@ function requiresCurrentMatrix(e: ProgramEvaluation): boolean {
 
 function MatchScoreRing({ score }: { score: number }) {
   // Simple, dependency-free circular progress using conic-gradient — no
-  // charting library needed for a single-number ring.
+  // charting library needed for a single-number ring. Includes the
+  // "Confidence Score" label as supporting text under the prominent number,
+  // making the score and label a single cohesive component.
   const deg = Math.round((score / 100) * 360);
   return (
-    <div
-      className="relative h-14 w-14 shrink-0 rounded-full grid place-items-center"
-      style={{ background: `conic-gradient(#C99712 ${deg}deg, #ECECEC 0deg)` }}
-      aria-hidden
-    >
-      <div className="h-11 w-11 rounded-full bg-white grid place-items-center">
-        <span className="text-sm font-bold tabular-nums text-ink-primary">{score}</span>
+    <div className="flex shrink-0 flex-col items-center gap-1" aria-label={`Confidence Score ${score}`}>
+      <div
+        className="relative h-14 w-14 rounded-full grid place-items-center"
+        style={{ background: `conic-gradient(#C99712 ${deg}deg, #ECECEC 0deg)` }}
+        aria-hidden
+      >
+        <div className="h-11 w-11 rounded-full bg-white grid place-items-center">
+          <span className="text-sm font-bold tabular-nums text-ink-primary">{score}</span>
+        </div>
       </div>
+      <span className="text-[9px] font-medium uppercase tracking-wide text-ink-secondary">Confidence Score</span>
     </div>
   );
 }
@@ -390,7 +395,7 @@ function IneligibleLenderCard({ e }: { e: ProgramEvaluation }) {
 function CompareTable({ items }: { items: ProgramEvaluation[] }) {
   const rows: Array<{ label: string; render: (e: ProgramEvaluation) => React.ReactNode }> = [
     { label: "Status", render: (e) => <StatusBadge status={e.status} /> },
-    { label: "Match score", render: (e) => `${e.matchScore}/100` },
+    { label: "Confidence Score", render: (e) => `${e.matchScore}/100` },
     { label: "Max LTV", render: (e) => (requiresCurrentMatrix(e) && e.maxLtv === 0 ? "Confirm matrix" : fmtPct(e.maxLtv, 1)) },
     { label: "Min FICO", render: (e) => (requiresCurrentMatrix(e) && e.minFico === 0 ? "Confirm matrix" : e.minFico > 0 ? e.minFico : "Not required") },
     { label: "Max DTI", render: (e) => (e.maxDti != null ? fmtPct(e.maxDti, 0) : "N/A") },

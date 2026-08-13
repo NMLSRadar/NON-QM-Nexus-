@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ShieldCheck, Lock, Mail } from "lucide-react";
 import "./globals.css";
+import "./light-theme.css";
 import { DISCLAIMER } from "@/domain/types/enums";
 import { AuthStatus } from "@/components/auth-status";
 import { AdminNavLink } from "@/components/admin-nav-link";
@@ -13,6 +14,9 @@ import { BuildVersionGuard } from "@/components/build-version-guard";
 import { PrimaryNav } from "@/components/primary-nav";
 import { GlobalAmbientEngine } from "@/components/global-ambient-engine";
 import { AiAssistantWidget } from "@/components/ai-assistant-widget";
+import { ThemeProvider, THEME_COOKIE } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { cookies } from "next/headers";
 import { TrialStatusBanner } from "@/components/trial-status-banner";
 import { createClient } from "@/lib/supabase/server";
 import { getLenderAccessInfo } from "@/lib/session";
@@ -62,10 +66,27 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     data: { user },
   } = await supabase.auth.getUser();
   const access = user ? await getLenderAccessInfo() : null;
+  // SSR theme: read the cookie set by the toggle/provider so the first render
+  // matches the user's saved choice (no flash). LocalStorage is read by the
+  // inline <head> script for the very first paint; the cookie keeps first
+  // server render consistent with it.
+  const themeCookie = (await cookies()).get(THEME_COOKIE)?.value ?? "dark";
+  const initialTheme = themeCookie === "light" ? "light" : "dark";
 
   return (
-    <html lang="en">
+    <html lang="en" data-theme={initialTheme} suppressHydrationWarning>
+      <head>
+        {/* No-flash theme script: applies the persisted theme to <html> before
+            first paint so a light-mode user never sees a dark flash. Reads
+            localStorage directly (the authoritative client store). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("nq-theme");var d=document.documentElement;if(t==="light"||t==="dark"){d.setAttribute("data-theme",t);}else{d.setAttribute("data-theme","dark");}}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();`,
+          }}
+        />
+      </head>
       <body className="min-h-screen flex flex-col bg-surface-bg text-ink-primary">
+        <ThemeProvider>
         <PwaRegister />
         <BuildVersionGuard />
         <GlobalAmbientEngine />
@@ -82,6 +103,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <PrimaryNav />
             </div>
             <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
+              <ThemeToggle />
               <TeamNavLink />
               <AdminNavLink />
               <AuthStatus />
@@ -139,6 +161,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
         </footer>
         {user && <AiAssistantWidget />}
+        </ThemeProvider>
       </body>
     </html>
   );

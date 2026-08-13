@@ -10,6 +10,8 @@ import { DocumentNeeds } from "./document-needs";
 import { ScenarioActivity } from "./scenario-activity";
 import { SponsoredAeContacts } from "./sponsored-ae-contacts";
 import { FileClassificationCard } from "@/components/file-classification-card";
+import { ScenarioComplexity } from "@/components/scenario-complexity";
+import { classifyScenarioComplexity } from "@/domain/complexity";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +109,9 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
 
           {/* Best Lender Matches — the signature section of the page. */}
           <Card className="p-6">
+            <div className="mb-4">
+              <ScenarioComplexity result={classifyScenarioComplexity(scenario)} />
+            </div>
             {analysis.bankStatementFileClassification ? (
               <FileClassificationCard result={analysis.bankStatementFileClassification} />
             ) : null}

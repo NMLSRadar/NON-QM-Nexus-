@@ -71,7 +71,10 @@ export function LiveLenderRankings({
             <div className="flex items-center gap-1 shrink-0">
               {moved === "up" && <span className="text-emerald-600 text-xs" aria-label="Moved up">▲</span>}
               {moved === "down" && <span className="text-rose-500 text-xs" aria-label="Moved down">▼</span>}
-              <span className="text-sm font-bold tabular-nums text-slate-900">{Math.round(e.matchScore)}%</span>
+              <div className="flex flex-col items-end leading-tight">
+                <span className="text-sm font-bold tabular-nums text-slate-900">{Math.round(e.matchScore)}%</span>
+                <span className="text-[8px] font-medium uppercase tracking-wide text-slate-400">Confidence</span>
+              </div>
             </div>
           </li>
         );

@@ -1,0 +1,821 @@
+/* =============================================================================
+   LIGHT THEME (ivory / deep-navy / champagne-gold) — added 2026-08-13
+   -----------------------------------------------------------------------------
+   The app's default is DARK (the existing navy/gold design, unchanged). This
+   layer adds a complete LIGHT mode driven by html[data-theme="light"]. It
+   re-maps the same surface overrides the .gold-theme/.gold-page dark layer
+   already applies, so EVERY page (header, footer, cards, tables, inputs,
+   states) flips to the ivory/navy/champagne palette without touching each
+   component. Reusable CSS custom properties are defined first and consumed by
+   the premium primitives below, so nothing is hard-coded twice.
+
+   Light-mode specific brand tokens (deep navy reads as ink on ivory; the gold
+   stays champagne — brighter than the dark-mode #d4af37 so it holds contrast
+   on ivory).
+----------------------------------------------------------------------------- */
+html[data-theme="light"] {
+  --gold: #a9842c;          /* deep champagne-gold for text/borders on ivory */
+  --gold-bright: #c49a3a;   /* brighter brushed gold for highlights */
+  --gold-deep: #7a5c1d;     /* near-olive gold for depth/gradients */
+  --ink-navy: #0b1f3a;      /* deep navy primary text */
+  --ink-navy-soft: #42506b; /* muted navy secondary text */
+  --ivory: #f6f1e7;         /* warm ivory page background */
+  --ivory-card: #ffffff;    /* soft-white card surface */
+  --ivory-wash: rgba(255, 255, 255, 0.7);
+  --champagne-border: rgba(169, 132, 44, 0.28);
+  --navy-deep: #0a1a30;     /* the always-dark header/footer chrome */
+}
+
+/* Root plumbing: force light color-scheme, transparent selection/scaffold. */
+html[data-theme="light"] body {
+  background-color: var(--ivory) !important;
+  color: var(--ink-navy) !important;
+  color-scheme: light;
+}
+
+/* The dark page wrapper bg (set by body:has(.gold-page)) flips to ivory. */
+html[data-theme="light"] body:has(.gold-page) {
+  background-color: var(--ivory) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Re-map the existing dark surface overrides to light values. Each rule below
+   mirrors the exact selector from the .gold-theme dark layer, but only inside
+   html[data-theme="light"] and with higher specificity so light wins there.
+--------------------------------------------------------------------------- */
+html[data-theme="light"] .gold-theme .bg-white,
+html[data-theme="light"] .gold-theme .bg-surface-card {
+  background-color: var(--ivory-card) !important;
+}
+html[data-theme="light"] .gold-theme .text-ink-primary,
+html[data-theme="light"] .gold-theme .text-slate-900,
+html[data-theme="light"] .gold-theme .text-slate-800,
+html[data-theme="light"] .gold-theme .text-slate-700 {
+  color: var(--ink-navy) !important;
+}
+html[data-theme="light"] .gold-theme .text-ink-secondary,
+html[data-theme="light"] .gold-theme .text-slate-600,
+html[data-theme="light"] .gold-theme .text-slate-500 {
+  color: var(--ink-navy-soft) !important;
+}
+html[data-theme="light"] .gold-theme .text-slate-400 {
+  color: #6b7890 !important;
+}
+html[data-theme="light"] .gold-theme .border-surface-border,
+html[data-theme="light"] .gold-theme .border-slate-200,
+html[data-theme="light"] .gold-theme .border-slate-300 {
+  border-color: var(--champagne-border) !important;
+}
+html[data-theme="light"] .gold-theme .bg-slate-50,
+html[data-theme="light"] .gold-theme .bg-slate-100,
+html[data-theme="light"] .gold-theme .bg-muted {
+  background-color: rgba(169, 132, 44, 0.06) !important;
+}
+html[data-theme="light"] .gold-theme .hover\:bg-slate-50:hover,
+html[data-theme="light"] .gold-theme .hover\:bg-brand-50:hover {
+  background-color: rgba(169, 132, 44, 0.1) !important;
+}
+html[data-theme="light"] .gold-theme .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html[data-theme="light"] .gold-theme .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(169, 132, 44, 0.14) !important;
+}
+html[data-theme="light"] .gold-theme input,
+html[data-theme="light"] .gold-theme select,
+html[data-theme="light"] .gold-theme textarea {
+  background-color: #fff !important;
+  color: var(--ink-navy) !important;
+  border-color: var(--champagne-border) !important;
+}
+html[data-theme="light"] .gold-theme ::placeholder {
+  color: #94a0b5 !important;
+}
+html[data-theme="light"] .gold-theme table thead tr {
+  border-color: rgba(169, 132, 44, 0.3) !important;
+}
+html[data-theme="light"] .gold-theme .shadow-soft,
+html[data-theme="light"] .gold-theme .shadow-soft-hover,
+html[data-theme="light"] .gold-theme .shadow-soft-lg {
+  box-shadow: 0 8px 24px -12px rgba(11, 31, 58, 0.18) !important;
+}
+
+/* Buttons that used the dark gold gradient keep their premium gold look but
+   with champagne tones that pop on ivory. */
+html[data-theme="light"] .gold-button {
+  background: linear-gradient(135deg, #dfc36b, #c49a3a 45%, #8a6a22);
+  color: #0b1f3a;
+  box-shadow: 0 8px 20px -8px rgba(169, 132, 44, 0.6);
+}
+html[data-theme="light"] .gold-outline-button,
+html[data-theme="light"] .gold-view-all-button {
+  background: rgba(169, 132, 44, 0.06);
+  border-color: rgba(169, 132, 44, 0.55);
+  color: var(--gold-deep);
+}
+html[data-theme="light"] .gold-cta-glow {
+  animation: light-gold-cta-pulse 3.2s ease-in-out infinite;
+}
+@keyframes light-gold-cta-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(169, 132, 44, 0.45), 0 4px 14px -4px rgba(169, 132, 44, 0.4); }
+  50% { box-shadow: 0 0 0 9px rgba(169, 132, 44, 0), 0 4px 22px -2px rgba(169, 132, 44, 0.6); }
+}
+
+/* Gold glass / panels become translucent champagne glass on light. */
+html[data-theme="light"] .gold-glass {
+  background: var(--ivory-wash);
+  border-color: var(--champagne-border);
+}
+html[data-theme="light"] .gold-panel {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(246, 241, 231, 0.96));
+  border-color: var(--champagne-border);
+  box-shadow: 0 0 0 1px rgba(169, 132, 44, 0.05) inset, 0 20px 40px -24px rgba(11, 31, 58, 0.25);
+}
+html[data-theme="light"] .gold-card {
+  background: linear-gradient(160deg, #ffffff, #faf6ec);
+  border-color: var(--champagne-border);
+  box-shadow: 0 8px 24px -18px rgba(11, 31, 58, 0.35);
+}
+html[data-theme="light"] .gold-card:hover {
+  border-color: rgba(196, 154, 58, 0.65);
+  box-shadow: 0 14px 34px -20px rgba(11, 31, 58, 0.4);
+}
+html[data-theme="light"] .gold-scenarios-panel {
+  background: linear-gradient(165deg, #ffffff 0%, #faf6ec 55%, #fff 100%);
+  border-color: var(--champagne-border);
+  box-shadow: 0 0 40px -22px rgba(169, 132, 44, 0.4), 0 24px 48px -30px rgba(11, 31, 58, 0.25);
+}
+
+/* Header + footer stay DARK NAVY in light mode (per the reference image: the
+   header is solid dark navy even on the ivory page). We keep their existing
+   dark chrome — only soften the gold hairline to champagne. */
+html[data-theme="light"] .premium-site-header {
+  border-bottom-color: rgba(196, 154, 58, 0.35);
+}
+html[data-theme="light"] .premium-site-header,
+html[data-theme="light"] footer.gold-theme {
+  background: linear-gradient(180deg, #0a1a30, #0d2138);
+  color: #fff;
+}
+html[data-theme="light"] footer.gold-theme {
+  background: rgba(10, 26, 48, 0.92);
+}
+
+/* Ambient engine dims slightly on light so ivory reads clean. */
+html[data-theme="light"] .ambient-glow { opacity: 0.08; }
+html[data-theme="light"] .ambient-network { opacity: 0.08; }
+
+/* Generic focus + card lift retained on light. */
+
+/* Theme toggle chrome — always gold (it lives in the dark header). */
+.premium-theme-toggle {
+  transition: background-color 180ms ease, border-color 180ms ease, transform 150ms ease;
+}
+.premium-theme-toggle:hover {
+  transform: translateY(-1px);
+}
+.premium-theme-toggle:active {
+  transform: translateY(0);
+}
+
+/* Smooth theme transitions (respect reduced-motion). */
+html[data-theme="light"] body,
+html[data-theme="light"] .gold-theme .bg-white,
+html[data-theme="light"] .gold-theme .bg-slate-50,
+html[data-theme="dark"] body,
+html[data-theme="dark"] .gold-theme .bg-white {
+  transition: background-color 260ms ease, color 260ms ease, border-color 260ms ease;
+}
+
+/* ---------------------------------------------------------------------------
+   GUIDELINE ENGINE — the animated hero centerpiece
+   ---------------------------------------------------------------------------
+   A living, circular "guideline engine": concentric rings rotating at
+   different speeds/directions, orbital particles, gold light pulses that travel
+   the connector paths between the borrower-scenario node and the match-score
+   nodes, gentle breathing on the whole assembly, and a small entrance
+   sequence. Pure CSS (transform/opacity/box-shadow only) so it stays at 60fps;
+   a tiny client component controls the paused-while-offscreen/respect-position
+   behavior. Fully disabled under prefers-reduced-motion.
+----------------------------------------------------------------------------- */
+
+/* The outer glass sphere + breathing wrapper. */
+.guideline-engine {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 1 / 1;
+}
+.guideline-engine__sphere {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.16), transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(196, 154, 58, 0.12), rgba(11, 20, 36, 0.12) 60%, transparent 72%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.16));
+  border: 1px solid rgba(196, 154, 58, 0.35);
+  box-shadow:
+    inset 0 0 60px rgba(196, 154, 58, 0.12),
+    0 30px 70px -30px rgba(169, 132, 44, 0.55);
+  overflow: hidden;
+}
+html[data-theme="light"] .guideline-engine__sphere {
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.5), transparent 42%),
+    radial-gradient(circle at 50% 50%, rgba(196, 154, 58, 0.14), rgba(246, 241, 231, 0.7) 60%, transparent 74%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.6), rgba(240, 233, 218, 0.6));
+  border-color: rgba(169, 132, 44, 0.4);
+  box-shadow:
+    inset 0 0 60px rgba(169, 132, 44, 0.1),
+    0 30px 70px -34px rgba(11, 31, 58, 0.45);
+}
+
+/* Breathing float on the whole sphere. */
+.guideline-engine__sphere {
+  animation: engine-breathe 9s ease-in-out infinite;
+}
+@keyframes engine-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8px) scale(1.012); }
+}
+
+/* Concentric orbit rings — each rotates independently, some CW some CCW. */
+.guideline-engine__rings,
+.guideline-engine__orbit {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+}
+.guideline-engine__ring {
+  position: absolute;
+  border-radius: 999px;
+  border: 1px solid rgba(196, 154, 58, 0.28);
+  transform: translate(-50%, -50%);
+  animation: engine-ring-spin linear infinite;
+}
+html[data-theme="light"] .guideline-engine__ring {
+  border-color: rgba(169, 132, 44, 0.35);
+}
+.guideline-engine__ring.r1 { inset: 8%; animation: engine-ring-spin 46s linear infinite; }
+.guideline-engine__ring.r2 {
+  inset: 20%;
+  border-style: dashed;
+  border-color: rgba(196, 154, 58, 0.2);
+  animation: engine-ring-spin 30s linear infinite reverse;
+}
+.guideline-engine__ring.r3 { inset: 32%; animation: engine-ring-spin 64s linear infinite; }
+.guideline-engine__ring.r4 {
+  inset: 42%;
+  border-color: rgba(196, 154, 58, 0.24);
+  animation: engine-ring-spin 22s linear infinite reverse;
+}
+@keyframes engine-ring-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Orbital particle dots that travel around the rings. Wrappers counter-rotate
+   the ring spin so dots stay as discrete shape highlights, then a child dot
+   pulses. (Cheap: transform-only.) */
+.guideline-engine__dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  animation: engine-dot-rotate linear infinite;
+}
+.guideline-engine__dot::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #e7c877;
+  box-shadow: 0 0 10px 2px rgba(231, 200, 119, 0.6);
+  animation: engine-dot-pulse 3s ease-in-out infinite;
+}
+.guideline-engine__dot.d1 { animation-duration: 46s; }
+.guideline-engine__dot.d1::before { animation-delay: 0s; }
+.guideline-engine__dot.d2 { animation-duration: 30s; animation-direction: reverse; }
+.guideline-engine__dot.d2::before { animation-delay: 1.2s; }
+.guideline-engine__dot.d3 { animation-duration: 64s; }
+.guideline-engine__dot.d3::before { animation-delay: 2.1s; }
+.guideline-engine__dot.d4 { animation-duration: 22s; animation-direction: reverse; }
+.guideline-engine__dot.d4::before { animation-delay: 0.6s; }
+@keyframes engine-dot-rotate {
+  from { transform: rotate(0deg) translateY(-12px); }
+  to { transform: rotate(360deg) translateY(-12px); }
+}
+@keyframes engine-dot-pulse {
+  0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(0.7); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.15); }
+}
+
+/* Center core — the "GUIDELINE ENGINE" label with a soft breathing glow. */
+.guideline-engine__core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  width: 46%;
+  aspect-ratio: 1 / 1;
+  place-items: center;
+  border-radius: 999px;
+  text-align: center;
+  background: radial-gradient(circle at 50% 40%, rgba(196, 154, 58, 0.28), rgba(11, 20, 36, 0.4) 70%);
+  border: 1px solid rgba(196, 154, 58, 0.5);
+  box-shadow: inset 0 0 40px rgba(196, 154, 58, 0.18), 0 0 46px -8px rgba(196, 154, 58, 0.55);
+  animation: engine-core-glow 4.5s ease-in-out infinite;
+}
+html[data-theme="light"] .guideline-engine__core {
+  background: radial-gradient(circle at 50% 40%, rgba(196, 154, 58, 0.22), rgba(255, 255, 255, 0.6) 70%);
+  box-shadow: inset 0 0 40px rgba(169, 132, 44, 0.12), 0 0 42px -10px rgba(169, 132, 44, 0.5);
+}
+@keyframes engine-core-glow {
+  0%, 100% { box-shadow: inset 0 0 40px rgba(196, 154, 58, 0.16), 0 0 40px -10px rgba(196, 154, 58, 0.45); }
+  50% { box-shadow: inset 0 0 50px rgba(196, 154, 58, 0.26), 0 0 60px -6px rgba(196, 154, 58, 0.7); }
+}
+.guideline-engine__core-icon { color: #e7c877; }
+.guideline-engine__core-label {
+  margin-top: 4px;
+  color: #f3e3b4;
+  font-size: 0.62em;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+html[data-theme="light"] .guideline-engine__core-icon { color: var(--gold-deep); }
+html[data-theme="light"] .guideline-engine__core-label { color: var(--gold-deep); }
+
+/* The borrowed-scenario card + the three match-score nodes, positioned
+   around the engine and connected by slow animated gold paths. */
+.guideline-engine__node {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(196, 154, 58, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 10px 12px;
+  backdrop-filter: blur(10px);
+  animation: engine-node-float 6s ease-in-out infinite;
+  box-shadow: 0 12px 28px -18px rgba(0, 0, 0, 0.6);
+}
+html[data-theme="light"] .guideline-engine__node {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(169, 132, 44, 0.55);
+  box-shadow: 0 12px 28px -18px rgba(11, 31, 58, 0.45);
+}
+@keyframes engine-node-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.guideline-engine__node.scenario { bottom: 2%; left: -4%; animation-delay: 0s; }
+.guideline-engine__node.m1 { top: 6%; right: -6%; animation-delay: 0.8s; }
+.guideline-engine__node.m2 { top: 38%; right: -14%; animation-delay: 1.6s; }
+.guideline-engine__node.m3 { bottom: 30%; right: -8%; animation-delay: 2.4s; }
+
+.guideline-engine__node-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(196, 154, 58, 0.16);
+  color: #e7c877;
+}
+html[data-theme="light"] .guideline-engine__node-icon {
+  background: rgba(169, 132, 44, 0.14);
+  color: var(--gold-deep);
+}
+.guideline-engine__node-label {
+  color: #aab4c6;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+html[data-theme="light"] .guideline-engine__node-label { color: #6b7890; }
+.guideline-engine__node-title {
+  color: #f2f4f8;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+html[data-theme="light"] .guideline-engine__node-title { color: var(--ink-navy); }
+.guideline-engine__node-sub {
+  color: #dcc98d;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+html[data-theme="light"] .guideline-engine__node-sub { color: var(--gold-deep); }
+
+/* Entrance sequence for the whole engine (fires once on load). */
+.guideline-engine__enter {
+  animation: engine-enter 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes engine-enter {
+  from { opacity: 0; transform: scale(0.94) translateY(14px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Match-score rings pulse gently. */
+.guideline-engine__score {
+  display: flex;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+  color: #f4eddc;
+  animation: engine-score-in 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+html[data-theme="light"] .guideline-engine__score { color: var(--ink-navy); }
+@keyframes engine-score-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Guidance paths are SVG strokes that draw/pulse slowly. */
+.guideline-engine__paths {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.guideline-engine__path {
+  fill: none;
+  stroke: rgba(196, 154, 58, 0.5);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  animation: engine-path-pulse 3.4s ease-in-out infinite;
+}
+html[data-theme="light"] .guideline-engine__path { stroke: rgba(169, 132, 44, 0.55); }
+@keyframes engine-path-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.9; }
+}
+
+/* Reduced motion: everything solid/static. */
+@media (prefers-reduced-motion: reduce) {
+  .guideline-engine,
+  .guideline-engine__sphere,
+  .guideline-engine__ring,
+  .guideline-engine__dot,
+  .guideline-engine__core,
+  .guideline-engine__node,
+  .guideline-engine__path,
+  .guideline-engine__enter,
+  .guideline-engine__score {
+    animation: none !important;
+  }
+}
+
+/* Tab hidden / offscreen: pause every animation in the engine (GPU save). */
+.guideline-engine.motionless * {
+  animation-play-state: paused !important;
+}
+
+/* Mobile: shrink engine, hide far nodes to avoid overwhelming small screens,
+   pause all motion (perf) — the "motionless" state is a calm static sphere. */
+@media (max-width: 767px) {
+  .guideline-engine__node.m3 { display: none; }
+  .guideline-engine__node.scenario { left: 0; bottom: -2%; }
+  .guideline-engine__node.m1 { right: -2%; }
+  .guideline-engine__node.m2 { right: -8%; }
+}
+
+/* =============================================================================
+   HOMEPAGE — stats bar, hero CTAs, feature-art refinements (both themes)
+============================================================================= */
+
+/* Voice Scenario CTA — elegant glass treatment. */
+.nexus-voice-cta {
+  display: inline-flex;
+  min-width: 158px;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border-radius: 12px;
+  border: 1px solid rgba(196, 154, 58, 0.5);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0 22px;
+  color: #e8c877;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), background-color 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+.nexus-voice-cta:hover {
+  transform: translateY(-2px);
+  border-color: rgba(240, 216, 127, 0.85);
+  background: rgba(212, 175, 55, 0.14);
+  color: #f7e9c2;
+  box-shadow: 0 12px 30px -14px rgba(212, 175, 55, 0.6);
+}
+.nexus-voice-cta:focus-visible {
+  outline: 2px solid #f4d979;
+  outline-offset: 3px;
+}
+html[data-theme="light"] .nexus-voice-cta {
+  border-color: rgba(169, 132, 44, 0.5);
+  background: rgba(255, 255, 255, 0.6);
+  color: #6b5217;
+}
+html[data-theme="light"] .nexus-voice-cta:hover {
+  border-color: rgba(169, 132, 44, 0.75);
+  background: rgba(255, 255, 255, 0.9);
+  color: #4a3a0e;
+  box-shadow: 0 12px 30px -16px rgba(169, 132, 44, 0.55);
+}
+
+/* Start a Scenario — brushed-gold primary. */
+.nexus-start-cta { min-width: 176px; }
+
+/* Stats bar — soft, separated, glass. */
+.nexus-stat {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+  backdrop-filter: blur(8px);
+}
+.nexus-stat-icon {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid rgba(232, 199, 90, 0.5);
+  background: rgba(212, 175, 55, 0.1);
+  color: #e8c877;
+}
+html[data-theme="light"] .nexus-stat {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(250, 246, 236, 0.7));
+  border-color: rgba(169, 132, 44, 0.22);
+}
+html[data-theme="light"] .nexus-stat-icon {
+  border-color: rgba(169, 132, 44, 0.5);
+  background: rgba(169, 132, 44, 0.1);
+  color: var(--gold-deep);
+}
+.nexus-stat-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #f4eddc;
+}
+html[data-theme="light"] .nexus-stat-value { color: var(--ink-navy); }
+.nexus-stat-label {
+  margin-top: 1px;
+  font-size: 0.78rem;
+  color: #9aa4b6;
+}
+html[data-theme="light"] .nexus-stat-label { color: #5f6c85; }
+
+/* Homepage feature cards — taller, show data tags / mini-lists. */
+.nexus-feature-home { min-height: 300px; }
+.nexus-feature-home .nexus-icon-orbit { margin-top: 60px; }
+.nexus-feature-home h2 { margin-top: 52px; }
+
+.nexus-tags {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 14px;
+}
+.nexus-tag {
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px 8px;
+  font-size: 0.7rem;
+  color: #b7bac2;
+}
+.nexus-tag span { color: #e8c877; font-weight: 600; }
+html[data-theme="light"] .nexus-tag {
+  border-color: rgba(169, 132, 44, 0.22);
+  background: rgba(169, 132, 44, 0.05);
+  color: #4a5a72;
+}
+html[data-theme="light"] .nexus-tag span { color: var(--gold-deep); }
+
+.nexus-viewall {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e8c877;
+  transition: color 160ms ease, gap 160ms ease;
+}
+.nexus-viewall:hover { color: #f7e9c2; gap: 9px; }
+html[data-theme="light"] .nexus-viewall { color: var(--gold-deep); }
+html[data-theme="light"] .nexus-viewall:hover { color: #4a3a0e; }
+
+.nexus-listening {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  font-size: 0.72rem;
+  color: #9aa4b6;
+}
+html[data-theme="light"] .nexus-listening { color: #5f6c85; }
+
+.nexus-rank-list {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 3px;
+  margin-top: 72px;
+  font-size: 0.74rem;
+  color: #c9cede;
+}
+.nexus-rank-list span:first-child { color: #f4eddc; font-weight: 700; }
+html[data-theme="light"] .nexus-rank-list { color: #5f6c85; }
+html[data-theme="light"] .nexus-rank-list span:first-child { color: var(--ink-navy); }
+
+@media (max-width: 767px) {
+  .nexus-stats { margin-top: 40px; }
+  .nexus-stat { padding: 16px 18px; }
+  .nexus-voice-cta { min-width: 146px; min-height: 48px; padding: 0 18px; font-size: 0.84rem; }
+}
+
+/* =============================================================================
+   LIGHT HOMEPAGE — flip the .nexus-landing + .nexus-* dark surfaces to the
+   ivory / deep-navy / champagne reference treatment.
+============================================================================= */
+html[data-theme="light"] .nexus-landing {
+  background:
+    radial-gradient(circle at 50% 8%, rgba(169, 132, 44, 0.07), transparent 30%),
+    linear-gradient(180deg, #f8f4ea 0%, #f6f1e7 52%, #faf6ec 100%);
+}
+html[data-theme="light"] .nexus-landing::before {
+  background-image:
+    linear-gradient(rgba(11, 31, 58, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 31, 58, 0.025) 1px, transparent 1px);
+}
+html[data-theme="light"] .nexus-eyebrow {
+  border-color: rgba(169, 132, 44, 0.4);
+  background: rgba(255, 255, 255, 0.6);
+  color: #6b5217;
+  box-shadow: 0 0 22px -16px rgba(169, 132, 44, 0.7);
+}
+html[data-theme="light"] .nexus-headline { color: #0b1f3a; text-shadow: none; }
+html[data-theme="light"] .nexus-gold-copy {
+  color: #a9842c;
+  background: linear-gradient(100deg, #c99f3d 4%, #a9842c 52%, #7a5c1d 96%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+html[data-theme="light"] .nexus-description { color: #4a5a72; }
+html[data-theme="light"] .nexus-feature-card {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), transparent 38%),
+    linear-gradient(165deg, #ffffff 0%, #faf6ec 62%, #ffffff 100%);
+  border-color: rgba(169, 132, 44, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 22px 44px -30px rgba(11, 31, 58, 0.4), 0 0 30px -22px rgba(169, 132, 44, 0.6);
+}
+html[data-theme="light"] .nexus-feature-card::after {
+  background: radial-gradient(circle at 82% 22%, rgba(169, 132, 44, 0.12), transparent 34%);
+}
+html[data-theme="light"] .nexus-icon-orbit {
+  border-color: rgba(169, 132, 44, 0.6);
+  background: radial-gradient(circle at 35% 30%, rgba(169, 132, 44, 0.16), rgba(250, 246, 236, 0.9) 72%);
+  color: #7a5c1d;
+  box-shadow: 0 0 20px -10px rgba(169, 132, 44, 0.7);
+}
+html[data-theme="light"] .nexus-feature-card h2 { color: #0b1f3a; }
+html[data-theme="light"] .nexus-feature-card p { color: #4a5a72; }
+
+/* Card-art miniatures adapt to light. */
+html[data-theme="light"] .nexus-audio-wave span {
+  background: linear-gradient(180deg, transparent, #a9842c, transparent);
+}
+html[data-theme="light"] .nexus-chart-columns span {
+  border-color: rgba(169, 132, 44, 0.4);
+  background: linear-gradient(180deg, rgba(169, 132, 44, 0.2), rgba(169, 132, 44, 0.03));
+}
+html[data-theme="light"] .nexus-chart-line { color: rgba(169, 132, 44, 0.8); }
+html[data-theme="light"] .nexus-document-stack span {
+  border-color: rgba(169, 132, 44, 0.4);
+  background: linear-gradient(145deg, rgba(169, 132, 44, 0.14), rgba(250, 246, 236, 0.9));
+  color: #7a5c1d;
+  box-shadow: 0 8px 18px -12px rgba(11, 31, 58, 0.4);
+}
+html[data-theme="light"] .nexus-closing-prompt p { color: #4a5a72; }
+html[data-theme="light"] .nexus-closing-prompt p svg { color: #a9842c; }
+html[data-theme="light"] .nexus-divider {
+  background: linear-gradient(90deg, transparent, rgba(169, 132, 44, 0.5));
+}
+html[data-theme="light"] .nexus-primary-cta {
+  border-color: #c99f3d;
+  background: linear-gradient(135deg, #e7cd7f 0%, #c49a3a 52%, #8a6a22 100%);
+  color: #0b1f3a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 12px 30px -14px rgba(169, 132, 44, 0.7);
+}
+html[data-theme="light"] .nexus-closing-cta {
+  border-color: rgba(169, 132, 44, 0.5);
+  background: rgba(255, 255, 255, 0.6);
+  color: #6b5217;
+}
+html[data-theme="light"] .nexus-closing-cta:hover {
+  border-color: rgba(169, 132, 44, 0.75);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* =============================================================================
+   SCENARIO COMPLEXITY — entrance + label fill (both themes, reduced-motion safe)
+============================================================================= */
+.scenario-complexity {
+  animation: complexity-enter 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes complexity-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.complexity-fill {
+  width: 100%;
+  transform-origin: left center;
+  animation: complexity-fill 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes complexity-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+/* =============================================================================
+   LIGHT MODE — app content pages. The .gold-page wrappers and the arbitrary
+   dark hex backgrounds the dark design uses are flipped to the ivory palette
+   so scenario results, the dashboard, voice intake, checklists, lenders, and
+   every other app page render correctly in light mode without per-page JSX
+   edits. Header + footer stay dark navy (per the reference image).
+============================================================================= */
+html[data-theme="light"] .gold-page {
+  background-color: var(--ivory) !important;
+}
+html[data-theme="light"] .gold-page .bg-\[\#050505\] { background-color: var(--ivory) !important; }
+html[data-theme="light"] .gold-page .bg-\[\#080808\] { background-color: var(--ivory) !important; }
+html[data-theme="light"] .gold-page .bg-\[\#0a0a0a\] { background-color: var(--ivory) !important; }
+html[data-theme="light"] .gold-page .bg-\[\#090909\] { background-color: var(--ivory) !important; }
+html[data-theme="light"] .gold-page .bg-\[\#111113\] { background-color: var(--ivory-card) !important; }
+html[data-theme="light"] .gold-page .bg-\[\#101012\] { background-color: var(--ivory-card) !important; }
+html[data-theme="light"] .gold-page .bg-\[\#121212\] { background-color: var(--ivory-card) !important; }
+html[data-theme="light"] .gold-page .bg-black\/30,
+html[data-theme="light"] .gold-page .bg-black\/40,
+html[data-theme="light"] .gold-page .bg-black\/60 {
+  background-color: rgba(11, 31, 58, 0.06) !important;
+}
+
+/* Text that the dark design hard-codes white on dark surfaces flips to navy. */
+html[data-theme="light"] .gold-page .text-white { color: var(--ink-navy) !important; }
+html[data-theme="light"] .gold-page .text-slate-300 { color: #5f6c85 !important; }
+html[data-theme="light"] .gold-page .text-slate-200 { color: var(--ink-navy) !important; }
+html[data-theme="light"] .gold-page .hover\:text-amber-200:hover { color: var(--gold-deep) !important; }
+html[data-theme="light"] .gold-page .hover\:text-amber-300:hover { color: var(--gold-deep) !important; }
+
+/* Gold hairlines / amber borders read champagne on ivory. */
+html[data-theme="light"] .gold-page .border-amber-500\/25 { border-color: var(--champagne-border) !important; }
+html[data-theme="light"] .gold-page .ring-amber-400\/40 { --tw-ring-color: rgba(169, 132, 44, 0.4); }
+
+/* Homepage voice hero (signed-in dashboard) sits on .gold-sheen inside a
+   .gold-page; flip its dark glass panel to ivory glass. */
+html[data-theme="light"] .home-voice-hero,
+html[data-theme="light"] .gold-page section.gold-sheen {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(250, 246, 236, 0.95)) !important;
+  border-color: var(--champagne-border) !important;
+  box-shadow: 0 24px 60px -32px rgba(11, 31, 58, 0.35) !important;
+}
+
+/* Live voice panel + scenario tables use .light-surface already; nothing to
+   do. Any chip that used amber-500/15 fills reads champagne on ivory. */
+html[data-theme="light"] .gold-page .bg-amber-500\/15 { background-color: rgba(169, 132, 44, 0.12) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="light"] body,
+  html[data-theme="light"] .gold-theme .bg-white,
+  html[data-theme="light"] .gold-page .bg-\[\#050505\],
+  html[data-theme="light"] .gold-page .bg-\[\#080808\] {
+    transition: none !important;
+  }
+  /* Complexity entrance + fill also stop animating for reduced-motion users. */
+  .scenario-complexity,
+  .complexity-fill {
+    animation: none !important;
+  }
+}
