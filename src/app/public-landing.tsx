@@ -106,7 +106,9 @@ export function PublicLanding() {
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               Listening…
               <span className="tracking-wide text-slate-500">00:24</span>
-              <span className="nexus-home-wave" aria-hidden="true" />
+              <span className="nexus-home-wave" aria-hidden="true">
+                <i /><i /><i /><i /><i /><i /><i /><i />
+              </span>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <Tag label="Loan Purpose" value="DSCR Investor" />
@@ -256,10 +258,10 @@ function CheckItem({ label, done, inProgress }: { label: string; done?: boolean;
       {done ? (
         <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
       ) : (
-        <span className="h-4 w-4 shrink-0 rounded-full border-2 border-amber-500/60" />
+        <span className="h-4 w-4 shrink-0 rounded-full border-2 border-amber-500/70" />
       )}
-      <span className={done ? "text-slate-700 line-through decoration-slate-400" : "text-slate-900"}>{label}</span>
-      <span className="ml-auto text-[10px] font-medium uppercase tracking-wide text-slate-400">
+      <span className={done ? "text-slate-800" : "text-slate-900"}>{label}</span>
+      <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-slate-500">
         {done ? "Completed" : inProgress ? "In progress" : ""}
       </span>
     </li>
