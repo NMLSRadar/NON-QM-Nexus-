@@ -2,6 +2,8 @@ import { getCurrentOrganizationId, getRepository, getLenderAccessInfo } from "@/
 import { recordPageView } from "@/lib/activity";
 import { compareAlphabetically } from "@/app/programs/program-directory-utils";
 import { LenderDirectory, type DirectoryLender } from "./lender-directory";
+import { PremiumPageHero } from "@/components/premium-ui";
+import { Building2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -28,16 +30,8 @@ export default async function LendersPage() {
     }));
 
   return (
-    <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
-      <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-[#0a0a0b] p-6 sm:p-8">
-        <div className="gold-ambient" />
-        <div className="relative z-10">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">Lenders</h1>
-          <p className="mt-2 max-w-2xl text-sm sm:text-base text-slate-400">
-            Compare and access guidelines from the industry&apos;s top NON-QM lenders.
-          </p>
-        </div>
-      </div>
+    <div className="nexus-workspace nexus-lenders-page gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
+      <PremiumPageHero icon={Building2} title={<>Lender <span className="nexus-title-gold">Directory</span></>} description={<>Compare verified programs and access current guidelines across the NON-QM Nexus lender network.</>} />
       <LenderDirectory lenders={lenders} isMember={access.tierLevel > 0} />
     </div>
   );

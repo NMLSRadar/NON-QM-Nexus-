@@ -106,7 +106,7 @@ export function PricingPlans({
           return (
             <div
               key={plan.id}
-              className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-amber-500/30 bg-[#0d0d0f]/90 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)]"
+              className="pricing-membership-card relative w-full max-w-2xl overflow-hidden rounded-2xl border border-amber-500/30 bg-[#0d0d0f]/90 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)]"
             >
               {/* ambient gold glow behind the card */}
               <div className="pointer-events-none absolute -top-28 left-1/2 h-56 w-[36rem] -translate-x-1/2 rounded-full bg-amber-500/20 blur-[90px]" />

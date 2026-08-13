@@ -1525,3 +1525,263 @@ html[data-theme="light"] .text-slate-400 { color: #3f4c63 !important; }
 html[data-theme="light"] .text-slate-500 { color: #4a5a72 !important; }
 html[data-theme="light"] .callout-label { color: #0e7490 !important; }
 html[data-theme="light"] .callout { border-color: rgba(16,185,129,0.4) !important; }
+
+/* =============================================================================
+   NEXUS INSTITUTIONAL LIGHT WORKSPACE — semantic system
+   All rules are light-only. Dark mode retains the established navy/gold UI.
+============================================================================= */
+html[data-theme="light"] {
+  --nexus-bg: #f5f2ea;
+  --nexus-surface: #ffffff;
+  --nexus-surface-alt: #fbf9f4;
+  --nexus-navy: #071426;
+  --nexus-navy-soft: #0b1f36;
+  --nexus-text: #10213b;
+  --nexus-text-muted: #56657a;
+  --nexus-text-faint: #7b8798;
+  --nexus-gold: #b78a24;
+  --nexus-gold-light: #e6bd55;
+  --nexus-border: rgba(183, 138, 36, 0.27);
+  --nexus-border-strong: rgba(183, 138, 36, 0.48);
+  --nexus-shadow: 0 18px 42px -30px rgba(7, 20, 38, 0.42), 0 1px 0 rgba(255, 255, 255, 0.95) inset;
+  --nexus-shadow-hover: 0 24px 50px -30px rgba(7, 20, 38, 0.5), 0 0 28px -22px rgba(183, 138, 36, 0.7);
+  --nexus-radius: 14px;
+}
+
+html[data-theme="light"] .nexus-workspace {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 82% 2%, rgba(230, 189, 85, 0.12), transparent 34%),
+    radial-gradient(ellipse at 8% 84%, rgba(7, 20, 38, 0.045), transparent 32%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 45%),
+    var(--nexus-bg) !important;
+  color: var(--nexus-text);
+}
+html[data-theme="light"] .nexus-workspace::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.3;
+  background-image:
+    linear-gradient(rgba(7, 20, 38, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(7, 20, 38, 0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, transparent 52%);
+}
+
+/* Shared hero: bright institutional panel with an abstract financial data wave. */
+html[data-theme="light"] .nexus-premium-hero {
+  min-height: 172px;
+  border: 1px solid var(--nexus-border-strong) !important;
+  border-radius: var(--nexus-radius) !important;
+  background:
+    radial-gradient(circle at 86% 46%, rgba(230, 189, 85, 0.2), transparent 17%),
+    repeating-radial-gradient(ellipse at 94% 72%, transparent 0 13px, rgba(183, 138, 36, 0.08) 14px 15px, transparent 16px 25px),
+    linear-gradient(112deg, #ffffff 0%, #fdfbf5 62%, #f4ead0 100%) !important;
+  box-shadow: var(--nexus-shadow), 0 0 0 1px rgba(255,255,255,.8) inset, 0 0 32px -24px rgba(183,138,36,.65) !important;
+}
+html[data-theme="light"] .nexus-premium-hero::after {
+  content: "";
+  position: absolute;
+  right: -3%;
+  bottom: 18%;
+  width: 40%;
+  height: 2px;
+  opacity: 0.7;
+  transform: rotate(-8deg);
+  background: linear-gradient(90deg, transparent, rgba(183,138,36,.32), #e6bd55, transparent);
+  box-shadow: 0 12px 22px rgba(230,189,85,.25), 0 -12px 18px rgba(230,189,85,.16);
+}
+html[data-theme="light"] .nexus-premium-hero .gold-ambient { opacity: .18; }
+html[data-theme="light"] .nexus-premium-medallion,
+html[data-theme="light"] .nexus-premium-hero .gold-header-icon {
+  color: var(--nexus-gold);
+  background: radial-gradient(circle at 35% 28%, #fff, #f7eed8 70%);
+  border: 1px solid rgba(183,138,36,.6);
+  box-shadow: 0 0 0 5px rgba(183,138,36,.06), 0 8px 22px -14px rgba(7,20,38,.45), inset 0 1px 0 #fff;
+}
+html[data-theme="light"] .nexus-premium-title { color: var(--nexus-navy) !important; font-size: clamp(2rem, 3.4vw, 2.65rem); letter-spacing: -.035em; }
+html[data-theme="light"] .nexus-title-gold {
+  background: linear-gradient(100deg, #d3a93c, #9a711a 70%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+}
+html[data-theme="light"] .nexus-premium-description { color: var(--nexus-text-muted) !important; max-width: 680px; }
+html[data-theme="light"] .nexus-premium-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  color: #715315;
+  font-size: .68rem;
+  font-weight: 750;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+html[data-theme="light"] .nexus-hero-flow {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  color: var(--nexus-text-muted);
+  font-size: .72rem;
+  font-weight: 650;
+  padding: .7rem .85rem;
+  border: 1px solid var(--nexus-border);
+  border-radius: 999px;
+  background: rgba(255,255,255,.72);
+}
+html[data-theme="light"] .nexus-hero-flow svg { width: 13px; color: var(--nexus-gold); }
+
+/* Shared cards, badges and metrics. */
+html[data-theme="light"] .nexus-luxury-card,
+html[data-theme="light"] .nexus-program-card,
+html[data-theme="light"] .nexus-lender-card,
+html[data-theme="light"] .checklist-card,
+html[data-theme="light"] .nexus-scenario-form .gold-card {
+  background: linear-gradient(155deg, #fff 0%, #fdfbf6 100%) !important;
+  border: 1px solid var(--nexus-border) !important;
+  border-radius: var(--nexus-radius) !important;
+  box-shadow: var(--nexus-shadow) !important;
+  transition: transform 210ms cubic-bezier(.2,.8,.2,1), border-color 210ms ease, box-shadow 210ms ease !important;
+}
+html[data-theme="light"] .nexus-program-card:hover,
+html[data-theme="light"] .nexus-lender-card:hover,
+html[data-theme="light"] .checklist-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--nexus-border-strong) !important;
+  box-shadow: var(--nexus-shadow-hover) !important;
+}
+html[data-theme="light"] .nexus-badge {
+  display: inline-flex; align-items: center; gap: .3rem; width: max-content;
+  border-radius: 999px; padding: .28rem .6rem; font-size: .68rem; font-weight: 750;
+}
+html[data-theme="light"] .nexus-badge--gold { color: #654a12; background: #fbf0ce; border: 1px solid rgba(183,138,36,.35); }
+html[data-theme="light"] .nexus-badge--green { color: #17623d; background: #e9f7ef; border: 1px solid rgba(36,133,84,.24); }
+html[data-theme="light"] .nexus-badge--red { color: #9f2d2d; background: #fff0ef; border: 1px solid rgba(180,52,52,.22); }
+html[data-theme="light"] .nexus-badge--navy { color: #fff; background: var(--nexus-navy-soft); border: 1px solid rgba(230,189,85,.32); }
+html[data-theme="light"] .nexus-data-metric { padding: .65rem .75rem; border: 1px solid rgba(7,20,38,.08); border-radius: 9px; background: var(--nexus-surface-alt); }
+html[data-theme="light"] .nexus-data-metric span { display: block; color: var(--nexus-text-faint); font-size: .64rem; text-transform: uppercase; letter-spacing: .08em; }
+html[data-theme="light"] .nexus-data-metric strong { display: block; margin-top: .18rem; color: var(--nexus-text); font-size: .84rem; }
+
+/* Search and filters become one consistent command-control component. */
+html[data-theme="light"] .nexus-search-panel,
+html[data-theme="light"] .nexus-lender-search {
+  border-color: var(--nexus-border) !important;
+  background: rgba(255,255,255,.78) !important;
+  box-shadow: 0 14px 34px -28px rgba(7,20,38,.45) !important;
+}
+html[data-theme="light"] .nexus-lender-search { max-width: 720px; padding: 4px; border: 1px solid var(--nexus-border); border-radius: 14px; }
+html[data-theme="light"] .nexus-search-panel input,
+html[data-theme="light"] .nexus-lender-search input {
+  height: 52px;
+  border-color: rgba(183,138,36,.34) !important;
+  border-radius: 11px !important;
+  background: #fff !important;
+  color: var(--nexus-text) !important;
+  box-shadow: inset 0 1px 2px rgba(7,20,38,.035);
+}
+html[data-theme="light"] .nexus-search-panel input:focus,
+html[data-theme="light"] .nexus-lender-search input:focus {
+  border-color: rgba(183,138,36,.75) !important;
+  box-shadow: 0 0 0 3px rgba(230,189,85,.18) !important;
+}
+
+/* Document checklists: structured rows with right-aligned requirement labels. */
+.checklist-card__heading { display: flex; align-items: flex-start; gap: .8rem; }
+.checklist-card__medallion { display: inline-flex; width: 42px; height: 42px; flex: 0 0 42px; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid rgba(212,175,55,.38); color: #e7c45f; background: rgba(212,175,55,.09); }
+.checklist-row__icon { display: inline-flex; width: 31px; height: 31px; flex: 0 0 31px; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid rgba(212,175,55,.2); background: rgba(212,175,55,.07); }
+html[data-theme="light"] .checklist-card { padding: 1.25rem !important; }
+html[data-theme="light"] .checklist-card__medallion,
+html[data-theme="light"] .checklist-row__icon { color: var(--nexus-gold); border-color: var(--nexus-border); background: #fbf5e6; }
+html[data-theme="light"] .checklist-row { position: relative; min-height: 54px; align-items: center; padding: .65rem 0; border-bottom: 1px solid rgba(7,20,38,.075); }
+html[data-theme="light"] .checklist-row:last-child { border-bottom: 0; }
+html[data-theme="light"] .checklist-row__copy > div { padding-right: 92px; }
+html[data-theme="light"] .checklist-row__badge { position: absolute; right: 0; top: 50%; transform: translateY(-50%); min-width: 76px; justify-content: center; }
+
+/* Product marketplace and program library. */
+html[data-theme="light"] .nexus-products-page .gold-card { min-height: 238px; }
+html[data-theme="light"] .nexus-products-page .gold-card > div:first-child > span:first-child { background: #fbf3df; border-color: var(--nexus-border-strong); color: var(--nexus-gold); }
+html[data-theme="light"] .nexus-products-page .gold-card .text-emerald-300 { color: #17623d !important; background: #e9f7ef; border-color: rgba(36,133,84,.24); }
+html[data-theme="light"] .nexus-program-category,
+html[data-theme="light"] .nexus-directory-panel {
+  background: rgba(255,255,255,.86) !important;
+  border-color: var(--nexus-border) !important;
+  box-shadow: var(--nexus-shadow);
+}
+html[data-theme="light"] .nexus-program-category > button { background: linear-gradient(90deg, #fff, #fbf8ef); }
+html[data-theme="light"] .nexus-program-card dl > div { background: #f8f5ee !important; border-color: rgba(7,20,38,.07) !important; }
+html[data-theme="light"] .nexus-directory-size { background: var(--nexus-navy-soft) !important; border-color: rgba(230,189,85,.35) !important; }
+html[data-theme="light"] .nexus-directory-size p { color: #fff !important; }
+html[data-theme="light"] .nexus-directory-size p:first-child { color: #aeb9c9 !important; }
+
+/* Lender grid: clean four-column directory with restrained lender accents. */
+html[data-theme="light"] .nexus-lender-card { min-height: 104px; }
+html[data-theme="light"] .nexus-lender-card:hover { background: linear-gradient(145deg, #0b1f36, #071426) !important; }
+html[data-theme="light"] .nexus-lender-card:hover span,
+html[data-theme="light"] .nexus-lender-card:hover p { color: #fff !important; }
+html[data-theme="light"] .nexus-lender-card:hover svg { color: #e6bd55 !important; }
+
+/* Pricing deliberately keeps the conversion card navy against the ivory canvas. */
+html[data-theme="light"] .nexus-pricing-page { padding-top: 2.25rem !important; }
+html[data-theme="light"] .nexus-pricing-hero { position: relative; padding: .75rem 0 0; }
+html[data-theme="light"] .nexus-pricing-hero h1 { font-size: clamp(2.25rem, 5vw, 3.5rem); letter-spacing: -.05em; }
+html[data-theme="light"] .pricing-membership-card {
+  background:
+    radial-gradient(circle at 84% 4%, rgba(230,189,85,.12), transparent 30%),
+    linear-gradient(145deg, #0b1f36, #071426 72%) !important;
+  border-color: rgba(230,189,85,.48) !important;
+  box-shadow: 0 28px 64px -28px rgba(7,20,38,.72), 0 0 0 1px rgba(230,189,85,.07) inset !important;
+}
+html[data-theme="light"] .pricing-membership-card .text-white { color: #fff !important; }
+html[data-theme="light"] .pricing-membership-card .text-slate-200,
+html[data-theme="light"] .pricing-membership-card .text-slate-300 { color: #d7deea !important; }
+html[data-theme="light"] .pricing-membership-card .text-slate-400,
+html[data-theme="light"] .pricing-membership-card .text-slate-500 { color: #98a6ba !important; }
+html[data-theme="light"] .pricing-membership-card .text-amber-400 { color: #e6bd55 !important; }
+html[data-theme="light"] .pricing-membership-card .gold-to-black-button {
+  color: var(--nexus-navy) !important;
+  background: linear-gradient(180deg, #f3d986 0%, #d6a933 46%, #a87818 100%) !important;
+  border: 1px solid #f6dd91;
+}
+
+/* Scenario builder and voice intelligence surface. */
+html[data-theme="light"] .nexus-scenario-builder { max-width: none !important; }
+html[data-theme="light"] .nexus-scenario-form fieldset { position: relative; padding: 1.35rem !important; }
+html[data-theme="light"] .nexus-scenario-form fieldset::before { content: ""; position: absolute; left: 0; top: 18px; bottom: 18px; width: 2px; border-radius: 2px; background: linear-gradient(#e6bd55, rgba(183,138,36,.1)); }
+html[data-theme="light"] .nexus-scenario-form label { color: var(--nexus-text-muted) !important; font-weight: 600; }
+html[data-theme="light"] .nexus-scenario-form input,
+html[data-theme="light"] .nexus-scenario-form select,
+html[data-theme="light"] .nexus-scenario-form textarea { min-height: 44px; border-radius: 9px !important; background: #fff !important; }
+html[data-theme="light"] .nexus-voice-client > div,
+html[data-theme="light"] .nexus-voice-client > section,
+html[data-theme="light"] .nexus-voice-client > article { border-color: var(--nexus-border) !important; }
+html[data-theme="light"] .nexus-voice-client button[aria-label*="record" i],
+html[data-theme="light"] .nexus-voice-client button[aria-label*="dictat" i] { box-shadow: 0 0 0 8px rgba(230,189,85,.1), 0 0 34px rgba(183,138,36,.32); }
+html[data-theme="light"] .nexus-voice-client [role="progressbar"] { background: rgba(7,20,38,.08) !important; }
+html[data-theme="light"] .nexus-voice-client .border-white\/10 { border-color: rgba(7,20,38,.09) !important; }
+html[data-theme="light"] .nexus-voice-client .bg-black\/20,
+html[data-theme="light"] .nexus-voice-client .bg-black\/30,
+html[data-theme="light"] .nexus-voice-client .bg-black\/40 { background-color: #faf8f2 !important; }
+
+/* Tables and keyboard focus. */
+html[data-theme="light"] .nexus-workspace table thead { background: var(--nexus-navy-soft); color: #fff; }
+html[data-theme="light"] .nexus-workspace table thead * { color: #fff !important; }
+html[data-theme="light"] .nexus-workspace table tbody tr:nth-child(even) { background: rgba(7,20,38,.018); }
+html[data-theme="light"] .nexus-workspace table tbody tr:hover { background: rgba(230,189,85,.09); }
+html[data-theme="light"] .nexus-workspace :focus-visible { outline: 2px solid rgba(183,138,36,.8) !important; outline-offset: 2px; }
+
+@media (max-width: 767px) {
+  html[data-theme="light"] .nexus-premium-hero { min-height: 0; padding: 1.25rem !important; }
+  html[data-theme="light"] .nexus-premium-hero__aside { display: none; }
+  html[data-theme="light"] .nexus-premium-title { font-size: 1.8rem; }
+  html[data-theme="light"] .checklist-row__copy > div { padding-right: 0; }
+  html[data-theme="light"] .checklist-row__badge { position: static; transform: none; margin-top: .4rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="light"] .nexus-workspace *,
+  html[data-theme="light"] .nexus-workspace *::before,
+  html[data-theme="light"] .nexus-workspace *::after { animation: none !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}

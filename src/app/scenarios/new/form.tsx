@@ -233,7 +233,7 @@ export function ScenarioForm() {
   }
 
   return (
-    <form ref={formRef} onSubmit={onSubmit} onInput={recomputeRequiredComplete} className="space-y-6" noValidate>
+    <form ref={formRef} onSubmit={onSubmit} onInput={recomputeRequiredComplete} className="nexus-scenario-form space-y-6" noValidate>
       {message ? (
         <p role="alert" className="rounded-md bg-rose-950/40 border border-rose-500/40 text-rose-300 text-sm px-3 py-2">
           {message}

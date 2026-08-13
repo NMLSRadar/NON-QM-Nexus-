@@ -5,6 +5,7 @@ import { recordPageView } from "@/lib/activity";
 import { Card } from "@/components/ui";
 import { ProgramDirectory } from "./program-directory";
 import { canonicalizePrograms } from "./program-directory-utils";
+import { PremiumPageHero } from "@/components/premium-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -20,21 +21,14 @@ export default async function ProgramsPage() {
   const canonicalProgramCount = canonicalizePrograms(programs).length;
 
   return (
-    <div className="gold-theme gold-page -mx-4 -my-6 space-y-5 rounded-b-3xl bg-[#050505] px-4 py-6 sm:px-6 sm:py-8">
-      <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-[#0a0a0b] p-6 sm:p-8">
-        <div className="gold-ambient" />
-        <div className="relative z-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/[0.07] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-300">
-              <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> Human-verified directory
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Programs</h1>
-            <p className="mt-2 max-w-3xl text-sm text-slate-400 sm:text-base">
-              Browse the complete lender program matrix by category, lender, or official program name. Every displayed guideline is versioned and reviewed before activation.
-            </p>
-          </div>
-          {programs.length > 0 ? (
-            <div className="flex shrink-0 items-center gap-3 rounded-xl border border-amber-500/20 bg-black/35 px-4 py-3">
+    <div className="nexus-workspace nexus-programs-page gold-theme gold-page -mx-4 -my-6 space-y-5 rounded-b-3xl bg-[#050505] px-4 py-6 sm:px-6 sm:py-8">
+      <PremiumPageHero
+        icon={Database}
+        eyebrow={<><ShieldCheck className="h-3.5 w-3.5" aria-hidden /> Human-verified directory</>}
+        title={<>Non-QM <span className="nexus-title-gold">Programs</span></>}
+        description={<>Explore hundreds of verified Non-QM programs across the Nexus lender network.</>}
+        aside={programs.length > 0 ? (
+            <div className="nexus-directory-size flex shrink-0 items-center gap-3 rounded-xl border border-amber-500/20 bg-black/35 px-4 py-3">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300">
                 <Database className="h-5 w-5" aria-hidden />
               </span>
@@ -44,8 +38,7 @@ export default async function ProgramsPage() {
               </div>
             </div>
           ) : null}
-        </div>
-      </div>
+      />
 
       {programs.length === 0 && access.tierLevel === 0 ? (
         <Card dark>

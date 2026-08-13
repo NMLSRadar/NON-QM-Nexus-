@@ -37,7 +37,7 @@ export default async function ScenariosPage() {
   });
 
   return (
-    <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
+    <div className="nexus-workspace nexus-scenarios-page gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
       <InviteMismatchBanner />
       <div className="gold-scenarios-panel relative overflow-hidden p-6 sm:p-8">
         <div className="gold-ambient" />

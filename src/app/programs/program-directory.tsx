@@ -77,7 +77,7 @@ function ProgramCard({ program, lender }: { program: Program; lender: Lender }) 
   const sourceUrl = program.sourceDocuments?.find((url) => /^https:\/\//.test(url));
 
   return (
-    <article className="group rounded-xl border border-amber-500/15 bg-[#111113] p-4 shadow-[0_12px_35px_-24px_rgba(245,158,11,0.45)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-400/55 hover:bg-[#151411]">
+    <article className="nexus-program-card group rounded-xl border border-amber-500/15 bg-[#111113] p-4 shadow-[0_12px_35px_-24px_rgba(245,158,11,0.45)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-400/55 hover:bg-[#151411]">
       <Link href={`/lenders/${lender.id}#program-${program.id}`} className="block focus:outline-none focus:ring-2 focus:ring-amber-400/60" aria-label={`View ${program.name} from ${lender.name}`}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -160,7 +160,7 @@ function CategoryAccordion({
   }, [lenderById, visiblePrograms]);
 
   return (
-    <section className={`overflow-hidden rounded-2xl border bg-[#0b0b0d] transition-colors ${expanded ? "border-amber-400/35" : "border-amber-500/15 hover:border-amber-400/30"}`}>
+    <section className={`nexus-program-category overflow-hidden rounded-2xl border bg-[#0b0b0d] transition-colors ${expanded ? "border-amber-400/35" : "border-amber-500/15 hover:border-amber-400/30"}`}>
       <button
         type="button"
         onClick={onToggle}
@@ -257,7 +257,7 @@ export function ProgramDirectory({ lenders, programs }: Props) {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-amber-500/20 bg-[#0a0a0b] p-4 shadow-[0_20px_60px_-45px_rgba(245,158,11,0.7)] sm:p-5">
+      <div className="nexus-search-panel rounded-2xl border border-amber-500/20 bg-[#0a0a0b] p-4 shadow-[0_20px_60px_-45px_rgba(245,158,11,0.7)] sm:p-5">
         <label htmlFor="program-search" className="sr-only">Search lenders or programs</label>
         <div className="relative">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-amber-400/70" aria-hidden />
@@ -266,7 +266,7 @@ export function ProgramDirectory({ lenders, programs }: Props) {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search lenders or programs..."
+            placeholder="Search programs, lenders, borrower types, or documentation methods..."
             className="h-12 w-full rounded-xl border border-amber-500/25 bg-black/50 pl-12 pr-4 text-sm text-white placeholder:text-slate-500 focus:border-amber-300/70 focus:outline-none focus:ring-2 focus:ring-amber-400/25 sm:text-base"
           />
         </div>

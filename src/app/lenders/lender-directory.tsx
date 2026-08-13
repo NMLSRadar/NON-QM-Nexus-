@@ -71,7 +71,7 @@ function LenderCard({ directoryLender, unlocked }: { directoryLender: DirectoryL
   return (
     <Link
       href={`/lenders/${lender.id}`}
-      className="group flex min-h-[112px] items-center gap-3 rounded-xl border border-amber-500/20 bg-[#111113] p-4 shadow-[0_12px_35px_-24px_rgba(245,158,11,0.45)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-400/65 hover:bg-[#151411] hover:shadow-[0_16px_35px_-22px_rgba(245,158,11,0.7)] focus:outline-none focus:ring-2 focus:ring-amber-400/60"
+      className="nexus-lender-card group flex min-h-[112px] items-center gap-3 rounded-xl border border-amber-500/20 bg-[#111113] p-4 shadow-[0_12px_35px_-24px_rgba(245,158,11,0.45)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-400/65 hover:bg-[#151411] hover:shadow-[0_16px_35px_-22px_rgba(245,158,11,0.7)] focus:outline-none focus:ring-2 focus:ring-amber-400/60"
       aria-label={`View ${lender.name} programs and guidelines`}
     >
       <AlphabetBadge name={lender.name} />
@@ -99,7 +99,7 @@ export function LenderDirectory({ lenders, isMember }: Props) {
 
   return (
     <div className="space-y-5">
-      <div>
+      <div className="nexus-lender-search">
         <label htmlFor="lender-search" className="sr-only">Search lenders</label>
         <div className="relative max-w-xl">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-amber-400/70" aria-hidden />
@@ -114,7 +114,7 @@ export function LenderDirectory({ lenders, isMember }: Props) {
         </div>
       </div>
 
-      <section className="rounded-2xl border border-amber-500/25 bg-gradient-to-b from-[#0d0d0f] to-black p-5 sm:p-6">
+      <section className="nexus-directory-panel rounded-2xl border border-amber-500/25 bg-gradient-to-b from-[#0d0d0f] to-black p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-amber-300/25 bg-gradient-to-br from-amber-300/20 via-amber-500/15 to-amber-700/10 text-amber-300 shadow-lg" aria-hidden>

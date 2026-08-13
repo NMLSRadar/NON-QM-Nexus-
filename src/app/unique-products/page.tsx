@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck, BriefcaseBusiness, Building2, GraduationCap, HeartPulse, House, Landmark, ShieldCheck } from "lucide-react";
 import { UNIQUE_PRODUCT_CATEGORIES } from "@/domain/uniqueProducts";
 import { recordPageView } from "@/lib/activity";
+import { PremiumPageHero } from "@/components/premium-ui";
 
 const icons = {
   JUMBO_AUS: Landmark,
@@ -15,25 +16,14 @@ const icons = {
 export default async function UniqueProductsPage() {
   await recordPageView("products");
   return (
-    <div className="gold-theme gold-page -mx-4 -my-6 min-h-full space-y-8 rounded-b-3xl bg-[#050505] px-4 py-6 sm:px-6 sm:py-8">
-      <section className="relative overflow-hidden rounded-3xl border border-amber-500/25 bg-[#0a0a0b] p-6 sm:p-10">
-        <div className="gold-ambient" />
-        <div className="relative z-10 max-w-3xl">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
-            <ShieldCheck className="h-4 w-4" /> Specialty Mortgage Product Directory
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-5xl">Unique Non-QM Products</h1>
-          <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
-            Choose a specialty program, see lenders known to offer it, compare key highlights, and contact an Account Executive for complete details.
-          </p>
-          <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-slate-400">
-            <span>Choose Program Type</span><ArrowRight className="h-4 w-4 text-amber-400" />
-            <span>See Lenders</span><ArrowRight className="h-4 w-4 text-amber-400" />
-            <span>Compare Highlights</span><ArrowRight className="h-4 w-4 text-amber-400" />
-            <span className="text-amber-300">Contact an AE</span>
-          </div>
-        </div>
-      </section>
+    <div className="nexus-workspace nexus-products-page gold-theme gold-page -mx-4 -my-6 min-h-full space-y-8 rounded-b-3xl bg-[#050505] px-4 py-6 sm:px-6 sm:py-8">
+      <PremiumPageHero
+        icon={ShieldCheck}
+        eyebrow={<>Specialty Mortgage Product Directory</>}
+        title={<>Unique Non-QM <span className="nexus-title-gold">Products</span></>}
+        description={<>Discover specialized financing programs that conventional lending cannot accommodate.</>}
+        aside={<div className="nexus-hero-flow"><span>Choose type</span><ArrowRight /><span>Compare</span><ArrowRight /><span>Connect</span></div>}
+      />
 
       <section aria-labelledby="program-types">
         <div className="mb-4 flex items-end justify-between gap-4">

@@ -7,15 +7,15 @@ import type { NeedsListItem } from "@/domain/types/results";
 function ChecklistRows({ items }: { items: NeedsListItem[] }) {
   const sorted = [...items].sort((a, b) => Number(b.required) - Number(a.required));
   return (
-    <ul className="space-y-2.5">
+    <ul className="checklist-rows space-y-2.5">
       {sorted.map((n, i) => (
-        <li key={i} className="flex items-start gap-2.5 text-sm">
-          <FileCheck2 className="h-4 w-4 mt-0.5 text-amber-400 shrink-0" aria-hidden />
-          <div className="min-w-0">
+        <li key={i} className="checklist-row flex items-start gap-2.5 text-sm">
+          <span className="checklist-row__icon"><FileCheck2 className="h-4 w-4 text-amber-400" aria-hidden /></span>
+          <div className="checklist-row__copy min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-medium text-white">{n.label}</p>
+              <p className="font-semibold text-white">{n.label}</p>
               <span
-                className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                className={`checklist-row__badge rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                   n.required ? "bg-amber-500/15 text-amber-300 border border-amber-500/30" : "border border-white/15 text-slate-400"
                 }`}
               >
@@ -57,8 +57,10 @@ export function DocumentChecklistCard({
 
   return (
     <div className="checklist-card gold-scenario-card rounded-2xl p-5">
-      <h3 className="text-lg font-bold text-white">{title}</h3>
-      <p className="mt-1 text-sm text-slate-400">{description}</p>
+      <div className="checklist-card__heading">
+        <span className="checklist-card__medallion"><FileCheck2 className="h-5 w-5" aria-hidden /></span>
+        <div><h3 className="text-lg font-bold text-white">{title}</h3><p className="mt-1 text-sm text-slate-400">{description}</p></div>
+      </div>
 
       <div className="mt-4 inline-flex rounded-full border border-amber-500/40 bg-black/40 p-1 text-xs font-semibold">
         {(["purchase", "refinance"] as const).map((t) => (
