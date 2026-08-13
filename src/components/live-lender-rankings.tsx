@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ProgramEvaluation } from "@/domain/types/results";
+import { useCountUp } from "@/hooks/use-count-up";
 
 const TONE_BAR: Record<string, string> = {
   strong_match: "bg-emerald-500",
@@ -11,6 +12,18 @@ const TONE_BAR: Record<string, string> = {
   manual_review: "bg-sky-500",
   ineligible: "bg-rose-400",
 };
+
+/** One score cell: number counts into place once (prefers-reduced-motion
+ * safe), with the "Confidence" label as supporting text beneath it. */
+function ConfidenceScoreCell({ score }: { score: number }) {
+  const { value } = useCountUp(Math.round(score), true);
+  return (
+    <div className="flex flex-col items-end leading-tight">
+      <span className="text-sm font-bold tabular-nums text-slate-900">{value}%</span>
+      <span className="text-[8px] font-medium uppercase tracking-wide text-slate-400">Confidence</span>
+    </div>
+  );
+}
 
 /** The right-hand panel of the 3-panel live voice experience: as the
  * borrower's transcript resolves more vitals, this re-runs the SAME
@@ -71,10 +84,7 @@ export function LiveLenderRankings({
             <div className="flex items-center gap-1 shrink-0">
               {moved === "up" && <span className="text-emerald-600 text-xs" aria-label="Moved up">▲</span>}
               {moved === "down" && <span className="text-rose-500 text-xs" aria-label="Moved down">▼</span>}
-              <div className="flex flex-col items-end leading-tight">
-                <span className="text-sm font-bold tabular-nums text-slate-900">{Math.round(e.matchScore)}%</span>
-                <span className="text-[8px] font-medium uppercase tracking-wide text-slate-400">Confidence</span>
-              </div>
+              <ConfidenceScoreCell score={e.matchScore} />
             </div>
           </li>
         );

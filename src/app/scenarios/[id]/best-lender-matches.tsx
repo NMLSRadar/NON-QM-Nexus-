@@ -7,6 +7,7 @@ import { SampleDataBadge, StatusBadge, Stat, Pill, fmtPct, fmtUsd } from "@/comp
 import type { ProgramEvaluation } from "@/domain/types/results";
 import type { MatchStatus } from "@/domain/types/enums";
 import { whyThisLender, potentialIssues, aiNarrative } from "@/domain/matching/narrative";
+import { useCountUp } from "@/hooks/use-count-up";
 
 const MAX_COMPARE = 4;
 /** Never show more than this many near-match/ineligible lenders — product
@@ -54,8 +55,10 @@ function MatchScoreRing({ score }: { score: number }) {
   // Simple, dependency-free circular progress using conic-gradient — no
   // charting library needed for a single-number ring. Includes the
   // "Confidence Score" label as supporting text under the prominent number,
-  // making the score and label a single cohesive component.
-  const deg = Math.round((score / 100) * 360);
+  // making the score and label a single cohesive component. The number
+  // counts into place once on mount (respects prefers-reduced-motion).
+  const { value, progress } = useCountUp(score, true);
+  const deg = Math.round(((progress * score) / 100) * 360);
   return (
     <div className="flex shrink-0 flex-col items-center gap-1" aria-label={`Confidence Score ${score}`}>
       <div
@@ -64,7 +67,7 @@ function MatchScoreRing({ score }: { score: number }) {
         aria-hidden
       >
         <div className="h-11 w-11 rounded-full bg-white grid place-items-center">
-          <span className="text-sm font-bold tabular-nums text-ink-primary">{score}</span>
+          <span className="text-sm font-bold tabular-nums text-ink-primary">{value}</span>
         </div>
       </div>
       <span className="text-[9px] font-medium uppercase tracking-wide text-ink-secondary">Confidence Score</span>
