@@ -1,0 +1,14 @@
+# Local/generated artifacts that are not part of the web application
+output/
+LAUNCH_HARDENING_REPORT.md
+
+# Local build and dependency caches
+.next/
+node_modules/
+coverage/
+*.log
+
+# Local-only configuration
+.env
+.env.*
+!.env.example
