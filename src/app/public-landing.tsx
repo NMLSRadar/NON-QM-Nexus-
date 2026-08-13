@@ -75,7 +75,7 @@ export function PublicLanding() {
       </section>
 
       {/* FEATURE HIGHLIGHTS — middle row (50+ Lenders / Hundreds / Guideline-First) */}
-      <section className="relative mx-auto mt-14 max-w-[1000px]">
+      <section className="relative mx-auto mt-10 max-w-[1000px]">
         <div className="nexus-home-highlights">
           {HIGHLIGHTS.map((h) => (
             <div key={h.label} className="nexus-home-highlight">
@@ -89,7 +89,7 @@ export function PublicLanding() {
       </section>
 
       {/* FEATURE DETAIL CARDS — three white cards with drop shadows */}
-      <section className="relative z-10 mx-auto mt-10 grid max-w-[1200px] gap-6 lg:grid-cols-3">
+      <section className="relative z-10 mx-auto mt-8 grid max-w-[1200px] gap-6 lg:grid-cols-3">
         <FeatureCard
           icon={<Mic2 className="h-6 w-6" />}
           iconClass="nexus-home-feature-icon--blue"
@@ -165,7 +165,7 @@ export function PublicLanding() {
       </section>
 
       {/* CLOSING */}
-      <section className="relative z-10 mx-auto mt-14 max-w-4xl text-center">
+      <section className="relative z-10 mx-auto mt-12 max-w-4xl text-center">
         <div className="nexus-home-closing">
           <span className="nexus-home-divider" />
           <p>

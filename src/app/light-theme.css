@@ -504,9 +504,9 @@ html[data-theme="light"] .guideline-engine__node-title { color: var(--ink-navy);
 /* Three circular gold match badges — RIGHT. */
 .guideline-engine__match {
   position: absolute;
-  z-index: 6;
-  width: 64px;
-  height: 64px;
+  z-index: 7;
+  width: 72px;
+  height: 72px;
   border-radius: 999px;
   display: grid;
   place-items: center;
@@ -519,9 +519,9 @@ html[data-theme="light"] .guideline-engine__node-title { color: var(--ink-navy);
   display: grid;
   place-items: center;
   align-content: center;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1.5px solid #d4af37;
-  box-shadow: 0 0 18px -4px rgba(212, 175, 55, 0.65), 0 10px 24px -14px rgba(0, 0, 0, 0.5);
+  background: #ffffff;
+  border: 2px solid #c5a47e;
+  box-shadow: 0 0 22px -4px rgba(212, 175, 55, 0.7), 0 10px 26px -14px rgba(0, 0, 0, 0.4);
   animation: engine-match-float 6.5s ease-in-out infinite;
 }
 html[data-theme="light"] .guideline-engine__match-inner {
@@ -534,8 +534,9 @@ html[data-theme="light"] .guideline-engine__match-inner {
   50% { transform: translateY(-5px); }
 }
 .guideline-engine__match-pct { display: inline-flex; align-items: baseline; line-height: 1; }
-.guideline-engine__match-num { font-size: 22px; font-weight: 800; color: #001a2c; letter-spacing: -0.02em; }
-.guideline-engine__match-percent { font-size: 12px; font-weight: 800; color: #001a2c; margin-left: 1px; }
+.guideline-engine__match-num { font-size: 25px; font-weight: 800; color: #001a2c; letter-spacing: -0.02em; }
+.guideline-engine__match-percent { font-size: 13px; font-weight: 800; color: #001a2c; margin-left: 1px; }
+.guideline-engine__match-label { font-size: 8px; }
 .guideline-engine__match-label {
   margin-top: 2px;
   font-size: 7px;
@@ -966,10 +967,10 @@ html[data-theme="light"] .gold-page .bg-amber-500\/15 { background-color: rgba(1
   max-width: 640px;
   color: #001a2c;
   font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
-  font-size: clamp(2.3rem, 5vw, 4.3rem);
+  font-size: clamp(2.3rem, 4.8vw, 4.2rem);
   font-weight: 600;
   letter-spacing: -0.015em;
-  line-height: 1.05;
+  line-height: 1.04;
   text-wrap: balance;
 }
 .nexus-home-headline > span { display: block; }
@@ -1007,9 +1008,9 @@ html[data-theme="light"] .gold-page .bg-amber-500\/15 { background-color: rgba(1
   background: linear-gradient(180deg, #e0bd5e 0%, #d4af37 40%, #a67c37 78%, #8b6b23 100%);
   color: #001a2c;
   border: 1px solid #f9e4b7;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 4px 14px rgba(197, 164, 126, 0.39);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 8px 20px -6px rgba(212, 175, 55, 0.65);
 }
-.nexus-home-cta--gold:hover { filter: brightness(1.06); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 8px 20px rgba(197, 164, 126, 0.5); transform: translateY(-2px); }
+.nexus-home-cta--gold:hover { filter: brightness(1.05); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 12px 26px -6px rgba(212, 175, 55, 0.8); transform: translateY(-2px); }
 .nexus-home-cta--light {
   background: #f9fafb;
   color: #001a2c;
