@@ -1311,6 +1311,9 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
     [
       /(?:\bfico\b|credit score|\bscore\b|\bcredit\b|\bsitting at\b)[^\d%]{0,32}(\d{3})\b/,
       /\b(\d{3})\s*(?:\bfico\b|credit score|\bscore\b|\bcredit\b)/,
+      // Broker phrasing often puts the numeric score before the descriptor:
+      // "720 mid FICO", "640 is the low FICO", "780 high FICO".
+      /\b(\d{3})\s*(?:is\s+)?(?:the\s+)?(?:low|mid(?:dle)?|high)\s+(?:fico|credit score|score|credit)\b/,
     ],
     (n) => n >= 300 && n <= 850
   );

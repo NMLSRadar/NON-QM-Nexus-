@@ -290,7 +290,6 @@ function LenderCard({
           value={e.estimatedQualifyingIncome != null ? `${fmtUsd(e.estimatedQualifyingIncome)}/mo` : "—"}
         />
         <Stat label="Documentation" value={e.documentationType} />
-        <Stat label="Guideline" value={`eff. ${e.effectiveDate}`} />
       </dl>
 
       {e.pnl85SupportingStatementDisclaimer && (
@@ -487,7 +486,6 @@ function CompareTable({ items }: { items: ProgramEvaluation[] }) {
     { label: "Max loan amount", render: (e) => (requiresCurrentMatrix(e) && e.maxLoanAmount === 0 ? "Confirm matrix" : fmtUsd(e.maxLoanAmount)) },
     { label: "Reserves required", render: (e) => (requiresCurrentMatrix(e) && (e.estimatedReservesRequiredMonths ?? 0) === 0 ? "Confirm matrix" : `${e.estimatedReservesRequiredMonths ?? "—"} mo`) },
     { label: "Documentation", render: (e) => e.documentationType },
-    { label: "Guideline version", render: (e) => `${e.guidelineVersion} (eff. ${e.effectiveDate})` },
   ];
 
   return (

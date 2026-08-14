@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { BestLenderMatches, ScenarioPricingGuidance } from "@/app/scenarios/[id]/best-lender-matches";
 import type { ProgramEvaluation } from "@/domain/types/results";
 import { MatchStatus } from "@/domain/types/enums";
@@ -86,6 +87,21 @@ describe("Scenario results — Calculation Summary removed", () => {
   it("never renders a Calculation Summary heading regardless of lender counts", () => {
     render(<BestLenderMatches evaluations={[eligible("1"), eligible("2"), eligible("3")]} tierLevel={3} />);
     expect(screen.queryByText(/calculation summary/i)).not.toBeInTheDocument();
+  });
+
+  it("does not display guideline versions or effective dates in lender recommendations or comparison", async () => {
+    const user = userEvent.setup();
+    render(<BestLenderMatches evaluations={[eligible("1"), eligible("2")]} tierLevel={3} />);
+
+    for (const checkbox of screen.getAllByRole("checkbox", { name: /compare test program/i })) {
+      await user.click(checkbox);
+    }
+
+    expect(screen.getByText(/side-by-side/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^Guideline$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/guideline version/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/eff\.\s*2026-01-01/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("v1.0")).not.toBeInTheDocument();
   });
 });
 

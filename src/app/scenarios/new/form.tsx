@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ClipboardList, Home, User, CreditCard, FolderOpen, Flag, Sparkles } from "lucide-react";
 import { createScenario } from "./actions";
 import type { ScenarioInput } from "@/domain/validation/scenarioSchema";
+import { parseFormNumber } from "@/lib/form-number";
 
 /**
  * Dynamic intake questionnaire. Conditional sections render based on the
@@ -40,9 +41,7 @@ function SectionLegend({ icon, title }: { icon: React.ReactNode; title: string }
 }
 
 function num(v: FormDataEntryValue | null): number | undefined {
-  if (v == null || v === "") return undefined;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : undefined;
+  return parseFormNumber(v);
 }
 function str(v: FormDataEntryValue | null): string | undefined {
   return v == null || v === "" ? undefined : String(v);
@@ -300,13 +299,13 @@ export function ScenarioForm() {
           <input id="units" name="units" type="number" min="1" max="20" className={field} />
         </Field>
         <Field name="purchasePrice" title="Purchase price ($)">
-          <input id="purchasePrice" name="purchasePrice" type="number" min="0" className={field} />
+          <input id="purchasePrice" name="purchasePrice" type="text" inputMode="numeric" pattern="[0-9,]*" placeholder="100,000" className={field} />
         </Field>
         <Field name="estimatedValue" title="Estimated value ($)">
           <input id="estimatedValue" name="estimatedValue" type="number" min="0" className={field} />
         </Field>
         <Field name="requestedLoanAmount" title="Requested loan amount ($)">
-          <input id="requestedLoanAmount" name="requestedLoanAmount" type="number" min="0" className={field} />
+          <input id="requestedLoanAmount" name="requestedLoanAmount" type="text" inputMode="numeric" pattern="[0-9,]*" placeholder="100,000" className={field} />
         </Field>
         <Field name="requestedCashOut" title="Requested cash out ($)">
           <input id="requestedCashOut" name="requestedCashOut" type="number" min="0" className={field} />

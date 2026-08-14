@@ -92,6 +92,17 @@ describe("voice extraction: phrasing coverage", () => {
     expect(x.fico?.value).toBe(700);
     expect(x.propertyValue?.value).toBe(750_000);
   });
+  it.each([
+    ["mid fico is 720", 720],
+    ["640 low fico", 640],
+    ["640 is the low fico", 640],
+    ["780 high fico", 780],
+    ["705 middle fico", 705],
+  ])("recognizes broker low/mid/high FICO phrasing: %s", (phrase, expected) => {
+    const x = extractFromTranscript(phrase);
+    expect(x.fico?.value).toBe(expected);
+    expect(assess(x).missing).not.toContain("fico");
+  });
   it("maps property-type variants (non-warrantable beats condo; duplex sets units)", () => {
     expect(extractFromTranscript("a non-warrantable condo").propertyType?.value).toBe("non_warrantable_condo");
     const genericCondo = extractFromTranscript("a condo downtown");
