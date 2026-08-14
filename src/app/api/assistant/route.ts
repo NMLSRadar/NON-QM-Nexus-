@@ -4,11 +4,11 @@ import { recordActivity } from "@/lib/activity";
 import { getAiProvider, asUntrustedData, type AiMessage } from "@/lib/ai/provider";
 import {
   ASSISTANT_SYSTEM_PROMPT,
-  buildGuidelineContext,
   buildLenderIntelligenceContext,
   buildPendingReviewContext,
   extractAssistantVitals,
 } from "@/lib/ai/assistantContext";
+import { buildCatalogDiscoveryFallback, buildRelevantGuidelineContext } from "@/lib/ai/assistantCatalogContext";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +80,8 @@ export async function POST(request: Request) {
   }
 
   const catalog = await repo.getCatalog(org); // same tier-gated catalog the rest of the app uses
-  const context = buildGuidelineContext(catalog);
+  const latestUserMessage = [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
+  const context = buildRelevantGuidelineContext(catalog, latestUserMessage);
   const pendingReview = await repo.listPendingReviewLenderPrograms(org);
   const pendingContext = buildPendingReviewContext(pendingReview);
   // AE-intelligence layer: qualitative routing (exceptions, deposit
@@ -105,6 +106,11 @@ export async function POST(request: Request) {
     return Response.json({ reply });
   } catch (err) {
     console.error("AI assistant error:", err);
+    const fallback = buildCatalogDiscoveryFallback(catalog, latestUserMessage);
+    if (fallback) {
+      await recordActivity(supabase, user.id, "ai_assistant");
+      return Response.json({ reply: fallback, fallback: true });
+    }
     return Response.json({ error: "The assistant is temporarily unavailable — please try again in a moment." }, { status: 502 });
   }
 }

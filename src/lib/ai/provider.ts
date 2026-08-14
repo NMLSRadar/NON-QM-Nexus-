@@ -76,7 +76,7 @@ export function parseStructured<T>(raw: string, schema: z.ZodType<T>): T {
 
 /** Select the configured provider. Keys come from environment variables only. */
 export function getAiProvider(): AiProvider {
-  const provider = process.env.AI_PROVIDER ?? "anthropic";
+  const provider = (process.env.AI_PROVIDER ?? "anthropic").trim().toLowerCase();
   switch (provider) {
     case "anthropic":
       return new AnthropicProvider();
@@ -165,6 +165,7 @@ class OpenAiProvider implements AiProvider {
 
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
+      signal: AbortSignal.timeout(45_000),
       headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
@@ -173,7 +174,10 @@ class OpenAiProvider implements AiProvider {
         messages: request.messages,
       }),
     });
-    if (!res.ok) throw new Error(`OpenAI API error: ${res.status}`);
+    if (!res.ok) {
+      const body = (await res.text()).slice(0, 1_000);
+      throw new Error(`OpenAI API error: ${res.status} ${body}`);
+    }
     const data = (await res.json()) as { choices: Array<{ message: { content: string } }> };
     return data.choices[0]?.message.content ?? "";
   }
@@ -184,6 +188,7 @@ class OpenAiProvider implements AiProvider {
 
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
+      signal: AbortSignal.timeout(45_000),
       headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL ?? "gpt-4o",

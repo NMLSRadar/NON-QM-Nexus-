@@ -101,7 +101,7 @@ export function AiAssistantWidget() {
               <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
                   className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${
-                    m.role === "user" ? "bg-gradient-to-r from-amber-300 to-amber-600 text-black" : "bg-white/5 border border-amber-500/15 text-slate-100"
+                    m.role === "user" ? "bg-gradient-to-r from-amber-300 to-amber-600 text-black" : "whitespace-pre-wrap bg-white/5 border border-amber-500/15 text-slate-100"
                   }`}
                 >
                   {m.content}
