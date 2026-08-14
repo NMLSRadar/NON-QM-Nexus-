@@ -16,7 +16,10 @@ export function useCountUp(target: number, active: boolean, duration = 900): { v
 
   useEffect(() => {
     if (!active || target <= 0) return;
-    const reduced = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) {
       setValue(target);
       setProgress(1);

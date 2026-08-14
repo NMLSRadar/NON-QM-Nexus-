@@ -155,6 +155,48 @@ html[data-theme="light"] .confidence-score__rule {
   background: linear-gradient(90deg, transparent, #a9842c 30%, #d6b759 50%, #a9842c 70%, transparent);
   box-shadow: 0 0 5px rgba(169, 132, 44, 0.38);
 }
+html[data-theme="light"] .pricing-guidance {
+  border-color: rgba(169, 132, 44, 0.46);
+  background: radial-gradient(circle at 100% 0%, rgba(196, 154, 58, 0.18), transparent 40%), linear-gradient(150deg, #ffffff, #f7f0e3 72%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 20px 38px -27px rgba(11, 31, 58, 0.48);
+  color: #0b1f3a;
+}
+html[data-theme="light"] .pricing-guidance__topline { color: #7a5c1d; }
+html[data-theme="light"] .pricing-guidance__icon {
+  border-color: rgba(169, 132, 44, 0.48);
+  background: rgba(169, 132, 44, 0.09);
+  box-shadow: 0 8px 16px -11px rgba(11, 31, 58, 0.5);
+}
+html[data-theme="light"] .pricing-guidance__score { border-bottom-color: rgba(169, 132, 44, 0.24); }
+html[data-theme="light"] .pricing-guidance__score strong {
+  background: linear-gradient(180deg, #bd8c28, #7a5c1d);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: none;
+}
+html[data-theme="light"] .pricing-guidance__score span { color: #56647b; }
+html[data-theme="light"] .pricing-guidance h2 { color: #0b1f3a; }
+html[data-theme="light"] .pricing-guidance__body { color: #273c59; }
+html[data-theme="light"] .pricing-guidance__detail {
+  border-left-color: #a9842c;
+  background: rgba(169, 132, 44, 0.08);
+  color: #42506b;
+}
+html[data-theme="light"] .pricing-guidance--layered {
+  border-color: rgba(190, 124, 23, 0.5);
+  background: radial-gradient(circle at 100% 0%, rgba(230, 159, 52, 0.18), transparent 40%), linear-gradient(150deg, #fffdfa, #f8efe0 72%);
+}
+html[data-theme="light"] .pricing-guidance--layered .pricing-guidance__topline { color: #8b5b11; }
+html[data-theme="light"] .pricing-guidance--guidelines {
+  border-color: rgba(174, 60, 60, 0.48);
+  background: radial-gradient(circle at 100% 0%, rgba(190, 52, 52, 0.12), transparent 42%), linear-gradient(150deg, #fffefe, #f8eaea 72%);
+}
+html[data-theme="light"] .pricing-guidance--guidelines .pricing-guidance__topline { color: #8f2f2f; }
+html[data-theme="light"] .pricing-guidance--guidelines .pricing-guidance__detail {
+  border-left-color: #ae3c3c;
+  background: rgba(190, 52, 52, 0.07);
+}
 html[data-theme="light"] .proceed-prompt-card {
   border-color: rgba(169, 132, 44, 0.52) !important;
   background: radial-gradient(circle at 88% 0%, rgba(196, 154, 58, 0.16), transparent 34%), linear-gradient(145deg, #ffffff, #f7f0e2) !important;

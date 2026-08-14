@@ -576,6 +576,144 @@ body:has(.gold-page) {
   background: linear-gradient(90deg, transparent, #f0c860 30%, #fff0a2 50%, #f0c860 70%, transparent);
   box-shadow: 0 0 8px rgba(240, 200, 96, 0.8);
 }
+
+/* Score-driven scenario guidance: beside lender results on desktop and directly
+   above them on mobile. */
+.pricing-guidance {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 1.25rem;
+  border: 1px solid rgba(212, 175, 55, 0.48);
+  border-radius: 1rem;
+  background: radial-gradient(circle at 100% 0%, rgba(240, 200, 96, 0.2), transparent 40%), linear-gradient(150deg, #181719, #09090a 72%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035), 0 20px 42px -28px rgba(212, 175, 55, 0.95);
+  color: #f8f3e8;
+  animation: pricing-guidance-enter 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.pricing-guidance::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #d4af37 20%, #fff0a6 50%, #d4af37 80%, transparent);
+  box-shadow: 0 0 14px rgba(240, 200, 96, 0.78);
+}
+.pricing-guidance::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 8rem;
+  height: 8rem;
+  top: -4rem;
+  right: -3rem;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.16);
+  filter: blur(22px);
+}
+.pricing-guidance__topline {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #f0c860;
+  font-size: 0.7rem;
+  line-height: 1;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+.pricing-guidance__icon {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid rgba(240, 200, 96, 0.56);
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.12);
+  box-shadow: 0 0 15px -5px rgba(240, 200, 96, 0.9);
+}
+.pricing-guidance__icon svg { width: 0.95rem; height: 0.95rem; }
+.pricing-guidance__score {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.22);
+}
+.pricing-guidance__score strong {
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 0.9;
+  font-weight: 950;
+  letter-spacing: -0.055em;
+  background: linear-gradient(180deg, #fff6bf, #e1b844 55%, #a87616);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7));
+}
+.pricing-guidance__score span {
+  color: #a8a8b0;
+  font-size: 0.68rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.pricing-guidance h2 {
+  margin-top: 1rem;
+  color: #fff;
+  font-size: 1.15rem;
+  line-height: 1.2;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.pricing-guidance__body {
+  margin-top: 0.7rem;
+  color: #f2e6c7;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  font-weight: 700;
+}
+.pricing-guidance__detail {
+  margin-top: 0.7rem;
+  padding: 0.75rem;
+  border-left: 2px solid #d4af37;
+  border-radius: 0.35rem;
+  background: rgba(212, 175, 55, 0.08);
+  color: #d2d2d7;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  font-weight: 600;
+}
+.pricing-guidance--layered {
+  border-color: rgba(240, 174, 70, 0.55);
+  background: radial-gradient(circle at 100% 0%, rgba(245, 158, 11, 0.2), transparent 40%), linear-gradient(150deg, #1b1713, #09090a 72%);
+}
+.pricing-guidance--layered .pricing-guidance__topline,
+.pricing-guidance--layered .pricing-guidance__icon { color: #fbbf54; }
+.pricing-guidance--guidelines {
+  border-color: rgba(248, 113, 113, 0.55);
+  background: radial-gradient(circle at 100% 0%, rgba(190, 52, 52, 0.24), transparent 42%), linear-gradient(150deg, #1c1314, #09090a 72%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.025), 0 20px 42px -28px rgba(220, 74, 74, 0.8);
+}
+.pricing-guidance--guidelines::before {
+  background: linear-gradient(90deg, transparent, #dc5a5a 20%, #ffc0a8 50%, #dc5a5a 80%, transparent);
+  box-shadow: 0 0 14px rgba(220, 74, 74, 0.7);
+}
+.pricing-guidance--guidelines .pricing-guidance__topline,
+.pricing-guidance--guidelines .pricing-guidance__icon { color: #ff9c8f; }
+.pricing-guidance--guidelines .pricing-guidance__icon {
+  border-color: rgba(255, 156, 143, 0.55);
+  background: rgba(190, 52, 52, 0.14);
+}
+.pricing-guidance--guidelines .pricing-guidance__detail { border-left-color: #dc5a5a; background: rgba(190, 52, 52, 0.1); }
+@keyframes pricing-guidance-enter {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pricing-guidance { animation: none !important; }
+}
 .proceed-prompt-card {
   position: relative;
   overflow: hidden;

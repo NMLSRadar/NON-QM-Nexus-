@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, FileEdit, RotateCw, Layers, Clock } from "lucide-react";
 import { analyzeScenario } from "@/domain/analyze";
 import { getCurrentOrganizationId, getLenderAccessInfo, getRepository } from "@/lib/session";
-import { Card, MetricTile, StatusBadge, SectionHeading, LinkButton, Pill, fmtUsd } from "@/components/ui";
+import { Card, StatusBadge, SectionHeading, LinkButton, Pill } from "@/components/ui";
 import type { MatchStatus } from "@/domain/types/enums";
-import { BestLenderMatches } from "./best-lender-matches";
+import { BestLenderMatches, ScenarioPricingGuidance } from "./best-lender-matches";
 import { DocumentNeeds } from "./document-needs";
 import { ScenarioActivity } from "./scenario-activity";
 import { SponsoredAeContacts } from "./sponsored-ae-contacts";
@@ -63,44 +63,6 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
       <div className="grid lg:grid-cols-3 gap-6 items-start">
         {/* Main column */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="p-6">
-            <SectionHeading icon={<Layers className="h-5 w-5" />} title="Scenario Snapshot" />
-            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <MetricTile label="Purchase price" value={fmtUsd(scenario.purchasePrice)} />
-              <MetricTile label="Estimated value" value={fmtUsd(scenario.estimatedValue)} />
-              <MetricTile label="Loan amount" value={fmtUsd(scenario.requestedLoanAmount)} />
-              <MetricTile
-                label="Credit profile"
-                value={scenario.fico ?? (scenario.creditProfileType ? scenario.creditProfileType.replace(/_/g, " ") : "—")}
-              />
-              <MetricTile
-                label="Citizenship"
-                value={`${scenario.citizenship?.replace(/_/g, " ") ?? "—"}${scenario.visaType ? ` (${scenario.visaType} visa)` : ""}`}
-              />
-              <MetricTile label="Income doc" value={scenario.incomeDocType ?? "—"} />
-              <MetricTile label="Vesting" value={scenario.vesting ?? "—"} />
-              <MetricTile
-                label="First-time homebuyer"
-                value={scenario.firstTimeHomebuyer === undefined ? "—" : scenario.firstTimeHomebuyer ? "Yes" : "No"}
-              />
-              <MetricTile
-                label="Investor experience"
-                value={
-                  scenario.investorExperience
-                    ? scenario.investorExperience.replace(/_/g, " ")
-                    : scenario.firstTimeInvestor
-                      ? "first time investor"
-                      : "—"
-                }
-              />
-              <MetricTile label="Cash out" value={fmtUsd(scenario.requestedCashOut)} />
-              {scenario.currentLoanBalance !== undefined && (
-                <MetricTile label="Current loan balance" value={fmtUsd(scenario.currentLoanBalance)} />
-              )}
-              <MetricTile label="Interest-only" value={scenario.interestOnlyRequested ? "Requested" : "No"} />
-            </div>
-          </Card>
-
           {/* Calculation Summary intentionally removed from this page (product
               spec: scenario-results cleanup) — LTV/DTI/DSCR/etc. are still
               computed in full by analyzeScenario above and drive lender
@@ -109,6 +71,7 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
 
           {/* Best Lender Matches — the signature section of the page. */}
           <Card className="p-6">
+            <ScenarioPricingGuidance evaluations={analysis.evaluations} className="mb-5 lg:hidden" />
             <div className="mb-4">
               <ScenarioComplexity result={classifyScenarioComplexity(scenario)} />
             </div>
@@ -188,6 +151,8 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
 
         {/* Sidebar */}
         <div className="space-y-6">
+          <ScenarioPricingGuidance evaluations={analysis.evaluations} className="hidden lg:block lg:sticky lg:top-24" />
+
           <Card className="p-5">
             <SectionHeading title="Document Needs List" />
             <div className="mt-3">

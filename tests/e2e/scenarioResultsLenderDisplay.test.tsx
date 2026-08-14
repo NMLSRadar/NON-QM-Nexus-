@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { BestLenderMatches } from "@/app/scenarios/[id]/best-lender-matches";
+import { BestLenderMatches, ScenarioPricingGuidance } from "@/app/scenarios/[id]/best-lender-matches";
 import type { ProgramEvaluation } from "@/domain/types/results";
 import { MatchStatus } from "@/domain/types/enums";
 
@@ -127,6 +127,34 @@ describe("Scenario results — eligible-lender suppression rule", () => {
     expect(screen.getByText("Reserve requirement not met")).toBeInTheDocument();
     expect(screen.getByText("Documentation type not supported")).toBeInTheDocument();
     expect(screen.getByText(/strongest near-match lenders/i)).toBeInTheDocument();
+  });
+});
+
+describe("Scenario results — score-based pricing guidance", () => {
+  it("shows the strong-scenario message when five or more lenders score at least 83", () => {
+    const evals = [83, 84, 86, 88, 90].map((matchScore, i) => makeEvaluation({ programId: `s${i}`, matchScore }));
+    render(<ScenarioPricingGuidance evaluations={evals} />);
+    expect(screen.getByText("Strong Non-QM Scenario")).toBeInTheDocument();
+    expect(screen.getByText(/rate and pricing should carry more weight/i)).toBeInTheDocument();
+  });
+
+  it("shows balanced guidance when the average score is 60 through 82", () => {
+    const evals = [62, 70, 78].map((matchScore, i) => makeEvaluation({ programId: `m${i}`, matchScore }));
+    render(<ScenarioPricingGuidance evaluations={evals} />);
+    expect(screen.getByText("Pricing and Execution Matter Equally")).toBeInTheDocument();
+    expect(screen.getByText(/matching the file to the right lender/i)).toBeInTheDocument();
+  });
+
+  it("prioritizes guidelines when the average score is 45 or lower", () => {
+    const evals = [35, 40, 45].map((matchScore, i) => makeEvaluation({ programId: `l${i}`, matchScore }));
+    render(<ScenarioPricingGuidance evaluations={evals} />);
+    expect(screen.getByText("Guidelines Matter More Than Rate")).toBeInTheDocument();
+    expect(screen.getByText(/does not matter if the deal cannot get done/i)).toBeInTheDocument();
+  });
+
+  it("shows no special disclaimer for the unspecified 46 through 59 average range", () => {
+    render(<ScenarioPricingGuidance evaluations={[makeEvaluation({ matchScore: 52 })]} />);
+    expect(screen.queryByLabelText("Scenario pricing guidance")).not.toBeInTheDocument();
   });
 });
 

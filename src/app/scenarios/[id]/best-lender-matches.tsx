@@ -76,6 +76,81 @@ function MatchScoreRing({ score }: { score: number }) {
   );
 }
 
+type PricingGuidanceTier = "strong" | "layered" | "guidelines";
+
+function getPricingGuidance(evaluations: ProgramEvaluation[]): {
+  tier: PricingGuidanceTier;
+  eyebrow: string;
+  title: string;
+  body: string;
+  detail: string;
+  metricValue: string;
+  metricLabel: string;
+} | null {
+  const scores = evaluations.map((e) => e.matchScore).filter(Number.isFinite);
+  if (scores.length === 0) return null;
+
+  const average = Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length);
+  const highConfidenceCount = scores.filter((score) => score >= 83).length;
+
+  if (highConfidenceCount >= 5) {
+    return {
+      tier: "strong",
+      eyebrow: "Pricing Signal",
+      title: "Strong Non-QM Scenario",
+      body: "An 83%+ confidence score across five or more lender matches is a strong signal for a Non-QM scenario.",
+      detail: "Guideline fit is consistently strong across multiple lenders, so rate and pricing should carry more weight when choosing the final lender.",
+      metricValue: String(highConfidenceCount),
+      metricLabel: "Lenders at 83%+",
+    };
+  }
+  if (average >= 60 && average <= 82) {
+    return {
+      tier: "layered",
+      eyebrow: "Balanced Review",
+      title: "Pricing and Execution Matter Equally",
+      body: "This scenario has potential layers, so pricing will be important — but it should not be considered by itself.",
+      detail: "Guideline fit and matching the file to the right lender are equally important for this scenario.",
+      metricValue: `${average}%`,
+      metricLabel: "Average confidence",
+    };
+  }
+  if (average <= 45) {
+    return {
+      tier: "guidelines",
+      eyebrow: "Execution First",
+      title: "Guidelines Matter More Than Rate",
+      body: "Rate should carry very little weight for a file with this risk profile and these potential layers.",
+      detail: "Prioritize an executable guideline fit. The rate does not matter if the deal cannot get done.",
+      metricValue: `${average}%`,
+      metricLabel: "Average confidence",
+    };
+  }
+  return null;
+}
+
+export function ScenarioPricingGuidance({ evaluations, className = "" }: { evaluations: ProgramEvaluation[]; className?: string }) {
+  const guidance = getPricingGuidance(evaluations);
+  if (!guidance) return null;
+  const Icon = guidance.tier === "strong" ? Sparkles : guidance.tier === "layered" ? AlertTriangle : XCircle;
+
+  return (
+    <aside className={`pricing-guidance pricing-guidance--${guidance.tier} ${className}`} aria-label="Scenario pricing guidance">
+      <div className="pricing-guidance__topline">
+        <span className="pricing-guidance__icon" aria-hidden="true"><Icon /></span>
+        <span>{guidance.eyebrow}</span>
+      </div>
+      <div className="pricing-guidance__score" aria-label={`${guidance.metricLabel} ${guidance.metricValue}`}>
+        <strong>{guidance.metricValue}</strong>
+        <span>{guidance.metricLabel}</span>
+      </div>
+      <h2>{guidance.title}</h2>
+      <p className="pricing-guidance__body">{guidance.body}</p>
+      <p className="pricing-guidance__detail">{guidance.detail}</p>
+    </aside>
+  );
+}
+
 function StarRating({ score }: { score: number }) {
   const stars = Math.max(1, Math.min(5, Math.round(score / 20)));
   return (
