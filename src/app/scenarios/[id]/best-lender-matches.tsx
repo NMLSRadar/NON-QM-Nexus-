@@ -204,7 +204,7 @@ function LenderCard({
       </div>
 
       <dl className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 border-t border-surface-border pt-4">
-        <Stat label="Max LTV" value={matrixPending && e.maxLtv === 0 ? "Confirm matrix" : fmtPct(e.maxLtv, 1)} />
+        <Stat label={e.matchedIncomeDocType === "pnl_only" ? "P&L Only Max LTV" : "Max LTV"} value={matrixPending && e.maxLtv === 0 ? "Confirm matrix" : fmtPct(e.maxLtv, 1)} />
         <Stat label="Min FICO" value={matrixPending && e.minFico === 0 ? "Confirm matrix" : e.minFico > 0 ? e.minFico : "Not required"} />
         <Stat label="Max loan amount" value={matrixPending && e.maxLoanAmount === 0 ? "Confirm matrix" : fmtUsd(e.maxLoanAmount)} />
         <Stat label="Reserves required" value={matrixPending && (e.estimatedReservesRequiredMonths ?? 0) === 0 ? "Confirm matrix" : `${e.estimatedReservesRequiredMonths ?? "—"} mo`} />
@@ -217,6 +217,12 @@ function LenderCard({
         <Stat label="Guideline" value={`eff. ${e.effectiveDate}`} />
       </dl>
 
+      {e.pnl85SupportingStatementDisclaimer && (
+        <div className="mt-4 rounded-control border-2 border-amber-400 bg-amber-50 p-3 text-sm font-semibold text-amber-950" role="note">
+          {e.pnl85SupportingStatementDisclaimer}
+        </div>
+      )}
+
       <div className="mt-3 flex flex-wrap gap-1.5">
         {e.loanPurposes.includes("cash_out_refinance") && <Pill tone="sky">Cash-Out Eligible</Pill>}
         {e.lienPosition === "standalone_second" && <Pill tone="gold">Standalone Second Lien</Pill>}
@@ -225,14 +231,14 @@ function LenderCard({
         {e.itinDscrConfirmed && <Pill tone="gold">ITIN DSCR Eligible</Pill>}
         {e.citizenshipEligible.includes("foreign_national") && <Pill tone="sky">Foreign National</Pill>}
         {e.foreignNationalSpecialist && <Pill tone="gold">Foreign National Specialist</Pill>}
-        {e.bankStatementCleanExecution && <Pill tone="gold">Clean-File Execution</Pill>}
-        {e.bankStatementFlexible && <Pill tone="gold">Bank Statement Flexibility</Pill>}
-        {e.incomeDocTypes.includes("bank_statement") && <Pill tone="neutral">Bank Statement</Pill>}
-        {e.incomeDocTypes.includes("dscr") && <Pill tone="neutral">DSCR</Pill>}
+        {e.matchedIncomeDocType !== "pnl_only" && e.bankStatementCleanExecution && <Pill tone="gold">Clean-File Execution</Pill>}
+        {e.matchedIncomeDocType !== "pnl_only" && e.bankStatementFlexible && <Pill tone="gold">Bank Statement Flexibility</Pill>}
+        {e.matchedIncomeDocType !== "pnl_only" && e.incomeDocTypes.includes("bank_statement") && <Pill tone="neutral">Bank Statement</Pill>}
+        {e.matchedIncomeDocType !== "pnl_only" && e.incomeDocTypes.includes("dscr") && <Pill tone="neutral">DSCR</Pill>}
         {e.premierProduct && <Pill tone="gold">Premier Product</Pill>}
         {matrixPending && <Pill tone="neutral">Current matrix required</Pill>}
-        {e.incomeDocTypes.includes("pnl_only") && <Pill tone="neutral">12-Month P&amp;L Only</Pill>}
-        {e.incomeDocTypes.includes("asset_depletion") && <Pill tone="neutral">Asset Depletion</Pill>}
+        {e.incomeDocTypes.includes("pnl_only") && <Pill tone="neutral">P&amp;L Only: Up to {fmtPct(e.maxLtv, 1)} LTV</Pill>}
+        {e.matchedIncomeDocType !== "pnl_only" && e.incomeDocTypes.includes("asset_depletion") && <Pill tone="neutral">Asset Depletion</Pill>}
         {e.interestOnlyAvailable && <Pill tone="neutral">Interest-Only</Pill>}
         {e.occupancies.includes("investment") && <Pill tone="neutral">Investment Property</Pill>}
       </div>

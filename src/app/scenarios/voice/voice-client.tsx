@@ -129,6 +129,13 @@ function manual<T>(value: T): Captured<T> {
   return { value, source: "manual edit" };
 }
 
+/** Final-clause command detector. Anchoring at the end prevents ordinary
+ * scenario prose containing words such as "continue" from being consumed as
+ * a navigation command. */
+export function hasProceedCommand(text: string): boolean {
+  return /(?:^|[.!?]\s*|\s)(?:proceed|let'?s proceed|go ahead|continue|show me (?:the )?lenders|show lenders|find lenders|show my matches|run the scenario)[.!?]?\s*$/i.test(text.trim());
+}
+
 function applyOverrides(base: VoiceExtraction, o: Overrides): VoiceExtraction {
   const x: VoiceExtraction = { ...base, notesFragments: [...base.notesFragments] };
   if (o.loanPurpose !== undefined) {
@@ -163,6 +170,14 @@ function applyOverrides(base: VoiceExtraction, o: Overrides): VoiceExtraction {
   if (o.existingLienBalance !== undefined) x.existingLienBalance = manual(o.existingLienBalance);
   if (o.citizenship !== undefined) x.citizenship = { ...manual(o.citizenship), ...(o.visaType ? { visaType: o.visaType } : {}) };
   if (o.state !== undefined) x.state = manual(o.state);
+  // Product lock also applies to manual corrections. Occupancy and income
+  // documentation can only be changed after the property type/unit count is
+  // changed outside the 5–8 range.
+  if (x.propertyType?.value === "5_8_unit") {
+    const unitLabel = x.units ? `${x.units}-unit property` : "5–8 unit property";
+    x.occupancy = { value: "investment", source: `automatically derived from ${unitLabel}`, inferred: true };
+    x.incomeDocType = { value: "dscr", source: `automatically derived from ${unitLabel}`, inferred: true };
+  }
   return x;
 }
 
@@ -264,22 +279,13 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   const hasFailedRef = useRef(false);
   const spokenRef = useRef("");
   const autoStartedRef = useRef(false);
-  /** Additional Info workflow — redesigned 2026-08-01 (Lender Database
-   * Audit & 5-8 Unit Expansion spec), REPLACING the prior 5-second
-   * auto-expiring countdown entirely. Once all 9 required vitals resolve,
-   * an "Additional Info" prompt appears with two explicit user actions —
-   * "Add Additional Info" or "Skip" — and NO timer of any kind: the panel
-   * never auto-collapses, never auto-submits, and the user is never
-   * trapped waiting on a clock. `additionalInfoPromptShown` renders the
-   * prompt the first time vitals complete; `additionalInfoExpanded` is
-   * true once the user clicks "Add Additional Info" (revealing the
-   * optional-vital tiles and voice/manual capture, plus a "Find Matching
-   * Lenders" button); `additionalInfoResolved` is true once the user
-   * picks Skip OR clicks "Find Matching Lenders" — ONLY THEN does the
-   * auto-analyze effect below actually submit. */
+  /** At 9/9 the required vitals collapse and Additional Information opens
+   * automatically. With no optional facts, a spoken Proceed command submits.
+   * Once any optional fact exists, only the prominent button submits so the
+   * user can keep speaking multiple optional details without interruption. */
   const [additionalInfoPromptShown, setAdditionalInfoPromptShown] = useState(false);
-  const [additionalInfoExpanded, setAdditionalInfoExpanded] = useState(false);
   const [additionalInfoResolved, setAdditionalInfoResolved] = useState(false);
+  const [requiredVitalsExpanded, setRequiredVitalsExpanded] = useState(true);
 
   useEffect(() => {
     setSupported(getNativeSpeechPlugin() !== undefined || getRecognitionCtor() !== undefined || canUseMediaRecorder());
@@ -300,6 +306,24 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
 
   const effective = useMemo(() => applyOverrides(extractFromTranscript(transcript), overrides), [transcript, overrides]);
   const assessment = useMemo(() => assess(effective), [effective]);
+  const optionalInfoCount = [
+    effective.mortgageLatesCategory,
+    effective.giftFundsUsed?.value !== "unknown" ? effective.giftFundsUsed : undefined,
+    effective.strIncomeUsed?.value !== "unknown" ? effective.strIncomeUsed : undefined,
+    effective.oneYearSelfEmployed?.value !== "unknown" ? effective.oneYearSelfEmployed : undefined,
+  ].filter(Boolean).length;
+  const proceedCommandHeard = hasProceedCommand(transcript);
+
+  useEffect(() => {
+    if (assessment.complete) {
+      setRequiredVitalsExpanded(false);
+      setAdditionalInfoPromptShown(true);
+    } else {
+      setRequiredVitalsExpanded(true);
+      setAdditionalInfoPromptShown(false);
+      setAdditionalInfoResolved(false);
+    }
+  }, [assessment.complete]);
 
   /* -------- live lender rankings (3-panel real-time experience) --------
    * Fetches the real, tier-gated catalog once on mount, then re-runs the
@@ -636,15 +660,11 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
     const changedSinceFailure = hasFailedRef.current && signature !== lastAttemptedRef.current;
     if (!neverAttempted && !changedSinceFailure) return;
 
-    // Additional Info workflow (redesigned 2026-08-01, replacing the prior
-    // countdown): the FIRST time this scenario becomes ready, show the
-    // "Additional Info" prompt (Add Additional Info / Skip) instead of
-    // submitting immediately — listening/extraction continue uninterrupted
-    // throughout (recognition is never stopped here). Submission is held
-    // until the user explicitly resolves the prompt one way or the other;
-    // there is no timer and no auto-expiration.
     if (!additionalInfoResolved) {
       if (!additionalInfoPromptShown) setAdditionalInfoPromptShown(true);
+      if (additionalInfoPromptShown && optionalInfoCount === 0 && proceedCommandHeard) {
+        setAdditionalInfoResolved(true);
+      }
       return;
     }
 
@@ -670,14 +690,8 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
     // stopListening is intentionally not a dependency: it's a stable,
     // unmount-safe helper used to stop capture right before submission.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effective, canAnalyze, isPending, router, additionalInfoResolved, additionalInfoPromptShown]);
+  }, [effective, canAnalyze, isPending, router, additionalInfoResolved, additionalInfoPromptShown, optionalInfoCount, proceedCommandHeard]);
 
-  function handleAddAdditionalInfo() {
-    setAdditionalInfoExpanded(true);
-  }
-  function handleSkipAdditionalInfo() {
-    setAdditionalInfoResolved(true);
-  }
   function handleFindMatchingLenders() {
     setAdditionalInfoResolved(true);
   }
@@ -807,7 +821,18 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         {interim && <p className="text-sm italic text-slate-400 mt-1">{interim}…</p>}
       </Card>
 
-      <Card dark title={`Vitals — ${assessment.vitalsFilled} of ${assessment.vitalsTotal} captured`}>
+      <Card dark title={assessment.complete ? `✓ ${assessment.vitalsFilled} of ${assessment.vitalsTotal} Required Vitals Complete` : `Vitals — ${assessment.vitalsFilled} of ${assessment.vitalsTotal} captured`}>
+        {assessment.complete && (
+          <button
+            type="button"
+            aria-expanded={requiredVitalsExpanded}
+            onClick={() => setRequiredVitalsExpanded((value) => !value)}
+            className="mb-3 text-xs font-semibold text-amber-300 hover:text-amber-200"
+          >
+            {requiredVitalsExpanded ? "Collapse required vitals" : "Review or correct required vitals"}
+          </button>
+        )}
+        {requiredVitalsExpanded && <>
         <div className="h-2 rounded bg-white/10 overflow-hidden mb-4" role="progressbar" aria-valuenow={assessment.vitalsFilled} aria-valuemin={0} aria-valuemax={assessment.vitalsTotal}>
           <div className="h-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all" style={{ width: `${(assessment.vitalsFilled / assessment.vitalsTotal) * 100}%` }} />
         </div>
@@ -961,57 +986,42 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
             )}
           </div>
         </details>
+        </>}
       </Card>
 
       {additionalInfoPromptShown && !additionalInfoResolved && (
-        <Card dark title="Additional Info">
-          {!additionalInfoExpanded ? (
-            <div>
-              <p className="text-sm text-slate-300 mb-3">
-                Would you like to add any additional scenario details — mortgage lates, gift funds, short-term-rental (DSCR) income, or one-year self-employment — that may improve your lender matches? This is entirely optional.
-              </p>
-              <div className="flex gap-2">
-                <button type="button" onClick={handleAddAdditionalInfo} className="gold-button rounded-md px-4 py-2 text-sm font-semibold">
-                  Add Additional Info
-                </button>
-                <button type="button" onClick={handleSkipAdditionalInfo} className="rounded-md border border-white/15 bg-black/30 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-black/50">
-                  Skip
-                </button>
+        <Card dark title="Additional Information">
+          <p className="text-sm font-semibold text-amber-200 mb-3">
+            Have more details? Keep speaking. Otherwise, say &quot;Proceed&quot; to view matching lenders.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {(
+              [
+                { key: "mortgageLatesCategory" as const, label: "Mortgage lates", value: effective.mortgageLatesCategory ? MORTGAGE_LATES_CATEGORY_LABELS[effective.mortgageLatesCategory.value] : undefined, source: effective.mortgageLatesCategory?.source },
+                { key: "giftFundsUsed" as const, label: "Gift funds", value: effective.giftFundsUsed && effective.giftFundsUsed.value !== "unknown" ? (effective.giftFundsUsed.value === "yes" ? "Yes" : "No") : undefined, source: effective.giftFundsUsed?.source },
+                ...(effective.incomeDocType?.value === "dscr"
+                  ? [{ key: "strIncomeUsed" as const, label: "DSCR short-term-rental income", value: effective.strIncomeUsed && effective.strIncomeUsed.value !== "unknown" ? (effective.strIncomeUsed.value === "yes" ? "Yes" : "No") : undefined, source: effective.strIncomeUsed?.source }]
+                  : []),
+                { key: "oneYearSelfEmployed" as const, label: "One-year self-employed", value: effective.oneYearSelfEmployed && effective.oneYearSelfEmployed.value !== "unknown" ? (effective.oneYearSelfEmployed.value === "yes" ? "Yes" : "No") : undefined, source: effective.oneYearSelfEmployed?.source },
+              ] as Array<{ key: string; label: string; value?: string; source?: string }>
+            ).map((v) => (
+              <div key={v.key} className={`flex items-start gap-2.5 rounded-lg border p-2.5 ${v.value ? "border-emerald-400/40 bg-emerald-500/10" : "border-white/10 bg-black/20"}`}>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-slate-400">{v.label}</p>
+                  <p className={`text-sm font-semibold ${v.value ? "text-white" : "text-slate-500"}`}>{v.value ?? "Not mentioned yet"}</p>
+                  {v.value && v.source && (
+                    <p className="text-[10px] text-slate-500 truncate" title={v.source}>
+                      “{v.source}”
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div>
-              <p className="text-sm text-slate-300 mb-3">
-                Say or select any additional details, then continue to matching whenever you&apos;re ready.
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {(
-                  [
-                    { key: "mortgageLatesCategory" as const, label: "Mortgage lates", value: effective.mortgageLatesCategory ? MORTGAGE_LATES_CATEGORY_LABELS[effective.mortgageLatesCategory.value] : undefined, source: effective.mortgageLatesCategory?.source },
-                    { key: "giftFundsUsed" as const, label: "Gift funds", value: effective.giftFundsUsed && effective.giftFundsUsed.value !== "unknown" ? (effective.giftFundsUsed.value === "yes" ? "Yes" : "No") : undefined, source: effective.giftFundsUsed?.source },
-                    ...(effective.incomeDocType?.value === "dscr"
-                      ? [{ key: "strIncomeUsed" as const, label: "DSCR short-term-rental income", value: effective.strIncomeUsed && effective.strIncomeUsed.value !== "unknown" ? (effective.strIncomeUsed.value === "yes" ? "Yes" : "No") : undefined, source: effective.strIncomeUsed?.source }]
-                      : []),
-                    { key: "oneYearSelfEmployed" as const, label: "One-year self-employed", value: effective.oneYearSelfEmployed && effective.oneYearSelfEmployed.value !== "unknown" ? (effective.oneYearSelfEmployed.value === "yes" ? "Yes" : "No") : undefined, source: effective.oneYearSelfEmployed?.source },
-                  ] as Array<{ key: string; label: string; value?: string; source?: string }>
-                ).map((v) => (
-                  <div key={v.key} className={`flex items-start gap-2.5 rounded-lg border p-2.5 ${v.value ? "border-emerald-400/40 bg-emerald-500/10" : "border-white/10 bg-black/20"}`}>
-                    <div className="min-w-0">
-                      <p className="text-[11px] text-slate-400">{v.label}</p>
-                      <p className={`text-sm font-semibold ${v.value ? "text-white" : "text-slate-500"}`}>{v.value ?? "Not mentioned yet"}</p>
-                      {v.value && v.source && (
-                        <p className="text-[10px] text-slate-500 truncate" title={v.source}>
-                          “{v.source}”
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button type="button" onClick={handleFindMatchingLenders} className="gold-button mt-3 rounded-md px-4 py-2 text-sm font-semibold">
-                Find Matching Lenders
-              </button>
-            </div>
+            ))}
+          </div>
+          {optionalInfoCount > 0 && (
+            <button type="button" onClick={handleFindMatchingLenders} className="gold-button mt-4 w-full rounded-md px-5 py-3 text-base font-bold tracking-wide">
+              PROCEED
+            </button>
           )}
         </Card>
       )}

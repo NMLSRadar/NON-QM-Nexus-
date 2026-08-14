@@ -440,6 +440,22 @@ export interface Program {
   pnlWithoutSupportingStatementsLtvCaps?: Partial<Record<LoanPurpose, number>>;
   pnlWithoutSupportingStatementsMinFico?: number;
   pnlWithoutSupportingStatementsMaxLoanAmount?: number;
+  /** Exact P&L-only product facts. These fields never inherit from the
+   * program's Bank Statement or generic Alternative Documentation rules. */
+  pnlOnlyAvailable?: boolean;
+  pnlMaxLtv?: number;
+  pnlMinFico?: number;
+  pnlMaxDti?: number;
+  pnlMaxLoanAmount?: number;
+  pnlRequiredMonthsSelfEmployed?: number;
+  pnlPreparerRequirements?: string;
+  pnlBankStatementSupportRequired?: boolean;
+  pnlSupportingStatementMonths?: number;
+  pnlReserveRequirements?: number;
+  pnlFthbAllowed?: boolean;
+  pnlOccupancy?: Occupancy[];
+  pnlPropertyTypes?: PropertyType[];
+  pnlNotes?: string;
   /**
    * 5-8 Unit Residential / Small-Balance Multifamily overlay — added
    * 2026-08-01 (Lender Database Audit & 5-8 Unit Expansion spec). This

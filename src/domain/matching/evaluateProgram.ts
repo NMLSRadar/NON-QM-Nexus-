@@ -43,6 +43,10 @@ export function evaluateProgram(
   asOf: Date = new Date(),
   bankStatementClassification?: BankStatementFileClassification,
 ): ProgramEvaluation {
+  const pnl85Disclaimer =
+    scenario.incomeDocType === "pnl_only" && calc.ltv?.value === 85
+      ? "Important: At 85% LTV, the lender will most likely require two months of bank statements to support the Profit & Loss statement."
+      : undefined;
   const active = selectActiveRules(
     customRules.filter((r) => r.programId === program.id),
     asOf,
@@ -67,12 +71,14 @@ export function evaluateProgram(
     matchScore: score,
     scoreBreakdown: breakdown,
     maxLtv: deriveMaxLtv(scenario, program, calc.dscr?.value ?? undefined),
-    maxLoanAmount: program.maxLoanAmount,
-    minFico: program.minFico,
-    maxDti: program.maxDti,
+    maxLoanAmount: scenario.incomeDocType === "pnl_only" ? (program.pnlMaxLoanAmount ?? program.maxLoanAmount) : program.maxLoanAmount,
+    minFico: scenario.incomeDocType === "pnl_only" ? (program.pnlMinFico ?? program.minFico) : program.minFico,
+    maxDti: scenario.incomeDocType === "pnl_only" ? (program.pnlMaxDti ?? program.maxDti) : program.maxDti,
     estimatedQualifyingIncome: calc.qualifyingMonthlyIncome?.value ?? undefined,
     estimatedReservesRequiredMonths: deriveRequiredReservesMonths(scenario, program, calc.dscr?.value, calc.ltv?.value),
-    documentationType: program.incomeDocTypes.join(", "),
+    documentationType: scenario.incomeDocType === "pnl_only" ? "P&L Only" : program.incomeDocTypes.join(", "),
+    matchedIncomeDocType: scenario.incomeDocType,
+    pnl85SupportingStatementDisclaimer: pnl85Disclaimer,
     incomeDocTypes: program.incomeDocTypes,
     loanPurposes: program.loanPurposes,
     occupancies: program.occupancies,

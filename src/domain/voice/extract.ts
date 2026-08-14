@@ -1529,7 +1529,7 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
     /full[\s-]?doc(?:s|umentation)?\b|full[\s-]?dock\b|fully documented\b|traditional (?:income )?documentation\b|conventional (?:income )?documentation\b|standard (?:income )?documentation\b|normal (?:income )?documentation\b|(?:personal|business|federal)\s+tax returns?\b|\btax returns?\b|taxes? (?:to|used to) qualify\b|qualify(?:ing)? (?:using|with|off) (?:the )?taxes\b|\b1040s?\b|\bw-?2s?\b|wage income\b|salaried income\b|pay ?stubs?\b|payroll income\b|employment income\b|\btranscripts?\b|irs transcripts?\b|4506-?c\b/;
   const bankStatementPattern = /bank statements?|bank deposits\b|qualifying off deposits\b|deposit[\s-]only income\b|deposit[\s-]based income\b|\b(?:personal|business)\s+deposits\b|deposits for income\b/;
   const dscrPattern = /\bdscr\b|debt[\s-]?service(?:\s+coverage)?|investor cash[\s-]?flow|rental income only|no[\s-]ratio|cash[\s-]?flow (?:only )?loan|rental cash[\s-]?flow|rental property loan|no[\s-]?income investor loan|property('s)? cash[\s-]?flow|qualify(?:ing)? off (?:the )?(?:rent|property)|using rents? to qualify|no income no employment/;
-  const pnlPattern = /p\s*&\s*l|p and l|\bpnl\b|profit and loss|cpa[\s-]prepared statement|accountant[\s-]prepared statement/;
+  const pnlPattern = /p\s*&\s*l(?:\s+only|\s+loan|\s+program|\s+income)?|p and l(?:\s+only|\s+loan|\s+program|\s+income)?|\bpnl\b(?:\s+only|\s+loan|\s+program|\s+income)?|profit(?:\s+and)?\s+loss(?:\s+only|\s+loan|\s+program|\s+income)?|qualif(?:y|ying)\s+(?:using|with)\s+(?:a\s+)?p\s*(?:&|and)\s*l|cpa[\s-]prepared statement|accountant[\s-]prepared statement/;
   const income1099Pattern = /\b1099s?\b|independent contractor income|contractor income only/;
   const assetDepletionPattern = /asset (?:depletion|utilization|based|qualifier)|qualify(?:ing)? off (?:their |his |her )?assets\b|using (?:their |his |her )?assets to qualify\b|no income at all\s*,?\s*just using (?:their |his |her )?(?:investment )?accounts\b|qualifying off (?:their |his |her )?(?:investment )?(?:accounts|portfolio)\b/;
   // WVOE (Written Verification of Employment) — first-class semantic intent
@@ -1576,6 +1576,11 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
   if (isGenuinelyAmbiguous) {
     // Leave incomeDocType unset entirely so the missing-Vital flow re-asks
     // the user which method to use, rather than silently picking one side.
+  } else if (pnlPattern.test(t)) {
+    // P&L is an exact product classification. A mention of one or two months
+    // of supporting bank statements validates the P&L; it never converts the
+    // request into a traditional 12/24-month Bank Statement calculation.
+    x.incomeDocType = cap(IncomeDocType.ProfitAndLoss, "P&L Only");
   } else if (bankStatementPattern.test(t)) {
     x.incomeDocType = cap(IncomeDocType.BankStatement, "bank statements");
     const months = /\b(12|24)\s*months?\b/.exec(t);
@@ -1589,8 +1594,6 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
     // occupancy; explicit primary/second-home language remains visible so the
     // eligibility engine can fail it or request clarification.
     if (!x.occupancy) x.occupancy = cap(Occupancy.Investment, "inferred from DSCR / rental qualification", true);
-  } else if (pnlPattern.test(t)) {
-    x.incomeDocType = cap(IncomeDocType.ProfitAndLoss, "P&L");
   } else if (income1099Pattern.test(t)) {
     x.incomeDocType = cap(IncomeDocType.Income1099, "1099");
   } else if (assetDepletionPattern.test(t)) {
@@ -1599,6 +1602,17 @@ export function extractFromTranscript(rawTranscript: string): VoiceExtraction {
     x.incomeDocType = cap(IncomeDocType.WvoeOnly, "Written Verification of Employment (WVOE)");
   } else if (fullDocPattern.test(t)) {
     x.incomeDocType = cap(IncomeDocType.FullDoc, "full documentation");
+  }
+
+  // Deterministic 5–8 unit product lock. This runs after both occupancy and
+  // income-document classification so even contradictory language in the
+  // same scenario cannot overwrite the catalog's exclusive 5–8 unit route.
+  // The lock disappears automatically when a later/full transcript changes
+  // the unit count/property classification outside the 5–8 range.
+  if (x.propertyType?.value === PropertyType.FiveToEightUnit) {
+    const unitLabel = x.units ? `${x.units}-unit property` : "5–8 unit property";
+    x.occupancy = cap(Occupancy.Investment, `automatically derived from ${unitLabel}`, true);
+    x.incomeDocType = cap(IncomeDocType.Dscr, `automatically derived from ${unitLabel}`, true);
   }
 
   // Employment type — a separate classification from incomeDocType (see

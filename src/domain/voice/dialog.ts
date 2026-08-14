@@ -79,6 +79,7 @@ const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const DEFAULT_MAX_LTV_BY_DOC_TYPE: Partial<Record<IncomeDocType, number>> = {
   bank_statement: 90,
   dscr: 85,
+  pnl_only: 85,
 };
 // ITIN borrowers: typically capped at 85% LTV (15% min down) across this
 // catalog, with GreenBox Loans' ITIN Full Doc program as the one disclosed
@@ -144,7 +145,13 @@ export function assess(x: VoiceExtraction): Assessment {
     const isItin = x.citizenship?.value === "itin";
     const maxLtv = defaultMaxLtv(x.incomeDocType?.value, isItin);
     if (maxLtv !== undefined) {
-      const docLabel = isItin ? "ITIN" : x.incomeDocType?.value === "bank_statement" ? "bank statement" : "DSCR";
+      const docLabel = isItin
+        ? "ITIN"
+        : x.incomeDocType?.value === "bank_statement"
+          ? "bank statement"
+          : x.incomeDocType?.value === "pnl_only"
+            ? "P&L Only"
+            : "DSCR";
       if (value !== undefined && loan === undefined) {
         loan = Math.round(value * (maxLtv / 100));
         derived.loanAmount = loan;
@@ -261,9 +268,9 @@ export function assess(x: VoiceExtraction): Assessment {
   if (conflicts.length > 0) {
     prompt = conflicts.join(" ");
   } else if (complete) {
-    prompt = `All set — ${vitalsFilled} of ${VITAL_KEYS.length} vitals captured: ${filledSummary.join(", ")}.${
+    prompt = `All set — ${vitalsFilled} of ${VITAL_KEYS.length} required vitals captured: ${filledSummary.join(", ")}.${
       citizenshipConfidenceNote ? ` ${citizenshipConfidenceNote}` : ""
-    }${visaClassificationNote ? ` ${visaClassificationNote}` : ""}${noFicoNote ? ` ${noFicoNote}` : ""}${assumedDownPaymentNote ? ` ${assumedDownPaymentNote}` : ""} Analyzing your scenario and ranking matching lenders now.`;
+    }${visaClassificationNote ? ` ${visaClassificationNote}` : ""}${noFicoNote ? ` ${noFicoNote}` : ""}${assumedDownPaymentNote ? ` ${assumedDownPaymentNote}` : ""} Have more details? Keep speaking. Otherwise, say “Proceed” to view matching lenders.`;
   } else if (filledSummary.length === 0) {
     prompt = `Tell me the full scenario in one go — I need ${listNaturally(askable.map((k) => VITAL_LABELS[k].toLowerCase()))}.`;
   } else {

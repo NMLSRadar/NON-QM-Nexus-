@@ -52,6 +52,11 @@ export interface ProgramEvaluation {
   estimatedQualifyingIncome?: number;
   estimatedReservesRequiredMonths?: number;
   documentationType: string;
+  /** Exact product requested by the scenario; cards use this instead of
+   * advertising unrelated products from the same broad program family. */
+  matchedIncomeDocType?: IncomeDocType;
+  /** Required prominent notice for P&L-only requests at exactly 85% LTV. */
+  pnl85SupportingStatementDisclaimer?: string;
   // Real program eligibility flags, passed straight through from the
   // Program record — surfaced on the premium recommendation cards
   // (occupancy/property/doc/purpose/citizenship badges, IO availability).

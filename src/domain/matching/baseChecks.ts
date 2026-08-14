@@ -116,6 +116,37 @@ function findPurposeLtvTier(scenario: Scenario, program: Program, calculatedDscr
  * most specific published matrix row, then applying any tighter overlays.
  */
 export function deriveMaxLtv(scenario: Scenario, program: Program, calculatedDscr?: number | null): number {
+  // P&L Only is a separate product, not a Bank Statement fallback. Resolve
+  // leverage exclusively from P&L-specific facts and fail closed (0) when a
+  // lender has no independently verified P&L ceiling. The global 85% cap is
+  // absolute even if malformed data contains a higher value.
+  if (scenario.incomeDocType === "pnl_only") {
+    const purpose = scenario.loanPurpose;
+    let exactCap = program.pnlMaxLtv;
+    if (purpose) {
+      const docCap = program.incomeDocTypeLtvCaps?.pnl_only?.[purpose];
+      if (docCap != null) exactCap = exactCap == null ? docCap : Math.min(exactCap, docCap);
+
+      const withSupport = program.pnlWithSupportingStatementsLtvCaps?.[purpose];
+      const withoutSupport = program.pnlWithoutSupportingStatementsLtvCaps?.[purpose];
+      let supportPathCap: number | undefined;
+      if (scenario.pnl?.supportingBankStatements === true) {
+        supportPathCap = withSupport;
+      } else if (scenario.pnl?.supportingBankStatements === false) {
+        supportPathCap = withoutSupport;
+      } else {
+        // Unknown support status: choose the best expressly documented path
+        // within the SAME P&L product. The 85% card then discloses the likely
+        // two-month supporting-statement condition.
+        const candidates = [withSupport, withoutSupport].filter((value): value is number => value != null);
+        if (candidates.length > 0) supportPathCap = Math.max(...candidates);
+      }
+      if (supportPathCap != null) exactCap = exactCap == null ? supportPathCap : Math.min(exactCap, supportPathCap);
+    }
+    if (exactCap == null) return 0;
+    return Math.min(85, exactCap);
+  }
+
   // 5-8 Unit Residential overlay — added 2026-08-01. Real 5-8 unit
   // matrices vary max LTV by loan amount, FICO, AND transaction type
   // simultaneously, a dimension the general ltvMatrix/baseMaxLtv path
@@ -154,13 +185,7 @@ export function deriveMaxLtv(scenario: Scenario, program: Program, calculatedDsc
       ? program.incomeDocTypeLtvCaps?.[scenario.incomeDocType]?.[scenario.loanPurpose]
       : undefined;
     if (docCap != null) matrixCap = Math.min(matrixCap, docCap);
-    if (scenario.incomeDocType === "pnl_only" && scenario.loanPurpose) {
-      const pnlCaps = scenario.pnl?.supportingBankStatements === true
-        ? program.pnlWithSupportingStatementsLtvCaps
-        : program.pnlWithoutSupportingStatementsLtvCaps;
-      const pnlCap = pnlCaps?.[scenario.loanPurpose];
-      if (pnlCap != null) matrixCap = Math.min(matrixCap, pnlCap);
-    }
+
     if (scenario.investorExperience === "first_time_investor" && program.firstTimeInvestorLtvAdjustment != null) {
       matrixCap -= program.firstTimeInvestorLtvAdjustment;
     }
@@ -219,15 +244,7 @@ export function deriveMaxLtv(scenario: Scenario, program: Program, calculatedDsc
     ? program.incomeDocTypeLtvCaps?.[scenario.incomeDocType]?.[scenario.loanPurpose]
     : undefined;
   if (docCap != null) cap = Math.min(cap, docCap);
-  if (scenario.incomeDocType === "pnl_only" && scenario.loanPurpose) {
-    // Unknown support is evaluated conservatively as the no-support tier;
-    // the lender's higher cap is only earned by an explicit `true`.
-    const pnlCaps = scenario.pnl?.supportingBankStatements === true
-      ? program.pnlWithSupportingStatementsLtvCaps
-      : program.pnlWithoutSupportingStatementsLtvCaps;
-    const pnlCap = pnlCaps?.[scenario.loanPurpose];
-    if (pnlCap != null) cap = Math.min(cap, pnlCap);
-  }
+
   if (scenario.investorExperience === "first_time_investor" && program.firstTimeInvestorLtvAdjustment != null) cap -= program.firstTimeInvestorLtvAdjustment;
   if (scenario.incomeDocType === "dscr" && scenario.dscr?.strIncomeUsed === "yes") {
     if (program.strIncomeLtvAdjustment != null) cap -= program.strIncomeLtvAdjustment;
@@ -283,6 +300,46 @@ export function baseProgramChecks(
   }
 
   if (scenario.incomeDocType === "pnl_only") {
+    const pnlOffered = program.incomeDocTypes.includes("pnl_only") && program.pnlOnlyAvailable !== false;
+    const exactPnlMaxLtv = deriveMaxLtv(scenario, program, calc.dscr?.value);
+    out.push(result(`${p}:pnl-product`, "Exact P&L Only product", "documentation",
+      pnlOffered ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+      pnlOffered
+        ? "Lender has an exact P&L Only product; Bank Statement eligibility was not substituted."
+        : "Lender does not offer an independently eligible P&L Only product."));
+    out.push(result(`${p}:pnl-exact-ltv`, "P&L Only maximum LTV source", "ltv",
+      exactPnlMaxLtv > 0 ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+      exactPnlMaxLtv > 0
+        ? `P&L Only: up to ${exactPnlMaxLtv}% LTV under this lender's exact P&L guidelines.`
+        : "No independently verified P&L Only maximum LTV is stored for this lender; its Bank Statement or generic program maximum cannot be used."));
+    if (calc.ltv?.value != null && calc.ltv.value > 85) {
+      out.push(result(`${p}:pnl-global-ltv`, "Global P&L Only maximum LTV", "ltv", RuleOutcome.Fail, RuleSeverity.Hard,
+        "P&L Only programs are capped at a maximum of 85% LTV."));
+    }
+    if (program.pnlMinFico != null && scenario.fico != null) {
+      const ok = scenario.fico >= program.pnlMinFico;
+      out.push(result(`${p}:pnl-fico`, "P&L Only minimum FICO", "fico", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+        ok ? `FICO ${scenario.fico} meets the P&L Only minimum of ${program.pnlMinFico}.` : `FICO ${scenario.fico} is below the P&L Only minimum of ${program.pnlMinFico}.`));
+    }
+    if (program.pnlMaxLoanAmount != null && scenario.requestedLoanAmount != null) {
+      const ok = scenario.requestedLoanAmount <= program.pnlMaxLoanAmount;
+      out.push(result(`${p}:pnl-loan`, "P&L Only maximum loan amount", "documentation", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+        ok ? "Requested loan amount is within the P&L Only product limit." : `P&L Only loan amount exceeds this lender's $${program.pnlMaxLoanAmount.toLocaleString("en-US")} maximum.`));
+    }
+    if (program.pnlOccupancy?.length && scenario.occupancy) {
+      const ok = program.pnlOccupancy.includes(scenario.occupancy);
+      out.push(result(`${p}:pnl-occupancy`, "P&L Only occupancy", "documentation", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+        ok ? `${scenario.occupancy} occupancy is allowed by the P&L Only product.` : `${scenario.occupancy} occupancy is not allowed by the P&L Only product.`));
+    }
+    if (program.pnlPropertyTypes?.length && scenario.propertyType) {
+      const ok = program.pnlPropertyTypes.includes(scenario.propertyType);
+      out.push(result(`${p}:pnl-property`, "P&L Only property type", "documentation", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+        ok ? `${scenario.propertyType} is allowed by the P&L Only product.` : `${scenario.propertyType} is not allowed by the P&L Only product.`));
+    }
+    if (program.pnlFthbAllowed === false && scenario.firstTimeHomebuyer === true) {
+      out.push(result(`${p}:pnl-fthb`, "P&L Only first-time homebuyer", "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
+        "This P&L Only product does not allow first-time homebuyers."));
+    }
     if (program.pnlPeriodMonths != null && scenario.pnl?.periodMonths != null) {
       const periodOk = scenario.pnl.periodMonths >= program.pnlPeriodMonths;
       out.push(result(`${p}:pnl-period`, "P&L statement period", "documentation", periodOk ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
