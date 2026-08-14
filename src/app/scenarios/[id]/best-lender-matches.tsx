@@ -60,17 +60,18 @@ function MatchScoreRing({ score }: { score: number }) {
   const { value, progress } = useCountUp(score, true);
   const deg = Math.round(((progress * score) / 100) * 360);
   return (
-    <div className="flex shrink-0 flex-col items-center gap-1" aria-label={`Confidence Score ${score}`}>
+    <div className="confidence-score flex shrink-0 flex-col items-center" aria-label={`Confidence Score ${score} out of 100`}>
       <div
-        className="relative h-14 w-14 rounded-full grid place-items-center"
-        style={{ background: `conic-gradient(#C99712 ${deg}deg, #ECECEC 0deg)` }}
+        className="confidence-score__ring relative grid place-items-center rounded-full"
+        style={{ background: `conic-gradient(from -90deg, #fff4b8 0deg, #f0c860 ${Math.max(0, deg - 8)}deg, #a97812 ${deg}deg, #dadde3 ${deg}deg, #f8fafc 360deg)` }}
         aria-hidden
       >
-        <div className="h-11 w-11 rounded-full bg-white grid place-items-center">
-          <span className="text-sm font-bold tabular-nums text-ink-primary">{value}</span>
+        <div className="confidence-score__core grid place-items-center rounded-full">
+          <span className="confidence-score__value tabular-nums">{value}</span>
         </div>
       </div>
-      <span className="text-[9px] font-medium uppercase tracking-wide text-ink-secondary">Confidence Score</span>
+      <span className="confidence-score__label">Confidence Score</span>
+      <span className="confidence-score__rule" aria-hidden="true" />
     </div>
   );
 }

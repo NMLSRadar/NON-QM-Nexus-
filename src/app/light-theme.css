@@ -127,6 +127,61 @@ html[data-theme="light"] .gold-cta-glow {
   50% { box-shadow: 0 0 0 9px rgba(169, 132, 44, 0), 0 4px 22px -2px rgba(169, 132, 44, 0.6); }
 }
 
+/* Enhanced score and voice-completion treatments stay dimensional in light
+   mode while using navy ink and quieter shadows for strong contrast. */
+html[data-theme="light"] .confidence-score__ring {
+  box-shadow: 0 0 0 1px rgba(169, 132, 44, 0.62), 0 10px 22px -13px rgba(11, 31, 58, 0.5), inset 0 0 9px rgba(255, 255, 255, 0.8);
+}
+html[data-theme="light"] .confidence-score__core {
+  background: radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.95), transparent 34%), linear-gradient(145deg, #ffffff, #eee7d9);
+  border-color: rgba(169, 132, 44, 0.22);
+  box-shadow: inset 0 5px 13px rgba(11, 31, 58, 0.08);
+}
+html[data-theme="light"] .confidence-score__value {
+  background: linear-gradient(180deg, #bd8c28 0%, #8a641b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.75));
+}
+html[data-theme="light"] .confidence-score__label {
+  background: linear-gradient(180deg, #183251 0%, #0b1f3a 62%, #42506b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: none;
+}
+html[data-theme="light"] .confidence-score__rule {
+  background: linear-gradient(90deg, transparent, #a9842c 30%, #d6b759 50%, #a9842c 70%, transparent);
+  box-shadow: 0 0 5px rgba(169, 132, 44, 0.38);
+}
+html[data-theme="light"] .proceed-prompt-card {
+  border-color: rgba(169, 132, 44, 0.52) !important;
+  background: radial-gradient(circle at 88% 0%, rgba(196, 154, 58, 0.16), transparent 34%), linear-gradient(145deg, #ffffff, #f7f0e2) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8), 0 18px 38px -26px rgba(11, 31, 58, 0.55);
+}
+html[data-theme="light"] .proceed-prompt-card__header { color: #7a5c1d; }
+html[data-theme="light"] .proceed-prompt-card__icon {
+  border-color: rgba(169, 132, 44, 0.48);
+  background: rgba(169, 132, 44, 0.09);
+  box-shadow: 0 7px 16px -10px rgba(11, 31, 58, 0.5);
+}
+html[data-theme="light"] .proceed-prompt-card__message {
+  border-left-color: #a9842c;
+  background: linear-gradient(90deg, rgba(169, 132, 44, 0.12), rgba(255, 255, 255, 0.55));
+  color: #0b1f3a;
+}
+html[data-theme="light"] .proceed-prompt-card__instruction strong {
+  border-color: rgba(122, 92, 29, 0.48);
+  background: linear-gradient(180deg, #f6dc84, #c49a3a 64%, #9b7728);
+  color: #07182d;
+  box-shadow: 0 7px 16px -9px rgba(11, 31, 58, 0.45);
+}
+html[data-theme="light"] .proceed-prompt-card__chevron {
+  color: #8a681f;
+  filter: drop-shadow(0 2px 3px rgba(11, 31, 58, 0.2));
+}
+
 /* Gold glass / panels become translucent champagne glass on light. */
 html[data-theme="light"] .gold-glass {
   background: var(--ivory-wash);

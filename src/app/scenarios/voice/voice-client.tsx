@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Home, User, DollarSign, Wallet, Percent, Gauge, FolderOpen, IdCard, TrendingUp, MapPin, Mic } from "lucide-react";
+import { Home, User, DollarSign, Wallet, Percent, Gauge, FolderOpen, IdCard, TrendingUp, MapPin, Mic, ChevronDown, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui";
 import { AiProcessingSequence } from "@/components/ai-processing-sequence";
 import { LiveLenderRankings } from "@/components/live-lender-rankings";
@@ -990,10 +990,18 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
       </Card>
 
       {additionalInfoPromptShown && !additionalInfoResolved && (
-        <Card dark title="Additional Information">
-          <p className="text-sm font-semibold text-amber-200 mb-3">
-            Have more details? Keep speaking. Otherwise, say &quot;Proceed&quot; to view matching lenders.
-          </p>
+        <Card dark className="proceed-prompt-card">
+          <div className="proceed-prompt-card__header">
+            <span className="proceed-prompt-card__icon" aria-hidden="true"><Sparkles /></span>
+            <span>Additional Information</span>
+          </div>
+          <div className="proceed-prompt-card__message" role="status" aria-live="polite">
+            <p>Have more details? Keep speaking.</p>
+            <p className="proceed-prompt-card__instruction">
+              Otherwise, say <strong>&ldquo;Proceed&rdquo;</strong> to view matching lenders.
+            </p>
+            <ChevronDown className="proceed-prompt-card__chevron" aria-hidden="true" />
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {(
               [
@@ -1019,7 +1027,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
             ))}
           </div>
           {optionalInfoCount > 0 && (
-            <button type="button" onClick={handleFindMatchingLenders} className="gold-button mt-4 w-full rounded-md px-5 py-3 text-base font-bold tracking-wide">
+            <button type="button" onClick={handleFindMatchingLenders} className="gold-button gold-cta-glow mt-5 w-full rounded-lg px-5 py-3.5 text-lg font-black tracking-[0.12em]">
               PROCEED
             </button>
           )}
