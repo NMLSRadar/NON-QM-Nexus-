@@ -14,16 +14,20 @@
    on ivory).
 ----------------------------------------------------------------------------- */
 html[data-theme="light"] {
-  --gold: #a9842c;          /* deep champagne-gold for text/borders on ivory */
-  --gold-bright: #c49a3a;   /* brighter brushed gold for highlights */
-  --gold-deep: #7a5c1d;     /* near-olive gold for depth/gradients */
-  --ink-navy: #0b1f3a;      /* deep navy primary text */
-  --ink-navy-soft: #42506b; /* muted navy secondary text */
-  --ivory: #f6f1e7;         /* warm ivory page background */
-  --ivory-card: #ffffff;    /* soft-white card surface */
-  --ivory-wash: rgba(255, 255, 255, 0.7);
-  --champagne-border: rgba(169, 132, 44, 0.28);
-  --navy-deep: #0a1a30;     /* the always-dark header/footer chrome */
+  --gold: #98731f;          /* antique champagne-gold, deepened for sandstone */
+  --gold-bright: #b98b29;   /* metallic highlight without yellow glare */
+  --gold-deep: #684d13;     /* rich bronze-gold for text and depth */
+  --ink-navy: #05172b;      /* near-ink navy primary text */
+  --ink-navy-soft: #314158; /* deeper slate-navy supporting text */
+  --ivory: #b9aa92;         /* rich sandstone application canvas */
+  --ivory-card: #f2eadc;    /* elevated warm-ivory card surface */
+  --ivory-wash: rgba(242, 234, 220, 0.88);
+  --champagne-border: rgba(123, 91, 24, 0.42);
+  --navy-deep: #07182d;     /* the always-dark header/footer chrome */
+  --sandstone-deep: #aa987d;
+  --sandstone-soft: #c8baa4;
+  --ivory-control: #f7f0e4;
+  --espresso-shadow: rgba(58, 40, 20, 0.32);
 }
 
 /* Root plumbing: force light color-scheme, transparent selection/scaffold. */
@@ -1636,20 +1640,20 @@ html[data-theme="light"] .callout { border-color: rgba(16,185,129,0.4) !importan
    All rules are light-only. Dark mode retains the established navy/gold UI.
 ============================================================================= */
 html[data-theme="light"] {
-  --nexus-bg: #f5f2ea;
-  --nexus-surface: #ffffff;
-  --nexus-surface-alt: #fbf9f4;
-  --nexus-navy: #071426;
-  --nexus-navy-soft: #0b1f36;
-  --nexus-text: #10213b;
-  --nexus-text-muted: #56657a;
-  --nexus-text-faint: #7b8798;
-  --nexus-gold: #b78a24;
-  --nexus-gold-light: #e6bd55;
-  --nexus-border: rgba(183, 138, 36, 0.27);
-  --nexus-border-strong: rgba(183, 138, 36, 0.48);
-  --nexus-shadow: 0 18px 42px -30px rgba(7, 20, 38, 0.42), 0 1px 0 rgba(255, 255, 255, 0.95) inset;
-  --nexus-shadow-hover: 0 24px 50px -30px rgba(7, 20, 38, 0.5), 0 0 28px -22px rgba(183, 138, 36, 0.7);
+  --nexus-bg: #b9aa92;
+  --nexus-surface: #f2eadc;
+  --nexus-surface-alt: #e9decc;
+  --nexus-navy: #05172b;
+  --nexus-navy-soft: #09203a;
+  --nexus-text: #0b1d35;
+  --nexus-text-muted: #314158;
+  --nexus-text-faint: #59677a;
+  --nexus-gold: #98731f;
+  --nexus-gold-light: #c79b35;
+  --nexus-border: rgba(123, 91, 24, 0.4);
+  --nexus-border-strong: rgba(123, 91, 24, 0.62);
+  --nexus-shadow: 0 22px 48px -30px rgba(58, 40, 20, 0.5), 0 1px 0 rgba(255, 251, 242, 0.78) inset;
+  --nexus-shadow-hover: 0 28px 56px -30px rgba(58, 40, 20, 0.58), 0 0 30px -22px rgba(152, 115, 31, 0.72);
   --nexus-radius: 14px;
 }
 
@@ -1986,4 +1990,171 @@ html[data-theme="light"] .nexus-workspace :focus-visible { outline: 2px solid rg
   html[data-theme="light"] .nexus-workspace *,
   html[data-theme="light"] .nexus-workspace *::before,
   html[data-theme="light"] .nexus-workspace *::after { animation: none !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+
+/* =============================================================================
+   DEEP SANDSTONE LIGHT MODE — 25% richer institutional color grade.
+   This final semantic layer intentionally wins over earlier light-mode rules so
+   every route shares the same sandstone canvas, warm-ivory elevation, ink navy,
+   antique gold, bronze borders and espresso shadows. It deepens color selectively
+   rather than placing a dim overlay over the application.
+============================================================================= */
+html[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 84% 4%, rgba(199, 155, 53, 0.2), transparent 27%),
+    radial-gradient(circle at 8% 78%, rgba(5, 23, 43, 0.1), transparent 31%),
+    linear-gradient(rgba(255, 248, 235, 0.08), rgba(84, 58, 27, 0.05)),
+    var(--nexus-bg) !important;
+  color: var(--nexus-text) !important;
+}
+html[data-theme="light"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.24;
+  background-image:
+    linear-gradient(rgba(5, 23, 43, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(5, 23, 43, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+html[data-theme="light"] .gold-page,
+html[data-theme="light"] .nexus-workspace {
+  background:
+    radial-gradient(ellipse at 86% 2%, rgba(199, 155, 53, 0.2), transparent 30%),
+    radial-gradient(ellipse at 7% 88%, rgba(5, 23, 43, 0.09), transparent 31%),
+    linear-gradient(135deg, rgba(255, 248, 235, 0.12), transparent 46%),
+    var(--nexus-bg) !important;
+}
+
+/* Raised application surfaces: warm ivory, never stark white. */
+html[data-theme="light"] main .bg-white,
+html[data-theme="light"] .gold-theme .bg-white,
+html[data-theme="light"] .gold-theme .bg-surface-card,
+html[data-theme="light"] .light-surface,
+html[data-theme="light"] .light-surface .bg-white,
+html[data-theme="light"] .gold-panel,
+html[data-theme="light"] .gold-card,
+html[data-theme="light"] .gold-scenarios-panel,
+html[data-theme="light"] .nexus-luxury-card,
+html[data-theme="light"] .nexus-program-card,
+html[data-theme="light"] .nexus-lender-card,
+html[data-theme="light"] .checklist-card,
+html[data-theme="light"] .nexus-program-category,
+html[data-theme="light"] .nexus-directory-panel {
+  background: linear-gradient(155deg, #f5eddf 0%, #eee3d2 100%) !important;
+  border-color: var(--nexus-border) !important;
+  box-shadow: var(--nexus-shadow) !important;
+}
+html[data-theme="light"] .gold-card:hover,
+html[data-theme="light"] .nexus-program-card:hover,
+html[data-theme="light"] .nexus-lender-card:hover,
+html[data-theme="light"] .checklist-card:hover {
+  border-color: var(--nexus-border-strong) !important;
+  box-shadow: var(--nexus-shadow-hover) !important;
+}
+
+/* Hero surfaces stay luminous enough to lead, but sit within the richer canvas. */
+html[data-theme="light"] .nexus-premium-hero,
+html[data-theme="light"] .home-voice-hero,
+html[data-theme="light"] .gold-page section.gold-sheen {
+  background:
+    radial-gradient(circle at 86% 40%, rgba(199, 155, 53, 0.24), transparent 19%),
+    repeating-radial-gradient(ellipse at 94% 72%, transparent 0 13px, rgba(123, 91, 24, 0.11) 14px 15px, transparent 16px 25px),
+    linear-gradient(112deg, #f7f0e4 0%, #efe4d2 64%, #ddcba9 100%) !important;
+  border-color: var(--nexus-border-strong) !important;
+  box-shadow: 0 24px 52px -32px rgba(58, 40, 20, 0.58), 0 1px 0 rgba(255, 251, 242, 0.78) inset, 0 0 34px -24px rgba(152, 115, 31, 0.62) !important;
+}
+
+/* Inputs and utility panels use porcelain ivory for clear interaction contrast. */
+html[data-theme="light"] main input,
+html[data-theme="light"] main select,
+html[data-theme="light"] main textarea,
+html[data-theme="light"] .gold-theme input,
+html[data-theme="light"] .gold-theme select,
+html[data-theme="light"] .gold-theme textarea,
+html[data-theme="light"] .nexus-search-panel input,
+html[data-theme="light"] .nexus-lender-search input,
+html[data-theme="light"] .nexus-scenario-form input,
+html[data-theme="light"] .nexus-scenario-form select,
+html[data-theme="light"] .nexus-scenario-form textarea {
+  background: var(--ivory-control) !important;
+  border-color: rgba(123, 91, 24, 0.46) !important;
+  color: var(--nexus-text) !important;
+  box-shadow: inset 0 1px 3px rgba(58, 40, 20, 0.08);
+}
+html[data-theme="light"] .nexus-search-panel,
+html[data-theme="light"] .nexus-lender-search {
+  background: rgba(238, 227, 210, 0.9) !important;
+  border-color: var(--nexus-border-strong) !important;
+  box-shadow: 0 18px 40px -28px rgba(58, 40, 20, 0.55) !important;
+}
+
+/* Secondary fills and row hierarchy. */
+html[data-theme="light"] main .bg-slate-50,
+html[data-theme="light"] main .bg-slate-100,
+html[data-theme="light"] .gold-theme .bg-muted,
+html[data-theme="light"] .nexus-program-card dl > div,
+html[data-theme="light"] .nexus-voice-client .bg-black\/20,
+html[data-theme="light"] .nexus-voice-client .bg-black\/30,
+html[data-theme="light"] .nexus-voice-client .bg-black\/40 {
+  background-color: #e8ddcb !important;
+  border-color: rgba(123, 91, 24, 0.25) !important;
+}
+html[data-theme="light"] .nexus-workspace table tbody tr:nth-child(even) { background: rgba(5, 23, 43, 0.045); }
+html[data-theme="light"] .nexus-workspace table tbody tr:hover { background: rgba(199, 155, 53, 0.16); }
+html[data-theme="light"] .checklist-row { border-bottom-color: rgba(58, 40, 20, 0.14); }
+html[data-theme="light"] .checklist-segmented-control { background: #d8cbb7 !important; border-color: rgba(58, 40, 20, 0.2) !important; }
+
+/* Antique-gold actions and accents with controlled metallic highlights. */
+html[data-theme="light"] .gold-button,
+html[data-theme="light"] .nexus-primary-cta {
+  background: linear-gradient(135deg, #d7b65d 0%, #b98b29 38%, #98731f 76%, #684d13 100%) !important;
+  border-color: rgba(244, 220, 158, 0.74) !important;
+  color: #05172b !important;
+  box-shadow: inset 0 1px 0 rgba(255, 245, 215, 0.58), 0 12px 28px -13px rgba(87, 60, 19, 0.68) !important;
+}
+html[data-theme="light"] .gold-outline-button,
+html[data-theme="light"] .gold-view-all-button,
+html[data-theme="light"] .nexus-hero-flow,
+html[data-theme="light"] .nexus-category-count {
+  background: rgba(238, 227, 210, 0.82) !important;
+  border-color: var(--nexus-border-strong) !important;
+  color: var(--gold-deep) !important;
+}
+html[data-theme="light"] .nexus-title-gold,
+html[data-theme="light"] .nexus-gold-copy {
+  background-image: linear-gradient(100deg, #b98b29 0%, #98731f 48%, #684d13 100%) !important;
+}
+
+/* High-value scenario surfaces receive stronger tonal separation. */
+html[data-theme="light"] .pricing-guidance,
+html[data-theme="light"] .proceed-prompt-card {
+  background: radial-gradient(circle at 100% 0%, rgba(185, 139, 41, 0.2), transparent 40%), linear-gradient(150deg, #f3eadc, #e4d6c2 74%) !important;
+  border-color: var(--nexus-border-strong) !important;
+  box-shadow: 0 22px 48px -30px rgba(58, 40, 20, 0.6), inset 0 1px 0 rgba(255, 250, 239, 0.72) !important;
+}
+html[data-theme="light"] .pricing-guidance--layered {
+  background: radial-gradient(circle at 100% 0%, rgba(184, 111, 29, 0.2), transparent 40%), linear-gradient(150deg, #f1e6d5, #dfceb4 74%) !important;
+}
+html[data-theme="light"] .pricing-guidance--guidelines {
+  background: radial-gradient(circle at 100% 0%, rgba(143, 47, 47, 0.17), transparent 42%), linear-gradient(150deg, #f0e1d8, #dfc7bd 74%) !important;
+  border-color: rgba(128, 42, 42, 0.54) !important;
+}
+
+/* Maintain strong readable ink everywhere on the deeper canvas. */
+html[data-theme="light"] .gold-theme .text-ink-primary,
+html[data-theme="light"] .gold-page .text-white,
+html[data-theme="light"] .gold-page h1,
+html[data-theme="light"] .gold-page h2,
+html[data-theme="light"] .gold-page h3 { color: var(--nexus-navy) !important; }
+html[data-theme="light"] .gold-theme .text-ink-secondary,
+html[data-theme="light"] .gold-page .text-slate-400,
+html[data-theme="light"] .gold-page .text-slate-500,
+html[data-theme="light"] .gold-page .text-slate-600 { color: var(--nexus-text-muted) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="light"] body::before { display: none; }
 }
