@@ -1,14 +1,43 @@
 "use client";
 
-/** Global light/dark toggle for the header — shown on desktop and mobile.
- * Native-feeling icon button (sun / moon), gold-tinted to match the
- * NON-QM Nexus chrome, with keyboard focus + accessible label. The actual
- * data-theme swap + persistence live in the ThemeProvider. */
+/** Global light/dark toggle for the header.
+ *
+ * Theme state intentionally lives in this small button instead of an app-wide
+ * React context. The root no-flash script applies the saved theme before first
+ * paint; this component only updates the DOM attribute and persistence when a
+ * user toggles it. Keeping the boundary local avoids re-hydrating the entire
+ * application for a purely visual preference.
+ */
 import { Moon, Sun } from "lucide-react";
-import { useTheme } from "./theme-provider";
+import { useEffect, useState } from "react";
+
+export type Theme = "dark" | "light";
+export const THEME_STORAGE_KEY = "nq-theme";
+
+function readTheme(): Theme {
+  if (typeof document === "undefined") return "dark";
+  const value = document.documentElement.getAttribute("data-theme");
+  return value === "light" ? "light" : "dark";
+}
 
 export function ThemeToggle({ className = "" }: { className?: string }) {
-  const { theme, toggle } = useTheme();
+  const [theme, setTheme] = useState<Theme>("dark");
+
+  useEffect(() => {
+    setTheme(readTheme());
+  }, []);
+
+  function toggle() {
+    const next: Theme = readTheme() === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, next);
+    } catch {
+      // Storage may be unavailable in hardened/private browser modes.
+    }
+    setTheme(next);
+  }
+
   const isDark = theme === "dark";
   return (
     <button

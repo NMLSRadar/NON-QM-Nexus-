@@ -33,9 +33,17 @@ html[data-theme="light"] body {
   color-scheme: light;
 }
 
-/* The dark page wrapper bg (set by body:has(.gold-page)) flips to ivory. */
-html[data-theme="light"] body:has(.gold-page) {
+/* Light mode uses one page background everywhere. Avoid a relational :has()
+   selector on <body>; it forces the browser to reconsider the full document
+   whenever descendants change during navigation or hydration. */
+html[data-theme="light"] body {
   background-color: var(--ivory) !important;
+}
+
+/* The ambient layer sits behind opaque light surfaces and contributes no useful
+   light-mode detail. Removing it prevents continuous off-screen paint work. */
+html[data-theme="light"] .ambient-engine {
+  display: none;
 }
 
 /* ---------------------------------------------------------------------------
