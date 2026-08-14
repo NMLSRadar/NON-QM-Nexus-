@@ -1,6 +1,10 @@
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { sendTransactionalEmail } from "@/lib/email";
 import { runBetaFeedbackSweep } from "@/lib/beta-feedback/sweep";
+import {
+  BETA_FEEDBACK_RELEASE_AT,
+  isBetaFeedbackReleaseOpen,
+} from "@/lib/beta-feedback/release";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -44,6 +48,17 @@ export async function GET(request: Request) {
   }
   if (auth !== `Bearer ${expected}`) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // The first feedback survey batch is intentionally held until Monday,
+  // August 17, 2026 at 7:00 AM Pacific. The daily 14:00 UTC cron reaches this
+  // route at that exact instant; authenticated manual runs use the same gate.
+  if (!isBetaFeedbackReleaseOpen()) {
+    return Response.json({
+      deferred: true,
+      scheduledFor: BETA_FEEDBACK_RELEASE_AT,
+      message: "Beta feedback surveys are scheduled for August 17, 2026 at 7:00 AM Pacific.",
+    });
   }
 
   try {
