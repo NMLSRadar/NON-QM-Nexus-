@@ -44,17 +44,30 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
-  // Silences Sentry's build-time SDK logs (deploy logs stay readable);
-  // has no effect on runtime error capture.
+// Runtime event capture is initialized independently in src/instrumentation.ts.
+// The webpack integration is only useful when all upload credentials exist;
+// without them it performs an expensive no-op source-map pass that can exhaust
+// the 1 GB build heap used by local/CI containers.
+const sentryBuildEnabled = Boolean(
+  process.env.SENTRY_AUTH_TOKEN &&
+  process.env.SENTRY_ORG &&
+  process.env.SENTRY_PROJECT,
+);
+
+const sentryBuildOptions = {
   silent: true,
-  // Only attempted when SENTRY_AUTH_TOKEN is set (a build-time secret the
-  // owner can add later in Vercel) — source-map upload is skipped cleanly
-  // without it, same "skip cleanly when unset" contract as SENTRY_DSN.
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
-  disableLogger: true,
   telemetry: false,
   widenClientFileUpload: false,
-});
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+};
+
+export default sentryBuildEnabled
+  ? withSentryConfig(nextConfig, sentryBuildOptions)
+  : nextConfig;
