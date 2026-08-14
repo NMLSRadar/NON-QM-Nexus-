@@ -14,7 +14,7 @@ import { BuildVersionGuard } from "@/components/build-version-guard";
 import { PrimaryNav } from "@/components/primary-nav";
 import { GlobalAmbientEngine } from "@/components/global-ambient-engine";
 import { AiAssistantWidget } from "@/components/ai-assistant-widget";
-import { ThemeToggle, THEME_STORAGE_KEY } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { TrialStatusBanner } from "@/components/trial-status-banner";
 import { createClient } from "@/lib/supabase/server";
 import { getLenderAccessInfo } from "@/lib/session";
@@ -79,7 +79,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             localStorage directly (the authoritative client store). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("${THEME_STORAGE_KEY}");var d=document.documentElement;if(t==="light"||t==="dark"){d.setAttribute("data-theme",t);}else{d.setAttribute("data-theme","dark");}}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();`,
+            __html: `(function(){try{var t=localStorage.getItem("nq-theme");var d=document.documentElement;if(t==="light"||t==="dark"){d.setAttribute("data-theme",t);}else{d.setAttribute("data-theme","dark");}}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();`,
           }}
         />
       </head>
