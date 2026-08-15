@@ -58,9 +58,11 @@ export default function PrivacyPage() {
       <h2>3. Third-Party Service Providers</h2>
       <p>We rely on the following providers to operate the Service, each of which processes data on our behalf under their own security and privacy commitments:</p>
       <ul>
+        <li><strong>Stripe</strong> — payment processing and subscription billing. Payment card data is transmitted directly to Stripe and never touches our servers; Stripe is a PCI-DSS Level 1 certified processor.</li>
         <li><strong>Supabase</strong> — database, authentication, and file storage.</li>
         <li><strong>Vercel</strong> — application hosting.</li>
         <li><strong>Resend</strong> — transactional email delivery (password resets, confirmations, alerts).</li>
+        <li><strong>Sentry</strong> — error and crash monitoring. Diagnostic data (stack traces, device/browser metadata) is scrubbed of personal identifiers on-device before transmission.</li>
         <li><strong>OpenAI / Anthropic</strong> — AI-based extraction of structured data from lender guideline documents (admin-uploaded documents only).</li>
       </ul>
 
