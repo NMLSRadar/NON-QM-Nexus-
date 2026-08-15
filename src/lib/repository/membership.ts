@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { commitmentMonthOf, type MembershipKind } from "@/lib/billing/commitment";
 
 export interface OrgCoverage {
   organizationId: string;
@@ -17,7 +18,7 @@ export interface EffectivePlan {
   /** "monthly" | "annual" — which recurring price this subscription is actually on ("monthly" for a comped/no-plan account too). */
   billingInterval: "monthly" | "annual";
   discountPercentOff: number | null;
-  /** The price for the active billingInterval, with the discount applied, or null if no plan. */
+  /** The price for the active billingInterval, with the discount applied, or null if no plan. For a member inside the 3-Month Commitment this is the CURRENT billable rate ($120) rather than the plan's standard $150. */
   effectivePriceCents: number | null;
   /** Set if the user canceled (self-serve or admin) — the plan/price above still reflect what they had, for display. */
   canceledAt: string | null;
@@ -43,6 +44,25 @@ export interface EffectivePlan {
    * not the trial is still active — lets the UI show "your trial ended
    * on <date>" even after expiration recomputes tierLevel to 0. */
   trialExpiresAt: string | null;
+  /** 3-Month Commitment fields (2026-08-15) — server-side mirrors of the
+   * Stripe Subscription Schedule state maintained by the webhook
+   * (src/app/api/webhooks/stripe/route.ts). Stripe is the source of
+   * truth; these exist so account/admin UIs render the commitment without
+   * per-request Stripe round-trips. Always "standard" / nulls for every
+   * pre-existing membership — the new option changes nothing for existing
+   * $150/month members. */
+  membershipKind: MembershipKind;
+  stripeSubscriptionScheduleId: string | null;
+  commitmentStartDate: string | null;
+  commitmentEndDate: string | null;
+  standardRateStartDate: string | null;
+  /** The CURRENT Stripe-billed monthly rate in cents ($120 inside the
+   * commitment, $150 once it completes) — null when unknown/comped. */
+  currentMonthlyPriceCents: number | null;
+  /** "Month X of 3" (1..3) while inside the commitment period, else null. */
+  commitmentMonth: number | null;
+  /** Stripe subscription.cancel_at (graceful schedule cancel), if set. */
+  cancelAt: string | null;
   /** Set when this user's effective tier is (at least partly) granted by an
    * org team subscription they're a covered member of — see
    * resolveOrgCoverage(). Null if the user has no qualifying org coverage
@@ -70,6 +90,14 @@ const NO_PLAN_BASE: Omit<EffectivePlan, "orgCoverage"> = {
   currentPeriodEnd: null,
   isTrial: false,
   trialExpiresAt: null,
+  membershipKind: "standard",
+  stripeSubscriptionScheduleId: null,
+  commitmentStartDate: null,
+  commitmentEndDate: null,
+  standardRateStartDate: null,
+  currentMonthlyPriceCents: null,
+  commitmentMonth: null,
+  cancelAt: null,
 };
 
 /**
@@ -79,17 +107,14 @@ const NO_PLAN_BASE: Omit<EffectivePlan, "orgCoverage"> = {
  * Coverage requires all of:
  *   1. An active (deleted_at is null) membership with covered_by_org_plan = true.
  *   2. That org has an org_subscriptions row with status = 'active'.
- *   3. That row's current_period_end is null (comped, no period) or still in
- *      the future (a Stripe sub whose period hasn't lapsed yet).
+ *   3. That row's current_period_end is null (comped, no period) or still
+ *      in the future (a Stripe sub whose period hasn't lapsed yet).
  *   4. Seat-count determinism: coverage never exceeds seats. A member's own
  *      covered flag can be true in the DB (e.g. a stale toggle from before a
- *      seat_count reduction) yet still resolve as UNCOVERED here if they
- *      don't fall within the org's oldest seat_count covered members
- *      (ordered by membership created_at ascending — oldest wins ties
- *      deterministically). This is the resolver-side half of "coverage
- *      never exceeds seats"; src/app/account/team/actions.ts enforces the
- *      same rule at toggle-time so it should never actually trigger in
- *      practice, but the resolver must not trust the flag blindly.
+ *      seat_count reduction) yet still resolve as UNCOVERED / lower here
+ *      when they don't fall within the org's oldest seat_count covered
+ *      members (ordered by membership created_at ascending — oldest wins
+ *      ties deterministically).
  *
  * A user can hold covered memberships in more than one org (e.g. accepted
  * two invites) — this returns the HIGHEST qualifying tier across all of
@@ -104,11 +129,10 @@ export async function resolveOrgCoverage(supabase: SupabaseClient, userId: strin
     .is("deleted_at", null);
   if (error) {
     // Graceful degradation for the window between this code shipping and
-    // `prisma db push` + supabase/team-membership-*.sql actually being
-    // applied to the live database (see HANDOFF.md) — memberships.
-    // covered_by_org_plan / org_subscriptions not existing yet must NOT
-    // break every other caller of getEffectivePlan() (every tier-gated
-    // read in the app). Any other error still throws normally.
+    // the live database actually being migrated (see HANDOFF.md) —
+    // memberships.covered_by_org_plan / org_subscriptions not existing yet
+    // must NOT break every other caller of getEffectivePlan() (every
+    // tier-gated read in the app). Any other error still throws normally.
     if (/column .*covered_by_org_plan.* does not exist|relation .*org_subscriptions.* does not exist/i.test(error.message)) {
       return null;
     }
@@ -211,6 +235,14 @@ async function autoProvisionAdminSubscription(supabase: SupabaseClient, userId: 
     currentPeriodEnd: null,
     isTrial: false,
     trialExpiresAt: null,
+    membershipKind: "standard",
+    stripeSubscriptionScheduleId: null,
+    commitmentStartDate: null,
+    commitmentEndDate: null,
+    standardRateStartDate: null,
+    currentMonthlyPriceCents: null,
+    commitmentMonth: null,
+    cancelAt: null,
   };
 }
 
@@ -222,21 +254,12 @@ async function autoProvisionAdminSubscription(supabase: SupabaseClient, userId: 
  * above for exactly how org coverage is determined (including the seat-
  * count-determinism rule) and OrgCoverage's doc comment for what's exposed
  * to the UI regardless of which one currently wins.
- *
- * The personal half of this (admin-assigned or Stripe-billed
- * UserSubscription) is unchanged from before team membership existed: a
- * user with no row in user_subscriptions, or a null plan_id, has no active
- * personal plan — UNLESS this account is itself a platform admin with no
- * subscription row at all, in which case see autoProvisionAdminSubscription()
- * above. A canceled personal subscription (canceled_at set) also resolves to
- * personal tier level 0, but still reports the plan/price/canceledAt so the
- * account page can show what was canceled and when.
  */
 export async function getEffectivePlan(supabase: SupabaseClient, userId: string): Promise<EffectivePlan> {
   const { data, error } = await supabase
     .from("user_subscriptions")
     .select(
-      "canceled_at, source, stripe_subscription_id, cancel_at_period_end, current_period_end, billing_interval, is_trial, trial_expires_at, plan:membership_plans(name, monthly_price_cents, annual_price_cents, tier_level), discount:discounts(percent_off)"
+      "canceled_at, source, stripe_subscription_id, stripe_subscription_schedule_id, cancel_at_period_end, cancel_at, current_period_end, billing_interval, is_trial, trial_expires_at, membership_kind, commitment_start_date, commitment_end_date, standard_rate_start_date, current_monthly_price_cents, plan:membership_plans(name, monthly_price_cents, annual_price_cents, tier_level), discount:discounts(percent_off)"
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -263,15 +286,31 @@ export async function getEffectivePlan(supabase: SupabaseClient, userId: string)
       // resolves to tier 0 the instant `now()` (this server's own clock, via
       // `new Date()` — never a client-supplied timestamp, never the client's
       // device clock) passes trial_expires_at. No admin action, cron job, or
-      // background sweep is required for this to take effect — every single
-      // tier-gated read (listLenders, listPrograms, the AI assistant, etc.)
-      // calls getEffectivePlan on every request, so expiration is enforced at
-      // the moment of read, exactly like the existing canceled_at check below.
+      // background sweep is required.
       const trialExpired = isTrial && trialExpiresAt !== null && new Date(trialExpiresAt).getTime() <= Date.now();
-      const percentOff = discount?.percent_off ?? 0;
+      const percentOff = (discount?.percent_off as number | undefined) ?? 0;
+
+      // 3-Month Commitment mirrors (webhook-maintained; Stripe is truth).
+      const membershipKind = ((data.membership_kind as string | null) ?? "standard") as MembershipKind;
+      const commitmentStartDate = (data.commitment_start_date as string | null) ?? null;
+      const commitmentEndDate = (data.commitment_end_date as string | null) ?? null;
+      const standardRateStartDate = (data.standard_rate_start_date as string | null) ?? null;
+      const currentMonthlyPriceCents = (data.current_monthly_price_cents as number | null) ?? null;
+      const stripeSubscriptionScheduleId = (data.stripe_subscription_schedule_id as string | null) ?? null;
+      const cancelAt = (data.cancel_at as string | null) ?? null;
+
       const billingInterval: "monthly" | "annual" = (data.billing_interval as string) === "annual" ? "annual" : "monthly";
       const annualPriceCents = (plan.annual_price_cents as number | null) ?? null;
-      const basePriceCents = billingInterval === "annual" && annualPriceCents != null ? annualPriceCents : (plan.monthly_price_cents as number);
+
+      // A 3-Month Commitment member is actually billed at the CURRENT
+      // monthly rate ($120 inside the commitment, $150 after it completes),
+      // not the plan's standard monthly price — display what Stripe bills.
+      const basePriceCents =
+        membershipKind === "commitment" && currentMonthlyPriceCents != null
+          ? currentMonthlyPriceCents
+          : billingInterval === "annual" && annualPriceCents != null
+            ? annualPriceCents
+            : (plan.monthly_price_cents as number);
       const effectivePriceCents = Math.round(basePriceCents * (1 - percentOff / 100));
 
       personal = {
@@ -289,6 +328,14 @@ export async function getEffectivePlan(supabase: SupabaseClient, userId: string)
         currentPeriodEnd: (data.current_period_end as string | null) ?? null,
         isTrial: isTrial && !trialExpired,
         trialExpiresAt,
+        membershipKind,
+        stripeSubscriptionScheduleId,
+        commitmentStartDate,
+        commitmentEndDate,
+        standardRateStartDate,
+        currentMonthlyPriceCents,
+        commitmentMonth: commitmentMonthOf(commitmentStartDate, commitmentEndDate),
+        cancelAt,
       };
     }
   }

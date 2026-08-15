@@ -1,17 +1,27 @@
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { getStripe } from "@/lib/stripe";
 import type Stripe from "stripe";
+import { createCommitmentScheduleFromSubscription, MEMBERSHIP_KIND_METADATA_KEY } from "@/lib/billing/commitment";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Stripe webhook — the SINGLE writer of Stripe-sourced user_subscriptions
- * state (see docs/billing.md, FINALIZE.md Phase 7). Nothing else in the app
- * ever sets stripe_status / current_period_end / cancel_at_period_end
- * directly. Uses the service-role client because user_subscriptions writes
- * are platform-admin-only under RLS (supabase/membership-rls.sql) — this
- * webhook is the one legitimate system-level writer, verified by Stripe's
- * signature rather than a user session.
+ * state. Nothing else in the app ever sets stripe_status /
+ * current_period_end / cancel_at_period_end directly. Uses the service-role
+ * client because user_subscriptions writes are platform-admin-only under
+ * RLS (supabase/membership-rls.sql) — this webhook is the one legitimate
+ * system-level writer, verified by Stripe's signature rather than a user
+ * session.
+ *
+ * 3-Month Commitment (2026-08-15): this webhook is also the single place
+ * that hands a fresh commitment Checkout subscription to its Subscription
+ * Schedule — the Stripe-native mechanism that bills $120 x3 then $150
+ * from cycle 4 (see src/lib/billing/commitment.ts) — and the single place
+ * that mirrors schedule state (commitment dates, current price,
+ * membership kind) into user_subscriptions. Every write is an idempotent,
+ * whole-image sync from the authoritative Stripe object, so webhook
+ * retries and out-of-order deliveries converge on the same state.
  */
 export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
@@ -27,10 +37,18 @@ export async function POST(request: Request) {
   try {
     event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
   } catch (err) {
-    return Response.json({ error: `Signature verification failed: ${err instanceof Error ? err.message : "unknown"}` }, { status: 400 });
+    return Response.json(
+      { error: `Signature verification failed: ${err instanceof Error ? err.message : "unknown"}` },
+      { status: 400 }
+    );
   }
 
   const supabase = createServiceRoleClient();
+
+  /** Metadata kinds that mark a subscription as NOT a personal membership. */
+  function isNonPersonal(subscription: Stripe.Subscription): boolean {
+    return subscription.metadata?.kind === "ae_placement" || subscription.metadata?.team === "true";
+  }
 
   async function upsertAePlacementFromSubscription(subscription: Stripe.Subscription) {
     const aeProfileId = subscription.metadata?.ae_profile_id;
@@ -56,25 +74,6 @@ export async function POST(request: Request) {
     if (error) console.error(`Failed to upsert AE placement for profile ${aeProfileId}:`, error.message);
   }
 
-  /**
-   * Team subscriptions (org_subscriptions) are distinguished from personal
-   * ones by `metadata.team === "true"` + `metadata.organization_id`, set on
-   * both the Checkout Session and the subscription itself by
-   * src/app/account/team/subscribe/actions.ts's startTeamCheckout(). This
-   * webhook remains the single writer of Stripe-sourced org_subscriptions
-   * state, same as it is for user_subscriptions — see
-   * src/app/account/team/actions.ts's updateSeatCount() for the one other
-   * legitimate writer (a direct Stripe API call whose result THIS webhook
-   * still confirms into the DB).
-   *
-   * Bulk Membership (docs/bulk-membership.md) card-billed deals also route
-   * here (metadata.team === "true" too — same subscription-based billing),
-   * but their Price is created dynamically per deal
-   * (src/app/admin/bulk-memberships/actions.ts) rather than living on a
-   * plan's stripe_team_price_id column, so the price->plan lookup below
-   * falls back to metadata.bulk_plan_id when the price doesn't match any
-   * plan's standard team price.
-   */
   async function upsertOrgSubscription(subscription: Stripe.Subscription) {
     const organizationId = subscription.metadata?.organization_id;
     if (!organizationId) {
@@ -128,45 +127,229 @@ export async function POST(request: Request) {
     }
   }
 
-  async function upsertFromSubscription(subscription: Stripe.Subscription) {
+  interface PlanMeta {
+    planId: string | null;
+    commitmentPriceId: string | null;
+    standardPriceId: string | null;
+  }
+
+  /** Resolves the membership plan + its price ids for a personal subscription. */
+  async function resolvePlanMeta(subscription: Stripe.Subscription): Promise<PlanMeta> {
+    const priceId = subscription.items.data[0]?.price?.id;
+    let plan:
+      | { id?: string | null; stripe_price_id?: string | null; stripe_annual_price_id?: string | null; stripe_commitment_price_id?: string | null }
+      | null = null;
+    if (priceId) {
+      const { data } = await supabase
+        .from("membership_plans")
+        .select("id, stripe_price_id, stripe_annual_price_id, stripe_commitment_price_id")
+        .or(`stripe_price_id.eq.${priceId},stripe_annual_price_id.eq.${priceId},stripe_commitment_price_id.eq.${priceId}`)
+        .maybeSingle();
+      plan = data ?? null;
+    }
+    return {
+      planId: (plan?.id as string | undefined) ?? null,
+      commitmentPriceId: (plan?.stripe_commitment_price_id as string | null | undefined) ?? null,
+      standardPriceId: (plan?.stripe_price_id as string | null | undefined) ?? null,
+    };
+  }
+
+  async function resolvePlanMetaForSchedule(schedule: Stripe.SubscriptionSchedule): Promise<PlanMeta> {
+    const subscriptionId = typeof schedule.subscription === "string" ? schedule.subscription : schedule.subscription?.id ?? null;
+    if (subscriptionId) {
+      try {
+        const sub = await stripe.subscriptions.retrieve(subscriptionId);
+        return await resolvePlanMeta(sub);
+      } catch {
+        // fall through to the empty meta — schedule sync is best-effort.
+      }
+    }
+    return { planId: null, commitmentPriceId: null, standardPriceId: null };
+  }
+
+  /**
+   * Whole-image mirror of a schedule + its subscription into
+   * user_subscriptions: commitment dates, current price, kind, status.
+   * Finds the user by Stripe customer id (schedule.customer), so it works
+   * for every schedule event without trusting metadata.
+   */
+  async function syncScheduleFromDb(
+    schedule: Stripe.SubscriptionSchedule,
+    planMeta: PlanMeta,
+    subscriptionOverride: Stripe.Subscription | null = null
+  ) {
+    const customerId = typeof schedule.customer === "string" ? schedule.customer : schedule.customer.id;
+    const { data: userRow, error: userError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("stripe_customer_id", customerId)
+      .maybeSingle();
+    if (userError) {
+      console.error(`Schedule ${schedule.id}: user lookup failed: ${userError.message}`);
+      return;
+    }
+    const supabaseUserId = (userRow?.id as string | null) ?? null;
+    if (!supabaseUserId) {
+      console.error(`Schedule ${schedule.id}: no NON-QM Nexus user for customer ${customerId} — cannot sync.`);
+      return;
+    }
+
+    // Phases are trimmed as they pass; the first present phase is the
+    // current (or next) one. Phase 1 end == phase 2 start == the date the
+    // $150 rate begins.
+    const phase1 = schedule.phases[0];
+    const phase2 = schedule.phases[1];
+    const commitmentStart = phase1?.start_date ? new Date(phase1.start_date * 1000).toISOString() : null;
+    const commitmentEnd = phase1?.end_date ? new Date(phase1.end_date * 1000).toISOString() : null;
+    const standardRateStart = phase2?.start_date ? new Date(phase2.start_date * 1000).toISOString() : commitmentEnd;
+    const billingPriceId =
+      phase1?.items[0]?.price ?? (typeof phase1?.items[0]?.plan === "string" ? phase1.items[0].plan : null);
+
+    let subscriptionId: string | null = typeof schedule.subscription === "string" ? schedule.subscription : schedule.subscription?.id ?? null;
+    let status: string | null = null;
+    let currentPeriodEnd: string | null = null;
+
+    if (subscriptionOverride) {
+      subscriptionId = subscriptionOverride.id;
+      status = subscriptionOverride.status;
+      currentPeriodEnd = subscriptionOverride.items.data[0]?.current_period_end
+        ? new Date(subscriptionOverride.items.data[0].current_period_end * 1000).toISOString()
+        : null;
+    } else if (subscriptionId) {
+      try {
+        const sub = await stripe.subscriptions.retrieve(subscriptionId);
+        status = sub.status;
+        currentPeriodEnd = sub.items.data[0]?.current_period_end
+          ? new Date(sub.items.data[0].current_period_end * 1000).toISOString()
+          : null;
+      } catch {
+        // subscription is gone (e.g. hard-canceled) — the schedule event
+        // still carried the id for the row update.
+      }
+    }
+
+    // Kind: commitment while the $120 price bills; commitment_completed
+    // once the $150 phase is current. Standard memberships never get
+    // schedules, so any schedule here belongs to a commitment member.
+    const kind =
+      planMeta.commitmentPriceId != null && billingPriceId === planMeta.commitmentPriceId
+        ? "commitment"
+        : billingPriceId === planMeta.standardPriceId
+          ? "commitment_completed"
+          : "standard";
+
+    const { error } = await supabase
+      .from("user_subscriptions")
+      .update({
+        membership_kind: kind,
+        stripe_subscription_schedule_id: schedule.id,
+        stripe_subscription_id: subscriptionId,
+        stripe_customer_id: customerId,
+        commitment_start_date: commitmentStart,
+        commitment_end_date: commitmentEnd,
+        standard_rate_start_date: standardRateStart,
+        current_monthly_price_cents: subscriptionOverride?.items.data[0]?.price?.unit_amount ?? null,
+        stripe_status: status,
+        current_period_end: currentPeriodEnd,
+      })
+      .eq("user_id", supabaseUserId);
+    if (error) {
+      console.error(`Failed to sync commitment schedule ${schedule.id}:`, error.message);
+    }
+  }
+
+  /**
+   * Creates the Subscription Schedule for a fresh commitment Checkout —
+   * exactly once. Idempotent: skips when the subscription already has a
+   * schedule (Stripe) or the DB row already stores one (us). Also called
+   * from customer.subscription.updated as a self-heal when a
+   * checkout.session.completed delivery was retried/lost, so a commitment
+   * can never silently stay on $120 without transitioning.
+   */
+  async function ensureCommitmentSchedule(subscription: Stripe.Subscription, planMeta: PlanMeta) {
+    if (subscription.metadata?.[MEMBERSHIP_KIND_METADATA_KEY] !== "commitment") return;
+    const attached = typeof subscription.schedule === "string" ? subscription.schedule : subscription.schedule?.id ?? null;
+    if (attached) {
+      // Subscription already on a schedule — make sure we mirror it.
+      try {
+        const schedule = await stripe.subscriptionSchedules.retrieve(attached);
+        await syncScheduleFromDb(schedule, planMeta, subscription);
+      } catch (err) {
+        console.error(`Failed to refresh schedule ${attached}:`, err);
+      }
+      return;
+    }
+
+    const { data: row } = await supabase
+      .from("user_subscriptions")
+      .select("stripe_subscription_schedule_id")
+      .eq("stripe_subscription_id", subscription.id)
+      .maybeSingle();
+    if (row?.stripe_subscription_schedule_id) return; // already created by us
+
+    if (!planMeta.commitmentPriceId || !planMeta.standardPriceId) {
+      console.error(
+        `Commitment subscription ${subscription.id}: plan has no commitment/standard price configured (commitment=${planMeta.commitmentPriceId}, standard=${planMeta.standardPriceId}) — cannot build schedule.`
+      );
+      return;
+    }
+
+    try {
+      const schedule = await createCommitmentScheduleFromSubscription(
+        stripe,
+        subscription.id,
+        planMeta.commitmentPriceId,
+        planMeta.standardPriceId
+      );
+      await syncScheduleFromDb(schedule, planMeta, subscription);
+      console.log(`[Commitment] Subscription ${subscription.id} handed to schedule ${schedule.id} (${schedule.phases.length} phases).`);
+    } catch (err) {
+      // Stripe contention/API error — the commitment self-heals on the next
+      // customer.subscription.updated event, or via
+      // scripts/stripe-reconcile-commitments.js. Log loudly, never block the
+      // checkout success experience (the user already has active access).
+      console.error(`Failed to create commitment schedule for ${subscription.id}:`, err);
+    }
+  }
+
+  async function upsertPersonalSubscription(subscription: Stripe.Subscription) {
     const supabaseUserId = subscription.metadata?.supabase_user_id;
     if (!supabaseUserId) {
       console.error(`Stripe subscription ${subscription.id} has no supabase_user_id metadata — skipping.`);
       return;
     }
 
+    const planMeta = await resolvePlanMeta(subscription);
     const priceId = subscription.items.data[0]?.price?.id;
     const recurringInterval = subscription.items.data[0]?.price?.recurring?.interval;
     const billingInterval = recurringInterval === "year" ? "annual" : "monthly";
-    let planId: string | null = null;
-    if (priceId) {
-      // A plan's monthly and annual Stripe prices are two different Price
-      // ids on the same membership_plans row — match either column so an
-      // annual subscriber resolves to their real plan/tier instead of
-      // silently landing on plan_id: null (no lender access at all).
-      const { data: plan } = await supabase
-        .from("membership_plans")
-        .select("id")
-        .or(`stripe_price_id.eq.${priceId},stripe_annual_price_id.eq.${priceId}`)
-        .maybeSingle();
-      planId = (plan?.id as string | undefined) ?? null;
-    }
-
     const currentPeriodEndUnix = subscription.items.data[0]?.current_period_end;
     const isCanceled = subscription.status === "canceled";
+
+    const membershipKind =
+      subscription.metadata?.[MEMBERSHIP_KIND_METADATA_KEY] === "commitment"
+        ? planMeta.commitmentPriceId != null && priceId === planMeta.commitmentPriceId
+          ? "commitment"
+          : "commitment_completed"
+        : "standard";
 
     const { error } = await supabase.from("user_subscriptions").upsert(
       {
         user_id: supabaseUserId,
-        plan_id: planId,
+        plan_id: planMeta.planId,
         source: "stripe",
         stripe_customer_id: typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id,
         stripe_subscription_id: subscription.id,
+        stripe_subscription_schedule_id:
+          typeof subscription.schedule === "string" ? subscription.schedule : subscription.schedule?.id ?? null,
         stripe_status: subscription.status,
         current_period_end: currentPeriodEndUnix ? new Date(currentPeriodEndUnix * 1000).toISOString() : null,
         cancel_at_period_end: subscription.cancel_at_period_end,
+        cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
         canceled_at: isCanceled ? new Date().toISOString() : null,
         billing_interval: billingInterval,
+        membership_kind: membershipKind,
+        current_monthly_price_cents: subscription.items.data[0]?.price?.unit_amount ?? null,
       },
       { onConflict: "user_id" }
     );
@@ -187,7 +370,8 @@ export async function POST(request: Request) {
           } else if (subscription.metadata?.team === "true") {
             await upsertOrgSubscription(subscription);
           } else {
-            await upsertFromSubscription(subscription);
+            await upsertPersonalSubscription(subscription);
+            await ensureCommitmentSchedule(subscription, await resolvePlanMeta(subscription));
           }
         }
         break;
@@ -200,7 +384,12 @@ export async function POST(request: Request) {
         } else if (subscription.metadata?.team === "true") {
           await upsertOrgSubscription(subscription);
         } else {
-          await upsertFromSubscription(subscription);
+          await upsertPersonalSubscription(subscription);
+          const planMeta = await resolvePlanMeta(subscription);
+          if (subscription.metadata?.[MEMBERSHIP_KIND_METADATA_KEY] === "commitment") {
+            // Self-heal (see ensureCommitmentSchedule docstring).
+            await ensureCommitmentSchedule(subscription, planMeta);
+          }
         }
         break;
       }
@@ -235,6 +424,15 @@ export async function POST(request: Request) {
         }
         break;
       }
+      case "subscription_schedule.created":
+      case "subscription_schedule.updated":
+      case "subscription_schedule.canceled":
+      case "subscription_schedule.aborted":
+      case "subscription_schedule.released": {
+        const schedule = event.data.object as Stripe.SubscriptionSchedule;
+        await syncScheduleFromDb(schedule, await resolvePlanMetaForSchedule(schedule));
+        break;
+      }
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
         const subscriptionId =
@@ -242,11 +440,6 @@ export async function POST(request: Request) {
             ? (invoice as { subscription?: string }).subscription
             : (invoice as { subscription?: Stripe.Subscription | null }).subscription?.id;
         if (subscriptionId) {
-          // A team (org_subscriptions) invoice failure isn't tracked with
-          // its own past_due status column (out of this spec's schema) —
-          // only personal user_subscriptions rows get this update; this is
-          // a harmless no-op update for a team subscription id (matches no
-          // row there).
           const { error } = await supabase
             .from("user_subscriptions")
             .update({ stripe_status: "past_due" })

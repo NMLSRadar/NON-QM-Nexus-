@@ -6,12 +6,32 @@ import { getEffectivePlan } from "@/lib/repository/membership";
 import { sendTransactionalEmail } from "@/lib/email";
 import { subscriptionCanceledEmail, subscriptionReactivatedEmail } from "@/lib/emailTemplates";
 import { getStripe } from "@/lib/stripe";
+import {
+  gracefullyCancelSchedule,
+  isCommitmentKind,
+  resumeCommitmentSchedule,
+} from "@/lib/billing/commitment";
 
 export interface CancelSubscriptionState {
   error?: string;
   success?: boolean;
 }
 
+/**
+ * Self-serve cancellation. Standard subscriptions: Stripe
+ * cancel_at_period_end (unchanged). 3-Month Commitment subscriptions are
+ * managed by a Subscription Schedule, and Stripe rejects
+ * cancel_at_period_end on them directly ("update the schedule instead" —
+ * verified in test mode 2026-08-15); the schedule is trimmed so the
+ * membership ends at the CURRENT billing period's close — the customer
+ * keeps access through the period they've already paid for, exactly like
+ * a standard subscription — and Stripe sets subscription.cancel_at to
+ * that date. The webhook then mirrors the state back.
+ *
+ * The commitment remains a 3-Month Commitment contract: canceling ends
+ * the schedule, which ends the future $120/$150 charges; nothing lets
+ * front-end logic keep the $120 rate beyond its schedule.
+ */
 export async function cancelSubscription(
   _prev: CancelSubscriptionState,
   _formData: FormData
@@ -27,16 +47,20 @@ export async function cancelSubscription(
   const plan = await getEffectivePlan(supabase, user.id);
 
   if (plan.source === "stripe" && plan.stripeSubscriptionId) {
-    // Real paid subscription: cancel at period end via Stripe. The local
-    // canceled_at / cancel_at_period_end fields are then updated by the
-    // customer.subscription.updated webhook, not directly here — this
-    // keeps the webhook as the single writer of Stripe-sourced state, per
-    // docs/billing.md. We still update immediately below as a
-    // best-effort UI reflection so the account page doesn't look stale
-    // until the webhook round-trips.
+    const stripe = getStripe();
     try {
-      const stripe = getStripe();
-      await stripe.subscriptions.update(plan.stripeSubscriptionId, { cancel_at_period_end: true });
+      const subscription = await stripe.subscriptions.retrieve(plan.stripeSubscriptionId);
+
+      if (plan.stripeSubscriptionScheduleId || isCommitmentKind(plan.membershipKind)) {
+        // Schedule-managed (commitment) subscription.
+        const scheduleId = plan.stripeSubscriptionScheduleId;
+        if (!scheduleId) {
+          return { error: "This subscription is managed by a billing schedule we can't resolve — please contact support." };
+        }
+        await gracefullyCancelSchedule(stripe, scheduleId, subscription);
+      } else {
+        await stripe.subscriptions.update(subscription.id, { cancel_at_period_end: true });
+      }
     } catch (err) {
       return { error: err instanceof Error ? err.message : "Failed to cancel with Stripe." };
     }
@@ -90,12 +114,53 @@ export async function reactivateSubscription(
 
   if (plan.source === "stripe" && plan.stripeSubscriptionId) {
     // Only meaningful while the subscription is still active but set to
-    // cancel at period end — resuming just clears that flag with Stripe.
+    // cancel at the period's close — resuming clears the cancellation.
     // A subscription Stripe has already fully ended cannot be "resumed";
     // the user would need to check out again for a new subscription.
     try {
       const stripe = getStripe();
-      await stripe.subscriptions.update(plan.stripeSubscriptionId, { cancel_at_period_end: false });
+      const subscription = await stripe.subscriptions.retrieve(plan.stripeSubscriptionId);
+
+      if (plan.stripeSubscriptionScheduleId || isCommitmentKind(plan.membershipKind)) {
+        // Schedule-managed (commitment) subscription: rebuild the
+        // two-phase schedule (restores the $120 remainder if the
+        // commitment hasn't fully ended yet, or goes straight to $150).
+        // Stripe is asked for the plan prices because getEffectivePlan
+        // intentionally doesn't expose plan_id.
+        const scheduleId = plan.stripeSubscriptionScheduleId;
+        if (!scheduleId) {
+          return { error: "This commitment is managed by a Stripe schedule we couldn't resolve — please contact support." };
+        }
+        const { data: subRow } = await supabase
+          .from("user_subscriptions")
+          .select("plan_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        const currentPlanId = (subRow?.plan_id as string | null) ?? null;
+        if (!currentPlanId) {
+          return { error: "This commitment has no plan on file — please contact support." };
+        }
+        const { data: planDef } = await supabase
+          .from("membership_plans")
+          .select("stripe_price_id, stripe_commitment_price_id")
+          .eq("id", currentPlanId)
+          .maybeSingle();
+        const commitmentPriceId = (planDef?.stripe_commitment_price_id as string | null) ?? null;
+        const standardPriceId = (planDef?.stripe_price_id as string | null) ?? null;
+        if (!commitmentPriceId || !standardPriceId) {
+          return { error: "The commitment price configuration is missing — please contact support." };
+        }
+        await resumeCommitmentSchedule({
+          stripe,
+          scheduleId,
+          subscription,
+          commitmentPriceId,
+          standardPriceId,
+          commitmentEnd: plan.commitmentEndDate,
+        });
+      } else {
+        await stripe.subscriptions.update(subscription.id, { cancel_at_period_end: false });
+      }
     } catch (err) {
       return { error: err instanceof Error ? err.message : "Failed to reactivate with Stripe." };
     }

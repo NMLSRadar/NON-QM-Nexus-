@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = pageMetadata({
   title: "Pricing — NON-QM Nexus Membership",
   description:
-    "One NON-QM Nexus membership: guideline-first Non-QM lender matching, voice scenario intake, and document checklists for every loan officer.",
+    "One NON-QM Nexus membership: guideline-first Non-QM lender matching, voice scenario intake, and document checklists for every loan officer. $150/month, or save $90 with the 3-month commitment.",
   path: "/pricing",
 });
 
@@ -24,6 +24,7 @@ interface PlanRow {
   description: string | null;
   stripe_price_id: string | null;
   stripe_annual_price_id: string | null;
+  stripe_commitment_price_id: string | null;
 }
 
 export default async function PricingPage() {
@@ -34,7 +35,7 @@ export default async function PricingPage() {
   const { data, error } = await supabase
     .from("membership_plans")
     .select(
-      "id, key, name, monthly_price_cents, annual_price_cents, tier_level, description, stripe_price_id, stripe_annual_price_id"
+      "id, key, name, monthly_price_cents, annual_price_cents, tier_level, description, stripe_price_id, stripe_annual_price_id, stripe_commitment_price_id"
     )
     .eq("is_active", true)
     .order("sort_order");
@@ -52,6 +53,7 @@ export default async function PricingPage() {
     description: r.description,
     stripePriceId: r.stripe_price_id,
     stripeAnnualPriceId: r.stripe_annual_price_id,
+    stripeCommitmentPriceId: r.stripe_commitment_price_id,
   }));
 
   // Copy-integrity fix (launch-hardening spec, Section 5): the "N currently
