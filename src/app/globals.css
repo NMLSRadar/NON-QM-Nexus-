@@ -1174,6 +1174,86 @@ body:has(.gold-page) {
   box-shadow: 0 10px 28px -14px rgba(212, 175, 55, 0.6);
 }
 
+/* Book a demo — hero primary CTA (non-functional placeholder until the booking flow is wired) */
+.nexus-demo-cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 182px;
+  min-height: 56px;
+  border-radius: 11px;
+  padding: 0 28px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.035em;
+  color: #0c0b08;
+  border: 1px solid #f8e7a8;
+  background: linear-gradient(135deg, #fdeeb6 0%, #ecc94b 45%, #bd8a1c 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -1px 0 rgba(120, 80, 10, 0.28),
+    0 14px 34px -12px rgba(212, 175, 55, 0.95);
+  overflow: hidden;
+  cursor: pointer;
+  animation: nexus-demo-glow 3.4s ease-in-out infinite;
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1), filter 240ms ease;
+}
+
+@keyframes nexus-demo-glow {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.65),
+      inset 0 -1px 0 rgba(120, 80, 10, 0.28),
+      0 14px 34px -12px rgba(212, 175, 55, 0.95),
+      0 0 0 rgba(230, 196, 84, 0);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.65),
+      inset 0 -1px 0 rgba(120, 80, 10, 0.28),
+      0 14px 34px -12px rgba(212, 175, 55, 0.95),
+      0 0 28px rgba(230, 196, 84, 0.45);
+  }
+}
+
+.nexus-demo-cta::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -70%;
+  width: 45%;
+  transform: skewX(-20deg);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+  transition: left 560ms ease;
+}
+
+.nexus-demo-cta:hover {
+  transform: translateY(-2px) scale(1.02);
+  filter: brightness(1.07);
+}
+
+.nexus-demo-cta:hover::after {
+  left: 130%;
+}
+
+.nexus-demo-cta:focus-visible {
+  outline: 2px solid #f4d979;
+  outline-offset: 4px;
+}
+
+.nexus-demo-cta:hover .nexus-cta-icon {
+  transform: translateY(-1px) scale(1.08);
+}
+
+.nexus-cta-icon {
+  transition: transform 230ms ease;
+}
+
 .nexus-primary-cta:focus-visible,
 .nexus-closing-cta:focus-visible {
   outline: 2px solid #f4d979;

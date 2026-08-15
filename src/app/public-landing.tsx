@@ -4,6 +4,7 @@ import {
   ArrowRight,
   BarChart3,
   Bolt,
+  CalendarDays,
   ClipboardCheck,
   FileCheck2,
   Mic,
@@ -38,6 +39,16 @@ function DataWave({ side }: { side: "left" | "right" }) {
         ))}
       </div>
     </div>
+  );
+}
+
+function BookDemoCta() {
+  return (
+    <button type="button" className="nexus-demo-cta group">
+      <CalendarDays className="nexus-cta-icon h-4 w-4" aria-hidden="true" />
+      <span>Book a demo</span>
+      {/* TODO(robert): wire demo booking flow (e.g. /demo page or calendar embed) — intentionally non-functional for now. */}
+    </button>
   );
 }
 
@@ -97,6 +108,7 @@ export function PublicLanding({ programCount: _programCount = null }: { programC
           </p>
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+            <BookDemoCta />
             <PrimaryCta />
             <SignInCta />
           </div>
