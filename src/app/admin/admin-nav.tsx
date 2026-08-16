@@ -68,7 +68,10 @@ const GROUPS: NavGroup[] = [
     id: "sales",
     title: "Sales & Attribution",
     icon: Tags,
-    items: [{ href: "/admin/attribution", label: "Signup Attribution" }],
+    items: [
+      { href: "/admin/demo-requests", label: "Demo Requests" },
+      { href: "/admin/attribution", label: "Signup Attribution" },
+    ],
   },
   {
     id: "operations",

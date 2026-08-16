@@ -44,11 +44,10 @@ function DataWave({ side }: { side: "left" | "right" }) {
 
 function BookDemoCta() {
   return (
-    <button type="button" className="nexus-demo-cta group">
+    <Link href="/demo" className="nexus-demo-cta group">
       <CalendarDays className="nexus-cta-icon h-4 w-4" aria-hidden="true" />
       <span>Book a demo</span>
-      {/* TODO(robert): wire demo booking flow (e.g. /demo page or calendar embed) — intentionally non-functional for now. */}
-    </button>
+    </Link>
   );
 }
 
