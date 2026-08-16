@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/beta-feedback",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/billing-dunning",
+      "schedule": "0 15 * * *"
     }
   ]
 }

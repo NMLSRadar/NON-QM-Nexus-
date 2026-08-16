@@ -175,9 +175,9 @@ describe.skipIf(!hasCredentials)("Commitment webhook (live database + real test-
     const { data: row } = await admin.from("user_subscriptions").select("*").eq("user_id", userId).single();
     // epoch-compare — the DB columns are timestamp-without-tz; ISO strings
     // round-trip through Postgres with formatting differences.
-    expect(Math.floor(new Date(row!.commitment_start_date as string).getTime() / 1000)).toBe(phase1.start_date);
-    expect(Math.floor(new Date(row!.commitment_end_date as string).getTime() / 1000)).toBe(phase1.end_date!);
-    expect(Math.floor(new Date(row!.standard_rate_start_date as string).getTime() / 1000)).toBe(phase2.start_date!);
+    expect(Math.floor(new Date(row!.commitment_start_date as string).getTime() / 1000)).toBe(phase1!.start_date);
+    expect(Math.floor(new Date(row!.commitment_end_date as string).getTime() / 1000)).toBe(phase1!.end_date!);
+    expect(Math.floor(new Date(row!.standard_rate_start_date as string).getTime() / 1000)).toBe(phase2!.start_date!);
     expect(row!.membership_kind).toBe("commitment");
   }, 60_000);
 });

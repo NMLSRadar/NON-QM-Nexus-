@@ -2,6 +2,14 @@ import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { getStripe } from "@/lib/stripe";
 import type Stripe from "stripe";
 import { createCommitmentScheduleFromSubscription, MEMBERSHIP_KIND_METADATA_KEY } from "@/lib/billing/commitment";
+import {
+  onCancelRequested,
+  onCancelRevoked,
+  onMembershipCanceled,
+  onMembershipStarted,
+  onPaymentFailed,
+  onPaymentSucceeded,
+} from "@/lib/billing/billingEvents";
 
 export const dynamic = "force-dynamic";
 
@@ -373,10 +381,26 @@ export async function POST(request: Request) {
             await upsertPersonalSubscription(subscription);
             await ensureCommitmentSchedule(subscription, await resolvePlanMeta(subscription));
           }
+          await onMembershipStarted({ supabase, event, subscription });
         }
         break;
       }
-      case "customer.subscription.created":
+      case "customer.subscription.created": {
+        const subscription = event.data.object as Stripe.Subscription;
+        if (subscription.metadata?.kind === "ae_placement") {
+          await upsertAePlacementFromSubscription(subscription);
+        } else if (subscription.metadata?.team === "true") {
+          await upsertOrgSubscription(subscription);
+        } else {
+          await upsertPersonalSubscription(subscription);
+          const planMeta = await resolvePlanMeta(subscription);
+          if (subscription.metadata?.[MEMBERSHIP_KIND_METADATA_KEY] === "commitment") {
+            await ensureCommitmentSchedule(subscription, planMeta);
+          }
+        }
+        await onMembershipStarted({ supabase, event, subscription });
+        break;
+      }
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
         if (subscription.metadata?.kind === "ae_placement") {
@@ -389,6 +413,23 @@ export async function POST(request: Request) {
           if (subscription.metadata?.[MEMBERSHIP_KIND_METADATA_KEY] === "commitment") {
             // Self-heal (see ensureCommitmentSchedule docstring).
             await ensureCommitmentSchedule(subscription, planMeta);
+          }
+        }
+        // Retention: a cancel-at-period-end request is the voluntary-churn
+        // signal (distinct from the actual cancel in subscription.deleted).
+        // Idempotent via cancel_requested_at on the row: once recorded for
+        // a subscription it isn't re-stamped, and a flip back to false
+        // clears it + logs the revocation.
+        if (subscription.cancel_at_period_end) {
+          await onCancelRequested({ supabase, event, subscription });
+        } else {
+          const { data: existing } = await supabase
+            .from("user_subscriptions")
+            .select("cancel_requested_at")
+            .eq("stripe_subscription_id", subscription.id)
+            .maybeSingle();
+          if (existing && (existing.cancel_requested_at as string | null) != null) {
+            await onCancelRevoked({ supabase, event, subscription });
           }
         }
         break;
@@ -412,6 +453,7 @@ export async function POST(request: Request) {
             .update({ status: "canceled", canceled_at: new Date().toISOString() })
             .eq("stripe_subscription_id", subscription.id);
           if (error) console.error(`Failed to mark org subscription ${subscription.id} canceled:`, error.message);
+          await onMembershipCanceled({ supabase, event, subscription });
           break;
         }
         const supabaseUserId = subscription.metadata?.supabase_user_id;
@@ -422,6 +464,7 @@ export async function POST(request: Request) {
             .eq("stripe_subscription_id", subscription.id);
           if (error) console.error(`Failed to mark subscription deleted for user ${supabaseUserId}:`, error.message);
         }
+        await onMembershipCanceled({ supabase, event, subscription });
         break;
       }
       case "subscription_schedule.created":
@@ -435,17 +478,12 @@ export async function POST(request: Request) {
       }
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId =
-          typeof (invoice as { subscription?: string | Stripe.Subscription | null }).subscription === "string"
-            ? (invoice as { subscription?: string }).subscription
-            : (invoice as { subscription?: Stripe.Subscription | null }).subscription?.id;
-        if (subscriptionId) {
-          const { error } = await supabase
-            .from("user_subscriptions")
-            .update({ stripe_status: "past_due" })
-            .eq("stripe_subscription_id", subscriptionId);
-          if (error) console.error(`Failed to mark past_due for subscription ${subscriptionId}:`, error.message);
-        }
+        await onPaymentFailed({ supabase, event, invoice });
+        break;
+      }
+      case "invoice.payment_succeeded": {
+        const invoice = event.data.object as Stripe.Invoice;
+        await onPaymentSucceeded({ supabase, event, invoice });
         break;
       }
       default:

@@ -14,6 +14,7 @@ const ADMIN_NAV = [
   { href: "/admin/monitoring", label: "Guideline Monitoring" },
   { href: "/admin/discounts", label: "Discounts" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/billing", label: "Billing & Retention" },
   { href: "/admin/teams", label: "Team Subscriptions" },
   { href: "/admin/bulk-memberships", label: "Bulk Memberships" },
   { href: "/admin/system-health", label: "System Health" },

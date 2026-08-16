@@ -37,6 +37,7 @@ model Organization {
   featureFlags  FeatureFlag[]
   orgSubscriptions OrgSubscription[]
   orgInvites       OrgInvite[]
+  billingEvents  BillingPaymentEvent[]
 
   @@map("organizations")
 }
@@ -76,6 +77,7 @@ model User {
   memberships  Membership[]
   subscription UserSubscription?
   activityEvents UserActivityEvent[]
+  paymentEvents BillingPaymentEvent[]
 
   @@map("users")
 }
@@ -164,6 +166,20 @@ model OrgSubscription {
   // contact, not necessarily any one covered member.
   billingContactEmail  String?   @map("billing_contact_email")
   billingContactName   String?   @map("billing_contact_name")
+  // --- Payment-decline (dunning) tracking (2026-08-16, docs/billing-runbook.md) ---
+  // Mirrors UserSubscription's dunning fields for team subscriptions. Written
+  // only by the Stripe webhook (invoice.payment_failed / payment_succeeded)
+  // and the daily billing-dunning cron. Team failure state is informational
+  // (the org's covered members keep access until the sub is actually
+  // canceled); the personal dunning columns are the ones gating access.
+  lastPaymentFailedAt    DateTime? @map("last_payment_failed_at")
+  lastPaymentSucceededAt DateTime? @map("last_payment_succeeded_at")
+  nextPaymentAttemptAt   DateTime? @map("next_payment_attempt_at")
+  declineCount           Int       @default(0) @map("decline_count")
+  dunningEmailCount      Int       @default(0) @map("dunning_email_count")
+  lastDunningEmailSentAt DateTime? @map("last_dunning_email_sent_at")
+  cancelRequestedAt      DateTime? @map("cancel_requested_at")
+
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")
 
@@ -356,11 +372,65 @@ model UserSubscription {
   trialActivatedAt   DateTime? @map("trial_activated_at")
   trialExpiresAt     DateTime? @map("trial_expires_at")
 
+  // --- Payment-decline (dunning) tracking (2026-08-16, docs/billing-runbook.md) ---
+  // Written ONLY by the Stripe webhook (invoice.payment_failed /
+  // invoice.payment_succeeded) and by the daily billing-dunning cron that
+  // sends the follow-up email. declineCount is the cumulative number of
+  // failed payment attempts Stripe reported for this subscription; it is
+  // reset to 0 the moment a payment succeeds — so a nonzero value with a
+  // recent lastPaymentFailedAt means "currently in dunning".
+  lastPaymentFailedAt    DateTime? @map("last_payment_failed_at")
+  lastPaymentSucceededAt DateTime? @map("last_payment_succeeded_at")
+  nextPaymentAttemptAt   DateTime? @map("next_payment_attempt_at")
+  declineCount           Int       @default(0) @map("decline_count")
+  dunningEmailCount      Int       @default(0) @map("dunning_email_count")
+  lastDunningEmailSentAt DateTime? @map("last_dunning_email_sent_at")
+  // When the member ASKED to cancel (retention: voluntary churn intent).
+  // Distinct from canceled_at, which is when access actually ends. A
+  // cancel_at_period_end user keeps cancel_requested_at NULL until the
+  // webhook sees a cancel request — see docs/billing-runbook.md.
+  cancelRequestedAt DateTime? @map("cancel_requested_at")
+
   user     User            @relation(fields: [userId], references: [id])
   plan     MembershipPlan? @relation(fields: [planId], references: [id])
   discount Discount?       @relation(fields: [discountId], references: [id])
 
   @@map("user_subscriptions")
+}
+
+/// One row per Stripe billing event we care about (2026-08-16,
+/// docs/billing-runbook.md). This is the event-trail table that powers the
+/// admin Billing & Retention dashboard: every failed payment attempt,
+/// every successful recovery, and every membership start / cancel request /
+/// actual cancel lands here with the Stripe reason + attempt payload. It is
+/// append-only by convention — the webhook inserts, never updates.
+/// `userId` is set for personal subscriptions, `organizationId` for team
+/// (org_subscriptions) rows; exactly one is populated.
+model BillingPaymentEvent {
+  id                  String    @id @default(uuid()) @db.Uuid
+  userId              String?   @map("user_id") @db.Uuid
+  organizationId      String?   @map("organization_id") @db.Uuid
+  eventType           String    @map("event_type")
+  // payment_failed | payment_succeeded | membership_started | membership_canceled
+  // | cancel_requested (cancel at period end) | cancel_revoked
+  stripeEventId       String    @unique @map("stripe_event_id") // Stripe event.id — dedupes webhook redelivery
+  stripeCustomerId    String?   @map("stripe_customer_id")
+  stripeSubscriptionId String?  @map("stripe_subscription_id")
+  amountCents         Int?      @map("amount_cents")
+  attemptNumber       Int?      @map("attempt_number") // Stripe invoice.attempt_count for failures
+  failureCode         String?   @map("failure_code") // e.g. card_declined, expired_card
+  failureMessage      String?   @map("failure_message")
+  nextRetryAt         DateTime? @map("next_retry_at") // invoice.next_payment_attempt
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  user          User?          @relation(fields: [userId], references: [id])
+  organization  Organization?  @relation(fields: [organizationId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([organizationId, createdAt])
+  @@index([stripeSubscriptionId])
+  @@index([eventType, createdAt])
+  @@map("billing_payment_events")
 }
 
 model Program {
@@ -843,7 +913,6 @@ model UserActivityEvent {
   @@index([occurredAt])
   @@map("user_activity_events")
 }
-
 // Beta Tester Feedback — see supabase/beta-feedback.sql for the authoritative
 // DDL, RLS, and the ensure_beta_survey_for_me() SECURITY DEFINER created here.
 // One row per user (unique user_id = "no duplicate surveys"). trial_started_at

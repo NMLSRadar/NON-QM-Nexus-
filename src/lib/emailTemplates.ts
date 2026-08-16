@@ -461,3 +461,73 @@ function formatCentsForEmail(cents: number): string {
   const dollars = cents / 100;
   return `$${dollars % 1 === 0 ? dollars.toLocaleString("en-US") : dollars.toFixed(2)}`;
 }
+
+/** Daily dunning follow-up (2026-08-16, docs/billing-runbook.md) — sent by
+ * the billing-dunning cron once per day while a member's card payment keeps
+ * failing (invoice.payment_failed with stripe_status past_due). The member
+ * keeps access (tier stays live until the subscription is actually
+ * canceled), so the email is a recovery nudge with a single focused CTA:
+ * update the payment method in the Stripe Customer Portal. */
+export function paymentDeclinedEmail(params: {
+  firstName: string | null;
+  planName: string;
+  amountDueCents: number;
+  attemptNumber: number;
+  nextRetryAtIso: string | null;
+  appUrl: string;
+}): { subject: string; html: string } {
+  const amountLabel = formatCentsForEmail(params.amountDueCents);
+  const nextRetry = params.nextRetryAtIso
+    ? new Date(params.nextRetryAtIso).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" })
+    : null;
+  const attemptLabel = `Attempt ${params.attemptNumber}${params.attemptNumber === 1 ? "" : ` (we've retried ${params.attemptNumber - 1} time${params.attemptNumber === 2 ? "" : "s"})`}`;
+  const greeting = params.firstName?.trim() ? `Hi ${escapeHtmlForDunningEmail(params.firstName)},` : "Hi,";
+  const planName = escapeHtmlForDunningEmail(params.planName);
+
+  const nextRetryHtml = nextRetry
+    ? `<p style="color:#6b7280;font-size:14px;line-height:1.6">Our processor will try again on <strong>${nextRetry}</strong>. To avoid an interruption, please update your payment method before then.</p>`
+    : `<p style="color:#6b7280;font-size:14px;line-height:1.6">Please update your payment method so we can complete the charge and keep your access uninterrupted.</p>`;
+
+  return {
+    subject: `Action needed: your NON-QM Nexus payment was declined (${attemptLabel.toLowerCase()})`,
+    html: `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:480px;margin:0 auto;color:#111827;">
+        <p style="font-size:13px;color:#9ca3af;margin:0 0 4px;">NON-QM Nexus</p>
+        <h1 style="font-size:20px;margin:0 0 16px;color:#111827;">Your payment was declined</h1>
+        <p style="color:#4b5563;font-size:14px;margin:0 0 16px;">${greeting}</p>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
+          <p style="margin:0 0 6px;font-size:14px;color:#7f1d1d;font-weight:600;">${planName} — ${amountLabel} due</p>
+          <p style="margin:0;font-size:13px;color:#991b1b;">${attemptLabel}. Your card issuer declined the payment.</p>
+        </div>
+        <p style="color:#6b7280;font-size:14px;line-height:1.6">You still have access to your membership right now — we just couldn't collect this month's payment.</p>
+        ${nextRetryHtml}
+        <p style="text-align:center;margin:28px 0;">
+          <a href="${params.appUrl}/account" style="display:inline-block;background:#0f172a;color:#ffffff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">Update payment method</a>
+        </p>
+        <p style="color:#9ca3af;font-size:12px;line-height:1.5">
+          If you've already updated your card, you can ignore this email — the next automatic retry should succeed. Questions? Just reply to this email and our team will help.
+        </p>
+        <p style="color:#9ca3af;font-size:11px;margin-top:24px;">NON-QM Nexus — automated billing notice.</p>
+      </div>
+    `,
+  };
+}
+
+function escapeHtmlForDunningEmail(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#039;";
+      default:
+        return character;
+    }
+  });
+}
