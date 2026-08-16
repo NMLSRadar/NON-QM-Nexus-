@@ -4,23 +4,32 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
-  ChevronDown,
+  BarChart3,
+  Building2,
+  CalendarDays,
   ChevronRight,
   Command,
   CreditCard,
-  Building2,
-  Users,
-  Tags,
-  Settings2,
+  FileText,
+  Inbox,
   Menu,
+  Percent,
+  Search,
+  Settings2,
+  ShieldCheck,
+  Tags,
+  Users,
+  Wallet,
   X,
 } from "lucide-react";
 
 type NavItem = { href: string; label: string };
-type NavGroup = { id: string; title: string; icon: typeof Users; items: NavItem[] };
+type NavGroup = { id: string; title: string; icon: typeof Command; items: NavItem[] };
 
-/** Admin navigation, grouped and alphabetized, with collapsible sections.
- * The whole panel collapses too (master toggle). Active page is highlighted. */
+/** Grouped source of truth (used for icons + a stable route registry).
+ * The rendered list below is the FLAT, strictly alphabetical view of every
+ * item — one list, A→Z, so any admin can find anything by reading down
+ * the alphabet. */
 const GROUPS: NavGroup[] = [
   {
     id: "overview",
@@ -84,26 +93,53 @@ const GROUPS: NavGroup[] = [
   },
 ];
 
-function groupForPath(pathname: string): string {
-  for (const g of GROUPS) {
-    if (g.items.some((i) => i.href === pathname)) return g.id;
-  }
-  return "overview";
+/** Every section, flattened, strictly alphabetical by label. */
+const ALL_ITEMS: Array<NavItem & { icon: typeof Command }> = GROUPS.flatMap((g) =>
+  g.items.map((item) => ({ ...item, icon: g.icon }))
+).sort((a, b) => a.label.localeCompare(b.label));
+
+/** Which section the current route is in (for the breadcrumb highlight). */
+function findGroup(pathname: string): NavGroup | null {
+  for (const g of GROUPS) if (g.items.some((i) => i.href === pathname)) return g;
+  return null;
 }
+
+const ICON_LOOKUP: Record<string, typeof Command> = {
+  "/admin": Command,
+  "/admin/scenario-volume": BarChart3,
+  "/admin/demo-requests": CalendarDays,
+  "/admin/billing": CreditCard,
+  "/admin/bulk-memberships": Users,
+  "/admin/discounts": Percent,
+  "/admin/memberships": Wallet,
+  "/admin/plans": CreditCard,
+  "/admin/teams": Users,
+  "/admin/monitoring": FileText,
+  "/admin/specialists": ShieldCheck,
+  "/admin/lenders": Building2,
+  "/admin/activity": BarChart3,
+  "/admin/trials": ShieldCheck,
+  "/admin/users": Users,
+  "/admin/attribution": Tags,
+  "/admin/documents": FileText,
+  "/admin/system-health": Settings2,
+};
 
 export function AdminNav() {
   const pathname = usePathname();
-  const activeGroup = useMemo(() => groupForPath(pathname), [pathname]);
-
-  // Master collapse. When collapsing, remember which group was active so it can be restored.
   const [collapsed, setCollapsed] = useState(false);
-  // Group accordion state: default open only for the group holding the current page.
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(GROUPS.map((g) => [g.id, g.id === groupForPath(pathname)]))
+  const [query, setQuery] = useState("");
+
+  const lowered = query.trim().toLowerCase();
+  const items = useMemo(
+    () => (lowered ? ALL_ITEMS.filter((i) => i.label.toLowerCase().includes(lowered)) : ALL_ITEMS),
+    [lowered]
   );
 
-  const toggleGroup = (id: string) =>
-    setOpenGroups((o) => ({ ...o, [id]: !o[id] }));
+  const stamp =
+    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_BUILD_SHA
+      ? String(process.env.NEXT_PUBLIC_BUILD_SHA).slice(0, 8)
+      : "") || "local";
 
   if (collapsed) {
     return (
@@ -119,7 +155,8 @@ export function AdminNav() {
             <Menu className="h-4 w-4" aria-hidden />
           </span>
           <span className="font-medium">Admin menu</span>
-          <ChevronRight className="ml-auto h-4 w-4 text-slate-500" aria-hidden />
+          <span className="ml-auto text-[11px] text-slate-500">deploy {stamp}</span>
+          <ChevronRight className="h-4 w-4 text-slate-500" aria-hidden />
         </button>
       </div>
     );
@@ -129,92 +166,92 @@ export function AdminNav() {
     <div className="relative overflow-hidden rounded-2xl border border-amber-400/30 bg-gradient-to-b from-[#0c0c0e] to-[#0a0a0b] shadow-lg shadow-black/40">
       <div className="gold-ambient" />
       <div className="relative z-10 p-4 sm:p-5">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
             <h1 className="text-lg font-semibold tracking-tight text-white">Admin</h1>
             <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-300">
-              {GROUPS.length} sections
+              {ALL_ITEMS.length} sections · A–Z
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setCollapsed(true)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/25 px-2.5 py-1 text-xs text-slate-400 transition-colors hover:border-amber-400/60 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400"
-          >
-            <X className="h-3.5 w-3.5" aria-hidden />
-            Collapse
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="hidden text-[10px] tabular-nums text-slate-500 sm:inline">deploy {stamp}</span>
+            <button
+              type="button"
+              onClick={() => setCollapsed(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/25 px-2.5 py-1 text-xs text-slate-400 transition-colors hover:border-amber-400/60 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+              Collapse
+            </button>
+          </div>
         </div>
 
-        <nav aria-label="Admin" className="space-y-3">
-          {GROUPS.map((group) => {
-            const open = !!openGroups[group.id];
-            const isActive = group.id === activeGroup;
+        {/* Find anything — type to filter the full alphabetical list */}
+        <div className="relative mb-3">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+            aria-hidden
+          />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            type="search"
+            placeholder="Find an admin section… (e.g. Demo, Plans, Users)"
+            aria-label="Search admin sections"
+            className="w-full rounded-lg border border-amber-500/20 bg-black/40 py-2 pl-9 pr-3 text-sm text-white placeholder:text-slate-500 transition-colors focus:border-amber-400/60 focus:outline-none focus:ring-2 focus:ring-amber-400/30"
+          />
+        </div>
+
+        <p className="mb-2 text-[11px] uppercase tracking-wider text-slate-500">
+          {items.length} of {ALL_ITEMS.length} sections
+        </p>
+<nav aria-label="Admin" className="grid gap-1">
+          {items.map((item) => {
+            const isCurrent = pathname === item.href;
+            const Icon = ICON_LOOKUP[item.href] ?? Inbox;
             return (
-              <div
-                key={group.id}
-                className={`overflow-hidden rounded-xl border transition-colors ${
-                  isActive
-                    ? "border-amber-400/40 bg-amber-500/[0.07]"
-                    : "border-white/[0.06] bg-white/[0.015]"
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={isCurrent ? "page" : undefined}
+                className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+                  isCurrent
+                    ? "bg-gradient-to-r from-amber-500/25 to-transparent font-semibold text-amber-100"
+                    : "text-slate-300 hover:bg-white/[0.04] hover:text-white"
                 }`}
               >
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.id)}
-                  aria-expanded={open}
-                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-white/[0.03] focus:outline-none focus:ring-2 focus:ring-amber-400"
+                <span
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-colors ${
+                    isCurrent
+                      ? "border-amber-400/50 bg-amber-500/15 text-amber-200"
+                      : "border-white/10 bg-black/30 text-slate-400"
+                  }`}
                 >
-                  <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors ${
-                      isActive
-                        ? "border-amber-400/50 bg-amber-500/15 text-amber-200"
-                        : "border-white/10 bg-black/30 text-slate-400"
-                    }`}
-                  >
-                    <group.icon className="h-4 w-4" aria-hidden />
-                  </span>
-                  <span className={isActive ? "text-amber-100" : "text-slate-200"}>{group.title}</span>
-                  <span
-                    className={`ml-auto text-[10px] font-medium tabular-nums ${
-                      isActive ? "text-amber-300/80" : "text-slate-500"
-                    }`}
-                  >
-                    {group.items.length}
-                  </span>
-                  {open ? (
-                    <ChevronDown className="h-4 w-4 text-slate-500" aria-hidden />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-slate-500" aria-hidden />
-                  )}
-                </button>
-
-                {open ? (
-                  <ul className="space-y-0.5 border-t border-white/[0.05] px-2 py-2">
-                    {group.items.map((item) => {
-                      const isCurrent = pathname === item.href;
-                      return (
-                        <li key={item.href}>
-                          <Link
-                            href={item.href}
-                            aria-current={isCurrent ? "page" : undefined}
-                            className={`block rounded-lg px-3 py-2 text-sm transition-colors ${
-                              isCurrent
-                                ? "bg-gradient-to-r from-amber-500/20 to-transparent font-semibold text-amber-100"
-                                : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
-                            }`}
-                          >
-                            {item.label}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <Icon className="h-3.5 w-3.5" aria-hidden />
+                </span>
+                <span className="min-w-0 truncate">{item.label}</span>
+                {isCurrent ? (
+                  <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-amber-300" aria-hidden />
                 ) : null}
-              </div>
+              </Link>
             );
           })}
+          {items.length === 0 ? (
+            <p className="rounded-lg border border-white/5 px-3 py-4 text-sm text-slate-500">
+              No admin section matches “{query}”.
+            </p>
+          ) : null}
         </nav>
+
+        {findGroup(pathname) ? (
+          <p className="mt-3 border-t border-white/5 pt-2 text-xs text-slate-500">
+            You&apos;re in: <span className="text-amber-200/90">{findGroup(pathname)?.title}</span>
+          </p>
+        ) : (
+          <p className="mt-3 border-t border-white/5 pt-2 text-xs text-slate-500">
+            All sections, alphabetized A–Z for quick finding.
+          </p>
+        )}
       </div>
     </div>
   );
