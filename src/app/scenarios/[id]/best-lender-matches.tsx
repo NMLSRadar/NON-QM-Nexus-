@@ -7,6 +7,7 @@ import { SampleDataBadge, StatusBadge, Stat, Pill, fmtPct, fmtUsd } from "@/comp
 import type { ProgramEvaluation } from "@/domain/types/results";
 import type { MatchStatus } from "@/domain/types/enums";
 import { whyThisLender, potentialIssues, aiNarrative } from "@/domain/matching/narrative";
+import { isPrivateGuidelinesLender } from "@/domain/privateGuidelines";
 import { useCountUp } from "@/hooks/use-count-up";
 import { PrivateGuidelinesMatchNote } from "@/components/private-guidelines-notice";
 
@@ -493,6 +494,14 @@ function CompareTable({ items }: { items: ProgramEvaluation[] }) {
     { label: "Max loan amount", render: (e) => (requiresCurrentMatrix(e) && e.maxLoanAmount === 0 ? "Confirm matrix" : fmtUsd(e.maxLoanAmount)) },
     { label: "Reserves required", render: (e) => (requiresCurrentMatrix(e) && (e.estimatedReservesRequiredMonths ?? 0) === 0 ? "Confirm matrix" : `${e.estimatedReservesRequiredMonths ?? "—"} mo`) },
     { label: "Documentation", render: (e) => e.documentationType },
+    {
+      label: "Guideline source",
+      render: (e) => (
+        <span className={isPrivateGuidelinesLender(e.lenderName) ? "font-semibold text-amber-700" : "text-ink-secondary"}>
+          {isPrivateGuidelinesLender(e.lenderName) ? "Not public — confirm with AE" : "Published"}
+        </span>
+      ),
+    },
   ];
 
   return (
