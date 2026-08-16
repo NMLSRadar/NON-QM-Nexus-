@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentOrganizationId } from "@/lib/session";
+import { tryGetCurrentOrganizationId } from "@/lib/session";
 
 /** Shown only to an org_admin of their current organization — mirrors
  * AdminNavLink's conditional-visibility pattern, but scoped per-org rather
  * than platform-wide. /account/team itself also gates via requireOrgAdmin
- * — this is UI convenience, never the actual security boundary. */
+ * — this is UI convenience, never the actual security boundary.
+ * Uses the NON-redirecting org lookup: this component renders inside the
+ * root layout on every page (including /login), and redirecting from a
+ * layout component is what caused the /login 307 redirect loop. */
 export async function TeamNavLink() {
   const supabase = await createClient();
   const {
@@ -13,7 +16,9 @@ export async function TeamNavLink() {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const organizationId = await getCurrentOrganizationId();
+  const organizationId = await tryGetCurrentOrganizationId();
+  if (!organizationId) return null;
+
   const { data } = await supabase
     .from("memberships")
     .select("role")

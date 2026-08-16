@@ -57,6 +57,7 @@ export async function getCurrentOrganizationId(): Promise<string> {
 
   const cookieStore = await cookies();
   const selected = cookieStore.get(ACTIVE_ORG_COOKIE)?.value;
+
   if (selected && memberships.some((m) => m.organization_id === selected)) {
     return selected;
   }
@@ -64,6 +65,49 @@ export async function getCurrentOrganizationId(): Promise<string> {
   return memberships[0]!.organization_id as string;
 }
 
+/**
+ * Non-redirecting variant of getCurrentOrganizationId for LAYOUT/HEADER
+ * components that render on EVERY page (including /login). Resolves the
+ * same org, but never throws and never redirects: a signed-out caller, an
+ * account with no active membership, or a query failure all resolve to
+ * null and the component degrades gracefully (e.g. hides a link).
+ *
+ * Why this exists: TeamNavLink (rendered in the root layout's header on
+ * every route) called getCurrentOrganizationId, which redirect("/login")
+ * for any signed-in account with zero active memberships. That made
+ * /login itself 307 → /login → 307 → … — the infinite redirect loop real
+ * users hit (ERR_TOO_MANY_REDIRECTS on login across devices; anonymous
+ * sessions were never affected because their header path returns early).
+ * Rule: layout components must never redirect — the security boundary
+ * lives in middleware and page-level code, not in chrome that renders
+ * inside the login page.
+ */
+export async function tryGetCurrentOrganizationId(): Promise<string | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: memberships, error } = await supabase
+    .from("memberships")
+    .select("organization_id")
+    .eq("user_id", user.id)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("tryGetCurrentOrganizationId query failed:", error.message);
+    return null;
+  }
+  if (!memberships || memberships.length === 0) return null;
+
+  const cookieStore = await cookies();
+  const selected = cookieStore.get(ACTIVE_ORG_COOKIE)?.value;
+  if (selected && memberships.some((m) => m.organization_id === selected)) {
+    return selected;
+  }
+  return memberships[0]!.organization_id as string;
+}
 /** All organizations the signed-in user has an active membership in, for
  * the org switcher. Empty array (never null) for a signed-out caller. */
 export async function listUserOrganizations(): Promise<Array<{ organizationId: string; organizationName: string; role: string }>> {
