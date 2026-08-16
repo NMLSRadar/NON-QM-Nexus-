@@ -78,6 +78,7 @@ const GROUPS: NavGroup[] = [
     title: "Sales & Attribution",
     icon: Tags,
     items: [
+      { href: "/admin/appointments", label: "Appointments" },
       { href: "/admin/demo-requests", label: "Demo Requests" },
       { href: "/admin/attribution", label: "Signup Attribution" },
     ],
@@ -107,6 +108,7 @@ function findGroup(pathname: string): NavGroup | null {
 const ICON_LOOKUP: Record<string, typeof Command> = {
   "/admin": Command,
   "/admin/scenario-volume": BarChart3,
+  "/admin/appointments": CalendarDays,
   "/admin/demo-requests": CalendarDays,
   "/admin/billing": CreditCard,
   "/admin/bulk-memberships": Users,

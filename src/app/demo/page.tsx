@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Sparkles } from "lucide-react";
 import { pageMetadata } from "@/lib/seo";
-import { DEMO_BOOKING_URL } from "@/lib/demo";
+import { DEMO_HOSTS } from "@/lib/demo";
 import { DemoForm } from "./demo-form";
 
 export const metadata: Metadata = pageMetadata({
@@ -32,7 +32,7 @@ export default function DemoPage() {
         </div>
 
         <div className="rounded-2xl border border-amber-500/20 bg-[#0a0a0b] p-5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] sm:p-6">
-          <DemoForm bookingUrl={DEMO_BOOKING_URL} />
+          <DemoForm hosts={DEMO_HOSTS} />
         </div>
 
         <p className="mt-6 text-center text-xs text-slate-500">
