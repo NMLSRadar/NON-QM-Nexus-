@@ -39,6 +39,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local working outputs (backups, generated files) — never commit
+/output/
+
 # typescript
 *.tsbuildinfo
 .env*
