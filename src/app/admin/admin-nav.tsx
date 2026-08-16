@@ -136,11 +136,6 @@ export function AdminNav() {
     [lowered]
   );
 
-  const stamp =
-    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_BUILD_SHA
-      ? String(process.env.NEXT_PUBLIC_BUILD_SHA).slice(0, 8)
-      : "") || "local";
-
   if (collapsed) {
     return (
       <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-[#0a0a0b]">
@@ -154,9 +149,8 @@ export function AdminNav() {
           <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-amber-500/25 bg-amber-500/10 text-amber-300">
             <Menu className="h-4 w-4" aria-hidden />
           </span>
-          <span className="font-medium">Admin menu</span>
-          <span className="ml-auto text-[11px] text-slate-500">deploy {stamp}</span>
-          <ChevronRight className="h-4 w-4 text-slate-500" aria-hidden />
+<span className="font-medium">Admin menu</span>
+          <ChevronRight className="ml-auto h-4 w-4 text-slate-500" aria-hidden />
         </button>
       </div>
     );
@@ -174,7 +168,6 @@ export function AdminNav() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="hidden text-[10px] tabular-nums text-slate-500 sm:inline">deploy {stamp}</span>
             <button
               type="button"
               onClick={() => setCollapsed(true)}
