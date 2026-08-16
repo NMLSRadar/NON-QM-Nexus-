@@ -111,8 +111,6 @@ export default async function AdminBillingPage() {
     },
   ];
 
-  const lastMonth = retention.at(-1);
-
   return (
     <div className="space-y-5">
       <div>

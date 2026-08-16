@@ -165,7 +165,7 @@ export async function getDunningQueue(supabase: SupabaseClient): Promise<Dunning
     .select(
       "stripe_subscription_id, user_id, stripe_status, decline_count, last_payment_failed_at, next_payment_attempt_at, last_dunning_email_sent_at, dunning_email_count, current_monthly_price_cents, plan:membership_plans(name), user:users!inner(email, profile:user_profiles(display_name))"
     )
-    .eq("canceled_at", null)
+    .is("canceled_at", null)
     .in("stripe_status", ["past_due", "unpaid", "incomplete", "incomplete_expired"])
     .order("last_payment_failed_at", { ascending: false });
   if (error) throw new Error(`Failed to load dunning queue: ${error.message}`);
