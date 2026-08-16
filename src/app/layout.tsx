@@ -21,6 +21,8 @@ import { getLenderAccessInfo } from "@/lib/session";
 import { SITE_URL, SITE_NAME, OG_IMAGE_PATH } from "@/lib/seo";
 import { SUPPORT_EMAIL } from "@/lib/support";
 
+const DEPLOY_SHA = (process.env.NEXT_PUBLIC_BUILD_SHA ?? "").slice(0, 8) || "local";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "NON-QM Nexus",
@@ -155,6 +157,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </a>
               </span>
             </nav>
+            <p className="text-[10px] tracking-wide text-slate-600">
+              Build <span className="tabular-nums">{DEPLOY_SHA}</span>
+            </p>
           </div>
         </footer>
         {user && <AiAssistantWidget />}
