@@ -1,11 +1,10 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendTransactionalEmail } from "@/lib/email";
-import { DEMO_BOOKING_URL, DEMO_NOTIFY_EMAILS } from "@/lib/demo";
+import { DEMO_NOTIFY_EMAILS } from "@/lib/demo";
 
-export type DemoFormState = { error?: string } | null;
+export type DemoFormState = { error?: string; success?: boolean } | null;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -67,8 +66,10 @@ export async function submitDemoRequest(
     console.error("Demo notify failed:", err);
   }
 
-  // On the booking scheduler to pick a time. External redirect is supported.
-  redirect(DEMO_BOOKING_URL);
+  // Submission succeeded — show the confirmation screen with a button to the
+  // scheduler (reached via a normal user tap, which avoids the forced redirect
+  // chain that mobile Safari rejects).
+  return { success: true };
 }
 
 function escapeHtml(s: string): string {

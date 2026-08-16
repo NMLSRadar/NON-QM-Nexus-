@@ -7,10 +7,13 @@
 // renders the log for follow-up.
 import "server-only";
 
-// The scheduling page visitors are sent to after submitting. This is a
-// Google Calendar "Appointment schedule" link (Calendly-style). To point at
-// a different scheduler, change this one constant.
-export const DEMO_BOOKING_URL = "https://calendar.app.google/1d6CA37yj6cS3E837";
+// The scheduling page visitors are sent to after submitting. This is the
+// direct Google Calendar "Appointment schedule" URL (not the calendar.app.google
+// short link, which appends extra redirects that mobile Safari rejects with
+// "cannot follow more than 20 redirections"). To point at a different
+// scheduler, replace this constant and keep it the long-form URL.
+export const DEMO_BOOKING_URL =
+  "https://calendar.google.com/calendar/appointments/schedules/AcZssZ1f1CvtnyVFXOImCzhE3mNg1LdPheczK-hii5eMLx49px4E3H3TxDJSOTADbK1raz97TQclpO44";
 
 // Who gets an email whenever a demo is requested. Best-effort: if sending
 // fails (or RESEND isn't configured), the lead is still logged and the
