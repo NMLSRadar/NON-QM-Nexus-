@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getCurrentOrganizationId, getRepository, getLenderAccessInfo } from "@/lib/session";
 import { PageHeader, Card, Pill, SampleDataBadge, MetricTile, fmtUsd, fmtPct } from "@/components/ui";
 import { getWordmarkStyle } from "@/domain/lenderBrandStyle";
+import { getPrivateGuidelinesInfo } from "@/domain/privateGuidelines";
+import { PrivateGuidelinesNotice } from "@/components/private-guidelines-notice";
 import { ProgramCitation } from "./program-citation";
 import { AeSection } from "./ae-section";
 import { LenderNotes } from "./lender-notes";
@@ -32,6 +34,7 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
         .sort((a, b) => compareAlphabetically(a.name, b.name))
     : [];
   const style = getWordmarkStyle(lender.name);
+  const privateGuidelines = getPrivateGuidelinesInfo(lender.name);
 
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-5">
@@ -75,7 +78,9 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
             </span>
             <Pill tone="neutral">Membership required</Pill>
             <p className="max-w-md text-sm text-slate-400">
-              Subscribe to NON-QM Nexus to access this lender’s complete guidelines and program details.
+              {privateGuidelines
+                ? "This lender does not publish its guidelines publicly — an Account Executive is the source of current terms. Membership unlocks the AE network and every other lender in the directory."
+                : "Subscribe to NON-QM Nexus to access this lender's complete guidelines and program details."}
             </p>
             <Link
               href="/pricing"
@@ -87,11 +92,21 @@ export default async function LenderDetailPage({ params }: { params: Promise<{ i
         </Card>
       ) : (
         <>
+          {privateGuidelines ? <PrivateGuidelinesNotice lenderName={lender.name} /> : null}
           <Card title={`Programs (${lenderPrograms.length})`} dark>
             {lenderPrograms.length === 0 ? (
-              <p className="text-sm text-slate-400">No active programs on file for this lender yet.</p>
+              <p className="text-sm text-slate-400">
+                {privateGuidelines
+                  ? "This lender distributes its program terms directly to approved brokers. Contact an Account Executive for the current program lineup and terms."
+                  : "No active programs on file for this lender yet."}
+              </p>
             ) : (
               <div className="space-y-4">
+                {privateGuidelines ? (
+                  <p className="rounded-control border border-amber-400/40 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-200">
+                    The figures below come from public reporting, not from this lender’s own matrix — confirm current terms with an Account Executive before submitting.
+                  </p>
+                ) : null}
                 {lenderPrograms.map((p) => (
                   <div id={`program-${p.id}`} key={p.id} className="scroll-mt-24 rounded-control border border-amber-500/20 bg-black/30 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">

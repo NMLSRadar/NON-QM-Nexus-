@@ -8,6 +8,7 @@ import type { ProgramEvaluation } from "@/domain/types/results";
 import type { MatchStatus } from "@/domain/types/enums";
 import { whyThisLender, potentialIssues, aiNarrative } from "@/domain/matching/narrative";
 import { useCountUp } from "@/hooks/use-count-up";
+import { PrivateGuidelinesMatchNote } from "@/components/private-guidelines-notice";
 
 const MAX_COMPARE = 4;
 /** Never show more than this many near-match/ineligible lenders — product
@@ -195,6 +196,8 @@ function LockedLenderCard({ e, rank }: { e: ProgramEvaluation; rank: number }) {
         </div>
       </div>
 
+      <PrivateGuidelinesMatchNote lenderName={e.lenderName} lenderId={e.lenderId} />
+
       <div className="mt-4 rounded-control border border-brand-100 bg-brand-50/40 p-4">
         <p className="text-sm font-semibold text-brand-900">
           This is a real eligible match for this scenario — the specific guideline details (max LTV, FICO, loan
@@ -278,6 +281,8 @@ function LenderCard({
           Compare
         </label>
       </div>
+
+      <PrivateGuidelinesMatchNote lenderName={e.lenderName} lenderId={e.lenderId} />
 
       <dl className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 border-t border-surface-border pt-4">
         <Stat label={e.matchedIncomeDocType === "pnl_only" ? "P&L Only Max LTV" : "Max LTV"} value={matrixPending && e.maxLtv === 0 ? "Confirm matrix" : fmtPct(e.maxLtv, 1)} />
@@ -461,6 +466,8 @@ function IneligibleLenderCard({ e }: { e: ProgramEvaluation }) {
           <XCircle className="h-3 w-3 mr-1 inline" /> Currently Ineligible
         </Pill>
       </div>
+
+      <PrivateGuidelinesMatchNote lenderName={e.lenderName} lenderId={e.lenderId} />
 
       {reasons.length > 0 && (
         <div className="mt-3 border-t border-rose-100 pt-3">

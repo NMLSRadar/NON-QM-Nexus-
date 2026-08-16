@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Building2, LockKeyhole, Search, ShieldCheck } from "lucide-react";
 import { getWordmarkStyle } from "@/domain/lenderBrandStyle";
+import { getPrivateGuidelinesInfo } from "@/domain/privateGuidelines";
+import { PrivateGuidelinesChip } from "@/components/private-guidelines-notice";
 import type { Lender, Program } from "@/domain/types/program";
 import { sortLendersAlphabetically } from "@/app/programs/program-directory-utils";
 
@@ -48,6 +50,7 @@ function AlphabetBadge({ name }: { name: string }) {
 
 function LenderCard({ directoryLender, unlocked }: { directoryLender: DirectoryLender; unlocked: boolean }) {
   const { lender, programs } = directoryLender;
+  const privateGuidelines = getPrivateGuidelinesInfo(lender.name);
   if (!unlocked) {
     return (
       <div className="relative flex min-h-[148px] flex-col justify-between gap-3 rounded-xl border border-amber-500/20 bg-[#111113] p-4 shadow-[0_12px_35px_-24px_rgba(245,158,11,0.45)]" aria-label={`${lender.name} — membership required`}>
@@ -58,6 +61,7 @@ function LenderCard({ directoryLender, unlocked }: { directoryLender: DirectoryL
             <p className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-amber-300/80">
               <LockKeyhole className="h-3 w-3" aria-hidden /> Membership required
             </p>
+            {privateGuidelines ? <PrivateGuidelinesChip lenderName={lender.name} className="mt-1.5" /> : null}
           </div>
           <LockKeyhole className="h-4 w-4 shrink-0 text-amber-400/80" aria-hidden />
         </div>
@@ -71,13 +75,18 @@ function LenderCard({ directoryLender, unlocked }: { directoryLender: DirectoryL
   return (
     <Link
       href={`/lenders/${lender.id}`}
-      className="nexus-lender-card group flex min-h-[112px] items-center gap-3 rounded-xl border border-amber-500/20 bg-[#111113] p-4 shadow-[0_12px_35px_-24px_rgba(245,158,11,0.45)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-400/65 hover:bg-[#151411] hover:shadow-[0_16px_35px_-22px_rgba(245,158,11,0.7)] focus:outline-none focus:ring-2 focus:ring-amber-400/60"
+      className={`nexus-lender-card group flex min-h-[112px] items-center gap-3 rounded-xl border bg-[#111113] p-4 shadow-[0_12px_35px_-24px_rgba(245,158,11,0.45)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#151411] hover:shadow-[0_16px_35px_-22px_rgba(245,158,11,0.7)] focus:outline-none focus:ring-2 focus:ring-amber-400/60 ${
+        privateGuidelines
+          ? "border-amber-400/45 hover:border-amber-300/70"
+          : "border-amber-500/20 hover:border-amber-400/65"
+      }`}
       aria-label={`View ${lender.name} programs and guidelines`}
     >
       <AlphabetBadge name={lender.name} />
       <div className="min-w-0 flex-1">
         <LenderName name={lender.name} />
         <p className="mt-1 text-xs tabular-nums text-slate-500">{programs.length} {programs.length === 1 ? "program" : "programs"}</p>
+        {privateGuidelines ? <PrivateGuidelinesChip lenderName={lender.name} className="mt-1.5" /> : null}
       </div>
       <ArrowRight className="h-4 w-4 shrink-0 text-amber-400/70 transition-transform group-hover:translate-x-0.5" aria-hidden />
     </Link>
