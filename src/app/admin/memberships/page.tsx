@@ -29,7 +29,7 @@ function cents2(amount: number): string {
   return `$${(amount / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export default async function AdminMembershipsPage({ searchParams }: { searchParams: Promise<{ tab?: string; status?: string; format?: string }> }) {
+export default async function AdminMembershipsPage({ searchParams }: { searchParams: Promise<{ tab?: string; status?: string }> }) {
   await requirePlatformAdmin();
   const params = await searchParams;
   const service = createServiceRoleClient();
@@ -101,32 +101,6 @@ export default async function AdminMembershipsPage({ searchParams }: { searchPar
   const repMetrics = repList.map((rid) => perRepMetrics(membershipRows, rid, now));
 
   const filtered = params.status ? membershipRows.filter((m) => m.status === params.status) : membershipRows;
-
-  // CSV export (all tab) respecting the active status filter + attribution.
-  if (params.format === "csv") {
-    const header = ["organization_id", "organization", "status", "plan_tier", "mrr_cents", "attributed_rep", "member_since", "renews_or_ends", "last_activity"];
-    const rows = filtered.map((m) => {
-      const orgId = m.organizationId;
-      return [
-        orgId,
-        `"${(orgNameById.get(orgId) ?? "").replace(/"/g, '""')}"`,
-        m.status,
-        m.planTier,
-        String(m.mrrCents),
-        `"${repName(m.attributionRepUserId).replace(/"/g, '""')}"`,
-        m.convertedAt ?? m.trialStartedAt ?? "",
-        (m as unknown as { currentPeriodEnd?: string }).currentPeriodEnd ?? (m as unknown as { accessEndsAt?: string }).accessEndsAt ?? "",
-        "",
-      ].join(",");
-    });
-    const csv = [header.join(","), ...rows].join("\n");
-    return new Response(csv, {
-      headers: {
-        "Content-Type": "text/csv",
-        "Content-Disposition": `attachment; filename="memberships-${params.status ?? "all"}.csv"`,
-      },
-    });
-  }
 
   function statusClass(s: string) {
     switch (s) {
@@ -231,7 +205,7 @@ export default async function AdminMembershipsPage({ searchParams }: { searchPar
               ))}
             </select>
             <button type="submit" className="rounded bg-amber-500/90 px-2 py-1 font-medium text-black hover:bg-amber-400">Filter</button>
-            <a href={`/admin/memberships?tab=all&format=csv${params.status ? `&status=${params.status}` : ""}`} className="rounded border border-slate-700 px-2 py-1 text-slate-300 hover:text-white">Export CSV</a>
+            <a href={`/admin/memberships/export${params.status ? `?status=${params.status}` : ""}`} className="rounded border border-slate-700 px-2 py-1 text-slate-300 hover:text-white">Export CSV</a>
           </form>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
