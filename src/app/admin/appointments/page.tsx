@@ -16,6 +16,7 @@ const HOSTS: Array<{ id: string; name: string; env: string }> = [
 
 function fmtDateTime(d: Date): string {
   return d.toLocaleString("en-US", {
+    timeZone: "America/Los_Angeles",
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -112,7 +113,9 @@ export default async function AppointmentsPage() {
                           <span className="text-sm font-medium text-white">{fmtDateTime(e.start)}</span>
                         </div>
                         {e.summary ? (
-                          <p className="truncate text-xs text-slate-400">{e.summary}</p>
+                          <p className="truncate text-xs text-slate-400">
+                            {e.summary === "Busy" ? "Booked slot" : e.summary}
+                          </p>
                         ) : null}
                         {attendee ? (
                           <p className="truncate text-xs text-slate-500">{attendee}</p>
@@ -133,8 +136,8 @@ export default async function AppointmentsPage() {
 
       <p className="text-xs text-slate-600">
         Appointments appear on the feed the moment someone books via Google — no refresh needed,
-        just reload this page. If a host&apos;s feed errors, the section shows which link needs
-        attention.
+        just reload this page. Times are shown in Pacific Time. If a host&apos;s feed errors, the
+        section shows which link needs attention.
       </p>
     </div>
   );
