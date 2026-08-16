@@ -8,6 +8,7 @@ const ADMIN_NAV = [
   { href: "/admin/lenders", label: "Lender Tiers" },
   { href: "/admin/specialists", label: "ITIN / FN Specialists" },
   { href: "/admin/trials", label: "Trial Access Management" },
+  { href: "/admin/attribution", label: "Signup Attribution" },
   { href: "/admin/activity", label: "Active Users & Beta Testers" },
   { href: "/admin/documents", label: "Documents" },
   { href: "/admin/monitoring", label: "Guideline Monitoring" },

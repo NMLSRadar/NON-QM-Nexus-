@@ -6,12 +6,13 @@ import { signUp, type AuthActionState } from "../login/actions";
 
 const initialState: AuthActionState = { error: null };
 
-export function SignupForm({ inviteToken }: { inviteToken?: string }) {
+export function SignupForm({ inviteToken, refCode }: { inviteToken?: string; refCode?: string }) {
   const [state, formAction, pending] = useActionState(signUp, initialState);
 
   return (
     <form action={formAction} className="space-y-4">
       {inviteToken ? <input type="hidden" name="inviteToken" value={inviteToken} /> : null}
+      {refCode ? <input type="hidden" name="repRef" value={refCode} /> : null}
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
           Email

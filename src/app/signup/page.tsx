@@ -36,8 +36,10 @@ async function loadInvitePreview(rawToken: string | undefined): Promise<{ organi
   return { organizationName: (org?.name as string | undefined) ?? "a team", role: data.role as string };
 }
 
-export default async function SignupPage({ searchParams }: { searchParams: Promise<{ invite?: string }> }) {
-  const { invite } = await searchParams;
+export default async function SignupPage({ searchParams }: { searchParams: Promise<{ invite?: string; ref?: string }> }) {
+  const params = await searchParams;
+  const { invite } = params;
+  const refCode = params.ref;
   const invitePreview = await loadInvitePreview(invite);
 
   return (
@@ -50,7 +52,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
         </p>
       ) : null}
       <Card>
-        <SignupForm inviteToken={invite} />
+        <SignupForm inviteToken={invite} refCode={refCode} />
       </Card>
       {!invitePreview ? (
         <p className="mt-4 text-center text-xs text-slate-500">

@@ -842,6 +842,8 @@ model UserActivityEvent {
   @@index([userId, occurredAt])
   @@index([occurredAt])
   @@map("user_activity_events")
+}
+
 // Beta Tester Feedback — see supabase/beta-feedback.sql for the authoritative
 // DDL, RLS, and the ensure_beta_survey_for_me() SECURITY DEFINER created here.
 // One row per user (unique user_id = "no duplicate surveys"). trial_started_at
@@ -874,4 +876,63 @@ model BetaTesterSurvey {
 
   @@map("beta_tester_surveys")
 
+}
+
+// ---------------------------------------------------------------------------
+// Signup Attribution (2026-08-16, supabase/signup-attribution.sql,
+// docs/tasks/03-signup-attribution.md). Written ONLY via the Supabase service
+// client / SECURITY DEFINER resolver (resolve_attribution_for_signup); RLS is
+// platform-admin-only, so a member-role session sees zero rows. Task 04
+// (Membership Management) reads these tables for per-rep retention.
+// ---------------------------------------------------------------------------
+model SalesRep {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @unique @map("user_id") @db.Uuid
+  code        String   @unique
+  displayName String   @map("display_name")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("sales_reps")
+}
+
+model OrganizationAttribution {
+  id                 String    @id @default(uuid()) @db.Uuid
+  organizationId     String    @unique @map("organization_id") @db.Uuid
+  attributedToUserId String?   @map("attributed_to_user_id") @db.Uuid
+  method             String // signup_link | invite | admin_manual
+  status             String    @default("confirmed") // confirmed | needs_review | unattributed
+  conflictDetail     String?   @map("conflict_detail")
+  firstCapturedAt    DateTime  @default(now()) @map("first_captured_at")
+  lastModifiedBy     String?   @map("last_modified_by") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@map("organization_attribution")
+}
+
+model AttributionCapture {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  repCode        String?   @map("rep_code")
+  repUserId      String?   @map("rep_user_id") @db.Uuid
+  method         String
+  source         String?
+  resolved       Boolean   @default(false)
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@map("attribution_captures")
+}
+
+model AttributionChange {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  fromUserId     String?  @map("from_user_id") @db.Uuid
+  toUserId       String?  @map("to_user_id") @db.Uuid
+  reason         String
+  changedBy      String   @map("changed_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("attribution_changes")
 }

@@ -54,6 +54,16 @@ export async function signUp(_prevState: AuthActionState, formData: FormData): P
   // it server-side (hash match, unaccepted, unrevoked, unexpired, matching
   // email) before acting on it.
   const inviteToken = formData.get("inviteToken");
+  // Sales-rep attribution code (task 03): rides the same user metadata so
+  // handle_new_user() can attribute the new org to the rep whose link the
+  // visitor signed up through. Passed through verbatim; the trigger resolves
+  // it against sales_reps.code (active reps only) and never trusts this
+  // client-supplied string beyond that.
+  const repRef = formData.get("repRef");
+
+  const userMetaData: Record<string, string> = {};
+  if (typeof inviteToken === "string" && inviteToken) userMetaData.invite_token = inviteToken;
+  if (typeof repRef === "string" && repRef) userMetaData.ref = repRef;
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
@@ -61,7 +71,7 @@ export async function signUp(_prevState: AuthActionState, formData: FormData): P
     password: parsed.data.password,
     options: {
       emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/login`,
-      data: typeof inviteToken === "string" && inviteToken ? { invite_token: inviteToken } : undefined,
+      data: Object.keys(userMetaData).length > 0 ? userMetaData : undefined,
     },
   });
   if (error) {
