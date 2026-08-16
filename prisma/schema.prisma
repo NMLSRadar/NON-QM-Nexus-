@@ -1005,3 +1005,63 @@ model AttributionChange {
 
   @@map("attribution_changes")
 }
+
+// ---------------------------------------------------------------------------
+// Membership Management (2026-08-16, supabase/membership-management.sql,
+// docs/tasks/04-membership-management.md). One per-org lifecycle row + an
+// append-only events trail + admin notes. Written ONLY via the service client
+// / record_membership_transition (SECURITY DEFINER); RLS is platform-admin-
+// only. Named organization_memberships because `memberships` is already the
+// org↔user role table (approved decision).
+// ---------------------------------------------------------------------------
+model OrganizationMembership {
+  id                   String    @id @default(uuid()) @db.Uuid
+  organizationId       String    @unique @map("organization_id") @db.Uuid
+  status               String // trialing | active | past_due | cancelled_pending | cancelled | churned | trial_expired
+  planTier             String    @map("plan_tier")
+  seatCount            Int       @default(1) @map("seat_count")
+  mrrCents             Int       @default(0) @map("mrr_cents")
+  billingInterval      String?   @map("billing_interval")
+  processorCustomerId  String?   @map("processor_customer_id")
+  processorSubId       String?   @map("processor_sub_id")
+  trialStartedAt       DateTime? @map("trial_started_at")
+  trialEndsAt          DateTime? @map("trial_ends_at")
+  convertedAt          DateTime? @map("converted_at")
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  cancelRequestedAt    DateTime? @map("cancel_requested_at")
+  accessEndsAt         DateTime? @map("access_ends_at")
+  churnedAt            DateTime? @map("churned_at")
+  churnType            String?   @map("churn_type")
+  churnReason          String?   @map("churn_reason")
+  churnReasonDetail    String?   @map("churn_reason_detail")
+  reactivatedAt        DateTime? @map("reactivated_at")
+  reactivationCount    Int       @default(0) @map("reactivation_count")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@map("organization_memberships")
+}
+
+model MembershipEvent {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  fromStatus     String?   @map("from_status")
+  toStatus       String    @map("to_status")
+  reason         String?
+  source         String // webhook | admin | system
+  actorUserId    String?   @map("actor_user_id") @db.Uuid
+  mrrDeltaCents  Int       @default(0) @map("mrr_delta_cents")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@map("membership_events")
+}
+
+model MembershipNote {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  authorUserId   String   @map("author_user_id") @db.Uuid
+  body           String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("membership_notes")
+}
