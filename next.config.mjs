@@ -42,6 +42,33 @@ const nextConfig = {
       bodySizeLimit: "25mb",
     },
   },
+  // Cache-busting headers so deploys never leave returning visitors with a
+  // stale HTML shell pointing at build chunks that no longer exist (the cause
+  // of the blank-page / "too many redirects" reports, which the
+  // build-version-guard below already defends against at the app level).
+  //
+  //  * Documents (HTML shells, RSC, auth/login pages, API routes, /public
+  //    assets like sw.js & icons) — `no-cache, no-store`: browsers and the CDN
+  //    always fetch fresh, so a newly deployed build id + fresh chunk names are
+  //    always picked up.
+  //  * /_next/static/* — content-addressed by build (hash in the filename), so
+  //    safe to cache for a year, immutable.
+  async headers() {
+    return [
+      {
+        source: "/((?!_next/static|_next/image|favicon.ico$).*)",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
+      {
+        source: "/_next/static/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+    ];
+  },
 };
 
 // Runtime event capture is initialized independently in src/instrumentation.ts.
