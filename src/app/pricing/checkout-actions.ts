@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { getStripe } from "@/lib/stripe";
+import { resolveStripeCustomerId } from "@/lib/billing/stripeCustomer";
 import { KIND_COMMITMENT, KIND_STANDARD, MEMBERSHIP_KIND_METADATA_KEY } from "@/lib/billing/commitment";
 
 /**
@@ -68,6 +69,12 @@ export async function startCheckout(formData: FormData): Promise<void> {
   const stripe = getStripe();
   const service = createServiceRoleClient();
 
+  // Test-mode checkouts stored TEST-mode customers on users.stripe_customer_id;
+  // with the live key those ids no longer resolve and crash checkout. Resolve
+  // (create/repair) a customer that is valid under the CURRENTLY configured
+  // Stripe key, persisting the new id. (2026-08-17 fix.)
+  const stripeCustomerId = await resolveStripeCustomerId(stripe, service, user.id, user.email);
+
   // Duplicate-subscription guard: a user who already holds a LIVE Stripe
   // subscription (or is mid-period on one) must not be able to check out
   // a second one — double submit, refreshed checkout tab, or a stale
@@ -89,26 +96,8 @@ export async function startCheckout(formData: FormData): Promise<void> {
   // Reuse this user's existing Stripe customer if we already created one
   // (e.g. from a prior checkout attempt), otherwise create it now and
   // persist it — service-role write, scoped to exactly this user's own row.
-  const { data: existingUser, error: userError } = await service
-    .from("users")
-    .select("stripe_customer_id")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (userError) throw new Error(`Failed to load user: ${userError.message}`);
-
-  let stripeCustomerId = existingUser?.stripe_customer_id as string | null | undefined;
-  if (!stripeCustomerId) {
-    const customer = await stripe.customers.create({
-      email: user.email,
-      metadata: { supabase_user_id: user.id },
-    });
-    stripeCustomerId = customer.id;
-    const { error: updateError } = await service
-      .from("users")
-      .update({ stripe_customer_id: stripeCustomerId })
-      .eq("id", user.id);
-    if (updateError) throw new Error(`Failed to save Stripe customer: ${updateError.message}`);
-  }
+  // (The reusable helper above replaces the old inline block that stored
+  // TEST-mode customers; see src/lib/billing/stripeCustomer.ts.)
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://nonqmnexus.com";
   const session = await stripe.checkout.sessions.create({

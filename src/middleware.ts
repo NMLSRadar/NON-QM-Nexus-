@@ -8,6 +8,18 @@ const PROTECTED_PREFIXES = ["/scenarios", "/lenders", "/programs", "/admin", "/a
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  // Canonical host: www.nonqmnexus.com and nonqmnexus.com serve separate
+  // cookie jars (Supabase sets host-scoped cookies). Cross-host navigation
+  // (e.g. Stripe's success_url on the apex host after signing in on www)
+  // silently loses the session -> sign-in loops. Redirect www -> apex once
+  // so every request lands on one cookie domain. (2026-08-17 fix.)
+  const host = request.headers.get("host") ?? "";
+  if (host.toLowerCase() === "www.nonqmnexus.com") {
+    const url = request.nextUrl.clone();
+    url.host = "nonqmnexus.com";
+    return NextResponse.redirect(url, 308);
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

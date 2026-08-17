@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { requireOrgAdmin } from "@/lib/orgAdmin";
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { getStripe } from "@/lib/stripe";
+import { resolveStripeCustomerId } from "@/lib/billing/stripeCustomer";
 
 /**
  * Starts a Stripe Checkout session for an org team subscription
@@ -54,16 +55,13 @@ export async function startTeamCheckout(formData: FormData): Promise<void> {
   if (userError) throw new Error(`Failed to load user: ${userError.message}`);
 
   const stripe = getStripe();
-  let stripeCustomerId = userRow?.stripe_customer_id as string | null | undefined;
-  if (!stripeCustomerId) {
-    const customer = await stripe.customers.create({
-      email: (userRow?.email as string | undefined) ?? undefined,
-      metadata: { supabase_user_id: userId },
-    });
-    stripeCustomerId = customer.id;
-    const { error: updateError } = await service.from("users").update({ stripe_customer_id: stripeCustomerId }).eq("id", userId);
-    if (updateError) throw new Error(`Failed to save Stripe customer: ${updateError.message}`);
-  }
+  // Same test-mode-customer repair as pricing checkout (2026-08-17).
+  const stripeCustomerId = await resolveStripeCustomerId(
+    stripe,
+    service,
+    userId,
+    (userRow?.email as string | undefined) ?? "",
+  );
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://nonqmnexus.com";
   const session = await stripe.checkout.sessions.create({

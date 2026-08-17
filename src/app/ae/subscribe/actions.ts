@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { getStripe } from "@/lib/stripe";
+import { resolveStripeCustomerId } from "@/lib/billing/stripeCustomer";
 import { isAeMonetizationEnabled } from "@/lib/ae/monetization";
 
 /**
@@ -37,13 +38,9 @@ export async function startAePlacementCheckout(): Promise<void> {
   const stripe = getStripe();
   const service = createServiceRoleClient();
 
-  const { data: existingUser } = await service.from("users").select("stripe_customer_id").eq("id", user.id).maybeSingle();
-  let stripeCustomerId = existingUser?.stripe_customer_id as string | null | undefined;
-  if (!stripeCustomerId) {
-    const customer = await stripe.customers.create({ email: user.email, metadata: { supabase_user_id: user.id } });
-    stripeCustomerId = customer.id;
-    await service.from("users").update({ stripe_customer_id: stripeCustomerId }).eq("id", user.id);
-  }
+  // Same test-mode-customer repair as pricing checkout (2026-08-17): a stored
+  // TEST-mode stripe_customer_id must not be reused under the LIVE key.
+  const stripeCustomerId = await resolveStripeCustomerId(stripe, service, user.id, user.email);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://nonqmnexus.com";
   const session = await stripe.checkout.sessions.create({
