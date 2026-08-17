@@ -407,6 +407,34 @@ async function archiveObsoleteVariants(admin, lenderId) {
   }
 }
 
+async function verifyProductionState(admin, lenderId) {
+  const { data: programs, error: programError } = await admin.from("programs")
+    .select("id,name,active")
+    .eq("lender_id", lenderId)
+    .eq("active", true)
+    .is("deleted_at", null);
+  if (programError) throw new Error(`Verify programs: ${programError.message}`);
+  const required = new Set(PROGRAMS.map((item) => item.name));
+  const actual = new Set((programs ?? []).map((item) => item.name));
+  const missing = [...required].filter((name) => !actual.has(name));
+  if (missing.length) throw new Error(`Production verification missing programs: ${missing.join(", ")}`);
+  const requiredRows = (programs ?? []).filter((item) => required.has(item.name));
+  const { data: versions, error: versionError } = await admin.from("guideline_versions")
+    .select("program_id,effective_date,verification_status")
+    .in("program_id", requiredRows.map((item) => item.id));
+  if (versionError) throw new Error(`Verify guideline versions: ${versionError.message}`);
+  const latest = new Map();
+  for (const version of versions ?? []) {
+    const previous = latest.get(version.program_id);
+    if (!previous || version.effective_date > previous.effective_date) latest.set(version.program_id, version);
+  }
+  const statuses = requiredRows.map((item) => latest.get(item.id)?.verification_status);
+  const verified = statuses.filter((status) => status === "human_verified").length;
+  const pending = statuses.filter((status) => status === "imported_pending_review").length;
+  if (verified !== 8 || pending !== 3) throw new Error(`Production verification expected 8 verified / 3 pending; received ${verified} / ${pending}`);
+  return { requiredPrograms: requiredRows.length, verified, pending, activeLenderPrograms: programs?.length ?? 0 };
+}
+
 export async function runIngestion() {
   const env = loadEnv();
   if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || env.NEXT_PUBLIC_SUPABASE_URL === "[SENSITIVE]") {
@@ -417,8 +445,10 @@ export async function runIngestion() {
   const lenderId = await resolveLender(admin, adminId);
   for (const item of PROGRAMS) await upsertProgram(admin, adminId, lenderId, item);
   await archiveObsoleteVariants(admin, lenderId);
+  const verification = await verifyProductionState(admin, lenderId);
   console.log(`[thelender-ingest] complete: ${PROGRAMS.length} independent product records; ${PROGRAMS.filter((p) => p.pendingReview).length} ITIN records held for admin review`);
-  return { skipped: false, programs: PROGRAMS.length };
+  console.log(`[thelender-ingest] verified production: ${verification.requiredPrograms} required programs (${verification.verified} human-verified, ${verification.pending} pending review); ${verification.activeLenderPrograms} total active theLender programs including existing DSCR/foreign-national specialties`);
+  return { skipped: false, programs: PROGRAMS.length, verification };
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
