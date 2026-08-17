@@ -3,7 +3,7 @@
 import { createScenario, type CreateScenarioState } from "../new/actions";
 import { assess, buildScenarioInput } from "@/domain/voice/dialog";
 import type { VoiceExtraction } from "@/domain/voice/slots";
-import { getCurrentOrganizationId, getRepository } from "@/lib/session";
+import { getRepository, tryGetCurrentOrganizationId } from "@/lib/session";
 import type { ProgramCatalog } from "@/domain/analyze";
 
 /**
@@ -33,7 +33,20 @@ export async function createScenarioFromVoice(extraction: VoiceExtraction): Prom
  * before the scenario is saved. No write, no scenario is created here.
  */
 export async function getVoiceCatalog(): Promise<ProgramCatalog> {
+  // Must NOT redirect: this action fires the instant /scenarios/voice
+  // mounts and that page is now the default post-login landing (signIn
+  // always redirects there), so a redirect here for a signed-in
+  // membership-less account — e.g. one whose memberships row was removed,
+  // or a beta account the provisioning trigger never created one for —
+  // turned login into an unbreakable /login ⇄ /scenarios/voice cycle.
+  // Same root-cause class as b2fea1b: non-critical paths must never
+  // redirect. Try-var resolves the org or null (no redirect/throw); the
+  // client already null-handles a failed catalog fetch and simply hides
+  // the live rankings panel — an empty catalog degrades identically.
+  const org = await tryGetCurrentOrganizationId();
+  if (!org) {
+    return { lenders: [], programs: [], rules: [] };
+  }
   const repo = await getRepository();
-  const org = await getCurrentOrganizationId();
   return repo.getCatalog(org);
 }
