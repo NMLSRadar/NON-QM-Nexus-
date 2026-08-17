@@ -61,6 +61,7 @@ const GROUPS: NavGroup[] = [
       { href: "/admin/monitoring", label: "Guideline Monitoring" },
       { href: "/admin/specialists", label: "ITIN / FN Specialists" },
       { href: "/admin/lenders", label: "Lender Tiers" },
+      { href: "/admin/thelender-review", label: "theLender Review" },
     ],
   },
   {
@@ -119,6 +120,7 @@ const ICON_LOOKUP: Record<string, typeof Command> = {
   "/admin/monitoring": FileText,
   "/admin/specialists": ShieldCheck,
   "/admin/lenders": Building2,
+  "/admin/thelender-review": FileText,
   "/admin/activity": BarChart3,
   "/admin/trials": ShieldCheck,
   "/admin/users": Users,

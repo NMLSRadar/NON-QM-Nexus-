@@ -2,7 +2,7 @@ import { RuleOutcome, RuleSeverity } from "../types/enums";
 import type { Program } from "../types/program";
 import type { Scenario } from "../types/scenario";
 import type { CalculationSummary, RuleEvaluationResult } from "../types/results";
-import { deriveMaxLtv, deriveRequiredReservesMonths } from "./baseChecks";
+import { deriveMaxDti, deriveMaxLtv, deriveRequiredReservesMonths } from "./baseChecks";
 import type { BankStatementFileClassification } from "./bankStatementComplexity";
 
 export interface ScoreBreakdownEntry {
@@ -65,10 +65,11 @@ export function computeScore(
   }
 
   // 3. DTI fit (15)
-  if (program.maxDti != null && calc.dti?.value != null) {
-    const buffer = program.maxDti - calc.dti.value;
+  const maxDti = deriveMaxDti(scenario, program, calc.ltv?.value);
+  if (maxDti != null && calc.dti?.value != null) {
+    const buffer = maxDti - calc.dti.value;
     const pts = buffer < 0 ? 0 : Math.min(15, 8 + Math.min(7, buffer / 2));
-    breakdown.push({ factor: "DTI fit", points: round(pts), maxPoints: 15, note: `DTI ${calc.dti.value}% vs max ${program.maxDti}%.` });
+    breakdown.push({ factor: "DTI fit", points: round(pts), maxPoints: 15, note: `DTI ${calc.dti.value}% vs applicable max ${maxDti}%.` });
   } else if (program.minDscr != null && calc.dscr?.value != null) {
     const buffer = calc.dscr.value - program.minDscr;
     const pts = buffer < 0 ? 0 : Math.min(15, 8 + Math.min(7, buffer * 10));

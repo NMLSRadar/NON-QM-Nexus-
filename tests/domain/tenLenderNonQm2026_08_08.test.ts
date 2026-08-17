@@ -11,7 +11,7 @@ describe("ten-lender Non-QM guideline and routing update — 2026-08-08", () => 
     const direct = new Set(PROGRAMS.map((program: { lender: string }) => program.lender));
     const gated = new Set(publicCatalogUpdates.map((item: { lender: string }) => item.lender));
     expect(new Set([...direct, ...gated])).toEqual(new Set([
-      "NewRez", "Hometown Equity Mortgage", "BluePoint Mortgage", "Oaktree Funding Corporation",
+      "NewRez", "theLender", "BluePoint Mortgage", "Oaktree Funding Corporation",
       "Forward Lending", "Redwood Residential Acquisition Corporation", "LendingOne",
       "Velocity Mortgage Capital", "CoreVest Finance", "Maverick Lending Solutions",
     ]));

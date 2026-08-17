@@ -104,6 +104,35 @@ export interface EligibilityLtvMatrixEntry {
   sourceSection?: string;
 }
 
+/** A conditional DTI tier. `maxDti` is available only when every supplied
+ * condition is met; otherwise the program's ordinary `maxDti` controls. */
+export interface ConditionalDtiRule {
+  maxDti: number;
+  minFico?: number;
+  maxLtv?: number;
+  loanPurposes?: LoanPurpose[];
+  occupancies?: Occupancy[];
+  requiresResidualIncomeReview?: boolean;
+  residualIncomeRequirement?: string;
+}
+
+/** Credit-event leverage/loan-size overlay selected by the most recent
+ * bankruptcy, foreclosure, or short-sale seasoning stated in the scenario. */
+export interface CreditEventLtvRule {
+  minSeasoningMonths: number;
+  maxLoanAmount: number;
+  maxLtvPurchase: number;
+  maxLtvRefinance: number | null;
+}
+
+/** Housing-history overlay for the most severe late category reported. */
+export interface HousingHistoryLtvRule {
+  category: MortgageLatesCategory;
+  maxLoanAmount: number;
+  maxLtvPurchase: number;
+  maxLtvRefinance: number | null;
+}
+
 /** Purpose-aware 1-4 unit matrix row. Null is an explicit N/A cell. */
 export interface PurposeLtvMatrixEntry {
   maxLoanAmount: number;
@@ -154,6 +183,7 @@ export interface Program {
   maxLoanAmount: number;
   minFico: number;
   maxDti?: number; // percent; omitted for pure DSCR / no-ratio programs
+  conditionalDtiRules?: ConditionalDtiRule[];
   minDscr?: number;
   baseMaxLtv: number; // percent, before matrix/rule refinement
   minReservesMonths: number;
@@ -181,6 +211,8 @@ export interface Program {
   /** Preferred full-fidelity matrix. When present it is authoritative over
    * ltvMatrix/baseMaxLtv for the scenario being evaluated. */
   eligibilityLtvMatrix?: EligibilityLtvMatrixEntry[];
+  creditEventLtvRules?: CreditEventLtvRule[];
+  housingHistoryLtvRules?: HousingHistoryLtvRule[];
   /** Closed-end seconds and HELOCs are evaluated against combined liens. */
   ltvMetric?: "ltv" | "cltv";
   /** Cash-out dollar caps by leverage band. Select the smallest maxLtv that
@@ -214,6 +246,9 @@ export interface Program {
    * 0, which means the guideline explicitly requires a clean 12-month
    * housing history. */
   maxMortgageLates30x12?: number;
+  noHousingHistoryReserveMonths?: number;
+  noHousingHistoryMinBorrowerContributionPercent?: number;
+  noHousingHistoryNotes?: string;
   /** Per-citizenship maximum LTV override — real guidelines frequently cap
    * a specific citizenship classification below the program's general
    * baseMaxLtv/ltvMatrix (e.g. "Non-Permanent Resident Aliens: Maximum
@@ -433,6 +468,7 @@ export interface Program {
    * borrower tax-return requirement. A preparer attestation, when required,
    * confirms tax filing only. */
   pnlPeriodMonths?: number;
+  pnlEligiblePeriods?: number[];
   pnlTaxReturnsRequired?: boolean;
   pnlPreparerAttestationPurpose?: "confirms_tax_filing_only";
   pnlSupportingBankStatementsMonths?: number;
@@ -544,6 +580,19 @@ export interface Program {
   // Structured discoverability and specialty-program facts. These remain
   // guideline data only when populated from a cited, reviewed source.
   searchTags?: string[];
+  category?: string;
+  subcategory?: string;
+  displayIncomeDocumentation?: string;
+  majorRestrictions?: string[];
+  sourceRuleIndex?: Array<{
+    field: string;
+    sourceUrl: string;
+    documentTitle: string;
+    effectiveDate: string;
+    page: number | string;
+    section: string;
+    status?: "verified" | "needs_review";
+  }>;
   documentationRequirements?: string[];
   sourceDocuments?: string[];
   assetQualifierMethods?: string[];

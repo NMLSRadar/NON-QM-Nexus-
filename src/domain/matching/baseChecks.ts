@@ -38,7 +38,64 @@ export function deriveRequiredReservesMonths(
     .filter((r) => r.firstTimeHomebuyer == null || scenario.firstTimeHomebuyer === r.firstTimeHomebuyer)
     .filter((r) => r.firstTimeInvestor == null || scenario.firstTimeInvestor === r.firstTimeInvestor)
     .map((r) => r.months);
+  if (scenario.creditEvents?.housingHistoryMonths === 0 && program.noHousingHistoryReserveMonths != null) {
+    matching.push(program.noHousingHistoryReserveMonths);
+  }
   return Math.max(program.minReservesMonths, ...matching);
+}
+
+function mostRecentCreditEventMonths(scenario: Scenario): number | undefined {
+  const events = scenario.creditEvents;
+  if (!events) return undefined;
+  const months = [events.bankruptcyMonthsSinceDischarge, events.foreclosureMonthsSince, events.shortSaleMonthsSince]
+    .filter((value): value is number => value != null);
+  return months.length ? Math.min(...months) : undefined;
+}
+
+function creditEventOverlay(scenario: Scenario, program: Program) {
+  const seasoning = mostRecentCreditEventMonths(scenario);
+  if (seasoning == null || !program.creditEventLtvRules?.length) return undefined;
+  return [...program.creditEventLtvRules]
+    .filter((rule) => seasoning >= rule.minSeasoningMonths)
+    .sort((a, b) => b.minSeasoningMonths - a.minSeasoningMonths)[0];
+}
+
+function housingHistoryOverlay(scenario: Scenario, program: Program) {
+  const category = scenario.creditEvents?.mortgageLatesCategory;
+  if (!category || category === "unknown" || !program.housingHistoryLtvRules?.length) return undefined;
+  return program.housingHistoryLtvRules.find((rule) => rule.category === category);
+}
+
+function applyCreditAndHousingOverlays(scenario: Scenario, program: Program, currentCap: number): number {
+  let cap = currentCap;
+  const credit = creditEventOverlay(scenario, program);
+  if (credit) {
+    const refinance = scenario.loanPurpose === "rate_term_refinance" || scenario.loanPurpose === "cash_out_refinance";
+    const creditCap = refinance ? credit.maxLtvRefinance : credit.maxLtvPurchase;
+    cap = creditCap == null ? 0 : Math.min(cap, creditCap);
+  } else if (mostRecentCreditEventMonths(scenario) != null && program.creditEventLtvRules?.length) {
+    cap = 0;
+  }
+  const housing = housingHistoryOverlay(scenario, program);
+  if (housing) {
+    const refinance = scenario.loanPurpose === "rate_term_refinance" || scenario.loanPurpose === "cash_out_refinance";
+    const housingCap = refinance ? housing.maxLtvRefinance : housing.maxLtvPurchase;
+    cap = housingCap == null ? 0 : Math.min(cap, housingCap);
+  }
+  return Math.max(0, cap);
+}
+
+/** Resolve the exact DTI ceiling applicable to the scenario. */
+export function deriveMaxDti(scenario: Scenario, program: Program, leverage?: number | null): number | undefined {
+  let maximum = program.maxDti;
+  for (const rule of program.conditionalDtiRules ?? []) {
+    if (rule.minFico != null && (scenario.fico == null || scenario.fico < rule.minFico)) continue;
+    if (rule.maxLtv != null && (leverage == null || leverage > rule.maxLtv)) continue;
+    if (rule.loanPurposes?.length && (!scenario.loanPurpose || !rule.loanPurposes.includes(scenario.loanPurpose))) continue;
+    if (rule.occupancies?.length && (!scenario.occupancy || !rule.occupancies.includes(scenario.occupancy))) continue;
+    maximum = Math.max(maximum ?? 0, rule.maxDti);
+  }
+  return maximum;
 }
 
 /**
@@ -144,7 +201,12 @@ export function deriveMaxLtv(scenario: Scenario, program: Program, calculatedDsc
       if (supportPathCap != null) exactCap = exactCap == null ? supportPathCap : Math.min(exactCap, supportPathCap);
     }
     if (exactCap == null) return 0;
-    return Math.min(85, exactCap);
+    if (program.eligibilityLtvMatrix?.length) {
+      const tier = findEligibilityLtvTier(scenario, program, calculatedDscr);
+      if (!tier) return 0;
+      exactCap = Math.min(exactCap, tier.maxLtv);
+    }
+    return applyCreditAndHousingOverlays(scenario, program, Math.min(85, exactCap));
   }
 
   // 5-8 Unit Residential overlay — added 2026-08-01. Real 5-8 unit
@@ -193,7 +255,7 @@ export function deriveMaxLtv(scenario: Scenario, program: Program, calculatedDsc
       if (program.strIncomeLtvAdjustment != null) matrixCap -= program.strIncomeLtvAdjustment;
       if (program.strIncomeMaxLtv != null) matrixCap = Math.min(matrixCap, program.strIncomeMaxLtv);
     }
-    return Math.max(0, matrixCap);
+    return applyCreditAndHousingOverlays(scenario, program, matrixCap);
   }
   if (program.purposeLtvMatrix?.length) {
     const tier = findPurposeLtvTier(scenario, program, calculatedDscr ?? undefined);
@@ -340,7 +402,13 @@ export function baseProgramChecks(
       out.push(result(`${p}:pnl-fthb`, "P&L Only first-time homebuyer", "borrower", RuleOutcome.Fail, RuleSeverity.Hard,
         "This P&L Only product does not allow first-time homebuyers."));
     }
-    if (program.pnlPeriodMonths != null && scenario.pnl?.periodMonths != null) {
+    if (program.pnlEligiblePeriods?.length && scenario.pnl?.periodMonths != null) {
+      const periodOk = program.pnlEligiblePeriods.includes(scenario.pnl.periodMonths);
+      out.push(result(`${p}:pnl-period-options`, "P&L statement period", "documentation", periodOk ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+        periodOk
+          ? `${scenario.pnl.periodMonths}-month P&L is an expressly supported period.`
+          : `This program accepts only ${program.pnlEligiblePeriods.join(" or ")}-month P&L statements.`));
+    } else if (program.pnlPeriodMonths != null && scenario.pnl?.periodMonths != null) {
       const periodOk = scenario.pnl.periodMonths >= program.pnlPeriodMonths;
       out.push(result(`${p}:pnl-period`, "P&L statement period", "documentation", periodOk ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
         periodOk
@@ -709,6 +777,28 @@ export function baseProgramChecks(
     }
   }
 
+  const creditOverlay = creditEventOverlay(scenario, program);
+  const housingOverlay = housingHistoryOverlay(scenario, program);
+  if (mostRecentCreditEventMonths(scenario) != null && program.creditEventLtvRules?.length) {
+    if (!creditOverlay) {
+      out.push(result(`${p}:credit-event-seasoning`, "Recent credit-event seasoning", "credit_event", RuleOutcome.Fail, RuleSeverity.Hard,
+        "The most recent bankruptcy, foreclosure, or short sale is inside the lender's minimum published seasoning."));
+    } else if (scenario.requestedLoanAmount != null) {
+      const ok = scenario.requestedLoanAmount <= creditOverlay.maxLoanAmount;
+      out.push(result(`${p}:credit-event-loan-cap`, "Credit-event maximum loan amount", "credit_event", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+        ok ? "Loan amount is within the applicable credit-event tier." : `Recent credit-event tier caps the loan amount at $${creditOverlay.maxLoanAmount.toLocaleString()}.`));
+    }
+  }
+  if (housingOverlay && scenario.requestedLoanAmount != null) {
+    const ok = scenario.requestedLoanAmount <= housingOverlay.maxLoanAmount;
+    out.push(result(`${p}:housing-history-loan-cap`, "Housing-history maximum loan amount", "housing_history", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+      ok ? "Loan amount is within the applicable housing-history tier." : `Housing-history tier caps the loan amount at $${housingOverlay.maxLoanAmount.toLocaleString()}.`));
+  }
+  if (scenario.creditEvents?.housingHistoryMonths === 0 && program.noHousingHistoryNotes) {
+    out.push(result(`${p}:no-housing-history`, "No housing history", "housing_history", RuleOutcome.ManualReview, RuleSeverity.Soft,
+      program.noHousingHistoryNotes));
+  }
+
   // FICO. Zero on a matrix-confirmation program is "not supplied," not
   // "no minimum FICO required."
   if (scenario.fico != null) {
@@ -780,11 +870,24 @@ export function baseProgramChecks(
     }
   }
 
-  // DTI vs limit (only when program uses ratios)
-  if (program.maxDti != null && calc.dti?.value != null) {
-    const ok = calc.dti.value <= program.maxDti;
-    out.push(result(`${p}:dti`, "Maximum DTI", "dti", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
-      ok ? `DTI ${calc.dti.value}% ≤ maximum ${program.maxDti}%.` : `DTI ${calc.dti.value}% exceeds maximum ${program.maxDti}%.`));
+  // DTI vs scenario-specific limit. Elevated tiers never inherit from a
+  // marketing headline: every FICO/LTV/purpose condition must be satisfied.
+  const scenarioMaxDti = deriveMaxDti(scenario, program, calc.ltv?.value);
+  if (scenarioMaxDti != null && calc.dti?.value != null) {
+    const ok = calc.dti.value <= scenarioMaxDti;
+    const elevatedRule = (program.conditionalDtiRules ?? []).find((rule) =>
+      rule.maxDti === scenarioMaxDti &&
+      (rule.minFico == null || (scenario.fico != null && scenario.fico >= rule.minFico)) &&
+      (rule.maxLtv == null || (calc.ltv?.value != null && calc.ltv.value <= rule.maxLtv)) &&
+      (!rule.loanPurposes?.length || (scenario.loanPurpose != null && rule.loanPurposes.includes(scenario.loanPurpose))) &&
+      (!rule.occupancies?.length || (scenario.occupancy != null && rule.occupancies.includes(scenario.occupancy))));
+    if (ok && elevatedRule?.requiresResidualIncomeReview && calc.dti.value > (program.maxDti ?? 0)) {
+      out.push(result(`${p}:dti`, "Maximum DTI", "dti", RuleOutcome.ManualReview, RuleSeverity.Soft,
+        `DTI ${calc.dti.value}% fits the conditional ${scenarioMaxDti}% tier, subject to ${elevatedRule.residualIncomeRequirement ?? "the lender's residual-income requirement"}.`));
+    } else {
+      out.push(result(`${p}:dti`, "Maximum DTI", "dti", ok ? RuleOutcome.Pass : RuleOutcome.Fail, RuleSeverity.Hard,
+        ok ? `DTI ${calc.dti.value}% ≤ applicable maximum ${scenarioMaxDti}%.` : `DTI ${calc.dti.value}% exceeds the applicable maximum ${scenarioMaxDti}%.`));
+    }
   }
 
   // DSCR vs minimum

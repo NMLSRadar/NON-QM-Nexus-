@@ -4,7 +4,7 @@ import type { Scenario } from "../types/scenario";
 import type { CalculationSummary, ProgramEvaluation, RuleEvaluationResult } from "../types/results";
 import { selectActiveRules } from "../rules/activeRules";
 import { evaluateRules } from "../rules/evaluate";
-import { baseProgramChecks, deriveMaxLtv, deriveRequiredReservesMonths } from "./baseChecks";
+import { baseProgramChecks, deriveMaxDti, deriveMaxLtv, deriveRequiredReservesMonths } from "./baseChecks";
 import { computeScore } from "./score";
 import type { BankStatementFileClassification } from "./bankStatementComplexity";
 
@@ -73,7 +73,9 @@ export function evaluateProgram(
     maxLtv: deriveMaxLtv(scenario, program, calc.dscr?.value ?? undefined),
     maxLoanAmount: scenario.incomeDocType === "pnl_only" ? (program.pnlMaxLoanAmount ?? program.maxLoanAmount) : program.maxLoanAmount,
     minFico: scenario.incomeDocType === "pnl_only" ? (program.pnlMinFico ?? program.minFico) : program.minFico,
-    maxDti: scenario.incomeDocType === "pnl_only" ? (program.pnlMaxDti ?? program.maxDti) : program.maxDti,
+    maxDti: scenario.incomeDocType === "pnl_only"
+      ? (program.pnlMaxDti ?? deriveMaxDti(scenario, program, calc.ltv?.value))
+      : deriveMaxDti(scenario, program, calc.ltv?.value),
     estimatedQualifyingIncome: calc.qualifyingMonthlyIncome?.value ?? undefined,
     estimatedReservesRequiredMonths: deriveRequiredReservesMonths(scenario, program, calc.dscr?.value, calc.ltv?.value),
     documentationType: scenario.incomeDocType === "pnl_only" ? "P&L Only" : program.incomeDocTypes.join(", "),
