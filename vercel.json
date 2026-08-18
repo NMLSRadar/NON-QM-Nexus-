@@ -24,10 +24,6 @@
     {
       "path": "/api/cron/billing-dunning",
       "schedule": "0 15 * * *"
-    },
-    {
-      "path": "/api/cron/send-bobby-questionnaire",
-      "schedule": "0 0 1 1 *"
     }
   ]
 }
