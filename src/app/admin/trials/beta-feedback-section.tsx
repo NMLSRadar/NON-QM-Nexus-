@@ -60,7 +60,7 @@ export async function BetaFeedbackSection() {
   return (
     <div className="space-y-6">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-900">Beta Tester Feedback</h2>
+        <h2 className="text-lg font-semibold text-white">Beta Tester Feedback</h2>
         <p className="text-xs text-slate-500">
           Day-3 questionnaire + Day-5 follow-up, automated from each tester&apos;s trial start date.
         </p>
@@ -120,7 +120,7 @@ export async function BetaFeedbackSection() {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-1 text-xs text-slate-600">No improvement feedback submitted yet.</p>
+                <p className="mt-1 text-xs text-slate-300">No improvement feedback submitted yet.</p>
               )}
             </div>
           </div>
@@ -132,10 +132,10 @@ export async function BetaFeedbackSection() {
           </div>
 
           {/* Per-tester table */}
-          <div className="overflow-x-auto bg-white rounded-lg border border-slate-200">
+          <div className="overflow-x-auto rounded-2xl border border-amber-500/25 bg-[#0d0d0f] shadow-[0_16px_50px_rgba(0,0,0,0.35)]">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-500 uppercase tracking-wide border-b border-slate-200">
+                <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wide text-slate-400">
                   <th className="px-3 py-2">Tester</th>
                   <th className="px-3 py-2">Trial start</th>
                   <th className="px-3 py-2">Trial day</th>
@@ -155,49 +155,49 @@ export async function BetaFeedbackSection() {
                   <th className="px-3 py-2">Responses</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-800">
                 {summaries.map((s) => {
                   const trialDay = Math.min(Math.floor((now - new Date(s.trial_started_at).getTime()) / DAY_MS) + 1, 999);
                   const written = (s as SurveySummaryRow & { written_feedback?: string[] }).written_feedback ?? [];
                   return (
                     <tr key={s.id} className="align-top">
                       <td className="px-3 py-2.5">
-                        <p className="font-medium text-slate-900">
+                        <p className="font-medium text-white">
                           {s.first_name || s.last_name ? `${s.first_name ?? ""} ${s.last_name ?? ""}`.trim() : "—"}
                         </p>
                         <p className="text-xs text-slate-500">{s.email || "—"}</p>
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-slate-600 whitespace-nowrap">
+                      <td className="px-3 py-2.5 text-xs text-slate-300 whitespace-nowrap">
                         {new Date(s.trial_started_at).toLocaleDateString()}
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-slate-600">{trialDay > 0 ? `Day ${trialDay}` : "—"}</td>
+                      <td className="px-3 py-2.5 text-xs text-slate-300">{trialDay > 0 ? `Day ${trialDay}` : "—"}</td>
                       <td className="px-3 py-2.5">
                         <span className={`inline-block rounded-full px-2 py-0.5 text-xs ${statusBadge[s.status as SurveyStatus] ?? statusBadge.NOT_SENT}`}>
                           {SURVEY_STATUS_LABELS[s.status as SurveyStatus] ?? s.status}
                         </span>
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-slate-600">{s.completion_percentage}%</td>
-                      <td className="px-3 py-2.5 text-xs text-slate-600 whitespace-nowrap">
+                      <td className="px-3 py-2.5 text-xs text-slate-300">{s.completion_percentage}%</td>
+                      <td className="px-3 py-2.5 text-xs text-slate-300 whitespace-nowrap">
                         {s.day3_email_sent_at ? (
                           new Date(s.day3_email_sent_at).toLocaleDateString()
                         ) : (
                           <SendSurveyNowButton surveyId={s.id} alreadySent={false} />
                         )}
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-slate-600">
+                      <td className="px-3 py-2.5 text-xs text-slate-300">
                         {s.day5_follow_up_sent_at ? new Date(s.day5_follow_up_sent_at).toLocaleDateString() : s.status === "COMPLETED" ? "Completed — n/a" : "Not sent"}
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-slate-700">
+                      <td className="px-3 py-2.5 text-xs text-slate-200">
                         {s.overall_rating !== null && s.overall_rating !== undefined ? `${s.overall_rating} / 5` : "—"}
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-slate-700">{s.voice_scenario_rating ?? "—"}</td>
-                      <td className="px-3 py-2.5 text-xs text-slate-700">{s.voice_accuracy_rating ?? "—"}</td>
-                      <td className="px-3 py-2.5 text-xs text-slate-700">{s.ai_assistant_rating ?? "—"}</td>
-                      <td className="px-3 py-2.5 text-xs text-slate-700">{s.ai_accuracy_rating ?? "—"}</td>
-                      <td className="px-3 py-2.5 text-xs text-slate-700">{s.likelihood_to_recommend ?? "—"}</td>
-                      <td className="px-3 py-2.5 text-xs text-slate-700">{s.would_become_paid_member ?? "—"}</td>
-                      <td className="px-3 py-2.5 text-xs text-slate-700">{s.estimated_time_saved ?? "—"}</td>
-                      <td className="px-3 py-2.5 text-xs text-slate-700 max-w-[180px]">
+                      <td className="px-3 py-2.5 text-xs text-slate-200">{s.voice_scenario_rating ?? "—"}</td>
+                      <td className="px-3 py-2.5 text-xs text-slate-200">{s.voice_accuracy_rating ?? "—"}</td>
+                      <td className="px-3 py-2.5 text-xs text-slate-200">{s.ai_assistant_rating ?? "—"}</td>
+                      <td className="px-3 py-2.5 text-xs text-slate-200">{s.ai_accuracy_rating ?? "—"}</td>
+                      <td className="px-3 py-2.5 text-xs text-slate-200">{s.likelihood_to_recommend ?? "—"}</td>
+                      <td className="px-3 py-2.5 text-xs text-slate-200">{s.would_become_paid_member ?? "—"}</td>
+                      <td className="px-3 py-2.5 text-xs text-slate-200">{s.estimated_time_saved ?? "—"}</td>
+                      <td className="px-3 py-2.5 text-xs text-slate-200 max-w-[180px]">
                         {written.length ? (
                           <span className="truncate block" title={written.join(" • ")}>
                             {written[0]}

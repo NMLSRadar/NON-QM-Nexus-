@@ -70,6 +70,7 @@ const GROUPS: NavGroup[] = [
     icon: Users,
     items: [
       { href: "/admin/activity", label: "Active Users & Beta Testers" },
+      { href: "/admin/beta-feedback", label: "Beta Tester Feedback" },
       { href: "/admin/trials", label: "Trial Access Management" },
       { href: "/admin/users", label: "Users" },
     ],
@@ -122,6 +123,7 @@ const ICON_LOOKUP: Record<string, typeof Command> = {
   "/admin/lenders": Building2,
   "/admin/thelender-review": FileText,
   "/admin/activity": BarChart3,
+  "/admin/beta-feedback": ShieldCheck,
   "/admin/trials": ShieldCheck,
   "/admin/users": Users,
   "/admin/attribution": Tags,
