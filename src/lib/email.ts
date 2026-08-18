@@ -26,6 +26,9 @@ export async function sendTransactionalEmail(params: {
   subject: string;
   html: string;
   headers?: Record<string, string>;
+  /** Optional provider-level idempotency key. Reusing the same key prevents
+   * duplicate sends when an automated trigger is retried. */
+  idempotencyKey?: string;
 }): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -47,6 +50,7 @@ export async function sendTransactionalEmail(params: {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
+        ...(params.idempotencyKey ? { "Idempotency-Key": params.idempotencyKey } : {}),
       },
       body: JSON.stringify({
         from: FROM_ADDRESS,
