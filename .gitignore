@@ -39,6 +39,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# scratch / working files — downloaded lender matrices and reference materials
+/work/
+*.live-key.txt
+.live-key.txt
+
 # local working outputs (backups, generated files) — never commit
 /output/
 
