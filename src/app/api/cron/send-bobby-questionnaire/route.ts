@@ -21,15 +21,31 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   const supabase = createServiceRoleClient();
-  const { data: user, error: userError } = await supabase
+  const directLookup = await supabase
     .from("users")
     .select("id")
     .ilike("email", RECIPIENT)
     .maybeSingle();
-  if (userError || !user) {
-    const error = userError?.message ?? "Bobby's NON-QM Nexus user account was not found";
-    console.error("bobby questionnaire failed", { stage: "user_lookup", error });
-    return Response.json({ ok: false, error }, { status: 404 });
+  if (directLookup.error) {
+    console.error("bobby questionnaire failed", { stage: "user_lookup", error: directLookup.error.message });
+    return Response.json({ ok: false, error: directLookup.error.message }, { status: 500 });
+  }
+
+  let user = directLookup.data;
+  if (!user) {
+    const ownerLookup = await supabase
+      .from("users")
+      .select("id")
+      .eq("platform_admin", true)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (ownerLookup.error || !ownerLookup.data) {
+      const error = ownerLookup.error?.message ?? "The NON-QM Nexus platform-owner account was not found";
+      console.error("bobby questionnaire failed", { stage: "owner_lookup", error });
+      return Response.json({ ok: false, error }, { status: 404 });
+    }
+    user = ownerLookup.data;
   }
 
   const { data: existing, error: existingError } = await supabase
