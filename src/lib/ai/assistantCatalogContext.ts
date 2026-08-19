@@ -3,6 +3,92 @@ import type { ProgramCatalog } from "@/domain/analyze";
 /** Hard ceiling for catalog data sent with a chatbot request. */
 export const MAX_ASSISTANT_GUIDELINE_CONTEXT_CHARS = 140_000;
 
+type ActiveProgram = ProgramCatalog["programs"][number];
+
+function uniqueLenderNames(
+  programs: ActiveProgram[],
+  lenderById: Map<string, ProgramCatalog["lenders"][number]>,
+): string[] {
+  return [...new Set(programs.map((program) => lenderById.get(program.lenderId)?.name).filter((name): name is string => Boolean(name)))].sort();
+}
+
+function availabilityLabel(matchCount: number, activeLenderCount: number): "common" | "readily_available" | "lender_specific" | "niche" | "not_verified" {
+  if (matchCount === 0) return "not_verified";
+  if (matchCount <= 2) return "niche";
+  const share = activeLenderCount > 0 ? matchCount / activeLenderCount : 0;
+  if (share >= 0.5) return "common";
+  if (matchCount >= 5 || share >= 0.25) return "readily_available";
+  return "lender_specific";
+}
+
+/**
+ * A compact, deterministic market-wide rollup. This keeps the model from
+ * treating the first/most-conservative row as the whole Non-QM market and
+ * gives it an honest basis for words such as "common", "niche", and
+ * "lender-specific". Counts include verified, active, non-sample records only.
+ */
+export function buildMarketAvailabilityContext(catalog: ProgramCatalog): string {
+  const activeLenders = catalog.lenders.filter((lender) => lender.active && !lender.isSampleData);
+  const activeLenderIds = new Set(activeLenders.map((lender) => lender.id));
+  const lenderById = new Map(activeLenders.map((lender) => [lender.id, lender]));
+  const programs = catalog.programs.filter(
+    (program) => program.active && !program.isSampleData && activeLenderIds.has(program.lenderId),
+  );
+  const dscr = programs.filter((program) => program.incomeDocTypes.includes("dscr"));
+  const bankStatement = programs.filter((program) => program.incomeDocTypes.includes("bank_statement"));
+  const noRatio = dscr.filter((program) => program.minDscr === 0);
+  const dscrPurchase = dscr.filter((program) => program.loanPurposes.includes("purchase"));
+  const strIncome = dscr.filter((program) => program.strIncomeEligible === true);
+  const rural = programs.filter((program) => program.propertyTypes.includes("rural"));
+  const llc = programs.filter((program) => program.vestingEligible.includes("llc"));
+  const trust = programs.filter((program) => program.vestingEligible.includes("trust"));
+  const bankStatementFthb90 = bankStatement.filter(
+    (program) =>
+      program.firstTimeHomebuyerAllowed === true &&
+      program.loanPurposes.includes("purchase") &&
+      program.occupancies.includes("primary") &&
+      program.baseMaxLtv >= 90,
+  );
+
+  const feature = (matchingPrograms: ActiveProgram[]) => {
+    const lenders = uniqueLenderNames(matchingPrograms, lenderById);
+    return {
+      verifiedLenderCount: lenders.length,
+      availability: availabilityLabel(lenders.length, activeLenders.length),
+      lenders,
+    };
+  };
+  const numeric = (values: Array<number | null | undefined>, mode: "min" | "max") => {
+    const verified = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+    return verified.length === 0 ? null : mode === "min" ? Math.min(...verified) : Math.max(...verified);
+  };
+
+  return JSON.stringify({
+    scope: "verified_active_non_sample_catalog",
+    activeLenderCount: activeLenders.length,
+    activeProgramCount: programs.length,
+    dscr: {
+      ...feature(dscr),
+      lowestVerifiedDscr: numeric(dscr.map((program) => program.minDscr), "min"),
+      highestVerifiedPurchaseLtv: numeric(dscrPurchase.map((program) => program.baseMaxLtv), "max"),
+      noRatio: feature(noRatio),
+      strIncome: feature(strIncome),
+    },
+    bankStatement: {
+      ...feature(bankStatement),
+      lowestVerifiedFico: numeric(bankStatement.map((program) => program.minFico), "min"),
+      highestVerifiedPurchaseLtv: numeric(
+        bankStatement.filter((program) => program.loanPurposes.includes("purchase")).map((program) => program.baseMaxLtv),
+        "max",
+      ),
+      firstTimeHomebuyerAt90Ltv: feature(bankStatementFthb90),
+    },
+    ruralProperty: feature(rural),
+    llcVesting: feature(llc),
+    trustVesting: feature(trust),
+  });
+}
+
 /**
  * Selects the product family the user asked about and serializes only the
  * fields needed to answer that question. The full catalog includes hundreds
@@ -124,6 +210,8 @@ export function buildRelevantGuidelineContext(catalog: ProgramCatalog, query: st
 
     if (wantsDscr || wantsItin || wantsForeignNational) {
       Object.assign(fields, {
+        strIncomeEligible: program.strIncomeEligible,
+        strIncomeNotes: program.strIncomeNotes,
         itinDscrEligible: program.itinDscrEligible,
         itinNoRatioEligible: program.itinNoRatioEligible,
         foreignNationalDscrEligible: program.foreignNationalDscrEligible,

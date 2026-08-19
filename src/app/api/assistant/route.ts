@@ -8,7 +8,11 @@ import {
   buildPendingReviewContext,
   extractAssistantVitals,
 } from "@/lib/ai/assistantContext";
-import { buildCatalogDiscoveryFallback, buildRelevantGuidelineContext } from "@/lib/ai/assistantCatalogContext";
+import {
+  buildCatalogDiscoveryFallback,
+  buildMarketAvailabilityContext,
+  buildRelevantGuidelineContext,
+} from "@/lib/ai/assistantCatalogContext";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +86,7 @@ export async function POST(request: Request) {
   const catalog = await repo.getCatalog(org); // same tier-gated catalog the rest of the app uses
   const latestUserMessage = [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
   const context = buildRelevantGuidelineContext(catalog, latestUserMessage);
+  const marketContext = buildMarketAvailabilityContext(catalog);
   const pendingReview = await repo.listPendingReviewLenderPrograms(org);
   const pendingContext = buildPendingReviewContext(pendingReview);
   // AE-intelligence layer: qualitative routing (exceptions, deposit
@@ -93,7 +98,7 @@ export async function POST(request: Request) {
   const aiMessages: AiMessage[] = [
     {
       role: "system",
-      content: `${ASSISTANT_SYSTEM_PROMPT}\n\n${asUntrustedData("lender_guideline_catalog", context)}\n\n${asUntrustedData("pending_review_lender_programs", pendingContext)}\n\n${asUntrustedData("lender_intelligence", intelligenceContext)}`,
+      content: `${ASSISTANT_SYSTEM_PROMPT}\n\n${asUntrustedData("market_availability_snapshot", marketContext)}\n\n${asUntrustedData("lender_guideline_catalog", context)}\n\n${asUntrustedData("pending_review_lender_programs", pendingContext)}\n\n${asUntrustedData("lender_intelligence", intelligenceContext)}`,
     },
     ...messages,
   ];
