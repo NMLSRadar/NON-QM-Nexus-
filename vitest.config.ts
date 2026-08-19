@@ -13,6 +13,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
+    globalSetup: ["./tests/integration/generatedTestUserCleanup.ts"],
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx", "src/**/*.test.ts"],
     // Default reporter for normal human-readable output, plus a guard that
     // only activates when REQUIRE_INTEGRATION=1 (see
