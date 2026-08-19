@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
  * commitment billing (2026-08-15): this webhook is also the single place
  * that hands a fresh commitment Checkout subscription to its Subscription
  * Schedule — the Stripe-native mechanism that bills the configured commitment phase, then the configured monthly phase
- * from cycle 4 (see src/lib/billing/commitment.ts) — and the single place
+ * from cycle 5 (see src/lib/billing/commitment.ts) — and the single place
  * that mirrors schedule state (commitment dates, current price,
  * membership kind) into user_subscriptions. Every write is an idempotent,
  * whole-image sync from the authoritative Stripe object, so webhook
