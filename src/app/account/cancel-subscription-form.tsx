@@ -11,10 +11,10 @@ export function CancelSubscriptionForm({ isStripe = false }: { isStripe?: boolea
 
   if (state.success) {
     return (
-      <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-3">
-        {isStripe
-          ? "Your subscription is set to cancel at the end of the current billing period — you keep access until then."
-          : "Your subscription has been canceled. You've lost lender-comparison access immediately — contact us if you'd like to reactivate."}
+      <p role="status" className="rounded border border-amber-400/40 bg-black/70 p-3 text-sm text-amber-100">
+        {state.message ?? (isStripe
+          ? "Your subscription is set to cancel at the applicable billing boundary. You keep access through that date."
+          : "Your subscription has been canceled. Contact support if you would like to reactivate.")}
       </p>
     );
   }

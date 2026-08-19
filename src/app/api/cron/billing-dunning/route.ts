@@ -1,6 +1,7 @@
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { sendTransactionalEmail } from "@/lib/email";
 import { paymentDeclinedEmail } from "@/lib/emailTemplates";
+import { PLANS } from "@/config/pricing";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -88,7 +89,7 @@ export async function GET(request: Request) {
     }
 
     const planName = ((planRow as { name?: string } | null)?.name) ?? "Membership";
-    const amountDueCents = ((planRow as { monthly_price_cents?: number | null } | null)?.monthly_price_cents) ?? 15000;
+    const amountDueCents = ((planRow as { monthly_price_cents?: number | null } | null)?.monthly_price_cents) ?? PLANS.monthly.amountCents;
     const attemptNumber = Math.max(1, (row.decline_count as number | null) ?? 1);
     const displayName = ((userRow as { profile?: { display_name?: string | null } | { display_name?: string | null }[] } | null)?.profile as
       | { display_name?: string | null }

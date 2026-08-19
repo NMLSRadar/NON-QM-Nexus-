@@ -2,6 +2,7 @@ import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { getStripe } from "@/lib/stripe";
 import type Stripe from "stripe";
 import { createCommitmentScheduleFromSubscription, MEMBERSHIP_KIND_METADATA_KEY } from "@/lib/billing/commitment";
+import { LEGACY_PLAN, PRICING_VERSION } from "@/config/pricing";
 import {
   onCancelRequested,
   onCancelRevoked,
@@ -22,9 +23,9 @@ export const dynamic = "force-dynamic";
  * system-level writer, verified by Stripe's signature rather than a user
  * session.
  *
- * 3-Month Commitment (2026-08-15): this webhook is also the single place
+ * commitment billing (2026-08-15): this webhook is also the single place
  * that hands a fresh commitment Checkout subscription to its Subscription
- * Schedule — the Stripe-native mechanism that bills $120 x3 then $150
+ * Schedule — the Stripe-native mechanism that bills the configured commitment phase, then the configured monthly phase
  * from cycle 4 (see src/lib/billing/commitment.ts) — and the single place
  * that mirrors schedule state (commitment dates, current price,
  * membership kind) into user_subscriptions. Every write is an idempotent,
@@ -204,7 +205,7 @@ export async function POST(request: Request) {
 
     // Phases are trimmed as they pass; the first present phase is the
     // current (or next) one. Phase 1 end == phase 2 start == the date the
-    // $150 rate begins.
+    // the monthly rate begins.
     const phase1 = schedule.phases[0];
     const phase2 = schedule.phases[1];
     const commitmentStart = phase1?.start_date ? new Date(phase1.start_date * 1000).toISOString() : null;
@@ -214,8 +215,9 @@ export async function POST(request: Request) {
       phase1?.items[0]?.price ?? (typeof phase1?.items[0]?.plan === "string" ? phase1.items[0].plan : null);
 
     let subscriptionId: string | null = typeof schedule.subscription === "string" ? schedule.subscription : schedule.subscription?.id ?? null;
-    let status: string | null = null;
+    let status: Stripe.Subscription.Status | null = subscriptionOverride?.status ?? null;
     let currentPeriodEnd: string | null = null;
+    let resolvedSubscription: Stripe.Subscription | null = subscriptionOverride ?? null;
 
     if (subscriptionOverride) {
       subscriptionId = subscriptionOverride.id;
@@ -226,6 +228,7 @@ export async function POST(request: Request) {
     } else if (subscriptionId) {
       try {
         const sub = await stripe.subscriptions.retrieve(subscriptionId);
+        resolvedSubscription = sub;
         status = sub.status;
         currentPeriodEnd = sub.items.data[0]?.current_period_end
           ? new Date(sub.items.data[0].current_period_end * 1000).toISOString()
@@ -236,11 +239,16 @@ export async function POST(request: Request) {
       }
     }
 
-    // Kind: commitment while the $120 price bills; commitment_completed
-    // once the $150 phase is current. Standard memberships never get
+    // Kind: commitment while the the commitment price bills; commitment_completed
+    // once the the monthly phase is current. Standard memberships never get
     // schedules, so any schedule here belongs to a commitment member.
-    const kind =
-      planMeta.commitmentPriceId != null && billingPriceId === planMeta.commitmentPriceId
+    const resolvedUnitAmount = resolvedSubscription?.items.data[0]?.price?.unit_amount ?? null;
+    const legacySchedule =
+      resolvedSubscription?.metadata?.[MEMBERSHIP_KIND_METADATA_KEY] === "commitment" &&
+      resolvedSubscription.metadata?.pricing_version !== PRICING_VERSION;
+    const kind = legacySchedule
+      ? resolvedUnitAmount === LEGACY_PLAN.amountCents ? "commitment" : "commitment_completed"
+      : planMeta.commitmentPriceId != null && billingPriceId === planMeta.commitmentPriceId
         ? "commitment"
         : billingPriceId === planMeta.standardPriceId
           ? "commitment_completed"
@@ -256,7 +264,9 @@ export async function POST(request: Request) {
         commitment_start_date: commitmentStart,
         commitment_end_date: commitmentEnd,
         standard_rate_start_date: standardRateStart,
-        current_monthly_price_cents: subscriptionOverride?.items.data[0]?.price?.unit_amount ?? null,
+        pricing_version: legacySchedule ? null : resolvedSubscription?.metadata?.pricing_version ?? null,
+        legacy_plan_key: legacySchedule ? LEGACY_PLAN.key : null,
+        current_monthly_price_cents: resolvedUnitAmount,
         stripe_status: status,
         current_period_end: currentPeriodEnd,
       })
@@ -272,10 +282,13 @@ export async function POST(request: Request) {
    * schedule (Stripe) or the DB row already stores one (us). Also called
    * from customer.subscription.updated as a self-heal when a
    * checkout.session.completed delivery was retried/lost, so a commitment
-   * can never silently stay on $120 without transitioning.
+   * can never silently stay on the commitment price without transitioning.
    */
   async function ensureCommitmentSchedule(subscription: Stripe.Subscription, planMeta: PlanMeta) {
     if (subscription.metadata?.[MEMBERSHIP_KIND_METADATA_KEY] !== "commitment") return;
+    // Legacy commitment subscriptions have no pricing_version marker. Never
+    // rebuild them using the v2 catalog if their old schedule is absent.
+    if (subscription.metadata?.pricing_version !== PRICING_VERSION) return;
     const attached = typeof subscription.schedule === "string" ? subscription.schedule : subscription.schedule?.id ?? null;
     if (attached) {
       // Subscription already on a schedule — make sure we mirror it.
@@ -334,11 +347,17 @@ export async function POST(request: Request) {
     const currentPeriodEndUnix = subscription.items.data[0]?.current_period_end;
     const isCanceled = subscription.status === "canceled";
 
+    const unitAmount = subscription.items.data[0]?.price?.unit_amount ?? null;
+    const isLegacyCommitment =
+      subscription.metadata?.[MEMBERSHIP_KIND_METADATA_KEY] === "commitment" &&
+      subscription.metadata?.pricing_version !== PRICING_VERSION;
     const membershipKind =
       subscription.metadata?.[MEMBERSHIP_KIND_METADATA_KEY] === "commitment"
-        ? planMeta.commitmentPriceId != null && priceId === planMeta.commitmentPriceId
-          ? "commitment"
-          : "commitment_completed"
+        ? isLegacyCommitment
+          ? unitAmount === LEGACY_PLAN.amountCents ? "commitment" : "commitment_completed"
+          : planMeta.commitmentPriceId != null && priceId === planMeta.commitmentPriceId
+            ? "commitment"
+            : "commitment_completed"
         : "standard";
 
     const { error } = await supabase.from("user_subscriptions").upsert(
@@ -357,7 +376,9 @@ export async function POST(request: Request) {
         canceled_at: isCanceled ? new Date().toISOString() : null,
         billing_interval: billingInterval,
         membership_kind: membershipKind,
-        current_monthly_price_cents: subscription.items.data[0]?.price?.unit_amount ?? null,
+        pricing_version: isLegacyCommitment ? null : subscription.metadata?.pricing_version ?? null,
+        legacy_plan_key: isLegacyCommitment ? LEGACY_PLAN.key : null,
+        current_monthly_price_cents: unitAmount,
       },
       { onConflict: "user_id" }
     );

@@ -18,7 +18,7 @@ export interface EffectivePlan {
   /** "monthly" | "annual" — which recurring price this subscription is actually on ("monthly" for a comped/no-plan account too). */
   billingInterval: "monthly" | "annual";
   discountPercentOff: number | null;
-  /** The price for the active billingInterval, with the discount applied, or null if no plan. For a member inside the 3-Month Commitment this is the CURRENT billable rate ($120) rather than the plan's standard $150. */
+  /** The price for the active billingInterval, with the discount applied, or null if no plan. For a member inside the commitment membership this is the CURRENT billable rate (the legacy commitment rate) rather than the plan's standard the legacy standard rate. */
   effectivePriceCents: number | null;
   /** Set if the user canceled (self-serve or admin) — the plan/price above still reflect what they had, for display. */
   canceledAt: string | null;
@@ -44,22 +44,22 @@ export interface EffectivePlan {
    * not the trial is still active — lets the UI show "your trial ended
    * on <date>" even after expiration recomputes tierLevel to 0. */
   trialExpiresAt: string | null;
-  /** 3-Month Commitment fields (2026-08-15) — server-side mirrors of the
+  /** commitment membership fields (2026-08-15) — server-side mirrors of the
    * Stripe Subscription Schedule state maintained by the webhook
    * (src/app/api/webhooks/stripe/route.ts). Stripe is the source of
    * truth; these exist so account/admin UIs render the commitment without
    * per-request Stripe round-trips. Always "standard" / nulls for every
    * pre-existing membership — the new option changes nothing for existing
-   * $150/month members. */
+   * the legacy standard rate/month members. */
   membershipKind: MembershipKind;
   stripeSubscriptionScheduleId: string | null;
   commitmentStartDate: string | null;
   commitmentEndDate: string | null;
   standardRateStartDate: string | null;
-  /** The CURRENT Stripe-billed monthly rate in cents ($120 inside the
-   * commitment, $150 once it completes) — null when unknown/comped. */
+  /** The CURRENT Stripe-billed monthly rate in cents (the legacy commitment rate inside the
+   * commitment, the legacy standard rate once it completes) — null when unknown/comped. */
   currentMonthlyPriceCents: number | null;
-  /** "Month X of 3" (1..3) while inside the commitment period, else null. */
+  /** "Month X of 4" (1..4) while inside the commitment period, else null. */
   commitmentMonth: number | null;
   /** Stripe subscription.cancel_at (graceful schedule cancel), if set. */
   cancelAt: string | null;
@@ -290,7 +290,7 @@ export async function getEffectivePlan(supabase: SupabaseClient, userId: string)
       const trialExpired = isTrial && trialExpiresAt !== null && new Date(trialExpiresAt).getTime() <= Date.now();
       const percentOff = (discount?.percent_off as number | undefined) ?? 0;
 
-      // 3-Month Commitment mirrors (webhook-maintained; Stripe is truth).
+      // commitment membership mirrors (webhook-maintained; Stripe is truth).
       const membershipKind = ((data.membership_kind as string | null) ?? "standard") as MembershipKind;
       const commitmentStartDate = (data.commitment_start_date as string | null) ?? null;
       const commitmentEndDate = (data.commitment_end_date as string | null) ?? null;
@@ -302,8 +302,8 @@ export async function getEffectivePlan(supabase: SupabaseClient, userId: string)
       const billingInterval: "monthly" | "annual" = (data.billing_interval as string) === "annual" ? "annual" : "monthly";
       const annualPriceCents = (plan.annual_price_cents as number | null) ?? null;
 
-      // A 3-Month Commitment member is actually billed at the CURRENT
-      // monthly rate ($120 inside the commitment, $150 after it completes),
+      // A commitment membership member is actually billed at the CURRENT
+      // monthly rate (the legacy commitment rate inside the commitment, the legacy standard rate after it completes),
       // not the plan's standard monthly price — display what Stripe bills.
       const basePriceCents =
         membershipKind === "commitment" && currentMonthlyPriceCents != null

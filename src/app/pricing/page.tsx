@@ -4,13 +4,15 @@ import { getVerifiedLenderCount } from "@/lib/repository/supabaseRepository";
 import { PricingPlans, type PricingPlanRow } from "./pricing-plans";
 import { TeamsPanel } from "./teams-panel";
 import { pageMetadata } from "@/lib/seo";
+import { formatCents } from "@/lib/billing/money";
+import { PLANS } from "@/config/pricing";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMetadata({
   title: "Pricing — NON-QM Nexus Membership",
   description:
-    "One NON-QM Nexus membership: guideline-first Non-QM lender matching, voice scenario intake, and document checklists for every loan officer. $150/month, or save $90 with the 3-month commitment.",
+    `${formatCents(PLANS.monthly.amountCents)}/month, or four required ${formatCents(PLANS.commit_4mo.amountCents)} monthly payments before automatic month-to-month renewal.`,
   path: "/pricing",
 });
 
@@ -86,8 +88,9 @@ export default async function PricingPage() {
       </p>
 
       <p className="text-center text-xs text-slate-500 max-w-2xl mx-auto">
-        Billing will be processed securely by Stripe — your card details never touch our servers. Cancel anytime from
-        your account page; you keep access through the end of the period you&apos;ve already paid for.
+        Billing is processed securely by Stripe — your card details never touch our servers. Monthly memberships can
+        be canceled at the period end. The four-month option keeps all four committed payments due and can be set not
+        to renew after its commitment boundary.
       </p>
     </div>
   );

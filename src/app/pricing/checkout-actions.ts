@@ -1,22 +1,38 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { getStripe } from "@/lib/stripe";
 import { resolveStripeCustomerId } from "@/lib/billing/stripeCustomer";
 import { KIND_COMMITMENT, KIND_STANDARD, MEMBERSHIP_KIND_METADATA_KEY } from "@/lib/billing/commitment";
+import {
+  COMMITMENT_DISCLOSURE,
+  COMMITMENT_DISCLOSURE_VERSION,
+  PRICING_VERSION,
+} from "@/config/pricing";
+
+const checkoutInput = z.object({
+  planId: z.string().uuid(),
+  interval: z.enum(["monthly", "annual"]).default("monthly"),
+  membership: z.enum([KIND_STANDARD, KIND_COMMITMENT]),
+  commitmentAcknowledged: z.enum(["yes"]).optional(),
+  commitmentDisclosureVersion: z.string().optional(),
+  salesRep: z.enum(["bobby", "mike"]),
+});
 
 /**
  * Starts a Stripe Checkout session for the given plan and redirects the
  * user to Stripe's hosted checkout page. Card data never touches this app.
  *
  * Two membership options (2026-08-15):
- *   - standard  — existing month-to-month $150 subscription (unchanged).
- *   - commitment — 3-Month Commitment: checkout at the plan's $120
+ *   - standard  — the legacy monthly subscription (unchanged).
+ *   - commitment — the commitment option: checkout at the configured commitment price
  *     commitment price; the checkout.session.completed webhook then
  *     converts the subscription to a Subscription Schedule that bills
- *     $120 exactly 3 cycles and auto-transitions to $150 from cycle 4
+ *     the configured term and then the monthly price
  *     (see src/lib/billing/commitment.ts). The marker travels on
  *     subscription metadata so the webhook can distinguish the two.
  *
@@ -26,14 +42,18 @@ import { KIND_COMMITMENT, KIND_STANDARD, MEMBERSHIP_KIND_METADATA_KEY } from "@/
  * a success URL.
  */
 export async function startCheckout(formData: FormData): Promise<void> {
-  const planId = formData.get("planId");
-  if (typeof planId !== "string" || !planId) {
-    throw new Error("Missing plan.");
+  const parsed = checkoutInput.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) throw new Error("Please complete all required checkout fields.");
+  const { planId, salesRep } = parsed.data;
+  const membership = parsed.data.membership;
+  const interval = membership === KIND_COMMITMENT ? "monthly" : parsed.data.interval;
+  if (
+    membership === KIND_COMMITMENT &&
+    (parsed.data.commitmentAcknowledged !== "yes" ||
+      parsed.data.commitmentDisclosureVersion !== COMMITMENT_DISCLOSURE_VERSION)
+  ) {
+    throw new Error("You must accept the current four-month billing commitment before checkout.");
   }
-  const membershipRaw = formData.get("membership");
-  const membership = membershipRaw === "commitment" ? KIND_COMMITMENT : KIND_STANDARD;
-  const interval =
-    membership === KIND_COMMITMENT ? "monthly" : formData.get("interval") === "annual" ? "annual" : "monthly";
 
   const supabase = await createClient();
   const {
@@ -56,7 +76,7 @@ export async function startCheckout(formData: FormData): Promise<void> {
     : (interval === "annual" ? plan.stripe_annual_price_id : plan.stripe_price_id);
   if (!candidatePriceId) {
     if (membership === KIND_COMMITMENT) {
-      throw new Error("The 3-Month Commitment isn't configured yet — run scripts/stripe-commitment-setup.js with the production Stripe key first.");
+      throw new Error("The 4-Month Commitment isn't configured yet — run the Pricing v2 Stripe sync first.");
     }
     throw new Error(
       interval === "annual"
@@ -68,6 +88,51 @@ export async function startCheckout(formData: FormData): Promise<void> {
 
   const stripe = getStripe();
   const service = createServiceRoleClient();
+  const requestHeaders = await headers();
+  const forwardedFor = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  const userAgent = requestHeaders.get("user-agent") ?? null;
+
+  // Derive tenant identity from the authenticated user. The browser never
+  // supplies an organization id.
+  const { data: membershipRow, error: membershipError } = await service
+    .from("memberships")
+    .select("organization_id")
+    .eq("user_id", user.id)
+    .is("deleted_at", null)
+    .limit(1)
+    .maybeSingle();
+  if (membershipError || !membershipRow?.organization_id) {
+    throw new Error("Your organization membership could not be verified.");
+  }
+  const organizationId = membershipRow.organization_id as string;
+
+  // Attribution remains in admin-only tables. This call never returns the rep
+  // to a member-facing response and does not put a name or email in Stripe.
+  const { error: attributionError } = await service.rpc("resolve_attribution_for_signup", {
+    p_organization_id: organizationId,
+    p_ref: salesRep,
+    p_method: "checkout_prompt",
+    p_source: "pricing_v2",
+    p_invite_rep_user_id: null,
+  });
+  if (attributionError) throw new Error("Unable to record referral selection.");
+
+  if (membership === KIND_COMMITMENT) {
+    const acceptedAt = new Date().toISOString();
+    const { error: acknowledgmentError } = await service.from("user_subscriptions").upsert(
+      {
+        user_id: user.id,
+        pricing_version: PRICING_VERSION,
+        commitment_ack_text: COMMITMENT_DISCLOSURE,
+        commitment_ack_version: COMMITMENT_DISCLOSURE_VERSION,
+        commitment_ack_at: acceptedAt,
+        commitment_ack_ip: forwardedFor,
+        commitment_ack_user_agent: userAgent,
+      },
+      { onConflict: "user_id" }
+    );
+    if (acknowledgmentError) throw new Error("Unable to store commitment acknowledgment.");
+  }
 
   // Test-mode checkouts stored TEST-mode customers on users.stripe_customer_id;
   // with the live key those ids no longer resolve and crash checkout. Resolve
@@ -115,17 +180,26 @@ export async function startCheckout(formData: FormData): Promise<void> {
     metadata: {
       supabase_user_id: user.id,
       membership_plan_id: plan.id,
+      pricing_version: PRICING_VERSION,
       [MEMBERSHIP_KIND_METADATA_KEY]: membership,
     },
     subscription_data: {
       metadata: {
         supabase_user_id: user.id,
         membership_plan_id: plan.id,
+        pricing_version: PRICING_VERSION,
         [MEMBERSHIP_KIND_METADATA_KEY]: membership,
       },
     },
   });
 
   if (!session.url) throw new Error("Stripe did not return a checkout URL.");
+  if (membership === KIND_COMMITMENT) {
+    const { error: sessionEvidenceError } = await service
+      .from("user_subscriptions")
+      .update({ commitment_checkout_session_id: session.id })
+      .eq("user_id", user.id);
+    if (sessionEvidenceError) throw new Error("Unable to finalize commitment evidence.");
+  }
   redirect(session.url);
 }

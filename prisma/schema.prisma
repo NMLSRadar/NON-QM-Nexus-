@@ -304,6 +304,12 @@ model MembershipPlan {
   // docs/bulk-membership.md), whose per-deal Prices are created dynamically
   // at negotiation time and need a shared Product to attach to.
   stripeProductId   String?  @map("stripe_product_id")
+  amountCents       Int?     @map("amount_cents")
+  billingMode       String?  @map("billing_mode")
+  termMonths        Int?     @map("term_months")
+  rollsToPlanKey    String?  @map("rolls_to_plan_key")
+  cancellableMidTerm Boolean? @map("cancellable_mid_term")
+  stripeLookupKey   String?  @unique @map("stripe_lookup_key")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
@@ -390,6 +396,20 @@ model UserSubscription {
   // cancel_at_period_end user keeps cancel_requested_at NULL until the
   // webhook sees a cancel request — see docs/billing-runbook.md.
   cancelRequestedAt DateTime? @map("cancel_requested_at")
+
+  pricingVersion             String?   @map("pricing_version")
+  amountCents                Int?      @map("amount_cents")
+  billingMode                String?   @map("billing_mode")
+  termMonths                 Int?      @map("term_months")
+  rollsToPlanId              String?   @map("rolls_to_plan_id")
+  legacyPlanKey              String?   @map("legacy_plan_key")
+  commitmentAckText          String?   @map("commitment_ack_text")
+  commitmentAckVersion       String?   @map("commitment_ack_version")
+  commitmentAckAt            DateTime? @map("commitment_ack_at")
+  commitmentAckIp            String?   @map("commitment_ack_ip")
+  commitmentAckUserAgent     String?   @map("commitment_ack_user_agent")
+  commitmentCheckoutSessionId String?  @unique @map("commitment_checkout_session_id")
+  cancelAtCommitmentEnd      Boolean   @default(false) @map("cancel_at_commitment_end")
 
   user     User            @relation(fields: [userId], references: [id])
   plan     MembershipPlan? @relation(fields: [planId], references: [id])
