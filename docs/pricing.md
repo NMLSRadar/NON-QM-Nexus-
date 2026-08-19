@@ -5,6 +5,7 @@
 | Plan | Billing | Commitment | Renewal |
 |---|---:|---:|---|
 | Monthly | $59.99 each month | None | Month-to-month until canceled |
+| Annual | $650.00 once per year | One annual billing period | Renews yearly until canceled |
 | 4-Month Commitment | $50.00 today, then $50.00 monthly three more times | Four payments; $200.00 total | Automatically $59.99/month after payment four until canceled |
 
 The commitment is not prepaid. Stripe collects four separate recurring monthly payments. The first is due at Checkout. A Subscription Schedule then keeps the $50 recurring price for four iterations and changes to the $59.99 recurring price at the next phase boundary.

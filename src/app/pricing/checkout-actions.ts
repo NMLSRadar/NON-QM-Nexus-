@@ -9,6 +9,7 @@ import { getStripe } from "@/lib/stripe";
 import { resolveStripeCustomerId } from "@/lib/billing/stripeCustomer";
 import { KIND_COMMITMENT, KIND_STANDARD, MEMBERSHIP_KIND_METADATA_KEY } from "@/lib/billing/commitment";
 import {
+  ANNUAL_PRICE_CENTS,
   COMMITMENT_DISCLOSURE,
   COMMITMENT_DISCLOSURE_VERSION,
   PRICING_VERSION,
@@ -65,11 +66,14 @@ export async function startCheckout(formData: FormData): Promise<void> {
 
   const { data: plan, error: planError } = await supabase
     .from("membership_plans")
-    .select("id, name, stripe_price_id, stripe_annual_price_id, stripe_commitment_price_id, is_active")
+    .select("id, name, annual_price_cents, stripe_price_id, stripe_annual_price_id, stripe_commitment_price_id, is_active")
     .eq("id", planId)
     .maybeSingle();
   if (planError) throw new Error(`Failed to load plan: ${planError.message}`);
   if (!plan || !plan.is_active) throw new Error("That plan is not available.");
+  if (interval === "annual" && plan.annual_price_cents !== ANNUAL_PRICE_CENTS) {
+    throw new Error("Annual billing is temporarily unavailable while the $650 yearly price is being configured.");
+  }
 
   const candidatePriceId = membership === KIND_COMMITMENT
     ? (plan.stripe_commitment_price_id as string | null)

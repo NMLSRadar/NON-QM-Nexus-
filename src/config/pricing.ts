@@ -14,6 +14,8 @@ export interface Plan {
 }
 
 export const PRICING_VERSION = "v2" as const;
+export const ANNUAL_PRICE_CENTS = 65000 as const;
+export const ANNUAL_STRIPE_LOOKUP_KEY = "non_qm_nexus_annual_v2" as const;
 export const COMMITMENT_DISCLOSURE_VERSION = "commit-4mo-v1" as const;
 export const COMMITMENT_DISCLOSURE =
   "By selecting this plan, you authorize NON-QM Nexus to charge your payment method $50.00 today and $50.00 per month for the following three months, for a total four-month commitment of $200.00. You may not cancel the remaining committed payments during this four-month term. After the fourth $50.00 payment, your membership will automatically continue at $59.99 per month on a month-to-month basis until you cancel. You may cancel the month-to-month membership at any time after the commitment term." as const;

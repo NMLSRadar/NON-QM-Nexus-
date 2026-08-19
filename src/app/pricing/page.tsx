@@ -5,7 +5,7 @@ import { PricingPlans, type PricingPlanRow } from "./pricing-plans";
 import { TeamsPanel } from "./teams-panel";
 import { pageMetadata } from "@/lib/seo";
 import { formatCents } from "@/lib/billing/money";
-import { PLANS } from "@/config/pricing";
+import { ANNUAL_PRICE_CENTS, PLANS } from "@/config/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +50,7 @@ export default async function PricingPage() {
     key: r.key,
     name: r.name,
     monthlyPriceCents: r.monthly_price_cents,
-    annualPriceCents: r.annual_price_cents,
+    annualPriceCents: r.stripe_annual_price_id ? ANNUAL_PRICE_CENTS : null,
     tierLevel: r.tier_level,
     description: r.description,
     stripePriceId: r.stripe_price_id,
