@@ -86,6 +86,7 @@ export async function createCommitmentScheduleFromSubscription(
     // The base phase (from_subscription) is the subscription's CURRENT
     // billing period — its start_date is the anchor for phase 1.
     phases: buildCommitmentPhases(basePhase.start_date, commitmentPriceId, standardPriceId),
+    end_behavior: "release",
   });
 }
 
@@ -117,9 +118,9 @@ export function kindFromPrice({
 }
 
 /**
- * Display "Month X of 3" for a member inside the commitment, computed
+ * Display "Month X of 4" for a member inside the commitment, computed
  * server-side from Stripe-sourced dates (never client timers):
- *   1 + floor((now - commitmentStart) / ~1 month), clamped to 1..3.
+ *   1 + floor((now - commitmentStart) / ~1 month), clamped to 1..4.
  * Returns null when the dates aren't there yet or the commitment ended.
  */
 export function commitmentMonthOf(

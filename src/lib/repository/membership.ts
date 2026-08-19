@@ -59,7 +59,7 @@ export interface EffectivePlan {
   /** The CURRENT Stripe-billed monthly rate in cents (the legacy commitment rate inside the
    * commitment, the legacy standard rate once it completes) — null when unknown/comped. */
   currentMonthlyPriceCents: number | null;
-  /** "Month X of 3" (1..3) while inside the commitment period, else null. */
+  /** "Month X of 4" (1..4) while inside the commitment period, else null. */
   commitmentMonth: number | null;
   /** Stripe subscription.cancel_at (graceful schedule cancel), if set. */
   cancelAt: string | null;
