@@ -21,7 +21,8 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev",
-    "stripe:live": "node scripts/stripe-live-bootstrap.js && node scripts/stripe-single-plan-2026-08.js && node scripts/stripe-commitment-setup.js && node scripts/stripe-register-webhook.js"
+    "stripe:live": "node scripts/stripe-live-bootstrap.js && node scripts/stripe-single-plan-2026-08.js && node scripts/stripe-commitment-setup.js && node scripts/stripe-register-webhook.js",
+    "stripe:sync-v2": "tsx scripts/sync-stripe-prices.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

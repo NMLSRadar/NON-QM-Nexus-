@@ -1,30 +1,22 @@
 /**
- * 3-Month Commitment membership — shared billing logic (2026-08-15).
+ * Pricing v2 commitment schedule logic.
  *
- * Stripe architecture: the commitment is a NORMAL monthly subscription
- * created through Checkout at the $120 price, which is then handed over
- * to a Subscription Schedule (from_subscription) that enforces the
- * pricing shape SERVER-SIDE:
+ * Checkout creates a normal monthly subscription at the commitment price.
+ * The webhook promotes it to a two-phase Subscription Schedule:
  *
- *   Phase 1 — $120/month × 3 billing cycles (starting at the cycle the
- *             subscription was created; the cycle already paid by
- *             Checkout counts as cycle 1)
- *   Phase 2 — $150/month, open-ended, from billing cycle 4
+ *   Phase 1 — four monthly commitment-price cycles. The Checkout payment is
+ *             cycle one, followed by three additional monthly invoices.
+ *   Phase 2 — the standard monthly price, open-ended.
  *
- * The schedule keeps the SAME subscription id (proven on Stripe test
- * mode, 2026-08-15): no duplicate subscription, no re-checkout, no new
- * payment authorization, no gap in access at the phase boundary —
- * Stripe invoices $120 exactly three times, then $150 automatically.
- *
- * Everything in this module is pure logic / thin Stripe calls so it can
- * be exercised by both the webhook and node-based integration tests
- * (no "server-only" import — same convention as src/lib/stripe.ts).
+ * Existing schedules are never rebuilt merely because the catalog changes;
+ * legacy subscriptions keep their original Stripe prices and phase dates.
  */
 import type Stripe from "stripe";
+import { PLANS } from "@/config/pricing";
 
-export const COMMITMENT_MONTHS = 3;
-export const COMMITMENT_MONTHLY_CENTS = 12000; // $120 intro rate
-export const STANDARD_MONTHLY_CENTS = 15000; // $150 standard rate
+export const COMMITMENT_MONTHS = PLANS.commit_4mo.termMonths;
+export const COMMITMENT_MONTHLY_CENTS = PLANS.commit_4mo.amountCents;
+export const STANDARD_MONTHLY_CENTS = PLANS.monthly.amountCents;
 
 /** metadata key on Checkout Sessions + subscriptions marking the membership kind. */
 export const MEMBERSHIP_KIND_METADATA_KEY = "membership_kind";
@@ -43,10 +35,10 @@ export function isCommitmentKind(kind: string | null | undefined): boolean {
 }
 
 /**
- * The two phases for a 3-month commitment schedule, anchored at the
+ * The two phases for a commitment schedule, anchored at the
  * schedule's existing first-phase start (the billing period the Checkout
  * subscription was created in). Phase 1 lasts `commitmentMonths`
- * iterations of the $120 price; phase 2 is the $150 price, open-ended
+ * iterations of the the commitment price price; phase 2 is the the monthly price price, open-ended
  * (no end_date => continues until canceled). `duration` is used rather
  * than `iterations` because phase `iterations` is only settable at
  * SCHEDULE CREATE, not UPDATE (Stripe API, verified 2026-08-15).
@@ -105,8 +97,8 @@ export function currentPeriodEndOf(subscription: Stripe.Subscription): number | 
 /**
  * Which commitment phase is currently billing on a NON-CANCELED
  * subscription, from Stripe price alone:
- *  - actual $120 price active  => still inside the commitment
- *  - $150 price active but sub was enrolled as a commitment
+ *  - actual the commitment price price active  => still inside the commitment
+ *  - the monthly price price active but sub was enrolled as a commitment
  *    (membership_kind=commitment metadata) => commitment completed,
  *    running month-to-month at the standard rate on the same sub.
  */
@@ -156,26 +148,40 @@ export function commitmentMonthOf(
 export async function gracefullyCancelSchedule(
   stripe: Stripe,
   scheduleId: string,
-  subscription: Stripe.Subscription
+  subscription: Stripe.Subscription,
+  preserveCommitment: boolean = true
 ): Promise<Stripe.SubscriptionSchedule> {
   const schedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
-  const currentPhase = schedule.phases[0];
-  if (!currentPhase) throw new Error("Schedule has no current phase — cannot schedule cancellation.");
-  const itemPrice = currentPhase.items[0]?.price;
-  const fallbackPriceId = typeof itemPrice === "string" ? itemPrice : (itemPrice as { id?: string } | undefined)?.id;
-  const priceId = subscription.items.data[0]?.price?.id ?? fallbackPriceId;
-  if (!priceId) throw new Error("No billable price found on the subscription/schedule.");
+  const currentPhase = schedule.current_phase;
+  const configuredPhase = schedule.phases.find(
+    (phase) => currentPhase && phase.start_date === currentPhase.start_date
+  ) ?? schedule.phases[0];
+  if (!configuredPhase) throw new Error("Schedule has no current phase — cannot schedule cancellation.");
+
+  const activePriceId = subscription.items.data[0]?.price?.id;
+  const commitmentIsActive = activePriceId != null && activePriceId === configuredPhase.items[0]?.price;
+  const commitmentBoundary = configuredPhase.end_date;
+
+  if (preserveCommitment && commitmentIsActive && commitmentBoundary) {
+    // Preserve the entire four-payment phase. Removing only the rollover phase
+    // stops month-five renewal without forgiving any committed $50 invoice.
+    return stripe.subscriptionSchedules.update(scheduleId, {
+      end_behavior: "cancel",
+      phases: [
+        {
+          items: [{ price: activePriceId, quantity: 1 }],
+          start_date: configuredPhase.start_date,
+          end_date: commitmentBoundary,
+        },
+      ],
+    });
+  }
+
   const periodEnd = currentPeriodEndOf(subscription);
-  if (!periodEnd) throw new Error("Subscription has no current period end — cannot schedule cancellation.");
+  if (!activePriceId || !periodEnd) throw new Error("Subscription billing boundary is unavailable.");
   return stripe.subscriptionSchedules.update(scheduleId, {
     end_behavior: "cancel",
-    phases: [
-      {
-        items: [{ price: priceId, quantity: 1 }],
-        start_date: currentPhase.start_date,
-        end_date: periodEnd,
-      },
-    ],
+    phases: [{ items: [{ price: activePriceId, quantity: 1 }], start_date: configuredPhase.start_date, end_date: periodEnd }],
   });
 }
 
@@ -184,7 +190,7 @@ export async function gracefullyCancelSchedule(
  * cancel): restores the two-phase commitment shape anchored at the
  * schedule's own (unchanged) current-phase start. If the commitment
  * period already ended by the time of resume, the member simply goes
- * straight to the standard $150/month phase.
+ * straight to the standard the monthly price/month phase.
  */
 export async function resumeCommitmentSchedule({
   stripe,

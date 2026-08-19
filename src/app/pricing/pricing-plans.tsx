@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { Crown, Check, ArrowRight, BadgeCheck, Sparkles } from "lucide-react";
 import { startCheckout } from "./checkout-actions";
+import { COMMITMENT_DISCLOSURE, COMMITMENT_DISCLOSURE_VERSION, PLANS, termTotalCents } from "@/config/pricing";
+import { formatCents } from "@/lib/billing/money";
 
 export interface PricingPlanRow {
   id: string;
@@ -18,9 +20,10 @@ export interface PricingPlanRow {
   stripeCommitmentPriceId: string | null;
 }
 
-const COMMITMENT_PRICE_CENTS = 12000;
-const STANDARD_PRICE_CENTS = 15000;
-const COMMITMENT_MONTHS = 3;
+const COMMITMENT_PRICE_CENTS = PLANS.commit_4mo.amountCents;
+const STANDARD_PRICE_CENTS = PLANS.monthly.amountCents;
+const COMMITMENT_MONTHS = PLANS.commit_4mo.termMonths;
+const COMMITMENT_TOTAL_CENTS = termTotalCents(PLANS.commit_4mo);
 const COMMITMENT_SAVINGS_CENTS = (STANDARD_PRICE_CENTS - COMMITMENT_PRICE_CENTS) * COMMITMENT_MONTHS;
 
 // Feature bullets for the month-to-month membership, laid out in two
@@ -37,14 +40,31 @@ function monthlyFeatures(_verifiedLenderCount: number): { left: string[]; right:
     right: [
       "No restrictions on guideline comparisons",
       "Dedicated support",
-      "Billed $150 monthly, month-to-month",
+      `Billed ${formatCents(STANDARD_PRICE_CENTS)} monthly, month-to-month`,
     ],
   };
 }
 
 function fmtDollars(cents: number): string {
-  const dollars = cents / 100;
-  return dollars % 1 === 0 ? String(dollars) : dollars.toFixed(2);
+  return formatCents(cents).slice(1);
+}
+
+function AttributionSelect() {
+  return (
+    <label className="mb-4 block text-sm text-slate-200">
+      <span className="mb-2 block font-medium text-amber-200">How did you hear about us?</span>
+      <select
+        name="salesRep"
+        required
+        defaultValue=""
+        className="w-full rounded-lg border border-amber-400/40 bg-black px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+      >
+        <option value="" disabled>Select one</option>
+        <option value="bobby">Bobby</option>
+        <option value="mike">Mike</option>
+      </select>
+    </label>
+  );
 }
 
 function FeatureList({ items }: { items: string[] }) {
@@ -170,6 +190,7 @@ export function PricingPlans({
                     <input type="hidden" name="planId" value={plan.id} />
                     <input type="hidden" name="interval" value={useAnnual ? "annual" : "monthly"} />
                     <input type="hidden" name="membership" value="standard" />
+                    <AttributionSelect />
                     <button
                       type="submit"
                       className="gold-to-black-button group flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
@@ -194,7 +215,7 @@ export function PricingPlans({
           </div>
         </div>
 
-        {/* ── Option 2: 3-Month Commitment (Best Value) ── */}
+        {/* ── Option 2: 4-Month Commitment (Best Value) ── */}
         <div className="relative w-full max-w-xl">
           <div
             className={[
@@ -212,7 +233,7 @@ export function PricingPlans({
               <div className="flex items-center justify-center gap-2">
                 <Sparkles className="h-4 w-4 text-amber-300" strokeWidth={2.2} />
                 <span className="text-sm font-semibold uppercase tracking-[0.25em] text-amber-300">
-                  3-Month Commitment
+                  4-Month Commitment
                 </span>
               </div>
 
@@ -229,31 +250,32 @@ export function PricingPlans({
                 </span>
                 <span className="ml-1 text-2xl font-semibold text-white">/month</span>
               </p>
-              <p className="mt-1 text-center text-sm font-medium text-amber-200/90">For your first 3 months</p>
+              <p className="mt-1 text-center text-sm font-medium text-amber-200/90">Four required monthly payments</p>
               <p className="mt-1 text-center text-xs text-slate-400">
                 {useAnnual ? (
-                  <>Annual billing isn&apos;t offered for the 3-month commitment</>
+                  <>Annual billing isn&apos;t offered for the 4-month commitment</>
                 ) : (
-                  <span className="text-slate-300">$150/month starting Month 4 — converts automatically</span>
+                  <span className="text-slate-300">After payment four: {formatCents(STANDARD_PRICE_CENTS)}/month until canceled</span>
                 )}
               </p>
 
               <div className="mx-auto mt-4 max-w-xs rounded-lg border border-amber-500/25 bg-black/40 px-3 py-2 text-center">
                 <p className="text-[13px] text-amber-100">
-                  <strong className="text-amber-300">Save $90</strong> during your first 3 months
+                  <strong className="text-amber-300">{formatCents(COMMITMENT_TOTAL_CENTS)} total commitment</strong> across four months
                 </p>
                 <p className="mt-0.5 text-[11px] text-slate-500">
-                  $150 × 3 = $450 · your rate $120 × 3 = $360
+                  {formatCents(COMMITMENT_PRICE_CENTS)} today + three monthly {formatCents(COMMITMENT_PRICE_CENTS)} charges
                 </p>
               </div>
 
               <ul className="mt-6 space-y-3">
                 {[
-                  "Save $30 per month for your first 3 months",
-                  "$90 total introductory savings",
+                  `${formatCents(COMMITMENT_PRICE_CENTS)} today, then three monthly ${formatCents(COMMITMENT_PRICE_CENTS)} charges`,
+                  `${formatCents(COMMITMENT_TOTAL_CENTS)} total four-month commitment`,
                   "Full NON-QM Nexus access — everything in the monthly membership",
-                  "Automatically converts to $150/month after Month 3",
-                  "Continues month-to-month thereafter — no re-enrollment, ever",
+                  `Automatically converts to ${formatCents(STANDARD_PRICE_CENTS)}/month after payment four`,
+                  "Remaining commitment payments cannot be canceled mid-term",
+                  "Continues month-to-month thereafter until canceled",
                 ].map((f) => (
                   <li key={f} className="flex items-start gap-2.5 text-sm text-slate-200">
                     <span aria-hidden className="mt-0.5 shrink-0 text-amber-400">
@@ -278,7 +300,7 @@ export function PricingPlans({
                     }}
                     className="gold-to-black-button group flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
                   >
-                    Start 3-Month Commitment
+                    Start 4-Month Commitment
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.4} />
                   </button>
 
@@ -290,20 +312,24 @@ export function PricingPlans({
                     ref={disclosureRef}
                     className="mt-4 rounded-xl border border-amber-500/25 bg-black/40 p-4 text-xs leading-relaxed text-slate-300"
                   >
+                    <AttributionSelect />
                     <p className="font-medium text-amber-200">
-                      Your first three monthly payments will be $120. Beginning with your fourth monthly billing cycle,
-                      your membership will automatically renew at $150 per month until canceled.
+                      {COMMITMENT_DISCLOSURE}
                     </p>
+                    <input type="hidden" name="commitmentDisclosureVersion" value={COMMITMENT_DISCLOSURE_VERSION} />
                     <label className="mt-3 flex cursor-pointer items-start gap-2.5">
                       <input
                         type="checkbox"
+                        name="commitmentAcknowledged"
+                        value="yes"
+                        required
                         checked={commitmentAcknowledged}
                         onChange={(e) => setCommitmentAcknowledged(e.target.checked)}
                         className="mt-0.5 h-4 w-4 shrink-0 accent-amber-400"
                       />
                       <span className="text-slate-300">
-                        I understand this billing structure — $120/month for my first 3 months, then $150/month
-                        month-to-month beginning with Month 4, until I cancel.
+                        I have read and agree to four payments of {formatCents(COMMITMENT_PRICE_CENTS)} and the automatic transition to {formatCents(STANDARD_PRICE_CENTS)} per
+                        month after the commitment.
                       </span>
                     </label>
                     <button
@@ -311,7 +337,7 @@ export function PricingPlans({
                       disabled={!commitmentAcknowledged}
                       className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-6 py-3 text-sm font-bold text-black transition-all hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      Start 3-Month Commitment
+                      Start 4-Month Commitment
                       <ArrowRight className="h-4 w-4" strokeWidth={2.6} />
                     </button>
                   </div>
@@ -319,7 +345,7 @@ export function PricingPlans({
               ) : isSignedIn ? (
                 !hasCommitment ? (
                   <p className="mt-8 text-center text-xs text-slate-500">
-                    The 3-Month Commitment isn&apos;t configured yet — check back soon.
+                    The 4-Month Commitment isn&apos;t configured yet — check back soon.
                   </p>
                 ) : null
               ) : (
@@ -327,7 +353,7 @@ export function PricingPlans({
                   href={`/signup?next=/pricing`}
                   className="gold-to-black-button group mt-8 flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
                 >
-                  Start 3-Month Commitment
+                  Start 4-Month Commitment
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.4} />
                 </Link>
               )}

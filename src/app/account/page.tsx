@@ -7,6 +7,8 @@ import { CancelSubscriptionForm } from "./cancel-subscription-form";
 import { ReactivateSubscriptionForm } from "./reactivate-subscription-form";
 import { ManageBillingForm } from "./manage-billing-form";
 import { KIND_COMMITMENT, KIND_COMMITMENT_COMPLETED } from "@/lib/billing/commitment";
+import { LEGACY_PLAN, PLANS } from "@/config/pricing";
+import { formatCents } from "@/lib/billing/money";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,12 @@ export default async function AccountPage() {
   if (!user) redirect("/login");
 
   const plan = await getEffectivePlan(supabase, user.id);
+  const { data: billingRecord } = await supabase
+    .from("user_subscriptions")
+    .select("legacy_plan_key")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const isLegacyCommitment = Boolean(billingRecord?.legacy_plan_key);
   // Genuinely ended (or never had a plan) vs. "still active, but set to end
   // at the period's close" — Stripe subscriptions stay usable right up
   // until current_period_end even after cancel_at_period_end / cancel_at is
@@ -36,7 +44,10 @@ export default async function AccountPage() {
 
   const inCommitment = plan.membershipKind === KIND_COMMITMENT;
   const commitmentCompleted = plan.membershipKind === KIND_COMMITMENT_COMPLETED;
-  const displayPlanName = inCommitment ? "3-Month Commitment" : plan.planName;
+  const displayPlanName = inCommitment ? (isLegacyCommitment ? "Legacy Commitment" : "4-Month Commitment") : plan.planName;
+  const commitmentMonths = isLegacyCommitment ? LEGACY_PLAN.termMonths : PLANS.commit_4mo.termMonths;
+  const commitmentRateCents = isLegacyCommitment ? LEGACY_PLAN.amountCents : PLANS.commit_4mo.amountCents;
+  const futureRateCents = isLegacyCommitment ? LEGACY_PLAN.standardAmountCents : PLANS.monthly.amountCents;
 
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl max-w-2xl space-y-6">
@@ -104,14 +115,14 @@ export default async function AccountPage() {
                   <div>
                     <dt className="text-[11px] uppercase tracking-wider text-slate-500">Current rate</dt>
                     <dd className="mt-0.5 text-white font-semibold">
-                      ${fmtUsd((plan.currentMonthlyPriceCents ?? 12000) / 100)}/month
+                      {formatCents(plan.currentMonthlyPriceCents ?? commitmentRateCents)}/month
                     </dd>
-                    <dd className="text-xs text-slate-400">For your first 3 months</dd>
+                    <dd className="text-xs text-slate-400">For the {commitmentMonths}-month commitment</dd>
                   </div>
                   <div>
                     <dt className="text-[11px] uppercase tracking-wider text-slate-500">Commitment period</dt>
                     <dd className="mt-0.5 text-white font-semibold">
-                      {plan.commitmentMonth ? `Month ${plan.commitmentMonth} of 3` : "Complete"}
+                      {plan.commitmentMonth ? `Month ${plan.commitmentMonth} of ${commitmentMonths}` : "Complete"}
                     </dd>
                     <dd className="text-xs text-slate-400">
                       {plan.commitmentStartDate ? `Started ${fmtDate(plan.commitmentStartDate)}` : ""}
@@ -124,11 +135,11 @@ export default async function AccountPage() {
                   </div>
                   <div>
                     <dt className="text-[11px] uppercase tracking-wider text-slate-500">Future rate</dt>
-                    <dd className="mt-0.5 text-white font-semibold">$150/month</dd>
+                    <dd className="mt-0.5 text-white font-semibold">{formatCents(futureRateCents)}/month</dd>
                     <dd className="text-xs text-slate-400">
                       {plan.standardRateStartDate
                         ? `Beginning ${fmtDate(plan.standardRateStartDate)} — no action needed, converts automatically`
-                        : "Beginning after Month 3 — no action needed, converts automatically"}
+                        : `Beginning after Month ${commitmentMonths} — converts automatically`}
                     </dd>
                   </div>
                 </dl>
@@ -137,8 +148,8 @@ export default async function AccountPage() {
 
             {commitmentCompleted ? (
               <p className="text-xs text-slate-400">
-                Your 3-month introductory period is complete — you&apos;re now billed month-to-month at $150/month on the same
-                subscription. No re-enrollment or new payment information was needed.
+                Your commitment is complete — you&apos;re now billed month-to-month at {formatCents(futureRateCents)}/month on the same
+                subscription until canceled.
               </p>
             ) : null}
 

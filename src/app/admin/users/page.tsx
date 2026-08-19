@@ -6,6 +6,8 @@ import { SubscriptionRow } from "./subscription-row";
 import { AdminInviteForm } from "./admin-invite-form";
 import { AdminRoleControl } from "./admin-role-control";
 import { commitmentMonthOf } from "@/lib/billing/commitment";
+import { LEGACY_PLAN, PLANS } from "@/config/pricing";
+import { formatCents } from "@/lib/billing/money";
 
 export const dynamic = "force-dynamic";
 
@@ -34,14 +36,16 @@ interface SubscriptionRowData {
   current_period_end: string | null;
   cancel_at_period_end: boolean | null;
   cancel_at: string | null;
+  pricing_version: string | null;
+  legacy_plan_key: string | null;
 }
 
 export type MemberFilter = "all" | "standard" | "commitment" | "commitment_completed" | "past_due" | "canceled";
 
 const FILTERS: { value: MemberFilter; label: string }[] = [
   { value: "all", label: "All Members" },
-  { value: "standard", label: "$150 Monthly Members" },
-  { value: "commitment", label: "3-Month Commitment Members" },
+  { value: "standard", label: `${formatCents(PLANS.monthly.amountCents)} Monthly Members` },
+  { value: "commitment", label: "4-Month Commitment Members" },
   { value: "commitment_completed", label: "Commitment Completed" },
   { value: "past_due", label: "Past Due" },
   { value: "canceled", label: "Canceled" },
@@ -74,15 +78,17 @@ function isFilterMatch(row: SubscriptionRowData, filter: MemberFilter): boolean 
 function MembershipCell({ row }: { row: SubscriptionRowData }) {
   const kind = (row.membership_kind ?? "standard") as string;
   const month = commitmentMonthOf(row.commitment_start_date, row.commitment_end_date);
+  const termMonths = row.legacy_plan_key ? LEGACY_PLAN.termMonths : PLANS.commit_4mo.termMonths;
+  const commitmentLabel = row.legacy_plan_key ? "Legacy Commitment" : "4-Month Commitment";
   return (
     <div className="min-w-[180px]">
       <div className="flex items-center gap-2">
         <span className="font-medium text-slate-100">
-          {kind === "commitment" ? "3-Month Commitment" : kind === "commitment_completed" ? "Monthly · Commitment done" : "Standard Monthly"}
+          {kind === "commitment" ? commitmentLabel : kind === "commitment_completed" ? "Monthly · Commitment done" : "Standard Monthly"}
         </span>
         {kind === "commitment" ? (
           <span className="inline-flex rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
-            {month ? `Month ${month} of 3` : "Commitment"}
+            {month ? `Month ${month} of ${termMonths}` : "Commitment"}
           </span>
         ) : null}
       </div>
@@ -94,7 +100,7 @@ function MembershipCell({ row }: { row: SubscriptionRowData }) {
             : "comped"}
       </div>
       {kind === "commitment" && row.standard_rate_start_date ? (
-        <div className="text-[11px] text-slate-500">$150/mo from {new Date(row.standard_rate_start_date).toLocaleDateString()}</div>
+        <div className="text-[11px] text-slate-500">{formatCents(row.legacy_plan_key ? LEGACY_PLAN.standardAmountCents : PLANS.monthly.amountCents)}/mo from {new Date(row.standard_rate_start_date).toLocaleDateString()}</div>
       ) : null}
       {kind === "commitment" && row.commitment_start_date && row.commitment_end_date ? (
         <div className="text-[11px] text-slate-600">
@@ -155,7 +161,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
     supabase
       .from("user_subscriptions")
       .select(
-        "user_id, plan_id, discount_id, canceled_at, source, stripe_subscription_id, stripe_customer_id, stripe_status, stripe_subscription_schedule_id, membership_kind, current_monthly_price_cents, commitment_start_date, commitment_end_date, standard_rate_start_date, current_period_end, cancel_at_period_end, cancel_at"
+        "user_id, plan_id, discount_id, canceled_at, source, stripe_subscription_id, stripe_customer_id, stripe_status, stripe_subscription_schedule_id, membership_kind, current_monthly_price_cents, commitment_start_date, commitment_end_date, standard_rate_start_date, current_period_end, cancel_at_period_end, cancel_at, pricing_version, legacy_plan_key"
       ),
     service.auth.admin.listUsers({ page: 1, perPage: 1000 }),
   ]);

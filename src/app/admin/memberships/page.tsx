@@ -11,6 +11,7 @@ import {
   type MembershipRow,
 } from "@/domain/memberships/metrics";
 import { MembershipActions } from "./membership-actions";
+import { PLANS, PRICING_VERSION } from "@/config/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export default async function AdminMembershipsPage({ searchParams }: { searchPar
   const tab = (TABS as readonly { key: string }[]).some((t) => t.key === params.tab) ? params.tab! : "overview";
 
   // Fetch membership rows + echo the attribution join for the Attribution tab.
-  const [membershipsRes, attributionRes, eventsRes, orgsRes, repsRes, trialsRes, usersRes] = await Promise.all([
+  const [membershipsRes, attributionRes, eventsRes, orgsRes, repsRes, trialsRes, usersRes, personalBillingRes] = await Promise.all([
     service.from("organization_memberships").select("*").order("updated_at", { ascending: false }),
     service.from("organization_attribution").select("organization_id, attributed_to_user_id, method, status, conflict_detail"),
     service.from("membership_events").select("organization_id, from_status, to_status, reason, source, actor_user_id, mrr_delta_cents, created_at").order("created_at", { ascending: false }).limit(1000),
@@ -44,6 +45,7 @@ export default async function AdminMembershipsPage({ searchParams }: { searchPar
     service.from("sales_reps").select("id, user_id, code, display_name"),
     service.from("trial_redemptions").select("id, activated_at, converted_at"),
     service.from("users").select("id, email"),
+    service.from("user_subscriptions").select("pricing_version, membership_kind, commitment_end_date, current_monthly_price_cents, stripe_status, legacy_plan_key"),
   ]);
   for (const [label, res] of [
     ["memberships", membershipsRes],
@@ -53,6 +55,7 @@ export default async function AdminMembershipsPage({ searchParams }: { searchPar
     ["reps", repsRes],
     ["trials", trialsRes],
     ["users", usersRes],
+    ["personal billing", personalBillingRes],
   ] as const) {
     if (res.error) throw new Error(`Failed to load ${label}: ${res.error.message}`);
   }
@@ -99,6 +102,22 @@ export default async function AdminMembershipsPage({ searchParams }: { searchPar
 
   const repList = [...new Set(membershipRows.map((m) => m.attributionRepUserId))].sort();
   const repMetrics = repList.map((rid) => perRepMetrics(membershipRows, rid, now));
+  const v2Billing = (personalBillingRes.data ?? []).filter((row) => row.pricing_version === PRICING_VERSION);
+  const commitmentCohort = v2Billing.filter((row) => row.commitment_end_date);
+  const monthFiveEligible = commitmentCohort.filter(
+    (row) => new Date(row.commitment_end_date as string).getTime() <= now.getTime()
+  );
+  const monthFiveConverted = monthFiveEligible.filter(
+    (row) => row.membership_kind === "commitment_completed" && row.current_monthly_price_cents === PLANS.monthly.amountCents
+  );
+  const monthFiveConversionRate = monthFiveEligible.length === 0
+    ? null
+    : Math.round((monthFiveConverted.length * 100) / monthFiveEligible.length);
+  const planMix = {
+    monthly: v2Billing.filter((row) => !row.commitment_end_date).length,
+    commitment: commitmentCohort.length,
+    legacy: (personalBillingRes.data ?? []).filter((row) => row.legacy_plan_key).length,
+  };
 
   const filtered = params.status ? membershipRows.filter((m) => m.status === params.status) : membershipRows;
 
@@ -134,6 +153,17 @@ export default async function AdminMembershipsPage({ searchParams }: { searchPar
             </a>
           ))}
         </nav>
+      </div>
+
+      <div className="rounded-xl border-2 border-amber-400/70 bg-gradient-to-r from-amber-500/15 to-black p-5 shadow-[0_0_30px_rgba(251,191,36,0.12)]">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">Primary Pricing v2 KPI</p>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-4xl font-bold text-white">{monthFiveConversionRate === null ? "—" : `${monthFiveConversionRate}%`}</p>
+            <p className="mt-1 text-sm text-slate-300">Month-five conversion from commitment to monthly</p>
+          </div>
+          <p className="text-sm text-slate-400">{monthFiveConverted.length} converted of {monthFiveEligible.length} eligible · Plan mix: {planMix.monthly} monthly / {planMix.commitment} commitment / {planMix.legacy} legacy</p>
+        </div>
       </div>
 
       {/* Top strip (Overview) */}

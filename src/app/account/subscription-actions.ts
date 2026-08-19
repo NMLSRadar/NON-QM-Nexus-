@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getEffectivePlan } from "@/lib/repository/membership";
 import { sendTransactionalEmail } from "@/lib/email";
 import { subscriptionCanceledEmail, subscriptionReactivatedEmail } from "@/lib/emailTemplates";
+import { PLANS } from "@/config/pricing";
+import { formatCents } from "@/lib/billing/money";
 import { getStripe } from "@/lib/stripe";
 import {
   gracefullyCancelSchedule,
@@ -15,11 +17,12 @@ import {
 export interface CancelSubscriptionState {
   error?: string;
   success?: boolean;
+  message?: string;
 }
 
 /**
  * Self-serve cancellation. Standard subscriptions: Stripe
- * cancel_at_period_end (unchanged). 3-Month Commitment subscriptions are
+ * cancel_at_period_end (unchanged). Commitment subscriptions are
  * managed by a Subscription Schedule, and Stripe rejects
  * cancel_at_period_end on them directly ("update the schedule instead" —
  * verified in test mode 2026-08-15); the schedule is trimmed so the
@@ -28,9 +31,9 @@ export interface CancelSubscriptionState {
  * a standard subscription — and Stripe sets subscription.cancel_at to
  * that date. The webhook then mirrors the state back.
  *
- * The commitment remains a 3-Month Commitment contract: canceling ends
- * the schedule, which ends the future $120/$150 charges; nothing lets
- * front-end logic keep the $120 rate beyond its schedule.
+ * The commitment remains a Commitment contract: canceling ends
+ * the schedule, which ends the future legacy scheduled charges; nothing lets
+ * front-end logic keep a legacy rate beyond its schedule.
  */
 export async function cancelSubscription(
   _prev: CancelSubscriptionState,
@@ -45,6 +48,12 @@ export async function cancelSubscription(
   }
 
   const plan = await getEffectivePlan(supabase, user.id);
+  const { data: billingRecord } = await supabase
+    .from("user_subscriptions")
+    .select("legacy_plan_key, pricing_version")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const isLegacyCommitment = Boolean(billingRecord?.legacy_plan_key);
 
   if (plan.source === "stripe" && plan.stripeSubscriptionId) {
     const stripe = getStripe();
@@ -57,7 +66,13 @@ export async function cancelSubscription(
         if (!scheduleId) {
           return { error: "This subscription is managed by a billing schedule we can't resolve — please contact support." };
         }
-        await gracefullyCancelSchedule(stripe, scheduleId, subscription);
+        await gracefullyCancelSchedule(stripe, scheduleId, subscription, !isLegacyCommitment);
+        if (!isLegacyCommitment) {
+          await supabase
+            .from("user_subscriptions")
+            .update({ cancel_at_commitment_end: true, cancel_requested_at: new Date().toISOString() })
+            .eq("user_id", user.id);
+        }
       } else {
         await stripe.subscriptions.update(subscription.id, { cancel_at_period_end: true });
       }
@@ -86,10 +101,21 @@ export async function cancelSubscription(
       }
     }
   } catch (err) {
-    console.error("Cancellation email threw:", err);
+    console.error("Cancellation email threw:", err instanceof Error ? err.name : "unknown");
   }
 
   revalidatePath("/account");
+  if (!isLegacyCommitment && plan.commitmentEndDate) {
+    const date = new Date(plan.commitmentEndDate).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    return {
+      success: true,
+      message: `Your membership is scheduled to end after your four-month commitment. Your remaining ${formatCents(PLANS.commit_4mo.amountCents)} commitment payments continue as scheduled. It will not transition to ${formatCents(PLANS.monthly.amountCents)} month-to-month. Access continues through ${date}.`,
+    };
+  }
   return { success: true };
 }
 
@@ -123,8 +149,8 @@ export async function reactivateSubscription(
 
       if (plan.stripeSubscriptionScheduleId || isCommitmentKind(plan.membershipKind)) {
         // Schedule-managed (commitment) subscription: rebuild the
-        // two-phase schedule (restores the $120 remainder if the
-        // commitment hasn't fully ended yet, or goes straight to $150).
+        // two-phase schedule (restores the legacy commitment if the
+        // commitment hasn't fully ended yet, or goes straight to the legacy monthly phase).
         // Stripe is asked for the plan prices because getEffectivePlan
         // intentionally doesn't expose plan_id.
         const scheduleId = plan.stripeSubscriptionScheduleId;
