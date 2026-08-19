@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LEGACY_PLAN, PLANS, effectiveMonthlyCents, termTotalCents } from "@/config/pricing";
+import { ANNUAL_PRICE_CENTS, LEGACY_PLAN, PLANS, effectiveMonthlyCents, termTotalCents } from "@/config/pricing";
 import { formatCents, parseDollarStringToCents } from "@/lib/billing/money";
 import { buildCommitmentPhases } from "@/lib/billing/commitment";
 import { evaluateAccess, evaluateCancellation } from "@/lib/billing/entitlements";
@@ -18,6 +18,11 @@ describe("Pricing v2", () => {
     expect(buildCommitmentPhases(1, "price_50", "price_5999")[0]).toMatchObject({
       duration: { interval: "month", interval_count: 4 },
     });
+  });
+
+  it("sets the annual option to exactly $650 billed yearly", () => {
+    expect(ANNUAL_PRICE_CENTS).toBe(65000);
+    expect(formatCents(ANNUAL_PRICE_CENTS)).toBe("$650.00");
   });
 
   it("never makes the commitment effective monthly rate exceed monthly", () => {
