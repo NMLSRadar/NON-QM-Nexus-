@@ -5,6 +5,7 @@ import type { CalculationSummary, ProgramEvaluation, RuleEvaluationResult } from
 import { selectActiveRules } from "../rules/activeRules";
 import { evaluateRules } from "../rules/evaluate";
 import { baseProgramChecks, deriveMaxDti, deriveMaxLtv, deriveRequiredReservesMonths } from "./baseChecks";
+import { incomeDocTypeLabel, resolveDocumentationProfile } from "./documentationProfile";
 import { computeScore } from "./score";
 import type { BankStatementFileClassification } from "./bankStatementComplexity";
 
@@ -43,68 +44,125 @@ export function evaluateProgram(
   asOf: Date = new Date(),
   bankStatementClassification?: BankStatementFileClassification,
 ): ProgramEvaluation {
+  const resolution = resolveDocumentationProfile(program, scenario.incomeDocType);
+  if (resolution.status === "verification_required") {
+    const explanation = `Guideline verification required for ${resolution.displayName}: ${resolution.issues.join(" ")}`;
+    const verificationResult: RuleEvaluationResult = {
+      ruleId: `${program.id}:documentation-profile-verification`,
+      ruleName: "Documentation program profile verification",
+      category: "documentation",
+      outcome: RuleOutcome.ManualReview,
+      severity: RuleSeverity.Hard,
+      userExplanation: explanation,
+    };
+    return {
+      programId: program.id,
+      lenderId: lender.id,
+      lenderTierLevel: lender.tierLevel,
+      programName: `${program.name} — ${resolution.displayName}`,
+      lenderName: lender.name,
+      isSampleData: program.isSampleData || lender.isSampleData,
+      status: MatchStatus.ManualReview,
+      matchScore: 0,
+      scoreBreakdown: [{ factor: "Verified documentation profile", points: 0, maxPoints: 100, note: explanation }],
+      documentationType: resolution.displayName,
+      matchedIncomeDocType: scenario.incomeDocType,
+      guidelineVerificationRequired: true,
+      profileVerificationIssues: resolution.issues,
+      estimatedQualifyingIncome: calc.qualifyingMonthlyIncome?.value ?? undefined,
+      incomeDocTypes: scenario.incomeDocType ? [scenario.incomeDocType] : [],
+      loanPurposes: [],
+      occupancies: [],
+      propertyTypes: [],
+      citizenshipEligible: [],
+      foreignNationalSpecialist: false,
+      itinSpecialist: false,
+      bankStatementCleanExecution: false,
+      bankStatementFlexible: false,
+      premierProduct: false,
+      itinDscrConfirmed: false,
+      interestOnlyAvailable: false,
+      ruleResults: [verificationResult],
+      failedRules: [],
+      warnings: [],
+      manualReviewItems: [verificationResult],
+      guidelineVersion: program.guidelineVersionLabel,
+      effectiveDate: program.effectiveDate,
+      lastVerifiedDate: program.lastVerifiedDate,
+      sourceCitation: program.sourceCitation,
+      disclaimer: DISCLAIMER,
+    };
+  }
+
+  const scopedProgram = resolution.program;
   const pnl85Disclaimer =
     scenario.incomeDocType === "pnl_only" && calc.ltv?.value === 85
       ? "Important: At 85% LTV, the lender will most likely require two months of bank statements to support the Profit & Loss statement."
       : undefined;
   const active = selectActiveRules(
-    customRules.filter((r) => r.programId === program.id),
+    customRules.filter((r) =>
+      r.programId === program.id &&
+      (resolution.ruleIds == null || resolution.ruleIds.includes(r.id))),
     asOf,
   );
 
   const ruleResults: RuleEvaluationResult[] = [
-    ...baseProgramChecks(scenario, calc, program),
+    ...baseProgramChecks(scenario, calc, scopedProgram),
     ...evaluateRules(scenario, calc, active),
   ];
 
-  const { score, breakdown } = computeScore(scenario, calc, program, ruleResults, bankStatementClassification);
+  const { score, breakdown } = computeScore(scenario, calc, scopedProgram, ruleResults, bankStatementClassification);
   const status = classifyStatus(ruleResults, score);
 
   return {
     programId: program.id,
     lenderId: lender.id,
     lenderTierLevel: lender.tierLevel,
-    programName: program.name,
+    programName: scopedProgram.name,
     lenderName: lender.name,
-    isSampleData: program.isSampleData || lender.isSampleData,
+    isSampleData: scopedProgram.isSampleData || lender.isSampleData,
     status,
     matchScore: score,
     scoreBreakdown: breakdown,
-    maxLtv: deriveMaxLtv(scenario, program, calc.dscr?.value ?? undefined),
-    maxLoanAmount: scenario.incomeDocType === "pnl_only" ? (program.pnlMaxLoanAmount ?? program.maxLoanAmount) : program.maxLoanAmount,
-    minFico: scenario.incomeDocType === "pnl_only" ? (program.pnlMinFico ?? program.minFico) : program.minFico,
+    maxLtv: deriveMaxLtv(scenario, scopedProgram, calc.dscr?.value ?? undefined),
+    maxLoanAmount: scenario.incomeDocType === "pnl_only" ? (scopedProgram.pnlMaxLoanAmount ?? scopedProgram.maxLoanAmount) : scopedProgram.maxLoanAmount,
+    minFico: scenario.incomeDocType === "pnl_only" ? (scopedProgram.pnlMinFico ?? scopedProgram.minFico) : scopedProgram.minFico,
     maxDti: scenario.incomeDocType === "pnl_only"
-      ? (program.pnlMaxDti ?? deriveMaxDti(scenario, program, calc.ltv?.value))
-      : deriveMaxDti(scenario, program, calc.ltv?.value),
+      ? (scopedProgram.pnlMaxDti ?? deriveMaxDti(scenario, scopedProgram, calc.ltv?.value))
+      : deriveMaxDti(scenario, scopedProgram, calc.ltv?.value),
     estimatedQualifyingIncome: calc.qualifyingMonthlyIncome?.value ?? undefined,
-    estimatedReservesRequiredMonths: deriveRequiredReservesMonths(scenario, program, calc.dscr?.value, calc.ltv?.value),
-    documentationType: scenario.incomeDocType === "pnl_only" ? "P&L Only" : program.incomeDocTypes.join(", "),
+    estimatedReservesRequiredMonths: deriveRequiredReservesMonths(scenario, scopedProgram, calc.dscr?.value, calc.ltv?.value),
+    documentationType: resolution.displayName || incomeDocTypeLabel(scenario.incomeDocType),
     matchedIncomeDocType: scenario.incomeDocType,
+    guidelineVerificationRequired: false,
+    profileSourceCitation: resolution.sourceCitation,
+    profileSourceSection: resolution.sourceSection,
+    profileSourcePage: resolution.sourcePage,
     pnl85SupportingStatementDisclaimer: pnl85Disclaimer,
-    incomeDocTypes: program.incomeDocTypes,
-    loanPurposes: program.loanPurposes,
-    occupancies: program.occupancies,
-    propertyTypes: program.propertyTypes,
-    citizenshipEligible: program.citizenshipEligible,
-    foreignNationalSpecialist: program.foreignNationalSpecialist ?? false,
-    itinSpecialist: program.itinSpecialist ?? false,
-    bankStatementCleanExecution: program.bankStatementCleanExecution ?? false,
-    bankStatementFlexible: program.bankStatementFlexible ?? false,
-    premierProduct: program.premierProduct ?? false,
+    incomeDocTypes: scenario.incomeDocType ? [scenario.incomeDocType] : scopedProgram.incomeDocTypes,
+    loanPurposes: scopedProgram.loanPurposes,
+    occupancies: scopedProgram.occupancies,
+    propertyTypes: scopedProgram.propertyTypes,
+    citizenshipEligible: scopedProgram.citizenshipEligible,
+    foreignNationalSpecialist: scopedProgram.foreignNationalSpecialist ?? false,
+    itinSpecialist: scopedProgram.itinSpecialist ?? false,
+    bankStatementCleanExecution: scopedProgram.bankStatementCleanExecution ?? false,
+    bankStatementFlexible: scopedProgram.bankStatementFlexible ?? false,
+    premierProduct: scopedProgram.premierProduct ?? false,
     itinDscrConfirmed:
       scenario.citizenship === "itin" &&
       scenario.incomeDocType === "dscr" &&
-      ((program.minDscr === 0 || program.minDscr == null) ? program.itinNoRatioEligible === true : program.itinDscrEligible === true),
-    lienPosition: program.lienPosition,
-    interestOnlyAvailable: program.interestOnlyAvailable,
+      ((scopedProgram.minDscr === 0 || scopedProgram.minDscr == null) ? scopedProgram.itinNoRatioEligible === true : scopedProgram.itinDscrEligible === true),
+    lienPosition: scopedProgram.lienPosition,
+    interestOnlyAvailable: scopedProgram.interestOnlyAvailable,
     ruleResults,
     failedRules: ruleResults.filter((r) => r.outcome === RuleOutcome.Fail),
     warnings: ruleResults.filter((r) => r.outcome === RuleOutcome.Warning),
     manualReviewItems: ruleResults.filter((r) => r.outcome === RuleOutcome.ManualReview),
-    guidelineVersion: program.guidelineVersionLabel,
-    effectiveDate: program.effectiveDate,
-    lastVerifiedDate: program.lastVerifiedDate,
-    sourceCitation: program.sourceCitation,
+    guidelineVersion: scopedProgram.guidelineVersionLabel,
+    effectiveDate: scopedProgram.effectiveDate,
+    lastVerifiedDate: scopedProgram.lastVerifiedDate,
+    sourceCitation: scopedProgram.sourceCitation,
     disclaimer: DISCLAIMER,
   };
 }

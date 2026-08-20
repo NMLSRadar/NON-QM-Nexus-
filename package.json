@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postbuild": "vitest run tests/domain/purposeLtvMatrix.test.ts tests/domain/fullEligibilityLtvMatrix.test.ts tests/domain/programConfigQuarantine.test.ts tests/domain/planetHomeCatalogRegression.test.ts tests/domain/fourLenderGuidelines2026_08_08.test.ts tests/domain/tenLenderNonQm2026_08_08.test.ts tests/domain/theLenderComplete2026_08_17.test.ts tests/domain/catalogMutationSafety.test.ts tests/domain/jmacComplete2026.test.ts tests/domain/luxuryMortgageAudit2026_08_08.test.ts tests/domain/acraComplete2026.test.ts tests/domain/accMortgageAudit2026_08_08.test.ts",
+    "postbuild": "vitest run tests/domain/programDocumentationIsolation.test.ts tests/domain/purposeLtvMatrix.test.ts tests/domain/fullEligibilityLtvMatrix.test.ts tests/domain/programConfigQuarantine.test.ts tests/domain/planetHomeCatalogRegression.test.ts tests/domain/fourLenderGuidelines2026_08_08.test.ts tests/domain/tenLenderNonQm2026_08_08.test.ts tests/domain/theLenderComplete2026_08_17.test.ts tests/domain/catalogMutationSafety.test.ts tests/domain/jmacComplete2026.test.ts tests/domain/luxuryMortgageAudit2026_08_08.test.ts tests/domain/acraComplete2026.test.ts tests/domain/accMortgageAudit2026_08_08.test.ts",
     "ingest:production:manual": "node scripts/run_production_ingestions.mjs",
     "start": "next start",
     "lint": "next lint",

@@ -40,9 +40,10 @@ export function generateRestructuringOptions(
   const baselineCalc = runCalculations(scenario);
   const baselineEligible = new Set(
     programs
-      .filter(({ program, lender }) =>
-        ELIGIBLE_STATUSES.includes(evaluateProgram(scenario, baselineCalc, program, lender, rules, asOf).status),
-      )
+      .filter(({ program, lender }) => {
+        const evaluation = evaluateProgram(scenario, baselineCalc, program, lender, rules, asOf);
+        return !evaluation.guidelineVerificationRequired && ELIGIBLE_STATUSES.includes(evaluation.status);
+      })
       .map(({ program }) => program.id),
   );
 
@@ -59,7 +60,7 @@ export function generateRestructuringOptions(
 
     for (const { program, lender } of programs) {
       const evaluation = evaluateProgram(modified, calc, program, lender, rules, asOf);
-      if (ELIGIBLE_STATUSES.includes(evaluation.status) && !baselineEligible.has(program.id)) {
+      if (!evaluation.guidelineVerificationRequired && ELIGIBLE_STATUSES.includes(evaluation.status) && !baselineEligible.has(program.id)) {
         unlocked.push(`${lender.name} — ${program.name}`);
         unlockedIds.push(program.id);
         for (const w of evaluation.warnings) remaining.push(`${program.name}: ${w.userExplanation}`);

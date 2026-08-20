@@ -35,6 +35,7 @@ function program(id: string, lenderId: string, overrides: Partial<Program> = {})
     minLoanAmount: 100_000,
     maxLoanAmount: 2_000_000,
     minFico: 660,
+    maxDti: 50,
     baseMaxLtv: 80,
     minReservesMonths: 0,
     interestOnlyAvailable: false,

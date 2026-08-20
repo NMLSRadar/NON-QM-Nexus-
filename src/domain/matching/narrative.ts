@@ -18,6 +18,7 @@ const CATEGORY_PRIORITY = ["ltv", "dscr", "dti", "documentation", "borrower", "e
  * invented). Sorted by category priority so the most load-bearing facts
  * (LTV, DSCR, documentation) surface first. */
 export function whyThisLender(e: ProgramEvaluation, maxItems = 6): string[] {
+  if (e.guidelineVerificationRequired) return [];
   const passes = e.ruleResults.filter((r) => r.outcome === RuleOutcome.Pass);
   const sorted = [...passes].sort((a, b) => {
     const ai = CATEGORY_PRIORITY.indexOf(a.category);
@@ -59,6 +60,9 @@ export function potentialIssues(e: ProgramEvaluation): string[] {
  * is a readable sentence, not novel reasoning the rule engine didn't
  * already produce. */
 export function aiNarrative(e: ProgramEvaluation, rank: number, runnerUpName?: string): string {
+  if (e.guidelineVerificationRequired) {
+    return `${e.lenderName} was not scored as an eligible ${e.documentationType} match because an independently verified documentation-program profile is not stored. Guideline verification is required; no sibling program limits were substituted.`;
+  }
   const rankWord = rank === 0 ? "ranks first" : `ranks #${rank + 1}`;
   const facts: string[] = [];
   if (e.maxLtv != null) facts.push(`up to ${e.maxLtv}% LTV`);

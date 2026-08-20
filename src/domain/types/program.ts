@@ -173,6 +173,14 @@ export interface Program {
   isSampleData: boolean;
   active: boolean;
   incomeDocTypes: IncomeDocType[];
+  /**
+   * Independently verified eligibility profiles for bundled product-family
+   * rows. A row advertising more than one income-documentation method is not
+   * eligible for matching unless the requested method has a human-verified
+   * profile here. The resolver never merges sibling profiles or falls back to
+   * the broad row's headline limits.
+   */
+  documentationProfiles?: Partial<Record<IncomeDocType, DocumentationEligibilityProfile>>;
   loanPurposes: LoanPurpose[];
   occupancies: Occupancy[];
   propertyTypes: PropertyType[];
@@ -608,6 +616,47 @@ export interface Program {
   effectiveDate: string;
   lastVerifiedDate?: string;
   sourceCitation: string;
+  notes?: string;
+}
+
+/** All decision-bearing fields for one documentation method. Required fields
+ * intentionally mirror Program's core eligibility contract; optional fields
+ * retain their ordinary meaning only after a human reviewer verifies the
+ * profile as a whole. Identity and source metadata live on the parent/profile. */
+export type DocumentationProgramCriteria = Omit<
+  Program,
+  | "id"
+  | "lenderId"
+  | "organizationId"
+  | "name"
+  | "isSampleData"
+  | "active"
+  | "incomeDocTypes"
+  | "documentationProfiles"
+  | "guidelineVersionId"
+  | "guidelineVersionLabel"
+  | "effectiveDate"
+  | "lastVerifiedDate"
+  | "sourceCitation"
+  | "notes"
+>;
+
+export interface DocumentationEligibilityProfile {
+  documentationType: IncomeDocType;
+  displayName: string;
+  verificationStatus: VerificationStatus;
+  guidelineVersionId: string;
+  guidelineVersionLabel: string;
+  effectiveDate: string;
+  lastVerifiedDate?: string;
+  sourceCitation: string;
+  sourceSection?: string;
+  sourcePage?: number;
+  /** Explicit list of program-level rule records approved for this profile.
+   * An empty array is meaningful: the reviewer confirmed there are no extra
+   * rule rows beyond criteria. Omission is incomplete and fails closed. */
+  ruleIds: string[];
+  criteria: DocumentationProgramCriteria;
   notes?: string;
 }
 

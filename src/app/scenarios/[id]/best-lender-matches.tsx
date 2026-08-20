@@ -89,7 +89,7 @@ function getPricingGuidance(evaluations: ProgramEvaluation[]): {
   metricValue: string;
   metricLabel: string;
 } | null {
-  const scores = evaluations.map((e) => e.matchScore).filter(Number.isFinite);
+  const scores = evaluations.filter((e) => !e.guidelineVerificationRequired).map((e) => e.matchScore).filter(Number.isFinite);
   if (scores.length === 0) return null;
 
   const average = Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length);
@@ -237,6 +237,7 @@ function LenderCard({
   const isLowestReserves = e.estimatedReservesRequiredMonths != null;
   const isHighestLtv = e.maxLtv != null;
   const matrixPending = requiresCurrentMatrix(e);
+  const verificationPending = e.guidelineVerificationRequired === true;
 
   return (
     <div
@@ -285,17 +286,24 @@ function LenderCard({
 
       <PrivateGuidelinesMatchNote lenderName={e.lenderName} lenderId={e.lenderId} />
 
+      {verificationPending && (
+        <div className="mt-4 rounded-control border-2 border-amber-400 bg-amber-50 p-3 text-sm text-amber-950" role="alert">
+          <p className="font-bold">Guideline verification required — {e.documentationType}</p>
+          <p className="mt-1">This bundled lender row does not yet contain an independently verified profile for the requested documentation program. No lender-level or sibling-program limits were used.</p>
+        </div>
+      )}
+
       <dl className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 border-t border-surface-border pt-4">
-        <Stat label={e.matchedIncomeDocType === "pnl_only" ? "P&L Only Max LTV" : "Max LTV"} value={matrixPending && e.maxLtv === 0 ? "Confirm matrix" : fmtPct(e.maxLtv, 1)} />
-        <Stat label="Min FICO" value={matrixPending && e.minFico === 0 ? "Confirm matrix" : e.minFico > 0 ? e.minFico : "Not required"} />
-        <Stat label="Max loan amount" value={matrixPending && e.maxLoanAmount === 0 ? "Confirm matrix" : fmtUsd(e.maxLoanAmount)} />
-        <Stat label="Reserves required" value={matrixPending && (e.estimatedReservesRequiredMonths ?? 0) === 0 ? "Confirm matrix" : `${e.estimatedReservesRequiredMonths ?? "—"} mo`} />
-        <Stat label="Max DTI" value={e.maxDti != null ? fmtPct(e.maxDti, 0) : "N/A"} />
+        <Stat label={e.matchedIncomeDocType === "pnl_only" ? "P&L Only Max LTV" : `${e.documentationType} Max LTV`} value={verificationPending ? "Verification required" : matrixPending && e.maxLtv === 0 ? "Confirm matrix" : fmtPct(e.maxLtv, 1)} />
+        <Stat label="Min FICO" value={verificationPending ? "Verification required" : matrixPending && e.minFico === 0 ? "Confirm matrix" : e.minFico != null && e.minFico > 0 ? e.minFico : "Not required"} />
+        <Stat label="Max loan amount" value={verificationPending ? "Verification required" : matrixPending && e.maxLoanAmount === 0 ? "Confirm matrix" : fmtUsd(e.maxLoanAmount)} />
+        <Stat label="Reserves required" value={verificationPending ? "Verification required" : matrixPending && (e.estimatedReservesRequiredMonths ?? 0) === 0 ? "Confirm matrix" : `${e.estimatedReservesRequiredMonths ?? "—"} mo`} />
+        <Stat label="Max DTI" value={verificationPending ? "Verification required" : e.maxDti != null ? fmtPct(e.maxDti, 0) : "N/A"} />
         <Stat
           label="Qualifying income"
           value={e.estimatedQualifyingIncome != null ? `${fmtUsd(e.estimatedQualifyingIncome)}/mo` : "—"}
         />
-        <Stat label="Documentation" value={e.documentationType} />
+        <Stat label="Matched Documentation" value={e.documentationType} />
       </dl>
 
       {e.pnl85SupportingStatementDisclaimer && (
@@ -304,25 +312,26 @@ function LenderCard({
         </div>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {e.loanPurposes.includes("cash_out_refinance") && <Pill tone="sky">Cash-Out Eligible</Pill>}
+      {!verificationPending && <div className="mt-3 flex flex-wrap gap-1.5">
         {e.lienPosition === "standalone_second" && <Pill tone="gold">Standalone Second Lien</Pill>}
         {e.citizenshipEligible.includes("itin") && <Pill tone="gold">ITIN Eligible</Pill>}
         {e.itinSpecialist && <Pill tone="gold">ITIN Specialist</Pill>}
         {e.itinDscrConfirmed && <Pill tone="gold">ITIN DSCR Eligible</Pill>}
         {e.citizenshipEligible.includes("foreign_national") && <Pill tone="sky">Foreign National</Pill>}
         {e.foreignNationalSpecialist && <Pill tone="gold">Foreign National Specialist</Pill>}
-        {e.matchedIncomeDocType !== "pnl_only" && e.bankStatementCleanExecution && <Pill tone="gold">Clean-File Execution</Pill>}
-        {e.matchedIncomeDocType !== "pnl_only" && e.bankStatementFlexible && <Pill tone="gold">Bank Statement Flexibility</Pill>}
-        {e.matchedIncomeDocType !== "pnl_only" && e.incomeDocTypes.includes("bank_statement") && <Pill tone="neutral">Bank Statement</Pill>}
-        {e.matchedIncomeDocType !== "pnl_only" && e.incomeDocTypes.includes("dscr") && <Pill tone="neutral">DSCR</Pill>}
+        {e.matchedIncomeDocType === "bank_statement" && e.bankStatementCleanExecution && <Pill tone="gold">Clean-File Execution</Pill>}
+        {e.matchedIncomeDocType === "bank_statement" && e.bankStatementFlexible && <Pill tone="gold">Bank Statement Flexibility</Pill>}
+        {e.matchedIncomeDocType === "bank_statement" && <Pill tone="neutral">Bank Statement</Pill>}
+        {e.matchedIncomeDocType === "dscr" && <Pill tone="neutral">DSCR</Pill>}
+        {e.matchedIncomeDocType === "wvoe_only" && <Pill tone="neutral">WVOE Only</Pill>}
+        {e.matchedIncomeDocType === "1099" && <Pill tone="neutral">1099</Pill>}
+        {e.matchedIncomeDocType === "full_doc" && <Pill tone="neutral">Full Documentation</Pill>}
         {e.premierProduct && <Pill tone="gold">Premier Product</Pill>}
         {matrixPending && <Pill tone="neutral">Current matrix required</Pill>}
-        {e.incomeDocTypes.includes("pnl_only") && <Pill tone="neutral">P&amp;L Only: Up to {fmtPct(e.maxLtv, 1)} LTV</Pill>}
-        {e.matchedIncomeDocType !== "pnl_only" && e.incomeDocTypes.includes("asset_depletion") && <Pill tone="neutral">Asset Depletion</Pill>}
+        {e.matchedIncomeDocType === "pnl_only" && <Pill tone="neutral">P&amp;L Only: Up to {fmtPct(e.maxLtv, 1)} LTV</Pill>}
+        {e.matchedIncomeDocType === "asset_depletion" && <Pill tone="neutral">Asset Depletion</Pill>}
         {e.interestOnlyAvailable && <Pill tone="neutral">Interest-Only</Pill>}
-        {e.occupancies.includes("investment") && <Pill tone="neutral">Investment Property</Pill>}
-      </div>
+      </div>}
 
       {(() => {
         const why = whyThisLender(e);
@@ -489,7 +498,7 @@ function CompareTable({ items }: { items: ProgramEvaluation[] }) {
     { label: "Status", render: (e) => <StatusBadge status={e.status} /> },
     { label: "Confidence Score", render: (e) => `${e.matchScore}/100` },
     { label: "Max LTV", render: (e) => (requiresCurrentMatrix(e) && e.maxLtv === 0 ? "Confirm matrix" : fmtPct(e.maxLtv, 1)) },
-    { label: "Min FICO", render: (e) => (requiresCurrentMatrix(e) && e.minFico === 0 ? "Confirm matrix" : e.minFico > 0 ? e.minFico : "Not required") },
+    { label: "Min FICO", render: (e) => (requiresCurrentMatrix(e) && e.minFico === 0 ? "Confirm matrix" : e.minFico != null && e.minFico > 0 ? e.minFico : "Not required") },
     { label: "Max DTI", render: (e) => (e.maxDti != null ? fmtPct(e.maxDti, 0) : "N/A") },
     { label: "Max loan amount", render: (e) => (requiresCurrentMatrix(e) && e.maxLoanAmount === 0 ? "Confirm matrix" : fmtUsd(e.maxLoanAmount)) },
     { label: "Reserves required", render: (e) => (requiresCurrentMatrix(e) && (e.estimatedReservesRequiredMonths ?? 0) === 0 ? "Confirm matrix" : `${e.estimatedReservesRequiredMonths ?? "—"} mo`) },
@@ -569,8 +578,8 @@ export function BestLenderMatches({
   // band first, then score, then name) — that ordering must never be
   // discarded in favor of a pure match-score sort, or an ineligible program
   // could visually outrank an eligible one.
-  const eligible = useMemo(() => evaluations.filter((e) => isEligibleStatus(e.status)), [evaluations]);
-  const ineligible = useMemo(() => evaluations.filter((e) => !isEligibleStatus(e.status)), [evaluations]);
+  const eligible = useMemo(() => evaluations.filter((e) => !e.guidelineVerificationRequired && isEligibleStatus(e.status)), [evaluations]);
+  const ineligible = useMemo(() => evaluations.filter((e) => e.guidelineVerificationRequired || !isEligibleStatus(e.status)), [evaluations]);
   const displayedIneligible = useMemo(
     () => (eligible.length >= ELIGIBLE_SUPPRESSION_THRESHOLD ? [] : ineligible.slice(0, MAX_DISPLAYED_INELIGIBLE)),
     [eligible.length, ineligible],

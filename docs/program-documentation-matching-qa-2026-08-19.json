@@ -1,0 +1,3208 @@
+{
+  "generatedAt": "2026-08-20T00:46:17.898Z",
+  "catalogCounts": {
+    "lenders": 57,
+    "programs": 483,
+    "rules": 0
+  },
+  "invariants": {
+    "allRecommendationsUseOneDocumentationType": true,
+    "allQuarantinedRowsSuppressNumbers": true,
+    "noVerificationRequiredRowIsRecommended": true
+  },
+  "qa": [
+    {
+      "documentationType": "bank_statement",
+      "scenario": {
+        "loanPurpose": "purchase",
+        "propertyType": "single_family",
+        "occupancy": "primary",
+        "ltv": 80,
+        "fico": 720
+      },
+      "counts": {
+        "evaluated": 468,
+        "eligible": 55,
+        "verificationRequired": 107
+      },
+      "recommendations": [
+        {
+          "lender": "ACC Mortgage",
+          "program": "ACC Prime — 12-Month Business Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 3,
+          "sourceCitation": "https://accmortgage.com/wp-content/uploads/2026/08/ACC-Prime-Matrix-ACCMortgage-2026.08.03.pdf",
+          "whyThisLenderRuleIds": [
+            "27472c37-ffa5-4d6c-95c8-1e6e88f41c50:doc",
+            "27472c37-ffa5-4d6c-95c8-1e6e88f41c50:purpose",
+            "27472c37-ffa5-4d6c-95c8-1e6e88f41c50:occ",
+            "27472c37-ffa5-4d6c-95c8-1e6e88f41c50:prop",
+            "27472c37-ffa5-4d6c-95c8-1e6e88f41c50:cit",
+            "27472c37-ffa5-4d6c-95c8-1e6e88f41c50:amt",
+            "27472c37-ffa5-4d6c-95c8-1e6e88f41c50:fico",
+            "27472c37-ffa5-4d6c-95c8-1e6e88f41c50:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ACC Mortgage",
+          "program": "ACC Prime — 12-Month Personal Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 3,
+          "sourceCitation": "https://accmortgage.com/wp-content/uploads/2026/08/ACC-Prime-Matrix-ACCMortgage-2026.08.03.pdf",
+          "whyThisLenderRuleIds": [
+            "5afb90c0-4dd0-49cf-ac03-501cf32a63c8:doc",
+            "5afb90c0-4dd0-49cf-ac03-501cf32a63c8:purpose",
+            "5afb90c0-4dd0-49cf-ac03-501cf32a63c8:occ",
+            "5afb90c0-4dd0-49cf-ac03-501cf32a63c8:prop",
+            "5afb90c0-4dd0-49cf-ac03-501cf32a63c8:cit",
+            "5afb90c0-4dd0-49cf-ac03-501cf32a63c8:amt",
+            "5afb90c0-4dd0-49cf-ac03-501cf32a63c8:fico",
+            "5afb90c0-4dd0-49cf-ac03-501cf32a63c8:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ACC Mortgage",
+          "program": "ACC Prime — 24-Month Business Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 3,
+          "sourceCitation": "https://accmortgage.com/wp-content/uploads/2026/08/ACC-Prime-Matrix-ACCMortgage-2026.08.03.pdf",
+          "whyThisLenderRuleIds": [
+            "19631294-1336-45ff-8e48-c1a0fe120e32:doc",
+            "19631294-1336-45ff-8e48-c1a0fe120e32:purpose",
+            "19631294-1336-45ff-8e48-c1a0fe120e32:occ",
+            "19631294-1336-45ff-8e48-c1a0fe120e32:prop",
+            "19631294-1336-45ff-8e48-c1a0fe120e32:cit",
+            "19631294-1336-45ff-8e48-c1a0fe120e32:amt",
+            "19631294-1336-45ff-8e48-c1a0fe120e32:fico",
+            "19631294-1336-45ff-8e48-c1a0fe120e32:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ACC Mortgage",
+          "program": "ACC Prime — 24-Month Personal Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 3,
+          "sourceCitation": "https://accmortgage.com/wp-content/uploads/2026/08/ACC-Prime-Matrix-ACCMortgage-2026.08.03.pdf",
+          "whyThisLenderRuleIds": [
+            "60a563e1-8202-4ff1-a5cf-7e8de4b11d4e:doc",
+            "60a563e1-8202-4ff1-a5cf-7e8de4b11d4e:purpose",
+            "60a563e1-8202-4ff1-a5cf-7e8de4b11d4e:occ",
+            "60a563e1-8202-4ff1-a5cf-7e8de4b11d4e:prop",
+            "60a563e1-8202-4ff1-a5cf-7e8de4b11d4e:cit",
+            "60a563e1-8202-4ff1-a5cf-7e8de4b11d4e:amt",
+            "60a563e1-8202-4ff1-a5cf-7e8de4b11d4e:fico",
+            "60a563e1-8202-4ff1-a5cf-7e8de4b11d4e:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Acra Lending",
+          "program": "Acra Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 600,
+          "maxDti": 50.49,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 3,
+          "sourceCitation": "Acra Owner-Occupied Program Summary and Acra NOO DTI Program Summary, supplied official PDFs. ITIN borrowers are intentionally excluded from this standard record and routed to Acra ITIN Bank Statement.",
+          "whyThisLenderRuleIds": [
+            "52dc8a72-f9a9-4e51-b8db-9cca8ebf93e8:doc",
+            "52dc8a72-f9a9-4e51-b8db-9cca8ebf93e8:purpose",
+            "52dc8a72-f9a9-4e51-b8db-9cca8ebf93e8:occ",
+            "52dc8a72-f9a9-4e51-b8db-9cca8ebf93e8:prop",
+            "52dc8a72-f9a9-4e51-b8db-9cca8ebf93e8:cit",
+            "52dc8a72-f9a9-4e51-b8db-9cca8ebf93e8:amt",
+            "52dc8a72-f9a9-4e51-b8db-9cca8ebf93e8:fico",
+            "52dc8a72-f9a9-4e51-b8db-9cca8ebf93e8:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Apex — 12-Month Business Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 6000000,
+          "reservesMonths": 3,
+          "sourceCitation": "FundLoans Apex Matrix v1.3 — 2026-08-01 — https://gl.fundloans.com/apex-matrix.pdf | https://guidelines.fundloans.com/portfolio",
+          "whyThisLenderRuleIds": [
+            "7504a994-ac25-4214-a443-6afd5d0b0514:doc",
+            "7504a994-ac25-4214-a443-6afd5d0b0514:purpose",
+            "7504a994-ac25-4214-a443-6afd5d0b0514:occ",
+            "7504a994-ac25-4214-a443-6afd5d0b0514:prop",
+            "7504a994-ac25-4214-a443-6afd5d0b0514:cit",
+            "7504a994-ac25-4214-a443-6afd5d0b0514:amt",
+            "7504a994-ac25-4214-a443-6afd5d0b0514:fico",
+            "7504a994-ac25-4214-a443-6afd5d0b0514:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Apex — 12-Month Personal Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 6000000,
+          "reservesMonths": 3,
+          "sourceCitation": "FundLoans Apex Matrix v1.3 — 2026-08-01 — https://gl.fundloans.com/apex-matrix.pdf | https://guidelines.fundloans.com/portfolio",
+          "whyThisLenderRuleIds": [
+            "334472b4-505f-4713-9de5-90eb2da72354:doc",
+            "334472b4-505f-4713-9de5-90eb2da72354:purpose",
+            "334472b4-505f-4713-9de5-90eb2da72354:occ",
+            "334472b4-505f-4713-9de5-90eb2da72354:prop",
+            "334472b4-505f-4713-9de5-90eb2da72354:cit",
+            "334472b4-505f-4713-9de5-90eb2da72354:amt",
+            "334472b4-505f-4713-9de5-90eb2da72354:fico",
+            "334472b4-505f-4713-9de5-90eb2da72354:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Apex — 24-Month Business Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 6000000,
+          "reservesMonths": 3,
+          "sourceCitation": "FundLoans Apex Matrix v1.3 — 2026-08-01 — https://gl.fundloans.com/apex-matrix.pdf | https://guidelines.fundloans.com/portfolio",
+          "whyThisLenderRuleIds": [
+            "9334ad0f-cb28-4b4a-a294-48c76359ce75:doc",
+            "9334ad0f-cb28-4b4a-a294-48c76359ce75:purpose",
+            "9334ad0f-cb28-4b4a-a294-48c76359ce75:occ",
+            "9334ad0f-cb28-4b4a-a294-48c76359ce75:prop",
+            "9334ad0f-cb28-4b4a-a294-48c76359ce75:cit",
+            "9334ad0f-cb28-4b4a-a294-48c76359ce75:amt",
+            "9334ad0f-cb28-4b4a-a294-48c76359ce75:fico",
+            "9334ad0f-cb28-4b4a-a294-48c76359ce75:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Apex — 24-Month Personal Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 6000000,
+          "reservesMonths": 3,
+          "sourceCitation": "FundLoans Apex Matrix v1.3 — 2026-08-01 — https://gl.fundloans.com/apex-matrix.pdf | https://guidelines.fundloans.com/portfolio",
+          "whyThisLenderRuleIds": [
+            "2b628af0-49bf-4980-9b67-1961d39026b8:doc",
+            "2b628af0-49bf-4980-9b67-1961d39026b8:purpose",
+            "2b628af0-49bf-4980-9b67-1961d39026b8:occ",
+            "2b628af0-49bf-4980-9b67-1961d39026b8:prop",
+            "2b628af0-49bf-4980-9b67-1961d39026b8:cit",
+            "2b628af0-49bf-4980-9b67-1961d39026b8:amt",
+            "2b628af0-49bf-4980-9b67-1961d39026b8:fico",
+            "2b628af0-49bf-4980-9b67-1961d39026b8:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "GIANT Lending",
+          "program": "Bank Statement (12/24 personal · 3/12 business)",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 500,
+          "maxDti": 50,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 0,
+          "sourceCitation": "NON-QM programs page — verified 2026-08-18 — https://www.thegiantlending.com/non-qm-non-conforming-loans/",
+          "whyThisLenderRuleIds": [
+            "7dc25599-9e7d-40e4-9efd-48be31d6ce64:doc",
+            "7dc25599-9e7d-40e4-9efd-48be31d6ce64:purpose",
+            "7dc25599-9e7d-40e4-9efd-48be31d6ce64:occ",
+            "7dc25599-9e7d-40e4-9efd-48be31d6ce64:prop",
+            "7dc25599-9e7d-40e4-9efd-48be31d6ce64:cit",
+            "7dc25599-9e7d-40e4-9efd-48be31d6ce64:amt",
+            "7dc25599-9e7d-40e4-9efd-48be31d6ce64:fico",
+            "7dc25599-9e7d-40e4-9efd-48be31d6ce64:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Jet Advantage Mortgage",
+          "program": "Bank Statement (12/24 personal + 3/12 business)",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 500,
+          "maxDti": 50,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 0,
+          "sourceCitation": "Public NON-QM page — verified 2026-08-18 — https://www.jetadvantagemtg.com/non-qm-non-conforming-loans/",
+          "whyThisLenderRuleIds": [
+            "856fccc7-0a93-4a6c-aa3e-aa5263daf2a6:doc",
+            "856fccc7-0a93-4a6c-aa3e-aa5263daf2a6:purpose",
+            "856fccc7-0a93-4a6c-aa3e-aa5263daf2a6:occ",
+            "856fccc7-0a93-4a6c-aa3e-aa5263daf2a6:prop",
+            "856fccc7-0a93-4a6c-aa3e-aa5263daf2a6:cit",
+            "856fccc7-0a93-4a6c-aa3e-aa5263daf2a6:amt",
+            "856fccc7-0a93-4a6c-aa3e-aa5263daf2a6:fico",
+            "856fccc7-0a93-4a6c-aa3e-aa5263daf2a6:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Brokers Choice Mortgage",
+          "program": "Bank Statement (12/24 personal + 3/12 business)",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 500,
+          "maxDti": 50,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 0,
+          "sourceCitation": "NON-QM programs page — verified 2026-08-18 — https://brokerschoicemtg.com/non-qm-non-conforming-loans/",
+          "whyThisLenderRuleIds": [
+            "68045369-6617-4c8e-99a8-c5196d5d849f:doc",
+            "68045369-6617-4c8e-99a8-c5196d5d849f:purpose",
+            "68045369-6617-4c8e-99a8-c5196d5d849f:occ",
+            "68045369-6617-4c8e-99a8-c5196d5d849f:prop",
+            "68045369-6617-4c8e-99a8-c5196d5d849f:cit",
+            "68045369-6617-4c8e-99a8-c5196d5d849f:amt",
+            "68045369-6617-4c8e-99a8-c5196d5d849f:fico",
+            "68045369-6617-4c8e-99a8-c5196d5d849f:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "LendSure Mortgage Corp.",
+          "program": "Bank Statement (12/24-Month)",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 45,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 6,
+          "sourceCitation": "LendSure Mortgage Corp. — user-supplied \"LendSure Non-QM Eligibility Matrix\" workbook, ingested 2026-08-03, tab \"LMC Super-Prime Bank Statement\".",
+          "whyThisLenderRuleIds": [
+            "2266a7b5-0901-4bfc-be6b-9257a0df81f8:doc",
+            "2266a7b5-0901-4bfc-be6b-9257a0df81f8:purpose",
+            "2266a7b5-0901-4bfc-be6b-9257a0df81f8:occ",
+            "2266a7b5-0901-4bfc-be6b-9257a0df81f8:prop",
+            "2266a7b5-0901-4bfc-be6b-9257a0df81f8:cit",
+            "2266a7b5-0901-4bfc-be6b-9257a0df81f8:amt",
+            "2266a7b5-0901-4bfc-be6b-9257a0df81f8:fico",
+            "2266a7b5-0901-4bfc-be6b-9257a0df81f8:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "BluePoint Mortgage",
+          "program": "Gold — 12-Month Business Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 6,
+          "sourceCitation": "Gold matrix 2026-07-30 — https://bluepointmtg.com/wp-content/docs/Gold_Full_Alt_Doc_Matrix_BluePointMtg_07302026.pdf",
+          "whyThisLenderRuleIds": [
+            "38aa1ec7-4385-4bb1-9f10-4951ddbebc4a:doc",
+            "38aa1ec7-4385-4bb1-9f10-4951ddbebc4a:purpose",
+            "38aa1ec7-4385-4bb1-9f10-4951ddbebc4a:occ",
+            "38aa1ec7-4385-4bb1-9f10-4951ddbebc4a:prop",
+            "38aa1ec7-4385-4bb1-9f10-4951ddbebc4a:cit",
+            "38aa1ec7-4385-4bb1-9f10-4951ddbebc4a:amt",
+            "38aa1ec7-4385-4bb1-9f10-4951ddbebc4a:fico",
+            "38aa1ec7-4385-4bb1-9f10-4951ddbebc4a:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "BluePoint Mortgage",
+          "program": "Gold — 12-Month Personal Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 6,
+          "sourceCitation": "Gold matrix 2026-07-30 — https://bluepointmtg.com/wp-content/docs/Gold_Full_Alt_Doc_Matrix_BluePointMtg_07302026.pdf",
+          "whyThisLenderRuleIds": [
+            "3493e816-5545-4612-be3f-0684ecda8a85:doc",
+            "3493e816-5545-4612-be3f-0684ecda8a85:purpose",
+            "3493e816-5545-4612-be3f-0684ecda8a85:occ",
+            "3493e816-5545-4612-be3f-0684ecda8a85:prop",
+            "3493e816-5545-4612-be3f-0684ecda8a85:cit",
+            "3493e816-5545-4612-be3f-0684ecda8a85:amt",
+            "3493e816-5545-4612-be3f-0684ecda8a85:fico",
+            "3493e816-5545-4612-be3f-0684ecda8a85:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Planet Home Lending",
+          "program": "Planet Non-QM Gold — Business Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 12,
+          "sourceCitation": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/8e3ee88c-9845-41cc-86d4-94179d28c5c5.pdf pp.1–5; https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/e9402387-15ba-41c2-ad33-b52c79625c40.pdf Income Documentation, Credit, Assets and Property sections",
+          "whyThisLenderRuleIds": [
+            "5c3389ee-a6ce-4b54-a8c9-5961555674c9:doc",
+            "5c3389ee-a6ce-4b54-a8c9-5961555674c9:purpose",
+            "5c3389ee-a6ce-4b54-a8c9-5961555674c9:occ",
+            "5c3389ee-a6ce-4b54-a8c9-5961555674c9:prop",
+            "5c3389ee-a6ce-4b54-a8c9-5961555674c9:cit",
+            "5c3389ee-a6ce-4b54-a8c9-5961555674c9:amt",
+            "5c3389ee-a6ce-4b54-a8c9-5961555674c9:fico",
+            "5c3389ee-a6ce-4b54-a8c9-5961555674c9:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Planet Home Lending",
+          "program": "Planet Non-QM Gold — Personal Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 12,
+          "sourceCitation": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/8e3ee88c-9845-41cc-86d4-94179d28c5c5.pdf pp.1–5; https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/e9402387-15ba-41c2-ad33-b52c79625c40.pdf Income Documentation, Credit, Assets and Property sections",
+          "whyThisLenderRuleIds": [
+            "e97daa21-2cbc-442e-b073-30cfbe37c9c1:doc",
+            "e97daa21-2cbc-442e-b073-30cfbe37c9c1:purpose",
+            "e97daa21-2cbc-442e-b073-30cfbe37c9c1:occ",
+            "e97daa21-2cbc-442e-b073-30cfbe37c9c1:prop",
+            "e97daa21-2cbc-442e-b073-30cfbe37c9c1:cit",
+            "e97daa21-2cbc-442e-b073-30cfbe37c9c1:amt",
+            "e97daa21-2cbc-442e-b073-30cfbe37c9c1:fico",
+            "e97daa21-2cbc-442e-b073-30cfbe37c9c1:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "BluePoint Mortgage",
+          "program": "Platinum — 12-Month Business Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 6,
+          "sourceCitation": "Platinum matrix 2026-05-04 — https://bluepointmtg.com/wp-content/docs/Platinum_Full-Alt-Doc_Matrix_BluePointMtg_05042026.pdf",
+          "whyThisLenderRuleIds": [
+            "9d726927-7ce3-4bba-9567-8269950a28f4:doc",
+            "9d726927-7ce3-4bba-9567-8269950a28f4:purpose",
+            "9d726927-7ce3-4bba-9567-8269950a28f4:occ",
+            "9d726927-7ce3-4bba-9567-8269950a28f4:prop",
+            "9d726927-7ce3-4bba-9567-8269950a28f4:cit",
+            "9d726927-7ce3-4bba-9567-8269950a28f4:amt",
+            "9d726927-7ce3-4bba-9567-8269950a28f4:fico",
+            "9d726927-7ce3-4bba-9567-8269950a28f4:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "BluePoint Mortgage",
+          "program": "Platinum — 12-Month Personal Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 6,
+          "sourceCitation": "Platinum matrix 2026-05-04 — https://bluepointmtg.com/wp-content/docs/Platinum_Full-Alt-Doc_Matrix_BluePointMtg_05042026.pdf",
+          "whyThisLenderRuleIds": [
+            "aec1287c-b164-4d8a-9d1d-442329273217:doc",
+            "aec1287c-b164-4d8a-9d1d-442329273217:purpose",
+            "aec1287c-b164-4d8a-9d1d-442329273217:occ",
+            "aec1287c-b164-4d8a-9d1d-442329273217:prop",
+            "aec1287c-b164-4d8a-9d1d-442329273217:cit",
+            "aec1287c-b164-4d8a-9d1d-442329273217:amt",
+            "aec1287c-b164-4d8a-9d1d-442329273217:fico",
+            "aec1287c-b164-4d8a-9d1d-442329273217:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ClearEdge Lending",
+          "program": "Prime Connect — 12-Month Business Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 6,
+          "sourceCitation": "ClearEdge Connect Product Matrix 7.1.2026 — https://clearedgelending.com/wp-content/uploads/2026/07/2026-7.1-CEL-PP-Connect-Product-Matrix-Clean-Copy.pdf",
+          "whyThisLenderRuleIds": [
+            "49f37f18-37e9-4168-99f2-d3fe40dfe6b0:doc",
+            "49f37f18-37e9-4168-99f2-d3fe40dfe6b0:purpose",
+            "49f37f18-37e9-4168-99f2-d3fe40dfe6b0:occ",
+            "49f37f18-37e9-4168-99f2-d3fe40dfe6b0:prop",
+            "49f37f18-37e9-4168-99f2-d3fe40dfe6b0:cit",
+            "49f37f18-37e9-4168-99f2-d3fe40dfe6b0:amt",
+            "49f37f18-37e9-4168-99f2-d3fe40dfe6b0:fico",
+            "49f37f18-37e9-4168-99f2-d3fe40dfe6b0:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ClearEdge Lending",
+          "program": "Prime Connect — 12-Month Personal Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 6,
+          "sourceCitation": "ClearEdge Connect Product Matrix 7.1.2026 — https://clearedgelending.com/wp-content/uploads/2026/07/2026-7.1-CEL-PP-Connect-Product-Matrix-Clean-Copy.pdf",
+          "whyThisLenderRuleIds": [
+            "aac0edfd-b1f8-4c99-ac14-7c00c0d5e0a8:doc",
+            "aac0edfd-b1f8-4c99-ac14-7c00c0d5e0a8:purpose",
+            "aac0edfd-b1f8-4c99-ac14-7c00c0d5e0a8:occ",
+            "aac0edfd-b1f8-4c99-ac14-7c00c0d5e0a8:prop",
+            "aac0edfd-b1f8-4c99-ac14-7c00c0d5e0a8:cit",
+            "aac0edfd-b1f8-4c99-ac14-7c00c0d5e0a8:amt",
+            "aac0edfd-b1f8-4c99-ac14-7c00c0d5e0a8:fico",
+            "aac0edfd-b1f8-4c99-ac14-7c00c0d5e0a8:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ClearEdge Lending",
+          "program": "Prime Connect — 24-Month Business Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 6,
+          "sourceCitation": "ClearEdge Connect Product Matrix 7.1.2026 — https://clearedgelending.com/wp-content/uploads/2026/07/2026-7.1-CEL-PP-Connect-Product-Matrix-Clean-Copy.pdf",
+          "whyThisLenderRuleIds": [
+            "6f54e506-6724-483b-baa0-1827bf29e9dc:doc",
+            "6f54e506-6724-483b-baa0-1827bf29e9dc:purpose",
+            "6f54e506-6724-483b-baa0-1827bf29e9dc:occ",
+            "6f54e506-6724-483b-baa0-1827bf29e9dc:prop",
+            "6f54e506-6724-483b-baa0-1827bf29e9dc:cit",
+            "6f54e506-6724-483b-baa0-1827bf29e9dc:amt",
+            "6f54e506-6724-483b-baa0-1827bf29e9dc:fico",
+            "6f54e506-6724-483b-baa0-1827bf29e9dc:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ClearEdge Lending",
+          "program": "Prime Connect — 24-Month Personal Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 6,
+          "sourceCitation": "ClearEdge Connect Product Matrix 7.1.2026 — https://clearedgelending.com/wp-content/uploads/2026/07/2026-7.1-CEL-PP-Connect-Product-Matrix-Clean-Copy.pdf",
+          "whyThisLenderRuleIds": [
+            "15a20641-2a1d-45ee-86b1-47d566a97cb2:doc",
+            "15a20641-2a1d-45ee-86b1-47d566a97cb2:purpose",
+            "15a20641-2a1d-45ee-86b1-47d566a97cb2:occ",
+            "15a20641-2a1d-45ee-86b1-47d566a97cb2:prop",
+            "15a20641-2a1d-45ee-86b1-47d566a97cb2:cit",
+            "15a20641-2a1d-45ee-86b1-47d566a97cb2:amt",
+            "15a20641-2a1d-45ee-86b1-47d566a97cb2:fico",
+            "15a20641-2a1d-45ee-86b1-47d566a97cb2:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ClearEdge Lending",
+          "program": "Prime Jade Alt Doc — 12-Month Business Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 6,
+          "sourceCitation": "ClearEdge Jade Matrix 7.22.2026 — https://clearedgelending.com/wp-content/uploads/2026/07/7.22.2026-Jade-Matrix.pdf",
+          "whyThisLenderRuleIds": [
+            "6fce9855-5599-4abd-b07b-ccb4858e7caf:doc",
+            "6fce9855-5599-4abd-b07b-ccb4858e7caf:purpose",
+            "6fce9855-5599-4abd-b07b-ccb4858e7caf:occ",
+            "6fce9855-5599-4abd-b07b-ccb4858e7caf:prop",
+            "6fce9855-5599-4abd-b07b-ccb4858e7caf:cit",
+            "6fce9855-5599-4abd-b07b-ccb4858e7caf:amt",
+            "6fce9855-5599-4abd-b07b-ccb4858e7caf:fico",
+            "6fce9855-5599-4abd-b07b-ccb4858e7caf:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ClearEdge Lending",
+          "program": "Prime Jade Alt Doc — 12-Month Personal Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 6,
+          "sourceCitation": "ClearEdge Jade Matrix 7.22.2026 — https://clearedgelending.com/wp-content/uploads/2026/07/7.22.2026-Jade-Matrix.pdf",
+          "whyThisLenderRuleIds": [
+            "6c09f4ca-2e2e-4731-94c1-c3389d0bf636:doc",
+            "6c09f4ca-2e2e-4731-94c1-c3389d0bf636:purpose",
+            "6c09f4ca-2e2e-4731-94c1-c3389d0bf636:occ",
+            "6c09f4ca-2e2e-4731-94c1-c3389d0bf636:prop",
+            "6c09f4ca-2e2e-4731-94c1-c3389d0bf636:cit",
+            "6c09f4ca-2e2e-4731-94c1-c3389d0bf636:amt",
+            "6c09f4ca-2e2e-4731-94c1-c3389d0bf636:fico",
+            "6c09f4ca-2e2e-4731-94c1-c3389d0bf636:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        }
+      ],
+      "quarantinedExamples": [
+        {
+          "lender": "Acra Lending",
+          "program": "12-Month Bank Statement — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "A&D Mortgage",
+          "program": "12/24 Month Bank Statement — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The Bank Statement program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "NQM Funding",
+          "program": "2nd Lien — Multi-Doc (Full Doc / Bank Statement / 1099 / P&L / Asset Utilization / DSCR) — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Champions Funding",
+          "program": "Accelerator Full/Alt Doc — Income Qualifying Investment Properties — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Champions Funding",
+          "program": "Activator — Alt-Doc (Non-Traditional Borrowers) — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "First National Bank of America",
+          "program": "Alt-A Premier — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Change Wholesale",
+          "program": "Alt-Doc — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Kind Lending",
+          "program": "Alt-Doc Suite (Bank Statement / 1099 / P&L / WVOE / Asset Utilization) — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "AmWest Funding Corp.",
+          "program": "AmWest Advantage — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "AmWest Funding Corp.",
+          "program": "AmWest Investor Advantage — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Arete — Full Doc / Alt Doc — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Aspire — Standalone Second (Full/Alt Doc) — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Redwood Residential Acquisition Corporation",
+          "program": "Aspire Expanded — 12-Month Business Bank Statement — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Redwood confirms the documentation path but does not publish seller-universal numeric tiers on the accessible page."
+          ]
+        },
+        {
+          "lender": "Redwood Residential Acquisition Corporation",
+          "program": "Aspire Expanded — 12-Month Personal Bank Statement — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Redwood confirms the documentation path but does not publish seller-universal numeric tiers on the accessible page."
+          ]
+        },
+        {
+          "lender": "Redwood Residential Acquisition Corporation",
+          "program": "Aspire Expanded — 24-Month Business Bank Statement — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Redwood confirms the documentation path but does not publish seller-universal numeric tiers on the accessible page."
+          ]
+        },
+        {
+          "lender": "Redwood Residential Acquisition Corporation",
+          "program": "Aspire Expanded — 24-Month Personal Bank Statement — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Redwood confirms the documentation path but does not publish seller-universal numeric tiers on the accessible page."
+          ]
+        },
+        {
+          "lender": "Redwood Residential Acquisition Corporation",
+          "program": "Aspire Expanded — Alternative Documentation — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Aspire X — Standalone Second (Expanded Doc) — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "JMAC Lending",
+          "program": "Balboa Non-Conforming — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Verification Required — Guideline Not Located in Provided JMAC Documentation. The supplied comparison sheet confirms Balboa Non-Conforming, but the controlling program-specific matrix was not provided. Headline figures are searchable ceilings only; obtain the current matrix before final eligibility."
+          ]
+        },
+        {
+          "lender": "Cake Mortgage",
+          "program": "Bank Statement — 12/24 Month — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Brokers First Funding",
+          "program": "Bank Statement — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The official narrative guideline confirms this program but defers scenario-specific LTV/FICO/loan-amount/reserve tiers to the current BFF matrix. Headline ceilings are retained only as searchable product ceilings; obtain the current matrix before final eligibility."
+          ]
+        },
+        {
+          "lender": "Velocity Mortgage Capital",
+          "program": "Bank Statement / Stated Income — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Official product pages confirm FlexTerm, Flex I/O, Fast50, Foreign Investor, ARV Pro, 5+ multifamily, mixed-use and commercial. Numeric matrices require broker-toolkit access."
+          ]
+        },
+        {
+          "lender": "BluePoint Mortgage",
+          "program": "Bank Statement Loan — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The Bank Statement program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "United Wholesale Mortgage",
+          "program": "Bank Statement Loan Program — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The Bank Statement program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "Angel Oak Mortgage Solutions",
+          "program": "Bank Statement Loans — Bank Statement",
+          "matchedDocumentation": "Bank Statement",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Bank Statement profile is stored for this bundled product family."
+          ]
+        }
+      ]
+    },
+    {
+      "documentationType": "1099",
+      "scenario": {
+        "loanPurpose": "purchase",
+        "propertyType": "single_family",
+        "occupancy": "primary",
+        "ltv": 80,
+        "fico": 720
+      },
+      "counts": {
+        "evaluated": 468,
+        "eligible": 16,
+        "verificationRequired": 73
+      },
+      "recommendations": [
+        {
+          "lender": "ACC Mortgage",
+          "program": "ACC Prime — 1099",
+          "matchedDocumentation": "1099",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 3,
+          "sourceCitation": "https://accmortgage.com/wp-content/uploads/2026/08/ACC-Prime-Matrix-ACCMortgage-2026.08.03.pdf",
+          "whyThisLenderRuleIds": [
+            "d82b4a59-8db9-4d45-9ee7-4ed6cf30ca39:doc",
+            "d82b4a59-8db9-4d45-9ee7-4ed6cf30ca39:purpose",
+            "d82b4a59-8db9-4d45-9ee7-4ed6cf30ca39:occ",
+            "d82b4a59-8db9-4d45-9ee7-4ed6cf30ca39:prop",
+            "d82b4a59-8db9-4d45-9ee7-4ed6cf30ca39:cit",
+            "d82b4a59-8db9-4d45-9ee7-4ed6cf30ca39:amt",
+            "d82b4a59-8db9-4d45-9ee7-4ed6cf30ca39:fico",
+            "d82b4a59-8db9-4d45-9ee7-4ed6cf30ca39:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "BluePoint Mortgage",
+          "program": "Gold — 1099",
+          "matchedDocumentation": "1099",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 6,
+          "sourceCitation": "Gold matrix 2026-07-30 — https://bluepointmtg.com/wp-content/docs/Gold_Full_Alt_Doc_Matrix_BluePointMtg_07302026.pdf",
+          "whyThisLenderRuleIds": [
+            "e5815ae5-51ec-4007-b3d9-2ecb362e4b79:doc",
+            "e5815ae5-51ec-4007-b3d9-2ecb362e4b79:purpose",
+            "e5815ae5-51ec-4007-b3d9-2ecb362e4b79:occ",
+            "e5815ae5-51ec-4007-b3d9-2ecb362e4b79:prop",
+            "e5815ae5-51ec-4007-b3d9-2ecb362e4b79:cit",
+            "e5815ae5-51ec-4007-b3d9-2ecb362e4b79:amt",
+            "e5815ae5-51ec-4007-b3d9-2ecb362e4b79:fico",
+            "e5815ae5-51ec-4007-b3d9-2ecb362e4b79:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Planet Home Lending",
+          "program": "Planet Non-QM Gold — 1099",
+          "matchedDocumentation": "1099",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 12,
+          "sourceCitation": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/8e3ee88c-9845-41cc-86d4-94179d28c5c5.pdf pp.1–5; https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/e9402387-15ba-41c2-ad33-b52c79625c40.pdf Income Documentation, Credit, Assets and Property sections",
+          "whyThisLenderRuleIds": [
+            "d093566b-0b1d-485e-8745-498e6aca8ba4:doc",
+            "d093566b-0b1d-485e-8745-498e6aca8ba4:purpose",
+            "d093566b-0b1d-485e-8745-498e6aca8ba4:occ",
+            "d093566b-0b1d-485e-8745-498e6aca8ba4:prop",
+            "d093566b-0b1d-485e-8745-498e6aca8ba4:cit",
+            "d093566b-0b1d-485e-8745-498e6aca8ba4:amt",
+            "d093566b-0b1d-485e-8745-498e6aca8ba4:fico",
+            "d093566b-0b1d-485e-8745-498e6aca8ba4:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Luxury Mortgage Corp.",
+          "program": "Simple Access — 1099 Only",
+          "matchedDocumentation": "1099",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 620,
+          "maxDti": 50,
+          "maxLoanAmount": 5000000,
+          "reservesMonths": 3,
+          "sourceCitation": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/fed06ed9-1e9a-4ead-9dfd-739b6580f18d.pdf",
+          "whyThisLenderRuleIds": [
+            "60b75228-1ca0-4a16-8de2-6967435279d9:doc",
+            "60b75228-1ca0-4a16-8de2-6967435279d9:purpose",
+            "60b75228-1ca0-4a16-8de2-6967435279d9:occ",
+            "60b75228-1ca0-4a16-8de2-6967435279d9:prop",
+            "60b75228-1ca0-4a16-8de2-6967435279d9:cit",
+            "60b75228-1ca0-4a16-8de2-6967435279d9:amt",
+            "60b75228-1ca0-4a16-8de2-6967435279d9:fico",
+            "60b75228-1ca0-4a16-8de2-6967435279d9:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "theLender",
+          "program": "theLender Gig Qualifier — 1099",
+          "matchedDocumentation": "1099",
+          "status": "strong_match",
+          "confidenceScore": 92,
+          "maxLtv": 90,
+          "minFico": 620,
+          "maxDti": 50,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 3,
+          "sourceCitation": "Non-QHEM 08.04.26E — https://wholesale.thelender.com/wp-content/uploads/2026/08/Non-QHEM_08.04.26E.pdf",
+          "whyThisLenderRuleIds": [
+            "005754dc-a6cd-4a72-8357-b647bf35f2ad:doc",
+            "005754dc-a6cd-4a72-8357-b647bf35f2ad:purpose",
+            "005754dc-a6cd-4a72-8357-b647bf35f2ad:occ",
+            "005754dc-a6cd-4a72-8357-b647bf35f2ad:prop",
+            "005754dc-a6cd-4a72-8357-b647bf35f2ad:cit",
+            "005754dc-a6cd-4a72-8357-b647bf35f2ad:amt",
+            "005754dc-a6cd-4a72-8357-b647bf35f2ad:fico",
+            "005754dc-a6cd-4a72-8357-b647bf35f2ad:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ACC Mortgage",
+          "program": "ACC Prime Plus — 1099",
+          "matchedDocumentation": "1099",
+          "status": "strong_match",
+          "confidenceScore": 85.33,
+          "maxLtv": 85,
+          "minFico": 620,
+          "maxDti": 50,
+          "maxLoanAmount": 1500000,
+          "reservesMonths": 3,
+          "sourceCitation": "https://accmortgage.com/wp-content/uploads/2026/08/ACC-PrimePlus-Matrix-ACCMortgage-2026.08.03.pdf",
+          "whyThisLenderRuleIds": [
+            "5e48bba4-94e9-4457-a270-42ad7bf34bc7:doc",
+            "5e48bba4-94e9-4457-a270-42ad7bf34bc7:purpose",
+            "5e48bba4-94e9-4457-a270-42ad7bf34bc7:occ",
+            "5e48bba4-94e9-4457-a270-42ad7bf34bc7:prop",
+            "5e48bba4-94e9-4457-a270-42ad7bf34bc7:cit",
+            "5e48bba4-94e9-4457-a270-42ad7bf34bc7:amt",
+            "5e48bba4-94e9-4457-a270-42ad7bf34bc7:fico",
+            "5e48bba4-94e9-4457-a270-42ad7bf34bc7:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ACC Mortgage",
+          "program": "ACC Second Chance — 1099",
+          "matchedDocumentation": "1099",
+          "status": "strong_match",
+          "confidenceScore": 85.33,
+          "maxLtv": 85,
+          "minFico": 620,
+          "maxDti": 50,
+          "maxLoanAmount": 3000000,
+          "reservesMonths": 3,
+          "sourceCitation": "https://accmortgage.com/wp-content/uploads/2026/08/ACC-SecondChance-Matrix-ACCMortgage-2026.08.03.pdf",
+          "whyThisLenderRuleIds": [
+            "afe1e374-50a1-4465-b5c9-9f5802fae9f7:doc",
+            "afe1e374-50a1-4465-b5c9-9f5802fae9f7:purpose",
+            "afe1e374-50a1-4465-b5c9-9f5802fae9f7:occ",
+            "afe1e374-50a1-4465-b5c9-9f5802fae9f7:prop",
+            "afe1e374-50a1-4465-b5c9-9f5802fae9f7:cit",
+            "afe1e374-50a1-4465-b5c9-9f5802fae9f7:amt",
+            "afe1e374-50a1-4465-b5c9-9f5802fae9f7:fico",
+            "afe1e374-50a1-4465-b5c9-9f5802fae9f7:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "AmWest Funding Corp.",
+          "program": "Advantage — 1-Year 1099",
+          "matchedDocumentation": "1099",
+          "status": "strong_match",
+          "confidenceScore": 85.33,
+          "maxLtv": 85,
+          "minFico": 620,
+          "maxDti": 49,
+          "maxLoanAmount": 3000000,
+          "reservesMonths": 3,
+          "sourceCitation": "AmWest Advantage Program — revised 2026-04-06 — https://amwestwholesale.com/content/documents/AmWest-Advantage-Program-Appvd.pdf",
+          "whyThisLenderRuleIds": [
+            "801cabe8-66ad-4047-9edb-1d48ff6a77af:doc",
+            "801cabe8-66ad-4047-9edb-1d48ff6a77af:purpose",
+            "801cabe8-66ad-4047-9edb-1d48ff6a77af:occ",
+            "801cabe8-66ad-4047-9edb-1d48ff6a77af:prop",
+            "801cabe8-66ad-4047-9edb-1d48ff6a77af:cit",
+            "801cabe8-66ad-4047-9edb-1d48ff6a77af:amt",
+            "801cabe8-66ad-4047-9edb-1d48ff6a77af:fico",
+            "801cabe8-66ad-4047-9edb-1d48ff6a77af:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "eRESI Capital",
+          "program": "Core eXpert — 1099",
+          "matchedDocumentation": "1099",
+          "status": "strong_match",
+          "confidenceScore": 85.33,
+          "maxLtv": 85,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3000000,
+          "reservesMonths": 6,
+          "sourceCitation": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/80d9b26b-f6f4-40ec-8e7f-459772bb164f.pdf pp.1–2; https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/7bb26151-6930-47d2-a82a-d99a474b0b85.pdf §§3–6",
+          "whyThisLenderRuleIds": [
+            "84a44563-522f-48da-8257-cafb0eda57a4:doc",
+            "84a44563-522f-48da-8257-cafb0eda57a4:purpose",
+            "84a44563-522f-48da-8257-cafb0eda57a4:occ",
+            "84a44563-522f-48da-8257-cafb0eda57a4:prop",
+            "84a44563-522f-48da-8257-cafb0eda57a4:cit",
+            "84a44563-522f-48da-8257-cafb0eda57a4:amt",
+            "84a44563-522f-48da-8257-cafb0eda57a4:fico",
+            "84a44563-522f-48da-8257-cafb0eda57a4:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Planet Home Lending",
+          "program": "Planet Non-QM Bronze — 1099",
+          "matchedDocumentation": "1099",
+          "status": "strong_match",
+          "confidenceScore": 85.33,
+          "maxLtv": 85,
+          "minFico": 620,
+          "maxDti": 50,
+          "maxLoanAmount": 1500000,
+          "reservesMonths": 6,
+          "sourceCitation": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/a36e6bf9-b8dd-4f6f-8305-d8526b1d19dd.pdf pp.1–5; https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/e9402387-15ba-41c2-ad33-b52c79625c40.pdf Income Documentation, Credit, Assets and Property sections",
+          "whyThisLenderRuleIds": [
+            "10f45754-9229-4c95-80f1-72c90dfd3658:doc",
+            "10f45754-9229-4c95-80f1-72c90dfd3658:purpose",
+            "10f45754-9229-4c95-80f1-72c90dfd3658:occ",
+            "10f45754-9229-4c95-80f1-72c90dfd3658:prop",
+            "10f45754-9229-4c95-80f1-72c90dfd3658:cit",
+            "10f45754-9229-4c95-80f1-72c90dfd3658:amt",
+            "10f45754-9229-4c95-80f1-72c90dfd3658:fico",
+            "10f45754-9229-4c95-80f1-72c90dfd3658:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Planet Home Lending",
+          "program": "Planet Non-QM Silver — 1099",
+          "matchedDocumentation": "1099",
+          "status": "strong_match",
+          "confidenceScore": 85.33,
+          "maxLtv": 85,
+          "minFico": 620,
+          "maxDti": 50,
+          "maxLoanAmount": 3000000,
+          "reservesMonths": 12,
+          "sourceCitation": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/1b4145f3-4913-438e-8100-f2568e1306f9.pdf pp.1–4; https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/e9402387-15ba-41c2-ad33-b52c79625c40.pdf Income Documentation, Credit, Assets and Property sections",
+          "whyThisLenderRuleIds": [
+            "9d9649a9-baf7-4923-9b7b-2dd1d087c82d:doc",
+            "9d9649a9-baf7-4923-9b7b-2dd1d087c82d:purpose",
+            "9d9649a9-baf7-4923-9b7b-2dd1d087c82d:occ",
+            "9d9649a9-baf7-4923-9b7b-2dd1d087c82d:prop",
+            "9d9649a9-baf7-4923-9b7b-2dd1d087c82d:cit",
+            "9d9649a9-baf7-4923-9b7b-2dd1d087c82d:amt",
+            "9d9649a9-baf7-4923-9b7b-2dd1d087c82d:fico",
+            "9d9649a9-baf7-4923-9b7b-2dd1d087c82d:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Jet Advantage Mortgage",
+          "program": "1099 Only",
+          "matchedDocumentation": "1099",
+          "status": "eligible",
+          "confidenceScore": 78.67,
+          "maxLtv": 80,
+          "minFico": 600,
+          "maxDti": 50,
+          "maxLoanAmount": 2000000,
+          "reservesMonths": 0,
+          "sourceCitation": "JET Non-QM Matrix 2.14.25 — https://www.jetadvantagemtg.com/non-qm-non-conforming-loans/",
+          "whyThisLenderRuleIds": [
+            "0148ba0f-1d71-45d5-be94-b1fb0982b184:doc",
+            "0148ba0f-1d71-45d5-be94-b1fb0982b184:purpose",
+            "0148ba0f-1d71-45d5-be94-b1fb0982b184:occ",
+            "0148ba0f-1d71-45d5-be94-b1fb0982b184:prop",
+            "0148ba0f-1d71-45d5-be94-b1fb0982b184:cit",
+            "0148ba0f-1d71-45d5-be94-b1fb0982b184:amt",
+            "0148ba0f-1d71-45d5-be94-b1fb0982b184:fico",
+            "0148ba0f-1d71-45d5-be94-b1fb0982b184:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Cake Mortgage",
+          "program": "1099 Only — 1/2 Year",
+          "matchedDocumentation": "1099",
+          "status": "eligible",
+          "confidenceScore": 78.67,
+          "maxLtv": 80,
+          "minFico": 620,
+          "maxDti": 50.49,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 0,
+          "sourceCitation": "Cake TPO — Cup Cake matrix, 1099 Only overlay — https://www.caketpo.com/files/matrix/Cup_Cake_Matrix_07.27.26__ver_1.0_.pdf",
+          "whyThisLenderRuleIds": [
+            "29b8accf-0e7d-440f-a2fe-cd7dd6c0b91b:doc",
+            "29b8accf-0e7d-440f-a2fe-cd7dd6c0b91b:purpose",
+            "29b8accf-0e7d-440f-a2fe-cd7dd6c0b91b:occ",
+            "29b8accf-0e7d-440f-a2fe-cd7dd6c0b91b:prop",
+            "29b8accf-0e7d-440f-a2fe-cd7dd6c0b91b:cit",
+            "29b8accf-0e7d-440f-a2fe-cd7dd6c0b91b:amt",
+            "29b8accf-0e7d-440f-a2fe-cd7dd6c0b91b:fico",
+            "29b8accf-0e7d-440f-a2fe-cd7dd6c0b91b:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "First Colony Wholesale",
+          "program": "SHARP Advantage — 1099",
+          "matchedDocumentation": "1099",
+          "status": "eligible",
+          "confidenceScore": 78.67,
+          "maxLtv": 80,
+          "minFico": 0,
+          "maxDti": 50,
+          "maxLoanAmount": 2000000,
+          "reservesMonths": 0,
+          "sourceCitation": "SHARP Advantage Full/Alt Doc 5.13.26 — 1099 section — https://fcmtpo.com/wp-content/uploads/2026/05/Sharp-Advantage-Full-Alt-Doc-Matrix-5.13.26-.pdf",
+          "whyThisLenderRuleIds": [
+            "5ab667c6-e8c3-449a-a43e-d4b96278ee71:doc",
+            "5ab667c6-e8c3-449a-a43e-d4b96278ee71:purpose",
+            "5ab667c6-e8c3-449a-a43e-d4b96278ee71:occ",
+            "5ab667c6-e8c3-449a-a43e-d4b96278ee71:prop",
+            "5ab667c6-e8c3-449a-a43e-d4b96278ee71:cit",
+            "5ab667c6-e8c3-449a-a43e-d4b96278ee71:amt",
+            "5ab667c6-e8c3-449a-a43e-d4b96278ee71:fico",
+            "5ab667c6-e8c3-449a-a43e-d4b96278ee71:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "NewRez",
+          "program": "SmartSelf — One-Year 1099",
+          "matchedDocumentation": "1099",
+          "status": "eligible",
+          "confidenceScore": 78.67,
+          "maxLtv": 80,
+          "minFico": 640,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 3,
+          "sourceCitation": "SmartSelf v26.5 — Published 2026-05-28 — https://corr.newrezcorrespondent.com/documents/web/contenteditordocs/Product%20Profiles/Smart/SmartSelf.pdf",
+          "whyThisLenderRuleIds": [
+            "62c381ec-d568-435f-a873-e2a0b4d4023b:doc",
+            "62c381ec-d568-435f-a873-e2a0b4d4023b:purpose",
+            "62c381ec-d568-435f-a873-e2a0b4d4023b:occ",
+            "62c381ec-d568-435f-a873-e2a0b4d4023b:prop",
+            "62c381ec-d568-435f-a873-e2a0b4d4023b:cit",
+            "62c381ec-d568-435f-a873-e2a0b4d4023b:amt",
+            "62c381ec-d568-435f-a873-e2a0b4d4023b:fico",
+            "62c381ec-d568-435f-a873-e2a0b4d4023b:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "NewRez",
+          "program": "SmartSelf — Two-Year 1099",
+          "matchedDocumentation": "1099",
+          "status": "eligible",
+          "confidenceScore": 78.67,
+          "maxLtv": 80,
+          "minFico": 640,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 3,
+          "sourceCitation": "SmartSelf v26.5 — Published 2026-05-28 — https://corr.newrezcorrespondent.com/documents/web/contenteditordocs/Product%20Profiles/Smart/SmartSelf.pdf",
+          "whyThisLenderRuleIds": [
+            "2711c00c-72ad-4d44-b3aa-8ce6dc7cbbb2:doc",
+            "2711c00c-72ad-4d44-b3aa-8ce6dc7cbbb2:purpose",
+            "2711c00c-72ad-4d44-b3aa-8ce6dc7cbbb2:occ",
+            "2711c00c-72ad-4d44-b3aa-8ce6dc7cbbb2:prop",
+            "2711c00c-72ad-4d44-b3aa-8ce6dc7cbbb2:cit",
+            "2711c00c-72ad-4d44-b3aa-8ce6dc7cbbb2:amt",
+            "2711c00c-72ad-4d44-b3aa-8ce6dc7cbbb2:fico",
+            "2711c00c-72ad-4d44-b3aa-8ce6dc7cbbb2:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        }
+      ],
+      "quarantinedExamples": [
+        {
+          "lender": "Logan Finance Corporation",
+          "program": "1099 — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The 1099 program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "Angel Oak Mortgage Solutions",
+          "program": "1099 Income Loan — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The 1099 program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "LoanStream Mortgage",
+          "program": "1099 Only — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The 1099 program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "Brokers First Funding",
+          "program": "1099 Only — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The official narrative guideline confirms this program but defers scenario-specific LTV/FICO/loan-amount/reserve tiers to the current BFF matrix. Headline ceilings are retained only as searchable product ceilings; obtain the current matrix before final eligibility."
+          ]
+        },
+        {
+          "lender": "Acra Lending",
+          "program": "12-Month Bank Statement — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified 1099 profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "NQM Funding",
+          "program": "2nd Lien — Multi-Doc (Full Doc / Bank Statement / 1099 / P&L / Asset Utilization / DSCR) — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified 1099 profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Champions Funding",
+          "program": "Accelerator Full/Alt Doc — Income Qualifying Investment Properties — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified 1099 profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Champions Funding",
+          "program": "Activator — Alt-Doc (Non-Traditional Borrowers) — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified 1099 profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "First National Bank of America",
+          "program": "Alt-A Premier — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified 1099 profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Change Wholesale",
+          "program": "Alt-Doc — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified 1099 profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Kind Lending",
+          "program": "Alt-Doc Suite (Bank Statement / 1099 / P&L / WVOE / Asset Utilization) — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified 1099 profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "AmWest Funding Corp.",
+          "program": "AmWest Advantage — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified 1099 profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Redwood Residential Acquisition Corporation",
+          "program": "Aspire Expanded — 1099 — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Redwood confirms the documentation path but does not publish seller-universal numeric tiers on the accessible page."
+          ]
+        },
+        {
+          "lender": "Redwood Residential Acquisition Corporation",
+          "program": "Aspire Expanded — Alternative Documentation — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified 1099 profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Aspire X — Standalone Second (Expanded Doc) — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified 1099 profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "JMAC Lending",
+          "program": "Balboa Non-Conforming — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Verification Required — Guideline Not Located in Provided JMAC Documentation. The supplied comparison sheet confirms Balboa Non-Conforming, but the controlling program-specific matrix was not provided. Headline figures are searchable ceilings only; obtain the current matrix before final eligibility."
+          ]
+        },
+        {
+          "lender": "Cake Mortgage",
+          "program": "Bank Statement — 12/24 Month — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified 1099 profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Angel Oak Mortgage Solutions",
+          "program": "Bank Statement Loans — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified 1099 profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "American Heritage Lending",
+          "program": "Bank Statement Loans — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified 1099 profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Logan Finance Corporation",
+          "program": "Bank Statement Loans — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified 1099 profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "BluePoint Mortgage",
+          "program": "BlueXpanded — 1099 — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Official page still links a 2025-09-25 matrix; confirm currentness with BluePoint AE."
+          ]
+        },
+        {
+          "lender": "JMAC Lending",
+          "program": "Carmel Non-Conforming — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Verification Required — Guideline Not Located in Provided JMAC Documentation. The supplied comparison sheet confirms Carmel Non-Conforming, but the controlling program-specific matrix was not provided. Headline figures are searchable ceilings only; obtain the current matrix before final eligibility."
+          ]
+        },
+        {
+          "lender": "Cake Mortgage",
+          "program": "Closed End Second (CES) — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Cake's Closed End Seconds Eligibility Guidelines (Version 2.0) confirm the program structure, eligible documentation, and transaction rules but explicitly defer every numeric figure (max CLTV, loan amount, combined lien amount, DTI, reserves, and DSCR for the CES/business-purpose option) to 'the applicable CES matrix,' which was not found published on the accessible Guidelines/Products pages — left at 0/unset rather than guessing. Confirm current figures with a Cake Mortgage AE. Vesting eligibility was not confirmed in the reviewed public guideline and must be verified with the lender. Vesting eligibility was not confirmed in the reviewed public guideline and must be verified with the lender."
+          ]
+        },
+        {
+          "lender": "First National Bank of America",
+          "program": "Dual Core — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "FNBA has not published a numeric LTV/FICO/loan-amount matrix for Dual Core anywhere on fnba.com as of 2026-08-07 (checked /wholesale/non-qm-loans/, /correspondent/, /correspondent/loan-programs/, /mortgage/, and /correspondent/pricing/, which only runs its quick-quote tool for Alt-A Premier and Near Miss). Confirm exact LTV/FICO/DTI/loan-amount limits with an FNBA account executive before quoting Dual Core to a borrower."
+          ]
+        },
+        {
+          "lender": "GreenBox Loans",
+          "program": "Elite – 1-Year 1099 — 1099",
+          "matchedDocumentation": "1099",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The 1099 program is missing a verified maximum DTI."
+          ]
+        }
+      ]
+    },
+    {
+      "documentationType": "pnl_only",
+      "scenario": {
+        "loanPurpose": "purchase",
+        "propertyType": "single_family",
+        "occupancy": "primary",
+        "ltv": 80,
+        "fico": 720
+      },
+      "counts": {
+        "evaluated": 468,
+        "eligible": 17,
+        "verificationRequired": 58
+      },
+      "recommendations": [
+        {
+          "lender": "AmWest Funding Corp.",
+          "program": "Advantage — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "status": "strong_match",
+          "confidenceScore": 86.67,
+          "maxLtv": 85,
+          "minFico": 660,
+          "maxDti": 49,
+          "maxLoanAmount": 3000000,
+          "reservesMonths": 6,
+          "sourceCitation": "AmWest Advantage Program — revised 2026-04-06 — https://amwestwholesale.com/content/documents/AmWest-Advantage-Program-Appvd.pdf",
+          "whyThisLenderRuleIds": [
+            "6017cd6d-0869-4003-9e0c-b985b6370318:doc",
+            "6017cd6d-0869-4003-9e0c-b985b6370318:pnl-product",
+            "6017cd6d-0869-4003-9e0c-b985b6370318:pnl-exact-ltv",
+            "6017cd6d-0869-4003-9e0c-b985b6370318:pnl-period",
+            "6017cd6d-0869-4003-9e0c-b985b6370318:purpose",
+            "6017cd6d-0869-4003-9e0c-b985b6370318:occ",
+            "6017cd6d-0869-4003-9e0c-b985b6370318:prop",
+            "6017cd6d-0869-4003-9e0c-b985b6370318:cit",
+            "6017cd6d-0869-4003-9e0c-b985b6370318:amt",
+            "6017cd6d-0869-4003-9e0c-b985b6370318:fico",
+            "6017cd6d-0869-4003-9e0c-b985b6370318:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "BluePoint Mortgage",
+          "program": "Gold — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "status": "strong_match",
+          "confidenceScore": 86.67,
+          "maxLtv": 85,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 6,
+          "sourceCitation": "Gold matrix 2026-07-30 — https://bluepointmtg.com/wp-content/docs/Gold_Full_Alt_Doc_Matrix_BluePointMtg_07302026.pdf",
+          "whyThisLenderRuleIds": [
+            "6c6e135b-a191-4421-b417-0153d8b4bc78:doc",
+            "6c6e135b-a191-4421-b417-0153d8b4bc78:pnl-product",
+            "6c6e135b-a191-4421-b417-0153d8b4bc78:pnl-exact-ltv",
+            "6c6e135b-a191-4421-b417-0153d8b4bc78:purpose",
+            "6c6e135b-a191-4421-b417-0153d8b4bc78:occ",
+            "6c6e135b-a191-4421-b417-0153d8b4bc78:prop",
+            "6c6e135b-a191-4421-b417-0153d8b4bc78:cit",
+            "6c6e135b-a191-4421-b417-0153d8b4bc78:amt",
+            "6c6e135b-a191-4421-b417-0153d8b4bc78:fico",
+            "6c6e135b-a191-4421-b417-0153d8b4bc78:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "BluePoint Mortgage",
+          "program": "Platinum — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "status": "strong_match",
+          "confidenceScore": 86.67,
+          "maxLtv": 85,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 6,
+          "sourceCitation": "Platinum matrix 2026-05-04 — https://bluepointmtg.com/wp-content/docs/Platinum_Full-Alt-Doc_Matrix_BluePointMtg_05042026.pdf",
+          "whyThisLenderRuleIds": [
+            "6727bf14-61be-45f0-9e5d-c22b4ba864da:doc",
+            "6727bf14-61be-45f0-9e5d-c22b4ba864da:pnl-product",
+            "6727bf14-61be-45f0-9e5d-c22b4ba864da:pnl-exact-ltv",
+            "6727bf14-61be-45f0-9e5d-c22b4ba864da:purpose",
+            "6727bf14-61be-45f0-9e5d-c22b4ba864da:occ",
+            "6727bf14-61be-45f0-9e5d-c22b4ba864da:prop",
+            "6727bf14-61be-45f0-9e5d-c22b4ba864da:cit",
+            "6727bf14-61be-45f0-9e5d-c22b4ba864da:amt",
+            "6727bf14-61be-45f0-9e5d-c22b4ba864da:fico",
+            "6727bf14-61be-45f0-9e5d-c22b4ba864da:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "theLender",
+          "program": "theLender — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "status": "strong_match",
+          "confidenceScore": 86.67,
+          "maxLtv": 85,
+          "minFico": 680,
+          "maxDti": 50,
+          "maxLoanAmount": 2500000,
+          "reservesMonths": 3,
+          "sourceCitation": "Non-QHEM 08.04.26E — https://wholesale.thelender.com/wp-content/uploads/2026/08/Non-QHEM_08.04.26E.pdf",
+          "whyThisLenderRuleIds": [
+            "42f39d22-e9b2-4476-938a-0da375188b83:doc",
+            "42f39d22-e9b2-4476-938a-0da375188b83:pnl-product",
+            "42f39d22-e9b2-4476-938a-0da375188b83:pnl-exact-ltv",
+            "42f39d22-e9b2-4476-938a-0da375188b83:pnl-fico",
+            "42f39d22-e9b2-4476-938a-0da375188b83:pnl-loan",
+            "42f39d22-e9b2-4476-938a-0da375188b83:pnl-period-options",
+            "42f39d22-e9b2-4476-938a-0da375188b83:purpose",
+            "42f39d22-e9b2-4476-938a-0da375188b83:occ",
+            "42f39d22-e9b2-4476-938a-0da375188b83:prop",
+            "42f39d22-e9b2-4476-938a-0da375188b83:cit",
+            "42f39d22-e9b2-4476-938a-0da375188b83:amt",
+            "42f39d22-e9b2-4476-938a-0da375188b83:fico",
+            "42f39d22-e9b2-4476-938a-0da375188b83:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "theLender",
+          "program": "theLender — P&L Plus",
+          "matchedDocumentation": "P&L Only",
+          "status": "strong_match",
+          "confidenceScore": 86.67,
+          "maxLtv": 85,
+          "minFico": 680,
+          "maxDti": 50,
+          "maxLoanAmount": 2500000,
+          "reservesMonths": 3,
+          "sourceCitation": "Non-QHEM 08.04.26E — https://wholesale.thelender.com/wp-content/uploads/2026/08/Non-QHEM_08.04.26E.pdf",
+          "whyThisLenderRuleIds": [
+            "6aa31ef8-6f29-4f02-96dd-84e353f4a6ce:doc",
+            "6aa31ef8-6f29-4f02-96dd-84e353f4a6ce:pnl-product",
+            "6aa31ef8-6f29-4f02-96dd-84e353f4a6ce:pnl-exact-ltv",
+            "6aa31ef8-6f29-4f02-96dd-84e353f4a6ce:pnl-fico",
+            "6aa31ef8-6f29-4f02-96dd-84e353f4a6ce:pnl-loan",
+            "6aa31ef8-6f29-4f02-96dd-84e353f4a6ce:pnl-period-options",
+            "6aa31ef8-6f29-4f02-96dd-84e353f4a6ce:purpose",
+            "6aa31ef8-6f29-4f02-96dd-84e353f4a6ce:occ",
+            "6aa31ef8-6f29-4f02-96dd-84e353f4a6ce:prop",
+            "6aa31ef8-6f29-4f02-96dd-84e353f4a6ce:cit",
+            "6aa31ef8-6f29-4f02-96dd-84e353f4a6ce:amt",
+            "6aa31ef8-6f29-4f02-96dd-84e353f4a6ce:fico",
+            "6aa31ef8-6f29-4f02-96dd-84e353f4a6ce:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Deephaven Mortgage",
+          "program": "12-Month Profit & Loss Statement — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 660,
+          "maxDti": 55,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 6,
+          "sourceCitation": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/103d013f-fea9-4d54-8083-7ff750d0cead.pdf p.1; https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/d2184ecc-3935-47a6-96af-37068a9a72ef.pdf §§8.5.1–8.5.3",
+          "whyThisLenderRuleIds": [
+            "09f7d68b-cff8-4b08-9e69-08bc8738b591:doc",
+            "09f7d68b-cff8-4b08-9e69-08bc8738b591:pnl-product",
+            "09f7d68b-cff8-4b08-9e69-08bc8738b591:pnl-exact-ltv",
+            "09f7d68b-cff8-4b08-9e69-08bc8738b591:pnl-period",
+            "09f7d68b-cff8-4b08-9e69-08bc8738b591:purpose",
+            "09f7d68b-cff8-4b08-9e69-08bc8738b591:occ",
+            "09f7d68b-cff8-4b08-9e69-08bc8738b591:prop",
+            "09f7d68b-cff8-4b08-9e69-08bc8738b591:cit",
+            "09f7d68b-cff8-4b08-9e69-08bc8738b591:amt",
+            "09f7d68b-cff8-4b08-9e69-08bc8738b591:fico",
+            "09f7d68b-cff8-4b08-9e69-08bc8738b591:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "A&D Mortgage",
+          "program": "1Y & 2Y P&L",
+          "matchedDocumentation": "P&L Only",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 660,
+          "maxDti": 55,
+          "maxLoanAmount": 2500000,
+          "reservesMonths": 3,
+          "sourceCitation": "A&D Mortgage LLC — official wholesale product sheet (dated April 15, 2026) — https://admortgage.com/wp-content/uploads/Programs_AD_Products_April_15_2026.pdf, fetched 2026-07-28",
+          "whyThisLenderRuleIds": [
+            "7f1fbcf0-8b4b-41a1-8993-d51b45582571:doc",
+            "7f1fbcf0-8b4b-41a1-8993-d51b45582571:pnl-product",
+            "7f1fbcf0-8b4b-41a1-8993-d51b45582571:pnl-exact-ltv",
+            "7f1fbcf0-8b4b-41a1-8993-d51b45582571:purpose",
+            "7f1fbcf0-8b4b-41a1-8993-d51b45582571:occ",
+            "7f1fbcf0-8b4b-41a1-8993-d51b45582571:prop",
+            "7f1fbcf0-8b4b-41a1-8993-d51b45582571:cit",
+            "7f1fbcf0-8b4b-41a1-8993-d51b45582571:amt",
+            "7f1fbcf0-8b4b-41a1-8993-d51b45582571:fico",
+            "7f1fbcf0-8b4b-41a1-8993-d51b45582571:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ACC Mortgage",
+          "program": "ACC Prime — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 3,
+          "sourceCitation": "https://accmortgage.com/wp-content/uploads/2026/08/ACC-Prime-Matrix-ACCMortgage-2026.08.03.pdf",
+          "whyThisLenderRuleIds": [
+            "ced2e2fa-e4e1-476f-8192-c9edf4cde036:doc",
+            "ced2e2fa-e4e1-476f-8192-c9edf4cde036:pnl-product",
+            "ced2e2fa-e4e1-476f-8192-c9edf4cde036:pnl-exact-ltv",
+            "ced2e2fa-e4e1-476f-8192-c9edf4cde036:pnl-period",
+            "ced2e2fa-e4e1-476f-8192-c9edf4cde036:purpose",
+            "ced2e2fa-e4e1-476f-8192-c9edf4cde036:occ",
+            "ced2e2fa-e4e1-476f-8192-c9edf4cde036:prop",
+            "ced2e2fa-e4e1-476f-8192-c9edf4cde036:cit",
+            "ced2e2fa-e4e1-476f-8192-c9edf4cde036:amt",
+            "ced2e2fa-e4e1-476f-8192-c9edf4cde036:fico",
+            "ced2e2fa-e4e1-476f-8192-c9edf4cde036:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ACC Mortgage",
+          "program": "ACC Prime Plus — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 620,
+          "maxDti": 50,
+          "maxLoanAmount": 1500000,
+          "reservesMonths": 3,
+          "sourceCitation": "https://accmortgage.com/wp-content/uploads/2026/08/ACC-PrimePlus-Matrix-ACCMortgage-2026.08.03.pdf",
+          "whyThisLenderRuleIds": [
+            "199c2eaf-b00e-4ef8-b0c3-e183316ce89d:doc",
+            "199c2eaf-b00e-4ef8-b0c3-e183316ce89d:pnl-product",
+            "199c2eaf-b00e-4ef8-b0c3-e183316ce89d:pnl-exact-ltv",
+            "199c2eaf-b00e-4ef8-b0c3-e183316ce89d:pnl-period",
+            "199c2eaf-b00e-4ef8-b0c3-e183316ce89d:purpose",
+            "199c2eaf-b00e-4ef8-b0c3-e183316ce89d:occ",
+            "199c2eaf-b00e-4ef8-b0c3-e183316ce89d:prop",
+            "199c2eaf-b00e-4ef8-b0c3-e183316ce89d:cit",
+            "199c2eaf-b00e-4ef8-b0c3-e183316ce89d:amt",
+            "199c2eaf-b00e-4ef8-b0c3-e183316ce89d:fico",
+            "199c2eaf-b00e-4ef8-b0c3-e183316ce89d:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ACC Mortgage",
+          "program": "ACC Second Chance — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3000000,
+          "reservesMonths": 3,
+          "sourceCitation": "https://accmortgage.com/wp-content/uploads/2026/08/ACC-SecondChance-Matrix-ACCMortgage-2026.08.03.pdf",
+          "whyThisLenderRuleIds": [
+            "b60f3d16-c3d8-473d-90a4-c4b179a2467a:doc",
+            "b60f3d16-c3d8-473d-90a4-c4b179a2467a:pnl-product",
+            "b60f3d16-c3d8-473d-90a4-c4b179a2467a:pnl-exact-ltv",
+            "b60f3d16-c3d8-473d-90a4-c4b179a2467a:pnl-period",
+            "b60f3d16-c3d8-473d-90a4-c4b179a2467a:purpose",
+            "b60f3d16-c3d8-473d-90a4-c4b179a2467a:occ",
+            "b60f3d16-c3d8-473d-90a4-c4b179a2467a:prop",
+            "b60f3d16-c3d8-473d-90a4-c4b179a2467a:cit",
+            "b60f3d16-c3d8-473d-90a4-c4b179a2467a:amt",
+            "b60f3d16-c3d8-473d-90a4-c4b179a2467a:fico",
+            "b60f3d16-c3d8-473d-90a4-c4b179a2467a:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Apex — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 6000000,
+          "reservesMonths": 3,
+          "sourceCitation": "FundLoans Portfolio Guidelines v1.4 / Apex Matrix v1.3 — 2026-08-01 — https://gl.fundloans.com/apex-matrix.pdf | https://guidelines.fundloans.com/portfolio",
+          "whyThisLenderRuleIds": [
+            "5c58f7dd-4276-4ad9-931f-3b81e397f84c:doc",
+            "5c58f7dd-4276-4ad9-931f-3b81e397f84c:pnl-product",
+            "5c58f7dd-4276-4ad9-931f-3b81e397f84c:pnl-exact-ltv",
+            "5c58f7dd-4276-4ad9-931f-3b81e397f84c:pnl-period",
+            "5c58f7dd-4276-4ad9-931f-3b81e397f84c:purpose",
+            "5c58f7dd-4276-4ad9-931f-3b81e397f84c:occ",
+            "5c58f7dd-4276-4ad9-931f-3b81e397f84c:prop",
+            "5c58f7dd-4276-4ad9-931f-3b81e397f84c:cit",
+            "5c58f7dd-4276-4ad9-931f-3b81e397f84c:amt",
+            "5c58f7dd-4276-4ad9-931f-3b81e397f84c:fico",
+            "5c58f7dd-4276-4ad9-931f-3b81e397f84c:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ClearEdge Lending",
+          "program": "Connect — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 680,
+          "maxDti": 50,
+          "maxLoanAmount": 2000000,
+          "reservesMonths": 3,
+          "sourceCitation": "ClearEdge Connect Product Matrix 7.1.2026 — https://clearedgelending.com/wp-content/uploads/2026/07/2026-7.1-CEL-PP-Connect-Product-Matrix-Clean-Copy.pdf",
+          "whyThisLenderRuleIds": [
+            "4c2c385d-b7f9-4128-8b0d-e9e7f18a7ba7:doc",
+            "4c2c385d-b7f9-4128-8b0d-e9e7f18a7ba7:pnl-product",
+            "4c2c385d-b7f9-4128-8b0d-e9e7f18a7ba7:pnl-exact-ltv",
+            "4c2c385d-b7f9-4128-8b0d-e9e7f18a7ba7:pnl-period",
+            "4c2c385d-b7f9-4128-8b0d-e9e7f18a7ba7:purpose",
+            "4c2c385d-b7f9-4128-8b0d-e9e7f18a7ba7:occ",
+            "4c2c385d-b7f9-4128-8b0d-e9e7f18a7ba7:prop",
+            "4c2c385d-b7f9-4128-8b0d-e9e7f18a7ba7:cit",
+            "4c2c385d-b7f9-4128-8b0d-e9e7f18a7ba7:amt",
+            "4c2c385d-b7f9-4128-8b0d-e9e7f18a7ba7:fico",
+            "4c2c385d-b7f9-4128-8b0d-e9e7f18a7ba7:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "eRESI Capital",
+          "program": "Core eXpert — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3000000,
+          "reservesMonths": 6,
+          "sourceCitation": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/80d9b26b-f6f4-40ec-8e7f-459772bb164f.pdf pp.1–2; https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/7bb26151-6930-47d2-a82a-d99a474b0b85.pdf §§3–6",
+          "whyThisLenderRuleIds": [
+            "05e135ea-1acc-4410-a2c0-3bdefef5e469:doc",
+            "05e135ea-1acc-4410-a2c0-3bdefef5e469:pnl-product",
+            "05e135ea-1acc-4410-a2c0-3bdefef5e469:pnl-exact-ltv",
+            "05e135ea-1acc-4410-a2c0-3bdefef5e469:purpose",
+            "05e135ea-1acc-4410-a2c0-3bdefef5e469:occ",
+            "05e135ea-1acc-4410-a2c0-3bdefef5e469:prop",
+            "05e135ea-1acc-4410-a2c0-3bdefef5e469:cit",
+            "05e135ea-1acc-4410-a2c0-3bdefef5e469:amt",
+            "05e135ea-1acc-4410-a2c0-3bdefef5e469:fico",
+            "05e135ea-1acc-4410-a2c0-3bdefef5e469:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Planet Home Lending",
+          "program": "Planet Non-QM Bronze — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 620,
+          "maxDti": 50,
+          "maxLoanAmount": 1500000,
+          "reservesMonths": 6,
+          "sourceCitation": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/a36e6bf9-b8dd-4f6f-8305-d8526b1d19dd.pdf pp.1–5; https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/e9402387-15ba-41c2-ad33-b52c79625c40.pdf Income Documentation, Credit, Assets and Property sections",
+          "whyThisLenderRuleIds": [
+            "dc8042e5-b673-4bfd-95aa-2a667f3aa981:doc",
+            "dc8042e5-b673-4bfd-95aa-2a667f3aa981:pnl-product",
+            "dc8042e5-b673-4bfd-95aa-2a667f3aa981:pnl-exact-ltv",
+            "dc8042e5-b673-4bfd-95aa-2a667f3aa981:purpose",
+            "dc8042e5-b673-4bfd-95aa-2a667f3aa981:occ",
+            "dc8042e5-b673-4bfd-95aa-2a667f3aa981:prop",
+            "dc8042e5-b673-4bfd-95aa-2a667f3aa981:cit",
+            "dc8042e5-b673-4bfd-95aa-2a667f3aa981:amt",
+            "dc8042e5-b673-4bfd-95aa-2a667f3aa981:fico",
+            "dc8042e5-b673-4bfd-95aa-2a667f3aa981:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Planet Home Lending",
+          "program": "Planet Non-QM Gold — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 12,
+          "sourceCitation": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/8e3ee88c-9845-41cc-86d4-94179d28c5c5.pdf pp.1–5; https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/e9402387-15ba-41c2-ad33-b52c79625c40.pdf Income Documentation, Credit, Assets and Property sections",
+          "whyThisLenderRuleIds": [
+            "1b964723-c1e5-4da9-88c5-7e6fb8745f63:doc",
+            "1b964723-c1e5-4da9-88c5-7e6fb8745f63:pnl-product",
+            "1b964723-c1e5-4da9-88c5-7e6fb8745f63:pnl-exact-ltv",
+            "1b964723-c1e5-4da9-88c5-7e6fb8745f63:purpose",
+            "1b964723-c1e5-4da9-88c5-7e6fb8745f63:occ",
+            "1b964723-c1e5-4da9-88c5-7e6fb8745f63:prop",
+            "1b964723-c1e5-4da9-88c5-7e6fb8745f63:cit",
+            "1b964723-c1e5-4da9-88c5-7e6fb8745f63:amt",
+            "1b964723-c1e5-4da9-88c5-7e6fb8745f63:fico",
+            "1b964723-c1e5-4da9-88c5-7e6fb8745f63:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Planet Home Lending",
+          "program": "Planet Non-QM Silver — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 620,
+          "maxDti": 50,
+          "maxLoanAmount": 3000000,
+          "reservesMonths": 12,
+          "sourceCitation": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/1b4145f3-4913-438e-8100-f2568e1306f9.pdf pp.1–4; https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/e9402387-15ba-41c2-ad33-b52c79625c40.pdf Income Documentation, Credit, Assets and Property sections",
+          "whyThisLenderRuleIds": [
+            "2adf50df-239e-463e-89d7-9ce321f6b917:doc",
+            "2adf50df-239e-463e-89d7-9ce321f6b917:pnl-product",
+            "2adf50df-239e-463e-89d7-9ce321f6b917:pnl-exact-ltv",
+            "2adf50df-239e-463e-89d7-9ce321f6b917:purpose",
+            "2adf50df-239e-463e-89d7-9ce321f6b917:occ",
+            "2adf50df-239e-463e-89d7-9ce321f6b917:prop",
+            "2adf50df-239e-463e-89d7-9ce321f6b917:cit",
+            "2adf50df-239e-463e-89d7-9ce321f6b917:amt",
+            "2adf50df-239e-463e-89d7-9ce321f6b917:fico",
+            "2adf50df-239e-463e-89d7-9ce321f6b917:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Luxury Mortgage Corp.",
+          "program": "Simple Access — P&L Only (1 Year)",
+          "matchedDocumentation": "P&L Only",
+          "status": "eligible",
+          "confidenceScore": 74.67,
+          "maxLtv": 80,
+          "minFico": 700,
+          "maxDti": 50,
+          "maxLoanAmount": 1500000,
+          "reservesMonths": 0,
+          "sourceCitation": "https://luxurymortgagewholesale.com/admin/rates/pdfs/SA_BankStatement-WSE.pdf",
+          "whyThisLenderRuleIds": [
+            "da0e94ba-686f-4221-b136-7ba768a27277:doc",
+            "da0e94ba-686f-4221-b136-7ba768a27277:pnl-product",
+            "da0e94ba-686f-4221-b136-7ba768a27277:pnl-exact-ltv",
+            "da0e94ba-686f-4221-b136-7ba768a27277:pnl-period",
+            "da0e94ba-686f-4221-b136-7ba768a27277:purpose",
+            "da0e94ba-686f-4221-b136-7ba768a27277:occ",
+            "da0e94ba-686f-4221-b136-7ba768a27277:prop",
+            "da0e94ba-686f-4221-b136-7ba768a27277:cit",
+            "da0e94ba-686f-4221-b136-7ba768a27277:amt",
+            "da0e94ba-686f-4221-b136-7ba768a27277:fico",
+            "da0e94ba-686f-4221-b136-7ba768a27277:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        }
+      ],
+      "quarantinedExamples": [
+        {
+          "lender": "American Heritage Lending",
+          "program": "1-Year Profit & Loss Only — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The P&L Only source citation is missing."
+          ]
+        },
+        {
+          "lender": "NQM Funding",
+          "program": "2nd Lien — Multi-Doc (Full Doc / Bank Statement / 1099 / P&L / Asset Utilization / DSCR) — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Champions Funding",
+          "program": "Accelerator Full/Alt Doc — Income Qualifying Investment Properties — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Champions Funding",
+          "program": "Activator — Alt-Doc (Non-Traditional Borrowers) — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "AmWest Funding Corp.",
+          "program": "Advantage — Foreign National Alt Doc — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "First National Bank of America",
+          "program": "Alt-A Premier — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Change Wholesale",
+          "program": "Alt-Doc — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Kind Lending",
+          "program": "Alt-Doc Suite (Bank Statement / 1099 / P&L / WVOE / Asset Utilization) — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Aspire — Standalone Second (Full/Alt Doc) — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Redwood Residential Acquisition Corporation",
+          "program": "Aspire Expanded — Alternative Documentation — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Redwood Residential Acquisition Corporation",
+          "program": "Aspire Expanded — P&L Only — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Redwood confirms the documentation path but does not publish seller-universal numeric tiers on the accessible page."
+          ]
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Aspire X — Standalone Second (Expanded Doc) — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "JMAC Lending",
+          "program": "Balboa Non-Conforming — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Verification Required — Guideline Not Located in Provided JMAC Documentation. The supplied comparison sheet confirms Balboa Non-Conforming, but the controlling program-specific matrix was not provided. Headline figures are searchable ceilings only; obtain the current matrix before final eligibility."
+          ]
+        },
+        {
+          "lender": "BluePoint Mortgage",
+          "program": "BlueXpanded — P&L Only — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Official page still links a 2025-09-25 matrix; confirm currentness with BluePoint AE."
+          ]
+        },
+        {
+          "lender": "GreenBox Loans",
+          "program": "CES — Full Doc / Bank Statement / P&L Only (Second Lien) — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Cake Mortgage",
+          "program": "Closed End Second (CES) — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Cake's Closed End Seconds Eligibility Guidelines (Version 2.0) confirm the program structure, eligible documentation, and transaction rules but explicitly defer every numeric figure (max CLTV, loan amount, combined lien amount, DTI, reserves, and DSCR for the CES/business-purpose option) to 'the applicable CES matrix,' which was not found published on the accessible Guidelines/Products pages — left at 0/unset rather than guessing. Confirm current figures with a Cake Mortgage AE. Vesting eligibility was not confirmed in the reviewed public guideline and must be verified with the lender. Vesting eligibility was not confirmed in the reviewed public guideline and must be verified with the lender."
+          ]
+        },
+        {
+          "lender": "First National Bank of America",
+          "program": "Dual Core — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "FNBA has not published a numeric LTV/FICO/loan-amount matrix for Dual Core anywhere on fnba.com as of 2026-08-07 (checked /wholesale/non-qm-loans/, /correspondent/, /correspondent/loan-programs/, /mortgage/, and /correspondent/pricing/, which only runs its quick-quote tool for Alt-A Premier and Near Miss). Confirm exact LTV/FICO/DTI/loan-amount limits with an FNBA account executive before quoting Dual Core to a borrower."
+          ]
+        },
+        {
+          "lender": "GreenBox Loans",
+          "program": "Elite – P&L Only — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The P&L Only program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "GreenBox Loans",
+          "program": "Elite Plus – P&L Only — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The P&L Only program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "Deephaven Mortgage",
+          "program": "Equity Advantage Closed-End Second — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Deephaven Mortgage",
+          "program": "Expanded Prime — Full / Alternative Documentation — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "NQM Funding",
+          "program": "Flex Supreme / Select Prime — Bank Statement / 1099 / P&L — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "First National Bank of America",
+          "program": "FlexFirst HELOC — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Forward Lending",
+          "program": "Full / Alt Doc Closed-End Second — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "NewFi Lending",
+          "program": "Hercules Expanded — P&L Only",
+          "matchedDocumentation": "P&L Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified P&L Only profile is stored for this bundled product family."
+          ]
+        }
+      ]
+    },
+    {
+      "documentationType": "asset_depletion",
+      "scenario": {
+        "loanPurpose": "purchase",
+        "propertyType": "single_family",
+        "occupancy": "primary",
+        "ltv": 80,
+        "fico": 720
+      },
+      "counts": {
+        "evaluated": 468,
+        "eligible": 13,
+        "verificationRequired": 67
+      },
+      "recommendations": [
+        {
+          "lender": "ACC Mortgage",
+          "program": "ACC Mortgage — Asset Depletion",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "status": "strong_match",
+          "confidenceScore": 93.33,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 3,
+          "sourceCitation": "https://accmortgage.com/wp-content/uploads/2026/08/ACC-Prime-Matrix-ACCMortgage-2026.08.03.pdf",
+          "whyThisLenderRuleIds": [
+            "aee229a9-c6ce-47f6-a35d-5e13e61931f6:doc",
+            "aee229a9-c6ce-47f6-a35d-5e13e61931f6:purpose",
+            "aee229a9-c6ce-47f6-a35d-5e13e61931f6:occ",
+            "aee229a9-c6ce-47f6-a35d-5e13e61931f6:prop",
+            "aee229a9-c6ce-47f6-a35d-5e13e61931f6:cit",
+            "aee229a9-c6ce-47f6-a35d-5e13e61931f6:amt",
+            "aee229a9-c6ce-47f6-a35d-5e13e61931f6:fico",
+            "aee229a9-c6ce-47f6-a35d-5e13e61931f6:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "theLender",
+          "program": "theLender — Asset Qualifier",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "status": "strong_match",
+          "confidenceScore": 93.33,
+          "maxLtv": 90,
+          "minFico": 660,
+          "maxDti": 43,
+          "maxLoanAmount": 4000000,
+          "reservesMonths": 3,
+          "sourceCitation": "Non-QHEM 08.04.26E — https://wholesale.thelender.com/wp-content/uploads/2026/08/Non-QHEM_08.04.26E.pdf",
+          "whyThisLenderRuleIds": [
+            "ea03f28c-2fd4-4d54-81df-50edae173d5d:doc",
+            "ea03f28c-2fd4-4d54-81df-50edae173d5d:purpose",
+            "ea03f28c-2fd4-4d54-81df-50edae173d5d:occ",
+            "ea03f28c-2fd4-4d54-81df-50edae173d5d:prop",
+            "ea03f28c-2fd4-4d54-81df-50edae173d5d:cit",
+            "ea03f28c-2fd4-4d54-81df-50edae173d5d:amt",
+            "ea03f28c-2fd4-4d54-81df-50edae173d5d:fico",
+            "ea03f28c-2fd4-4d54-81df-50edae173d5d:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Montage — Asset Qualification / Assets Only",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "status": "strong_match",
+          "confidenceScore": 86.67,
+          "maxLtv": 85,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 6000000,
+          "reservesMonths": 3,
+          "sourceCitation": "FundLoans Montage Matrix v1.3 / Portfolio Guidelines v1.4 — 2026-08-01 — https://gl.fundloans.com/montage-matrix.pdf | https://guidelines.fundloans.com/portfolio",
+          "whyThisLenderRuleIds": [
+            "850637aa-ca37-4aab-aae8-541182ca227e:doc",
+            "850637aa-ca37-4aab-aae8-541182ca227e:purpose",
+            "850637aa-ca37-4aab-aae8-541182ca227e:occ",
+            "850637aa-ca37-4aab-aae8-541182ca227e:prop",
+            "850637aa-ca37-4aab-aae8-541182ca227e:cit",
+            "850637aa-ca37-4aab-aae8-541182ca227e:amt",
+            "850637aa-ca37-4aab-aae8-541182ca227e:fico",
+            "850637aa-ca37-4aab-aae8-541182ca227e:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "BluePoint Mortgage",
+          "program": "Gold — Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "status": "eligible",
+          "confidenceScore": 81.33,
+          "maxLtv": 85,
+          "minFico": 700,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 3,
+          "sourceCitation": "Gold matrix 2026-07-30 — https://bluepointmtg.com/wp-content/docs/Gold_Full_Alt_Doc_Matrix_BluePointMtg_07302026.pdf",
+          "whyThisLenderRuleIds": [
+            "833b4a77-d891-4962-ad7c-63c86e4396d3:doc",
+            "833b4a77-d891-4962-ad7c-63c86e4396d3:purpose",
+            "833b4a77-d891-4962-ad7c-63c86e4396d3:occ",
+            "833b4a77-d891-4962-ad7c-63c86e4396d3:prop",
+            "833b4a77-d891-4962-ad7c-63c86e4396d3:cit",
+            "833b4a77-d891-4962-ad7c-63c86e4396d3:amt",
+            "833b4a77-d891-4962-ad7c-63c86e4396d3:fico",
+            "833b4a77-d891-4962-ad7c-63c86e4396d3:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "PennyMac",
+          "program": "Non-QM A+ — Asset Depletion / Asset Qualifier",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "status": "eligible",
+          "confidenceScore": 81.33,
+          "maxLtv": 85,
+          "minFico": 700,
+          "maxDti": 55,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 0,
+          "sourceCitation": "PennyMac Non-QM A+ Product Profile 08.03.26 — https://corr.pennymac.com/assets/documents/non-qm-resources/non-qm-a-plus-product-profile.pdf",
+          "whyThisLenderRuleIds": [
+            "71dd94da-922f-4616-9797-b6d75d004eca:doc",
+            "71dd94da-922f-4616-9797-b6d75d004eca:purpose",
+            "71dd94da-922f-4616-9797-b6d75d004eca:occ",
+            "71dd94da-922f-4616-9797-b6d75d004eca:prop",
+            "71dd94da-922f-4616-9797-b6d75d004eca:cit",
+            "71dd94da-922f-4616-9797-b6d75d004eca:amt",
+            "71dd94da-922f-4616-9797-b6d75d004eca:fico",
+            "71dd94da-922f-4616-9797-b6d75d004eca:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Logan Finance Corporation",
+          "program": "Asset Qualification (Open Road / Beyond)",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3000000,
+          "reservesMonths": 3,
+          "sourceCitation": "Logan Finance Wholesale — Open Road Asset Qual — https://loganwholesale.com/logan-open-road-asset-qual/, https://loganwholesale.com/experience-asset-qual/",
+          "whyThisLenderRuleIds": [
+            "50304289-b9b6-4caf-9300-4940e2f6df5c:doc",
+            "50304289-b9b6-4caf-9300-4940e2f6df5c:purpose",
+            "50304289-b9b6-4caf-9300-4940e2f6df5c:occ",
+            "50304289-b9b6-4caf-9300-4940e2f6df5c:prop",
+            "50304289-b9b6-4caf-9300-4940e2f6df5c:cit",
+            "50304289-b9b6-4caf-9300-4940e2f6df5c:amt",
+            "50304289-b9b6-4caf-9300-4940e2f6df5c:fico",
+            "50304289-b9b6-4caf-9300-4940e2f6df5c:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "LendSure Mortgage Corp.",
+          "program": "Asset Qualifier",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 660,
+          "maxDti": 45,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 6,
+          "sourceCitation": "LendSure Mortgage Corp. — user-supplied \"LendSure Non-QM Eligibility Matrix\" workbook, ingested 2026-08-03, tab \"LMC Super-Prime Asset Depletion\".",
+          "whyThisLenderRuleIds": [
+            "5717c3ee-5110-405d-bfc1-90bf08b3e4c8:doc",
+            "5717c3ee-5110-405d-bfc1-90bf08b3e4c8:purpose",
+            "5717c3ee-5110-405d-bfc1-90bf08b3e4c8:occ",
+            "5717c3ee-5110-405d-bfc1-90bf08b3e4c8:prop",
+            "5717c3ee-5110-405d-bfc1-90bf08b3e4c8:cit",
+            "5717c3ee-5110-405d-bfc1-90bf08b3e4c8:amt",
+            "5717c3ee-5110-405d-bfc1-90bf08b3e4c8:fico",
+            "5717c3ee-5110-405d-bfc1-90bf08b3e4c8:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Brokers First Funding",
+          "program": "Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 680,
+          "maxDti": 45,
+          "maxLoanAmount": 2500000,
+          "reservesMonths": 0,
+          "sourceCitation": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/8940e0f4-fd1f-49cc-bc45-3b5018625ea0.pdf pp.90-92 §8.11",
+          "whyThisLenderRuleIds": [
+            "49c25efa-cbcc-4350-88e8-7d33f66f0833:doc",
+            "49c25efa-cbcc-4350-88e8-7d33f66f0833:purpose",
+            "49c25efa-cbcc-4350-88e8-7d33f66f0833:occ",
+            "49c25efa-cbcc-4350-88e8-7d33f66f0833:prop",
+            "49c25efa-cbcc-4350-88e8-7d33f66f0833:cit",
+            "49c25efa-cbcc-4350-88e8-7d33f66f0833:amt",
+            "49c25efa-cbcc-4350-88e8-7d33f66f0833:fico",
+            "49c25efa-cbcc-4350-88e8-7d33f66f0833:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ClearEdge Lending",
+          "program": "Connect — Asset Depletion",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 620,
+          "maxDti": 50,
+          "maxLoanAmount": 3000000,
+          "reservesMonths": 3,
+          "sourceCitation": "ClearEdge Connect Product Matrix 7.1.2026 — https://clearedgelending.com/wp-content/uploads/2026/07/2026-7.1-CEL-PP-Connect-Product-Matrix-Clean-Copy.pdf",
+          "whyThisLenderRuleIds": [
+            "7a037c2c-1685-4362-b603-68e3b7212721:doc",
+            "7a037c2c-1685-4362-b603-68e3b7212721:purpose",
+            "7a037c2c-1685-4362-b603-68e3b7212721:occ",
+            "7a037c2c-1685-4362-b603-68e3b7212721:prop",
+            "7a037c2c-1685-4362-b603-68e3b7212721:cit",
+            "7a037c2c-1685-4362-b603-68e3b7212721:amt",
+            "7a037c2c-1685-4362-b603-68e3b7212721:fico",
+            "7a037c2c-1685-4362-b603-68e3b7212721:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "eRESI Capital",
+          "program": "Core eXpert — Asset Depletion",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3000000,
+          "reservesMonths": 6,
+          "sourceCitation": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/80d9b26b-f6f4-40ec-8e7f-459772bb164f.pdf pp.1–2; https://d2ol7oe51mr4n9.cloudfront.net/user_3Cfrs4UEzyBfibhWL8hkQ0WuLXI/7bb26151-6930-47d2-a82a-d99a474b0b85.pdf §§3–6",
+          "whyThisLenderRuleIds": [
+            "0243d033-19e8-446e-b62c-24a60c7b4d89:doc",
+            "0243d033-19e8-446e-b62c-24a60c7b4d89:purpose",
+            "0243d033-19e8-446e-b62c-24a60c7b4d89:occ",
+            "0243d033-19e8-446e-b62c-24a60c7b4d89:prop",
+            "0243d033-19e8-446e-b62c-24a60c7b4d89:cit",
+            "0243d033-19e8-446e-b62c-24a60c7b4d89:amt",
+            "0243d033-19e8-446e-b62c-24a60c7b4d89:fico",
+            "0243d033-19e8-446e-b62c-24a60c7b4d89:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "BluePoint Mortgage",
+          "program": "Platinum — Full Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 3500000,
+          "reservesMonths": 3,
+          "sourceCitation": "Platinum matrix 2026-05-04 — https://bluepointmtg.com/wp-content/docs/Platinum_Full-Alt-Doc_Matrix_BluePointMtg_05042026.pdf",
+          "whyThisLenderRuleIds": [
+            "b6ba58a8-2cfe-4208-843a-6ca6abf06504:doc",
+            "b6ba58a8-2cfe-4208-843a-6ca6abf06504:purpose",
+            "b6ba58a8-2cfe-4208-843a-6ca6abf06504:occ",
+            "b6ba58a8-2cfe-4208-843a-6ca6abf06504:prop",
+            "b6ba58a8-2cfe-4208-843a-6ca6abf06504:cit",
+            "b6ba58a8-2cfe-4208-843a-6ca6abf06504:amt",
+            "b6ba58a8-2cfe-4208-843a-6ca6abf06504:fico",
+            "b6ba58a8-2cfe-4208-843a-6ca6abf06504:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "First Colony Wholesale",
+          "program": "SHARP Advantage — Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "status": "eligible",
+          "confidenceScore": 80,
+          "maxLtv": 80,
+          "minFico": 680,
+          "maxDti": 50,
+          "maxLoanAmount": 2000000,
+          "reservesMonths": 0,
+          "sourceCitation": "SHARP Advantage Full/Alt Doc 5.13.26 — Assets section — https://fcmtpo.com/wp-content/uploads/2026/05/Sharp-Advantage-Full-Alt-Doc-Matrix-5.13.26-.pdf",
+          "whyThisLenderRuleIds": [
+            "397a69bb-5e64-47ea-b37e-5f7928e31c32:doc",
+            "397a69bb-5e64-47ea-b37e-5f7928e31c32:purpose",
+            "397a69bb-5e64-47ea-b37e-5f7928e31c32:occ",
+            "397a69bb-5e64-47ea-b37e-5f7928e31c32:prop",
+            "397a69bb-5e64-47ea-b37e-5f7928e31c32:cit",
+            "397a69bb-5e64-47ea-b37e-5f7928e31c32:amt",
+            "397a69bb-5e64-47ea-b37e-5f7928e31c32:fico",
+            "397a69bb-5e64-47ea-b37e-5f7928e31c32:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Angel Oak Mortgage Solutions",
+          "program": "Asset Depletion Mortgage",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "status": "eligible",
+          "confidenceScore": 74.67,
+          "maxLtv": 80,
+          "minFico": 700,
+          "maxDti": 50,
+          "maxLoanAmount": 2000000,
+          "reservesMonths": 3,
+          "sourceCitation": "Angel Oak Mortgage Solutions — Asset Depletion Mortgage — https://angeloakms.com/programs/asset-depletion-mortgage-program/",
+          "whyThisLenderRuleIds": [
+            "91bee53d-83e1-4273-82b5-ef5467cd0ef8:doc",
+            "91bee53d-83e1-4273-82b5-ef5467cd0ef8:purpose",
+            "91bee53d-83e1-4273-82b5-ef5467cd0ef8:occ",
+            "91bee53d-83e1-4273-82b5-ef5467cd0ef8:prop",
+            "91bee53d-83e1-4273-82b5-ef5467cd0ef8:cit",
+            "91bee53d-83e1-4273-82b5-ef5467cd0ef8:amt",
+            "91bee53d-83e1-4273-82b5-ef5467cd0ef8:fico",
+            "91bee53d-83e1-4273-82b5-ef5467cd0ef8:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        }
+      ],
+      "quarantinedExamples": [
+        {
+          "lender": "NQM Funding",
+          "program": "2nd Lien — Multi-Doc (Full Doc / Bank Statement / 1099 / P&L / Asset Utilization / DSCR) — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Asset Depletion / Asset Utilization profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Champions Funding",
+          "program": "Accelerator Full/Alt Doc — Income Qualifying Investment Properties — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Asset Depletion / Asset Utilization profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Champions Funding",
+          "program": "Activator — Alt-Doc (Non-Traditional Borrowers) — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Asset Depletion / Asset Utilization profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "First National Bank of America",
+          "program": "Alt-A Premier — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Asset Depletion / Asset Utilization profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Change Wholesale",
+          "program": "Alt-Doc — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Asset Depletion / Asset Utilization profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Kind Lending",
+          "program": "Alt-Doc Suite (Bank Statement / 1099 / P&L / WVOE / Asset Utilization) — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Asset Depletion / Asset Utilization profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Aspire — Standalone Second (Full/Alt Doc) — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Asset Depletion / Asset Utilization profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Redwood Residential Acquisition Corporation",
+          "program": "Aspire Expanded — Alternative Documentation — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Asset Depletion / Asset Utilization profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Redwood Residential Acquisition Corporation",
+          "program": "Aspire Expanded — Asset Utilization — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Redwood confirms the documentation path but does not publish seller-universal numeric tiers on the accessible page."
+          ]
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Aspire X — Standalone Second (Expanded Doc) — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Asset Depletion / Asset Utilization profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "HomeXpress Mortgage",
+          "program": "Asset Assist — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The Asset Depletion / Asset Utilization program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "Angel Oak Mortgage Solutions",
+          "program": "Asset Qualifier — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The Asset Depletion / Asset Utilization program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "American Heritage Lending",
+          "program": "Asset Qualifier Loans — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The Asset Depletion / Asset Utilization program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "ClearEdge Lending",
+          "program": "Asset Utilization — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The Asset Depletion / Asset Utilization program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "A&D Mortgage",
+          "program": "Asset Utilization — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The Asset Depletion / Asset Utilization program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "LoanStream Mortgage",
+          "program": "Asset Utilization — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The Asset Depletion / Asset Utilization program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "BluePoint Mortgage",
+          "program": "Asset Utilization — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The Asset Depletion / Asset Utilization program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "Cake Mortgage",
+          "program": "Asset Utilization — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Cake's Version 4.0 narrative guideline confirms the program and qualitative underwriting rules but repeatedly defers exact FICO, LTV/CLTV, loan-amount, mortgage-history, adverse-credit seasoning, and reserve tiers to the separate current program/credit matrix, which was not included. Confirm the current Cake matrix before final eligibility or quoting numeric terms."
+          ]
+        },
+        {
+          "lender": "Cake Mortgage",
+          "program": "ATR-in-Full (AiF) — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Cake's Version 4.0 narrative guideline confirms the program and qualitative underwriting rules but repeatedly defers exact FICO, LTV/CLTV, loan-amount, mortgage-history, adverse-credit seasoning, and reserve tiers to the separate current program/credit matrix, which was not included. Confirm the current Cake matrix before final eligibility or quoting numeric terms."
+          ]
+        },
+        {
+          "lender": "JMAC Lending",
+          "program": "Balboa Non-Conforming — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Verification Required — Guideline Not Located in Provided JMAC Documentation. The supplied comparison sheet confirms Balboa Non-Conforming, but the controlling program-specific matrix was not provided. Headline figures are searchable ceilings only; obtain the current matrix before final eligibility."
+          ]
+        },
+        {
+          "lender": "American Heritage Lending",
+          "program": "Bank Statement Loans — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Asset Depletion / Asset Utilization profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "BluePoint Mortgage",
+          "program": "BlueXpanded — Asset Utilization — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Official page still links a 2025-09-25 matrix; confirm currentness with BluePoint AE."
+          ]
+        },
+        {
+          "lender": "LendSure Mortgage Corp.",
+          "program": "Bridge — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified Asset Depletion / Asset Utilization profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "eRESI Capital",
+          "program": "Core eXpert — Asset Utilization — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The Asset Depletion / Asset Utilization program is missing a verified maximum DTI."
+          ]
+        },
+        {
+          "lender": "First National Bank of America",
+          "program": "Dual Core — Asset Depletion / Asset Utilization",
+          "matchedDocumentation": "Asset Depletion / Asset Utilization",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "FNBA has not published a numeric LTV/FICO/loan-amount matrix for Dual Core anywhere on fnba.com as of 2026-08-07 (checked /wholesale/non-qm-loans/, /correspondent/, /correspondent/loan-programs/, /mortgage/, and /correspondent/pricing/, which only runs its quick-quote tool for Alt-A Premier and Near Miss). Confirm exact LTV/FICO/DTI/loan-amount limits with an FNBA account executive before quoting Dual Core to a borrower."
+          ]
+        }
+      ]
+    },
+    {
+      "documentationType": "wvoe_only",
+      "scenario": {
+        "loanPurpose": "purchase",
+        "propertyType": "single_family",
+        "occupancy": "primary",
+        "ltv": 80,
+        "fico": 720
+      },
+      "counts": {
+        "evaluated": 468,
+        "eligible": 4,
+        "verificationRequired": 33
+      },
+      "recommendations": [
+        {
+          "lender": "AmWest Funding Corp.",
+          "program": "Advantage — WVOE",
+          "matchedDocumentation": "WVOE Only",
+          "status": "strong_match",
+          "confidenceScore": 85.33,
+          "maxLtv": 85,
+          "minFico": 620,
+          "maxDti": 49,
+          "maxLoanAmount": 3000000,
+          "reservesMonths": 6,
+          "sourceCitation": "AmWest Advantage Program — revised 2026-04-06 — https://amwestwholesale.com/content/documents/AmWest-Advantage-Program-Appvd.pdf",
+          "whyThisLenderRuleIds": [
+            "2ec8a9f6-6e8d-43e7-9777-f53745cdbeb0:doc",
+            "2ec8a9f6-6e8d-43e7-9777-f53745cdbeb0:purpose",
+            "2ec8a9f6-6e8d-43e7-9777-f53745cdbeb0:occ",
+            "2ec8a9f6-6e8d-43e7-9777-f53745cdbeb0:prop",
+            "2ec8a9f6-6e8d-43e7-9777-f53745cdbeb0:cit",
+            "2ec8a9f6-6e8d-43e7-9777-f53745cdbeb0:amt",
+            "2ec8a9f6-6e8d-43e7-9777-f53745cdbeb0:fico",
+            "2ec8a9f6-6e8d-43e7-9777-f53745cdbeb0:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "theLender",
+          "program": "theLender — Written VOE",
+          "matchedDocumentation": "WVOE Only",
+          "status": "strong_match",
+          "confidenceScore": 85.33,
+          "maxLtv": 85,
+          "minFico": 680,
+          "maxDti": 50,
+          "maxLoanAmount": 2500000,
+          "reservesMonths": 3,
+          "sourceCitation": "Non-QHEM 08.04.26E — https://wholesale.thelender.com/wp-content/uploads/2026/08/Non-QHEM_08.04.26E.pdf",
+          "whyThisLenderRuleIds": [
+            "7be7f41f-29f8-4720-b743-2d06a157c9b5:doc",
+            "7be7f41f-29f8-4720-b743-2d06a157c9b5:purpose",
+            "7be7f41f-29f8-4720-b743-2d06a157c9b5:occ",
+            "7be7f41f-29f8-4720-b743-2d06a157c9b5:prop",
+            "7be7f41f-29f8-4720-b743-2d06a157c9b5:cit",
+            "7be7f41f-29f8-4720-b743-2d06a157c9b5:amt",
+            "7be7f41f-29f8-4720-b743-2d06a157c9b5:fico",
+            "7be7f41f-29f8-4720-b743-2d06a157c9b5:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "ClearEdge Lending",
+          "program": "Connect — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "status": "eligible",
+          "confidenceScore": 78.67,
+          "maxLtv": 80,
+          "minFico": 660,
+          "maxDti": 50,
+          "maxLoanAmount": 1500000,
+          "reservesMonths": 3,
+          "sourceCitation": "ClearEdge Connect Product Matrix 7.1.2026 — https://clearedgelending.com/wp-content/uploads/2026/07/2026-7.1-CEL-PP-Connect-Product-Matrix-Clean-Copy.pdf",
+          "whyThisLenderRuleIds": [
+            "bb0b181b-9b16-4319-9587-d5a9945d9528:doc",
+            "bb0b181b-9b16-4319-9587-d5a9945d9528:purpose",
+            "bb0b181b-9b16-4319-9587-d5a9945d9528:occ",
+            "bb0b181b-9b16-4319-9587-d5a9945d9528:prop",
+            "bb0b181b-9b16-4319-9587-d5a9945d9528:cit",
+            "bb0b181b-9b16-4319-9587-d5a9945d9528:amt",
+            "bb0b181b-9b16-4319-9587-d5a9945d9528:fico",
+            "bb0b181b-9b16-4319-9587-d5a9945d9528:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        },
+        {
+          "lender": "Cake Mortgage",
+          "program": "WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "status": "eligible",
+          "confidenceScore": 78.67,
+          "maxLtv": 80,
+          "minFico": 680,
+          "maxDti": 50,
+          "maxLoanAmount": 3000000,
+          "reservesMonths": 0,
+          "sourceCitation": "Cake TPO — Cheese Cake (Alt Doc) matrix, WVOE overlay — https://www.caketpo.com/files/matrix/Cheese_Cake_-_Alt_Doc_Matrix.pdf",
+          "whyThisLenderRuleIds": [
+            "264f4768-dfe3-4972-863a-497d978f743a:doc",
+            "264f4768-dfe3-4972-863a-497d978f743a:purpose",
+            "264f4768-dfe3-4972-863a-497d978f743a:occ",
+            "264f4768-dfe3-4972-863a-497d978f743a:prop",
+            "264f4768-dfe3-4972-863a-497d978f743a:cit",
+            "264f4768-dfe3-4972-863a-497d978f743a:amt",
+            "264f4768-dfe3-4972-863a-497d978f743a:fico",
+            "264f4768-dfe3-4972-863a-497d978f743a:ltv"
+          ],
+          "siblingDocumentationLeaked": false
+        }
+      ],
+      "quarantinedExamples": [
+        {
+          "lender": "Champions Funding",
+          "program": "Accelerator Full/Alt Doc — Income Qualifying Investment Properties — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Champions Funding",
+          "program": "Activator — Alt-Doc (Non-Traditional Borrowers) — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "AmWest Funding Corp.",
+          "program": "Advantage — Foreign National Alt Doc — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Change Wholesale",
+          "program": "Alt-Doc — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Kind Lending",
+          "program": "Alt-Doc Suite (Bank Statement / 1099 / P&L / WVOE / Asset Utilization) — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Redwood Residential Acquisition Corporation",
+          "program": "Aspire Expanded — Alternative Documentation — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Redwood Residential Acquisition Corporation",
+          "program": "Aspire Expanded — Written VOE — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Redwood confirms the documentation path but does not publish seller-universal numeric tiers on the accessible page."
+          ]
+        },
+        {
+          "lender": "FundLoans",
+          "program": "Aspire X — Standalone Second (Expanded Doc) — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "JMAC Lending",
+          "program": "Balboa Non-Conforming — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Verification Required — Guideline Not Located in Provided JMAC Documentation. The supplied comparison sheet confirms Balboa Non-Conforming, but the controlling program-specific matrix was not provided. Headline figures are searchable ceilings only; obtain the current matrix before final eligibility."
+          ]
+        },
+        {
+          "lender": "Cake Mortgage",
+          "program": "Closed End Second (CES) — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "Cake's Closed End Seconds Eligibility Guidelines (Version 2.0) confirm the program structure, eligible documentation, and transaction rules but explicitly defer every numeric figure (max CLTV, loan amount, combined lien amount, DTI, reserves, and DSCR for the CES/business-purpose option) to 'the applicable CES matrix,' which was not found published on the accessible Guidelines/Products pages — left at 0/unset rather than guessing. Confirm current figures with a Cake Mortgage AE. Vesting eligibility was not confirmed in the reviewed public guideline and must be verified with the lender. Vesting eligibility was not confirmed in the reviewed public guideline and must be verified with the lender."
+          ]
+        },
+        {
+          "lender": "NQM Funding",
+          "program": "Flex Supreme / Select Prime — Bank Statement / 1099 / P&L — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Forward Lending",
+          "program": "Full / Alt Doc Closed-End Second — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Champions Funding",
+          "program": "ITIN Activator — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "JMAC Lending",
+          "program": "JMAC Closed-End Second — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "JMAC Lending",
+          "program": "JMAC Limited Doc — WVOE / P&L — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "JMAC Lending",
+          "program": "Newport Non-Conforming — Alt Doc / ITIN — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "The Newport guide supplies separate ITIN/Alt-Doc grids, but several cells are densely formatted and method-specific. Search/routing facts are verified; final method/FICO/loan-amount LTV must be confirmed against the current matrix page before quoting."
+          ]
+        },
+        {
+          "lender": "Carrington Mortgage Services",
+          "program": "Non-Agency Advantage — Full Doc / Alt Doc (Bank Statement, 1099, WVOE) — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "GIANT Lending",
+          "program": "NON-QM Full Doc / 1099 / Asset — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "GIANT Lending",
+          "program": "Non-QM Second (Standalone / HELOAN) — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Jet Advantage Mortgage",
+          "program": "Non-QM Second (Standalone / HELOAN) — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Brokers Choice Mortgage",
+          "program": "Non-QM Second (Standalone) — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Forward Lending",
+          "program": "Non-QM Select — Bank Statement / Alt Doc — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Jet Advantage Mortgage",
+          "program": "NON-QM Select & Grades (Full/Alt Doc) — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "Brokers Choice Mortgage",
+          "program": "NON-QM Select & Grades (Full/Alt Doc) — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        },
+        {
+          "lender": "AmWest Funding Corp.",
+          "program": "P&L / 1099 / WVOE — WVOE Only",
+          "matchedDocumentation": "WVOE Only",
+          "score": 0,
+          "numericValuesSuppressed": true,
+          "issues": [
+            "No independently verified WVOE Only profile is stored for this bundled product family."
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -47,7 +47,7 @@ export interface ProgramEvaluation {
   scoreBreakdown: Array<{ factor: string; points: number; maxPoints: number; note: string }>;
   maxLtv?: number;
   maxLoanAmount?: number;
-  minFico: number;
+  minFico?: number;
   maxDti?: number;
   estimatedQualifyingIncome?: number;
   estimatedReservesRequiredMonths?: number;
@@ -55,6 +55,14 @@ export interface ProgramEvaluation {
   /** Exact product requested by the scenario; cards use this instead of
    * advertising unrelated products from the same broad program family. */
   matchedIncomeDocType?: IncomeDocType;
+  /** Hard fail-closed state for a bundled row whose requested documentation
+   * profile is missing, incomplete, or not human verified. Such a result is
+   * never eligible/strong and never receives borrowed numeric values. */
+  guidelineVerificationRequired?: boolean;
+  profileVerificationIssues?: string[];
+  profileSourceCitation?: string;
+  profileSourceSection?: string;
+  profileSourcePage?: number;
   /** Required prominent notice for P&L-only requests at exactly 85% LTV. */
   pnl85SupportingStatementDisclaimer?: string;
   // Real program eligibility flags, passed straight through from the

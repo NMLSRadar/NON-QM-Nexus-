@@ -1,9 +1,17 @@
 import type { ProgramCatalog } from "@/domain/analyze";
+import type { IncomeDocType } from "@/domain/types/enums";
+import { resolveDocumentationProfile } from "@/domain/matching/documentationProfile";
 
 /** Hard ceiling for catalog data sent with a chatbot request. */
 export const MAX_ASSISTANT_GUIDELINE_CONTEXT_CHARS = 140_000;
 
 type ActiveProgram = ProgramCatalog["programs"][number];
+
+function scopedProgram(program: ActiveProgram, documentationType: IncomeDocType): ActiveProgram | undefined {
+  if (!program.incomeDocTypes.includes(documentationType)) return undefined;
+  const resolution = resolveDocumentationProfile(program, documentationType);
+  return resolution.status === "resolved" ? resolution.program : undefined;
+}
 
 function uniqueLenderNames(
   programs: ActiveProgram[],
@@ -34,8 +42,8 @@ export function buildMarketAvailabilityContext(catalog: ProgramCatalog): string 
   const programs = catalog.programs.filter(
     (program) => program.active && !program.isSampleData && activeLenderIds.has(program.lenderId),
   );
-  const dscr = programs.filter((program) => program.incomeDocTypes.includes("dscr"));
-  const bankStatement = programs.filter((program) => program.incomeDocTypes.includes("bank_statement"));
+  const dscr = programs.map((program) => scopedProgram(program, "dscr")).filter((program): program is ActiveProgram => Boolean(program));
+  const bankStatement = programs.map((program) => scopedProgram(program, "bank_statement")).filter((program): program is ActiveProgram => Boolean(program));
   const noRatio = dscr.filter((program) => program.minDscr === 0);
   const dscrPurchase = dscr.filter((program) => program.loanPurposes.includes("purchase"));
   const strIncome = dscr.filter((program) => program.strIncomeEligible === true);
@@ -101,24 +109,38 @@ export function buildRelevantGuidelineContext(catalog: ProgramCatalog, query: st
   const wantsDscr = /\bdscr\b|debt\s+service\s+coverage|no\s*ratio/.test(q);
   const wantsItin = /\bitin\b/.test(q);
   const wantsForeignNational = /foreign\s+national|non[- ]?resident alien/.test(q);
-  const wantsAsset = /asset\s+(?:depletion|qualifier)|assets?\s+as\s+income/.test(q);
-  const hasIntent = wantsPnl || wantsBankStatements || wantsDscr || wantsItin || wantsForeignNational || wantsAsset;
+  const wantsAsset = /asset\s+(?:depletion|utili[sz]ation|qualifier)|assets?\s+as\s+income/.test(q);
+  const wantsWvoe = /\bwvoe\b|written\s+(?:verification|voe)|verification\s+of\s+employment/.test(q);
+  const wants1099 = /\b1099\b/.test(q);
+  const requestedDocumentation: IncomeDocType | undefined = wantsPnl
+    ? "pnl_only"
+    : wantsBankStatements
+      ? "bank_statement"
+      : wantsDscr
+        ? "dscr"
+        : wantsAsset
+          ? "asset_depletion"
+          : wantsWvoe
+            ? "wvoe_only"
+            : wants1099
+              ? "1099"
+              : undefined;
+  const hasIntent = Boolean(requestedDocumentation) || wantsItin || wantsForeignNational;
 
   const lenderById = new Map(catalog.lenders.map((lender) => [lender.id, lender]));
   const selected = catalog.programs
     .filter((program) => program.active && !program.isSampleData)
+    .map((program) => requestedDocumentation ? scopedProgram(program, requestedDocumentation) : program)
+    .filter((program): program is ActiveProgram => Boolean(program))
     .filter((program) => {
       const lender = lenderById.get(program.lenderId);
       if (!lender || !lender.active || lender.isSampleData) return false;
       if (!hasIntent) return true;
       return (
-        (wantsPnl && (program.incomeDocTypes.includes("pnl_only") || program.pnlOnlyAvailable === true)) ||
-        (wantsBankStatements && program.incomeDocTypes.includes("bank_statement")) ||
-        (wantsDscr && program.incomeDocTypes.includes("dscr")) ||
+        (requestedDocumentation != null && program.incomeDocTypes.length === 1 && program.incomeDocTypes[0] === requestedDocumentation) ||
         (wantsItin && (program.citizenshipEligible.includes("itin") || program.itinSpecialist === true)) ||
         (wantsForeignNational &&
-          (program.citizenshipEligible.includes("foreign_national") || program.foreignNationalSpecialist === true)) ||
-        (wantsAsset && program.incomeDocTypes.includes("asset_depletion"))
+          (program.citizenshipEligible.includes("foreign_national") || program.foreignNationalSpecialist === true))
       );
     })
     .sort((a, b) => {
@@ -269,12 +291,21 @@ export function buildCatalogDiscoveryFallback(catalog: ProgramCatalog, query: st
   if (/\bp\s*&\s*l\b|profit\s*(?:and|&)\s*loss|pnl(?:\s+only)?/.test(q)) {
     matcher = {
       label: "verified P&L Only",
-      test: (program) => program.pnlOnlyAvailable === true && typeof program.pnlMaxLtv === "number",
+      test: (program) => {
+        const scoped = scopedProgram(program, "pnl_only");
+        return scoped?.pnlOnlyAvailable === true && typeof scoped.pnlMaxLtv === "number";
+      },
     };
   } else if (/bank\s+statements?/.test(q)) {
-    matcher = { label: "Bank Statement", test: (program) => program.incomeDocTypes.includes("bank_statement") };
+    matcher = { label: "Bank Statement", test: (program) => Boolean(scopedProgram(program, "bank_statement")) };
   } else if (/\bdscr\b|debt\s+service\s+coverage/.test(q)) {
-    matcher = { label: "DSCR", test: (program) => program.incomeDocTypes.includes("dscr") };
+    matcher = { label: "DSCR", test: (program) => Boolean(scopedProgram(program, "dscr")) };
+  } else if (/\bwvoe\b|written\s+(?:verification|voe)|verification\s+of\s+employment/.test(q)) {
+    matcher = { label: "WVOE Only", test: (program) => Boolean(scopedProgram(program, "wvoe_only")) };
+  } else if (/\b1099\b/.test(q)) {
+    matcher = { label: "1099", test: (program) => Boolean(scopedProgram(program, "1099")) };
+  } else if (/asset\s+(?:depletion|utili[sz]ation|qualifier)/.test(q)) {
+    matcher = { label: "Asset Depletion / Asset Utilization", test: (program) => Boolean(scopedProgram(program, "asset_depletion")) };
   } else if (/\bitin\b/.test(q)) {
     matcher = {
       label: "ITIN",
@@ -299,8 +330,9 @@ export function buildCatalogDiscoveryFallback(catalog: ProgramCatalog, query: st
   if (matches.length === 0) return `I couldn't find a currently verified ${matcher.label} product in this account's catalog.`;
   const visible = matches.slice(0, 20);
   const lines = visible.map(({ lender, program }) => {
-    const pnlCap = matcher!.label === "verified P&L Only" ? ` — P&L Only max ${program.pnlMaxLtv}% LTV` : "";
-    return `• ${lender!.name}: ${program.name}${pnlCap}`;
+    const scopedPnl = matcher!.label === "verified P&L Only" ? scopedProgram(program, "pnl_only") : undefined;
+    const cap = scopedPnl?.pnlMaxLtv;
+    return `• ${lender!.name}: ${program.name}${typeof cap === "number" ? ` — P&L Only max ${cap}% LTV` : ""}`;
   });
   const remainder = matches.length - visible.length;
   return [
