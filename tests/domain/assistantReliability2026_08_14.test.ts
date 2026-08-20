@@ -145,6 +145,7 @@ describe("chatbot catalog context reliability", () => {
         vestingEligible: ["llc"],
       }),
       program("bank-low", "l4", { minFico: 500, baseMaxLtv: 65 }),
+      program("bank-100", "l4", { eligibleDepositPercentage: 100, minimumExpenseFactor: 10 }),
       program("bank-fthb", "l5", { minFico: 700, baseMaxLtv: 90, firstTimeHomebuyerAllowed: true }),
       program("sample-no-ratio", "l5", { incomeDocTypes: ["dscr"], minDscr: 0, isSampleData: true }),
     ];
@@ -157,6 +158,7 @@ describe("chatbot catalog context reliability", () => {
     expect(snapshot.dscr.strIncome.lenders).toEqual(["Lender 1"]);
     expect(snapshot.bankStatement.lowestVerifiedFico).toBe(500);
     expect(snapshot.bankStatement.firstTimeHomebuyerAt90Ltv.lenders).toEqual(["Lender 5"]);
+    expect(snapshot.bankStatement.hundredPercentEligibleDeposits.lenders).toEqual(["Lender 4"]);
     expect(snapshot.ruralProperty.lenders).toEqual(["Lender 1"]);
     expect(snapshot.trustVesting.lenders).toEqual(["Lender 1"]);
   });
@@ -188,5 +190,63 @@ describe("chatbot catalog context reliability", () => {
     expect(ASSISTANT_SYSTEM_PROMPT).toContain("LLC vesting is extremely common on DSCR loans");
     expect(ASSISTANT_SYSTEM_PROMPT).toContain("A first-time homebuyer can get to 90% LTV using bank statements");
     expect(ASSISTANT_SYSTEM_PROMPT).toContain("Do not invent precision");
+  });
+
+  it("routes alternative deposit and multi-account questions to detailed bank-statement rules", () => {
+    const catalog: ProgramCatalog = {
+      lenders: [lender("bank", "Flexible Bank Lender"), lender("dscr", "Unrelated DSCR Lender")],
+      programs: [
+        program("bank", "bank", {
+          personalBankStatementRules: "Personal and business accounts may be combined when transfers are excluded.",
+          businessBankStatementRules: "Multiple accounts for the same business are permitted.",
+          expenseFactorNotes: "Zelle and cash must be consistent with the business.",
+          documentationRequirements: ["Document account transfers to prevent duplicate income."],
+        }),
+        program("dscr", "dscr", { incomeDocTypes: ["dscr"] }),
+      ],
+      rules: [],
+    };
+
+    for (const question of [
+      "Can I combine personal and business statements?",
+      "Can I count Zelle, Venmo, or cash deposits?",
+      "Can I use multiple accounts for the same business?",
+    ]) {
+      const context = buildRelevantGuidelineContext(catalog, question);
+      expect(context).toContain("Flexible Bank Lender");
+      expect(context).toContain("transfers are excluded");
+      expect(context).toContain("Multiple accounts");
+      expect(context).not.toContain("Unrelated DSCR Lender");
+    }
+  });
+
+  it("limits crypto-reserve context to programs whose verified text actually mentions digital assets", () => {
+    const context = buildRelevantGuidelineContext(
+      {
+        lenders: [lender("crypto", "Crypto Lender"), lender("other", "Other Lender")],
+        programs: [
+          program("crypto", "crypto", {
+            documentationRequirements: ["Documented cryptocurrency may be considered for reserves with a haircut."],
+          }),
+          program("other", "other"),
+        ],
+        rules: [],
+      },
+      "Can I use Bitcoin for reserves?",
+    );
+    expect(context).toContain("Crypto Lender");
+    expect(context).toContain("cryptocurrency");
+    expect(context).not.toContain("Other Lender");
+  });
+
+  it("preserves the approved casual answer logic and its calculation safeguards", () => {
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain("Yes. There are lenders that will let you combine them.");
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain("the same revenue is not counted twice");
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain("Yeah, you can with some lenders");
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain("reasonable and indicative");
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain("Orion Lending and Greenbox Loans");
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain("every dollar deposited becomes qualifying income");
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain("around 60% utilization is a common market reference");
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain("Never automatically call crypto ineligible");
   });
 });

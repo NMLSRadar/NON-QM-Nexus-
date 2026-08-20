@@ -44,6 +44,9 @@ export function buildMarketAvailabilityContext(catalog: ProgramCatalog): string 
   );
   const dscr = programs.map((program) => scopedProgram(program, "dscr")).filter((program): program is ActiveProgram => Boolean(program));
   const bankStatement = programs.map((program) => scopedProgram(program, "bank_statement")).filter((program): program is ActiveProgram => Boolean(program));
+  const hundredPercentEligibleDeposits = bankStatement.filter(
+    (program) => program.eligibleDepositPercentage === 100,
+  );
   const noRatio = dscr.filter((program) => program.minDscr === 0);
   const dscrPurchase = dscr.filter((program) => program.loanPurposes.includes("purchase"));
   const strIncome = dscr.filter((program) => program.strIncomeEligible === true);
@@ -90,6 +93,7 @@ export function buildMarketAvailabilityContext(catalog: ProgramCatalog): string 
         "max",
       ),
       firstTimeHomebuyerAt90Ltv: feature(bankStatementFthb90),
+      hundredPercentEligibleDeposits: feature(hundredPercentEligibleDeposits),
     },
     ruralProperty: feature(rural),
     llcVesting: feature(llc),
@@ -105,7 +109,10 @@ export function buildMarketAvailabilityContext(catalog: ProgramCatalog): string 
 export function buildRelevantGuidelineContext(catalog: ProgramCatalog, query: string): string {
   const q = query.toLowerCase();
   const wantsPnl = /\bp\s*&\s*l\b|profit\s*(?:and|&)\s*loss|pnl(?:\s+only)?/.test(q);
-  const wantsBankStatements = /bank\s+statements?|business\s+deposits?|expense\s+factor/.test(q) && !wantsPnl;
+  const wantsBankStatements =
+    /bank\s+statements?|business\s+deposits?|expense\s+factor|\bzelle\b|\bvenmo\b|cash\s+deposits?|multiple\s+(?:bank\s+)?accounts?|combine\s+(?:personal|business)|personal\s+(?:and|&)\s+business/.test(q) &&
+    !wantsPnl;
+  const wantsCryptoReserves = /\bcrypto(?:currency)?\b|\bbitcoin\b|digital\s+assets?/.test(q);
   const wantsDscr = /\bdscr\b|debt\s+service\s+coverage|no\s*ratio/.test(q);
   const wantsItin = /\bitin\b/.test(q);
   const wantsForeignNational = /foreign\s+national|non[- ]?resident alien/.test(q);
@@ -125,7 +132,7 @@ export function buildRelevantGuidelineContext(catalog: ProgramCatalog, query: st
             : wants1099
               ? "1099"
               : undefined;
-  const hasIntent = Boolean(requestedDocumentation) || wantsItin || wantsForeignNational;
+  const hasIntent = Boolean(requestedDocumentation) || wantsItin || wantsForeignNational || wantsCryptoReserves;
 
   const lenderById = new Map(catalog.lenders.map((lender) => [lender.id, lender]));
   const selected = catalog.programs
@@ -140,7 +147,16 @@ export function buildRelevantGuidelineContext(catalog: ProgramCatalog, query: st
         (requestedDocumentation != null && program.incomeDocTypes.length === 1 && program.incomeDocTypes[0] === requestedDocumentation) ||
         (wantsItin && (program.citizenshipEligible.includes("itin") || program.itinSpecialist === true)) ||
         (wantsForeignNational &&
-          (program.citizenshipEligible.includes("foreign_national") || program.foreignNationalSpecialist === true))
+          (program.citizenshipEligible.includes("foreign_national") || program.foreignNationalSpecialist === true)) ||
+        (wantsCryptoReserves &&
+          /crypto|cryptocurrency|bitcoin|digital asset/i.test(
+            [
+              ...(program.searchTags ?? []),
+              ...(program.documentationRequirements ?? []),
+              ...(program.majorRestrictions ?? []),
+              program.notes ?? "",
+            ].join(" "),
+          ))
       );
     })
     .sort((a, b) => {
@@ -227,6 +243,21 @@ export function buildRelevantGuidelineContext(catalog: ProgramCatalog, query: st
         cpaLetterAllowed: program.cpaLetterAllowed,
         eaLetterAllowed: program.eaLetterAllowed,
         eligibleDepositPercentage: program.eligibleDepositPercentage,
+        personalBankStatementRules: program.personalBankStatementRules,
+        businessBankStatementRules: program.businessBankStatementRules,
+        expenseFactorNotes: program.expenseFactorNotes,
+        documentationRequirements: program.documentationRequirements,
+        majorRestrictions: program.majorRestrictions,
+        notes: program.notes,
+      });
+    }
+
+    if (wantsCryptoReserves) {
+      Object.assign(fields, {
+        documentationRequirements: program.documentationRequirements,
+        majorRestrictions: program.majorRestrictions,
+        searchTags: program.searchTags,
+        notes: program.notes,
       });
     }
 
