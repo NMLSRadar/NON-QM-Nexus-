@@ -11,7 +11,7 @@ export const SITE_NAME = "NON-QM Nexus";
 
 /** Sitewide OpenGraph/social image — the app's real logo, used everywhere
  * since there's no separate marketing OG asset yet. */
-export const OG_IMAGE_PATH = "/logo.png";
+export const OG_IMAGE_PATH = "/brand/non-qm-nexus-og.png";
 
 /**
  * Builds a page's Metadata: unique title + description, canonical URL, and

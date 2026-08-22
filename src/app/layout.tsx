@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { ShieldCheck, Lock, Mail } from "lucide-react";
 import "./globals.css";
@@ -16,6 +15,7 @@ import { GlobalAmbientEngine } from "@/components/global-ambient-engine";
 import { AiAssistantWidget } from "@/components/ai-assistant-widget";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TrialStatusBanner } from "@/components/trial-status-banner";
+import { BrandMark, BrandSignature } from "@/components/brand-logo";
 import { createClient } from "@/lib/supabase/server";
 import { getLenderAccessInfo } from "@/lib/session";
 import { SITE_URL, SITE_NAME, OG_IMAGE_PATH } from "@/lib/seo";
@@ -93,7 +93,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <header className="premium-site-header relative z-40 gold-theme gold-glass sticky top-0 text-white">
           <div className="premium-header-inner mx-auto grid max-w-[1500px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 px-3 py-2.5 sm:gap-x-4 sm:px-6 sm:py-3 xl:flex xl:flex-wrap">
             <Link href="/" className="premium-wordmark flex shrink-0 items-center gap-2.5 text-lg font-semibold tracking-tight">
-              <Image src="/logo.png" alt="NON-QM Nexus" width={38} height={38} className="rounded-full ring-1 ring-amber-400/40" priority />
+              <BrandMark className="h-11 w-[3.3rem]" priority />
               <span>
                 NON-QM <span className="gold-text-gradient font-bold">Nexus</span>
               </span>
@@ -112,6 +112,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-3 py-4 sm:px-4 sm:py-6">{children}</main>
         <footer className="relative z-10 border-t border-amber-500/20 gold-theme gold-glass">
           <div className="mx-auto max-w-7xl px-4 py-6 text-xs text-slate-400 space-y-5">
+            <div className="flex justify-center sm:justify-start">
+              <BrandSignature className="w-28 sm:w-32" />
+            </div>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <span

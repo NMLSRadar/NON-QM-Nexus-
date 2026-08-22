@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import Image from "next/image";
+import { BrandMark } from "@/components/brand-logo";
 import { ShieldCheck, Lock } from "lucide-react";
 import { createServiceRoleClient } from "@/lib/repository/serviceRoleClient";
 import { loadSurveyByToken, type BetaSurveyRow } from "@/lib/beta-feedback/service";
@@ -50,7 +50,7 @@ export default async function SurveyPage({ params }: { params: Promise<{ token: 
             generic external form. */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <Image src="/logo.png" alt="NON-QM Nexus" width={34} height={34} className="rounded-full ring-1 ring-amber-400/40" />
+            <BrandMark className="h-9 w-11" />
             <div>
               <p className="text-sm font-semibold text-white leading-tight">
                 NON-QM <span className="text-[#d4af37]">Nexus</span> — Beta Tester Feedback
