@@ -15,7 +15,6 @@ import {
   Info,
   Landmark,
   LineChart,
-  Mic2,
   Percent,
   ReceiptText,
   ShieldCheck,
@@ -25,6 +24,9 @@ import {
   WalletCards,
 } from "lucide-react";
 import "./toolkit.css";
+import { ReverseSolverVoice } from "./reverse-solver-voice";
+import { formatNumericInput, numericDisplayValue, parseNumericInput } from "@/lib/toolkit/numeric-input";
+import type { ReverseSolverVoiceFields } from "@/domain/toolkit/reverse-solver-voice";
 import {
   calc1099Income,
   calcAssetDepletion,
@@ -57,10 +59,10 @@ type NumericFieldProps = {
   friendlyEntry?: boolean;
 };
 
-function NumericField({ label, value, onChange, min = 0, max, step = 1, prefix, suffix, friendlyEntry = false }: NumericFieldProps) {
+function NumericField({ label, value, onChange, min = 0, max, step = 1, prefix, suffix }: NumericFieldProps) {
   const [draft, setDraft] = useState<string | null>(null);
-  const formattedValue = prefix === "$" ? value.toLocaleString("en-US", { maximumFractionDigits: 2 }) : String(value);
-  const displayValue = friendlyEntry ? (draft ?? formattedValue) : value;
+  const formattedValue = numericDisplayValue(value, prefix === "$");
+  const displayValue = draft ?? formattedValue;
   return (
     <label className="toolkit-field">
       <span className="toolkit-field-label">{label}</span>
@@ -68,27 +70,26 @@ function NumericField({ label, value, onChange, min = 0, max, step = 1, prefix, 
         {prefix ? <span className="pl-3 text-slate-500">{prefix}</span> : null}
         <input
           className="w-full min-w-0 bg-transparent px-3 py-2.5 text-sm text-white outline-none tabular-nums"
-          type={friendlyEntry ? "text" : "number"}
+          type="text"
           value={displayValue}
-          onFocus={() => { if (friendlyEntry) setDraft(formattedValue); }}
-          onBlur={() => { if (friendlyEntry) setDraft(null); }}
-          onChange={(event) => {
-            if (!friendlyEntry) {
-              onChange(Number(event.target.value));
-              return;
-            }
-            const raw = event.target.value;
-            if (!/^[\d,]*\.?\d*$/.test(raw)) return;
-            setDraft(raw);
-            const normalized = raw.replace(/,/g, "");
-            if (normalized !== "" && normalized !== ".") {
-              const parsed = Number(normalized);
-              if (Number.isFinite(parsed)) onChange(parsed);
-            }
+          aria-label={label || undefined}
+          onFocus={(event) => {
+            setDraft(value === 0 ? "" : formattedValue);
+            event.currentTarget.select();
           }}
-          min={friendlyEntry ? undefined : min}
-          max={friendlyEntry ? undefined : max}
-          step={friendlyEntry ? undefined : step}
+          onBlur={() => {
+            const parsed = draft == null ? value : parseNumericInput(draft);
+            if (parsed != null) onChange(Math.min(max ?? Number.POSITIVE_INFINITY, Math.max(min, parsed)));
+            setDraft(null);
+          }}
+          onChange={(event) => {
+            const formatted = formatNumericInput(event.target.value, step < 1 ? 4 : 2);
+            if (formatted == null) return;
+            setDraft(formatted);
+            const parsed = parseNumericInput(formatted);
+            if (parsed != null) onChange(parsed);
+            else if (formatted === "") onChange(0);
+          }}
           inputMode="decimal"
         />
         {suffix ? <span className="pr-3 text-xs text-slate-500">{suffix}</span> : null}
@@ -254,19 +255,36 @@ function BankStatementCalculator({ borrowerReference, setBorrowerReference }: { 
 function PnlCalculator({ borrowerReference, setBorrowerReference }: { borrowerReference: string; setBorrowerReference: (v: string) => void }) {
   const [gross, setGross] = useState(600000);
   const [expenses, setExpenses] = useState(240000);
+  const [expenseRatio, setExpenseRatio] = useState(40);
+  const [expenseMode, setExpenseMode] = useState<"amount" | "ratio">("amount");
   const [ownership, setOwnership] = useState(100);
   const [months, setMonths] = useState(12);
   const [preparer, setPreparer] = useState<"cpa" | "ea" | "tax_professional" | "borrower">("cpa");
+  const changeGross = (nextGross: number) => {
+    setGross(nextGross);
+    if (expenseMode === "ratio") setExpenses(nextGross * expenseRatio / 100);
+    else setExpenseRatio(nextGross > 0 ? expenses / nextGross * 100 : 0);
+  };
+  const changeExpenses = (nextExpenses: number) => {
+    setExpenseMode("amount");
+    setExpenses(nextExpenses);
+    setExpenseRatio(gross > 0 ? nextExpenses / gross * 100 : 0);
+  };
+  const changeExpenseRatio = (nextRatio: number) => {
+    setExpenseMode("ratio");
+    setExpenseRatio(nextRatio);
+    setExpenses(gross * nextRatio / 100);
+  };
   const net = gross - expenses;
-  const inputs = { gross, expenses, ownership, months, preparer };
+  const inputs = { gross, expenses, expenseRatio, ownership, months, preparer };
   const result = calcPnlIncome({ periodMonths: months, grossRevenue: gross, expenseAmount: expenses, netIncome: net, ownershipPercent: ownership, preparer, supportingBankStatements: true });
   const ratio = gross > 0 ? expenses / gross * 100 : 0;
   return (
     <CalculatorShell title="P&L Income Worksheet" description="Translate the P&L’s net business income into monthly qualifying income and expose the implied expense ratio." borrowerReference={borrowerReference} setBorrowerReference={setBorrowerReference} exportButton={<><ExportPdfButton calculator="pnl" inputs={inputs} borrowerReference={borrowerReference} /><ExcelTemplateButton document="pnl" /></>}>
       <div className="toolkit-banner flex gap-3 p-4 text-sm leading-relaxed text-amber-50"><Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden /><p><strong className="mr-1 uppercase tracking-wide text-amber-300">P&L Only rule:</strong> Tax returns are never required. The P&L is the income document. CPA attestation, when applicable, confirms tax filing only—it does not validate the income amount.</p></div>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(280px,.75fr)]">
-        <SectionCard title="P&L summary" icon={ReceiptText}><div className="grid gap-4 sm:grid-cols-2"><NumericField label="Gross revenue" value={gross} onChange={setGross} prefix="$" friendlyEntry /><NumericField label="Total expenses" value={expenses} onChange={setExpenses} prefix="$" friendlyEntry /><NumericField label="Ownership" value={ownership} onChange={setOwnership} max={100} suffix="%" /><NumericField label="Covered period" value={months} onChange={setMonths} min={1} max={24} suffix="months" friendlyEntry /><SelectField label="P&L preparer" value={preparer} onChange={(v) => setPreparer(v as typeof preparer)} options={[{ value: "cpa", label: "CPA" }, { value: "ea", label: "EA" }, { value: "tax_professional", label: "Tax preparer" }, { value: "borrower", label: "Borrower" }]} /></div></SectionCard>
-        <div className="space-y-4"><ResultCard title="Qualifying monthly income" graphic="bars" value={MONEY2.format(Number(result.value ?? 0))}><p>Net income: {MONEY2.format(net)}</p><p>Implied expense ratio: {ratio.toFixed(1)}%</p></ResultCard><MathPanel formula={result.formula} lines={[`${MONEY2.format(net)} × ${ownership}% ÷ ${months} months`, `= ${MONEY2.format(Number(result.value ?? 0))} per month`]} /></div>
+        <SectionCard title="P&L summary" icon={ReceiptText}><div className="grid gap-4 sm:grid-cols-2"><NumericField label="Gross revenue" value={gross} onChange={changeGross} prefix="$" /><NumericField label="Total expenses" value={expenses} onChange={changeExpenses} prefix="$" /><NumericField label="Expense ratio" value={expenseRatio} onChange={changeExpenseRatio} max={100} step={0.1} suffix="%" /><NumericField label="Ownership" value={ownership} onChange={setOwnership} max={100} suffix="%" /><NumericField label="Covered period" value={months} onChange={setMonths} min={1} max={24} suffix="months" /><SelectField label="P&L preparer" value={preparer} onChange={(v) => setPreparer(v as typeof preparer)} options={[{ value: "cpa", label: "CPA" }, { value: "ea", label: "EA" }, { value: "tax_professional", label: "Tax preparer" }, { value: "borrower", label: "Borrower" }]} /></div><p className="mt-4 text-xs leading-relaxed text-slate-400">Enter either Total Expenses or Expense Ratio. The paired field updates automatically while preserving the method you most recently edited.</p></SectionCard>
+        <div className="space-y-4"><ResultCard title="Qualifying monthly income" graphic="bars" value={MONEY2.format(Number(result.value ?? 0))}><p>Net income: {MONEY2.format(net)}</p><p>Expense ratio: {ratio.toFixed(1)}%</p></ResultCard><MathPanel formula={result.formula} lines={[`${MONEY2.format(net)} × ${ownership}% ÷ ${months} months`, `= ${MONEY2.format(Number(result.value ?? 0))} per month`]} /></div>
       </div>
     </CalculatorShell>
   );
@@ -295,11 +313,11 @@ function AssetCalculator({ borrowerReference, setBorrowerReference }: { borrower
     { label: "Retirement (401(k), IRA, SEP, KEOGH)", amount: retirement, eligibility: 70, setAmount: setRetirement },
   ];
   return (
-    <CalculatorShell title="Asset Depletion" description="See eligible assets, every funds-to-close deduction, and the divisor that turns remaining assets into monthly income." borrowerReference={borrowerReference} setBorrowerReference={setBorrowerReference} exportButton={<ExportPdfButton calculator="asset-depletion" inputs={inputs} borrowerReference={borrowerReference} />}>
+    <CalculatorShell title="Asset Depletion" description="See eligible assets, every funds-to-close deduction, and the number of months used to calculate monthly income." borrowerReference={borrowerReference} setBorrowerReference={setBorrowerReference} exportButton={<ExportPdfButton calculator="asset-depletion" inputs={inputs} borrowerReference={borrowerReference} />}>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(280px,.7fr)]">
         <div className="space-y-4">
           <SectionCard title="Assets & eligibility" icon={WalletCards}><table className="toolkit-asset-table"><thead><tr><th>Asset type</th><th>Asset amount</th><th>Eligibility</th><th>Eligible amount</th></tr></thead><tbody>{assetRows.map((row) => <tr key={row.label}><td data-label="Asset type" className="text-sm font-medium text-slate-200">{row.label}</td><td data-label="Asset amount"><NumericField label="" value={row.amount} onChange={row.setAmount} prefix="$" friendlyEntry /></td><td data-label="Eligibility"><span className="block rounded-lg border border-slate-700/50 bg-black/25 px-3 py-2 text-sm tabular-nums text-slate-300">{row.eligibility}%</span></td><td data-label="Eligible amount" className="text-sm font-semibold tabular-nums text-amber-200">{MONEY2.format(row.amount * row.eligibility / 100)}</td></tr>)}</tbody></table><div className="mt-3 max-w-md"><SelectField label="Bond eligibility" value={bondsInvestmentGrade ? "eligible" : "ineligible"} onChange={(value) => setBondsInvestmentGrade(value === "eligible")} options={[{ value: "eligible", label: "Eligible / investment-grade — 80%" }, { value: "ineligible", label: "Below investment grade — ineligible (0%)" }]} /></div><p className="mt-3 text-xs leading-relaxed text-slate-400">Below-investment-grade corporate and municipal bonds are ineligible.</p></SectionCard>
-          <SectionCard title="Funds to close & divisor" icon={BadgeDollarSign}><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><NumericField label="Required down payment" value={down} onChange={setDown} prefix="$" friendlyEntry /><NumericField label="Closing costs" value={costs} onChange={setCosts} prefix="$" friendlyEntry /><NumericField label="Required reserves" value={reserves} onChange={setReserves} prefix="$" friendlyEntry /><NumericField label="Divisor" value={divisor} onChange={setDivisor} min={1} suffix="months" friendlyEntry /></div></SectionCard>
+          <SectionCard title="Funds to close & monthly calculation" icon={BadgeDollarSign}><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><NumericField label="Required down payment" value={down} onChange={setDown} prefix="$" /><NumericField label="Closing costs" value={costs} onChange={setCosts} prefix="$" /><NumericField label="Required reserves" value={reserves} onChange={setReserves} prefix="$" /><div className="toolkit-months-field"><NumericField label="Divide by How Many Months?" value={divisor} onChange={setDivisor} min={1} suffix="months" /></div></div><p className="mt-4 text-sm font-semibold text-amber-100">Eligible Assets ÷ Number of Months = Monthly Qualifying Income</p></SectionCard>
         </div>
         <div className="space-y-4"><ResultCard title="Monthly qualifying income" graphic="assets" value={MONEY2.format(Number(result.value ?? 0))}><p>Eligible assets: {MONEY2.format(Number(result.inputs?.eligibleAssets ?? 0))}</p><p>Net depletable assets: {MONEY2.format(Number(result.inputs?.netEligible ?? 0))}</p></ResultCard><MathPanel formula={result.formula} lines={[`Eligible assets − ${MONEY2.format(down + costs + reserves)} funds-to-close deductions`, `÷ ${divisor} months = ${MONEY2.format(Number(result.value ?? 0))}`]} /></div>
       </div>
@@ -354,17 +372,44 @@ function ReverseSolver({ borrowerReference, setBorrowerReference }: { borrowerRe
   const [dti, setDti] = useState(50);
   const [rent, setRent] = useState(6000);
   const [dscr, setDscr] = useState(1);
-  const [paymentFactor, setPaymentFactor] = useState(750);
+  const [interestRate, setInterestRate] = useState(7.25);
+  const [termYears, setTermYears] = useState(30);
+  const [paymentFactor, setPaymentFactor] = useState(() => calcMonthlyPrincipalAndInterest(100000, 7.25, 30));
+  const [monthlyTaxes, setMonthlyTaxes] = useState(900);
+  const [monthlyInsurance, setMonthlyInsurance] = useState(250);
+  const [monthlyHoa, setMonthlyHoa] = useState(0);
   const [doc, setDoc] = useState<DocumentationType>("non_qm");
   const [condo, setCondo] = useState<CondoClassification>("not_condo");
-  const inputs = { cash, closing, reserves, income, liabilities, dti, rent, dscr, paymentFactor, doc, condo };
-  const result = solveMaximumPurchasePrice({ availableCash: cash, closingCostPercent: closing, reserveAmount: reserves, documentationType: doc, condoClassification: condo, qualifyingMonthlyIncome: income, monthlyLiabilities: liabilities, maximumDtiPercent: dti, qualifyingMonthlyRent: rent, minimumDscr: dscr, proposedMonthlyPaymentPer100k: paymentFactor });
+  const monthlyHousingExpenses = monthlyTaxes + monthlyInsurance + monthlyHoa;
+  const changeRate = (nextRate: number) => { setInterestRate(nextRate); setPaymentFactor(calcMonthlyPrincipalAndInterest(100000, nextRate, termYears)); };
+  const changeTerm = (nextTerm: number) => { setTermYears(nextTerm); setPaymentFactor(calcMonthlyPrincipalAndInterest(100000, interestRate, nextTerm)); };
+  const applyVoiceFields = (fields: ReverseSolverVoiceFields) => {
+    if (fields.cash != null) setCash(fields.cash);
+    if (fields.closing != null) setClosing(fields.closing);
+    if (fields.reserves != null) setReserves(fields.reserves);
+    if (fields.income != null) setIncome(fields.income);
+    if (fields.liabilities != null) setLiabilities(fields.liabilities);
+    if (fields.dti != null) setDti(fields.dti);
+    if (fields.rent != null) setRent(fields.rent);
+    if (fields.dscr != null) setDscr(fields.dscr);
+    if (fields.monthlyTaxes != null) setMonthlyTaxes(fields.monthlyTaxes);
+    if (fields.monthlyInsurance != null) setMonthlyInsurance(fields.monthlyInsurance);
+    if (fields.monthlyHoa != null) setMonthlyHoa(fields.monthlyHoa);
+    const nextRate = fields.interestRate ?? interestRate;
+    const nextTerm = fields.termYears ?? termYears;
+    if (fields.interestRate != null) setInterestRate(fields.interestRate);
+    if (fields.termYears != null) setTermYears(fields.termYears);
+    if (fields.paymentFactor != null) setPaymentFactor(fields.paymentFactor);
+    else if (fields.interestRate != null || fields.termYears != null) setPaymentFactor(calcMonthlyPrincipalAndInterest(100000, nextRate, nextTerm));
+  };
+  const inputs = { cash, closing, reserves, income, liabilities, dti, rent, dscr, interestRate, termYears, paymentFactor, monthlyTaxes, monthlyInsurance, monthlyHoa, doc, condo };
+  const result = solveMaximumPurchasePrice({ availableCash: cash, closingCostPercent: closing, reserveAmount: reserves, documentationType: doc, condoClassification: condo, qualifyingMonthlyIncome: income, monthlyLiabilities: liabilities, maximumDtiPercent: dti, qualifyingMonthlyRent: rent, minimumDscr: dscr, proposedMonthlyPaymentPer100k: paymentFactor, monthlyHousingExpenses });
   return (
-    <CalculatorShell title="Reverse Solver" description="Work backward from cash, income, rent, reserves, and LTV overlays to a maximum purchase price. Every constraint is solved separately; the lowest ceiling binds." borrowerReference={borrowerReference} setBorrowerReference={setBorrowerReference} exportButton={<ExportPdfButton calculator="reverse-solver" inputs={inputs} borrowerReference={borrowerReference} />}>
-      <div className="rounded-2xl border border-amber-400/25 bg-gradient-to-r from-amber-500/10 to-black/40 p-4 text-sm text-amber-100"><Mic2 className="mr-2 inline h-4 w-4" /> Voice intake will extend the shared Voice Scenario pipeline in the dedicated voice phase. This release provides the complete deterministic manual solver without creating a parallel voice stack.</div>
+    <CalculatorShell title="Reverse Solver" description="Speak or enter the scenario, then work backward from cash, income, housing expenses, reserves, and LTV overlays to a maximum purchase price." borrowerReference={borrowerReference} setBorrowerReference={setBorrowerReference} exportButton={<ExportPdfButton calculator="reverse-solver" inputs={inputs} borrowerReference={borrowerReference} />}>
+      <ReverseSolverVoice onFields={applyVoiceFields} />
       <div className="grid gap-6 lg:grid-cols-[1.2fr_.8fr]">
-        <div className="grid gap-4 rounded-2xl border border-amber-500/15 bg-black/30 p-5 sm:grid-cols-2"><NumericField label="Available cash" value={cash} onChange={setCash} prefix="$" /><NumericField label="Required reserves" value={reserves} onChange={setReserves} prefix="$" /><NumericField label="Closing costs" value={closing} onChange={setClosing} step={0.25} suffix="%" /><NumericField label="Qualifying monthly income" value={income} onChange={setIncome} prefix="$" /><NumericField label="Monthly liabilities" value={liabilities} onChange={setLiabilities} prefix="$" /><NumericField label="Maximum DTI" value={dti} onChange={setDti} suffix="%" /><NumericField label="Qualifying monthly rent" value={rent} onChange={setRent} prefix="$" /><NumericField label="Minimum DSCR" value={dscr} onChange={setDscr} step={0.05} /><NumericField label="Payment per $100k loan" value={paymentFactor} onChange={setPaymentFactor} prefix="$" /><SelectField label="Documentation" value={doc} onChange={(v) => setDoc(v as DocumentationType)} options={[{ value: "non_qm", label: "Non-QM" }, { value: "bank_statement", label: "Bank Statement" }, { value: "other", label: "Other" }]} /><SelectField label="Condominium classification" value={condo} onChange={(v) => setCondo(v as CondoClassification)} options={[{ value: "not_condo", label: "Not a condo" }, { value: "warrantable", label: "Warrantable condo" }, { value: "non_warrantable", label: "Non-warrantable condo" }]} /></div>
-        <div className="space-y-4"><ResultCard title="Maximum purchase price" value={MONEY.format(result.maximumPurchasePrice)}><p>Binding constraint: <strong className="capitalize text-amber-300">{result.bindingConstraint}</strong></p><p>Maximum loan: {MONEY.format(result.maximumLoanAmount)}</p><p>Required down payment: {MONEY.format(result.requiredDownPayment)} ({result.minimumDownPercent}%)</p></ResultCard><MathPanel formula="maximum purchase price = minimum of cash, income/DTI, and DSCR constraint ceilings" lines={[`Cash ceiling: ${MONEY.format(result.constraintLimits.cash)}`, `Income ceiling: ${result.constraintLimits.income == null ? "not evaluated" : MONEY.format(result.constraintLimits.income)}`, `DSCR ceiling: ${result.constraintLimits.dscr == null ? "not evaluated" : MONEY.format(result.constraintLimits.dscr)}`, ...result.assumptions]} /></div>
+        <div className="grid gap-4 rounded-2xl border border-amber-500/15 bg-black/30 p-5 sm:grid-cols-2"><NumericField label="Available cash" value={cash} onChange={setCash} prefix="$" /><NumericField label="Required reserves" value={reserves} onChange={setReserves} prefix="$" /><NumericField label="Closing costs" value={closing} onChange={setClosing} step={0.25} suffix="%" /><NumericField label="Qualifying monthly income" value={income} onChange={setIncome} prefix="$" /><NumericField label="Monthly liabilities" value={liabilities} onChange={setLiabilities} prefix="$" /><NumericField label="Maximum DTI" value={dti} onChange={setDti} suffix="%" /><NumericField label="Qualifying monthly rent" value={rent} onChange={setRent} prefix="$" /><NumericField label="Minimum DSCR" value={dscr} onChange={setDscr} step={0.05} /><NumericField label="Interest rate" value={interestRate} onChange={changeRate} step={0.125} suffix="%" /><NumericField label="Loan term" value={termYears} onChange={changeTerm} min={1} max={40} suffix="years" /><NumericField label="Monthly property taxes" value={monthlyTaxes} onChange={setMonthlyTaxes} prefix="$" /><NumericField label="Monthly insurance" value={monthlyInsurance} onChange={setMonthlyInsurance} prefix="$" /><NumericField label="Monthly HOA" value={monthlyHoa} onChange={setMonthlyHoa} prefix="$" /><NumericField label="P&I per $100k loan" value={paymentFactor} onChange={setPaymentFactor} prefix="$" /><SelectField label="Documentation" value={doc} onChange={(v) => setDoc(v as DocumentationType)} options={[{ value: "non_qm", label: "Non-QM" }, { value: "bank_statement", label: "Bank Statement" }, { value: "other", label: "Other" }]} /><SelectField label="Condominium classification" value={condo} onChange={(v) => setCondo(v as CondoClassification)} options={[{ value: "not_condo", label: "Not a condo" }, { value: "warrantable", label: "Warrantable condo" }, { value: "non_warrantable", label: "Non-warrantable condo" }]} /></div>
+        <div className="space-y-4"><ResultCard title="Maximum purchase price" value={MONEY.format(result.maximumPurchasePrice)}><p>Binding constraint: <strong className="capitalize text-amber-300">{result.bindingConstraint}</strong></p><p>Maximum loan: {MONEY.format(result.maximumLoanAmount)}</p><p>Required down payment: {MONEY.format(result.requiredDownPayment)} ({result.minimumDownPercent}%)</p><p>Fixed monthly housing expenses: {MONEY2.format(monthlyHousingExpenses)}</p></ResultCard><MathPanel formula="maximum purchase price = minimum of cash, income/DTI, and DSCR constraint ceilings" lines={[`Cash ceiling: ${MONEY.format(result.constraintLimits.cash)}`, `Income ceiling: ${result.constraintLimits.income == null ? "not evaluated" : MONEY.format(result.constraintLimits.income)}`, `DSCR ceiling: ${result.constraintLimits.dscr == null ? "not evaluated" : MONEY.format(result.constraintLimits.dscr)}`, ...result.assumptions]} /></div>
       </div>
     </CalculatorShell>
   );

@@ -201,11 +201,13 @@ function styleWorksheet(sheet: ExcelJS.Worksheet, title: string, subtitle: strin
 }
 
 function styleInputRow(sheet: ExcelJS.Worksheet, row: number, label: string, value: string | number | ExcelJS.CellFormulaValue = 0, format?: string) {
+  const isFormula = typeof value === "object" && value !== null && "formula" in value;
   sheet.getCell(row, 2).value = label;
   sheet.getCell(row, 2).font = { name: "Aptos", size: 10, bold: true, color: { argb: `FF${INK}` } };
   sheet.getCell(row, 3).value = value;
-  sheet.getCell(row, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: `FF${PALE_GOLD}` } };
-  sheet.getCell(row, 3).border = { bottom: { style: "thin", color: { argb: `FF${GOLD}` } } };
+  sheet.getCell(row, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: isFormula ? "FFE8F3E2" : `FF${PALE_GOLD}` } };
+  sheet.getCell(row, 3).border = { bottom: { style: "thin", color: { argb: `FF${isFormula ? "6A9A52" : GOLD}` } } };
+  sheet.getCell(row, 3).protection = { locked: isFormula };
   if (format) sheet.getCell(row, 3).numFmt = format;
 }
 
@@ -222,17 +224,55 @@ export async function createTemplateWorkbook(kind: ToolkitTemplateId): Promise<B
   sheet.getCell("C6").value = "";
   sheet.getCell("B6").font = { bold: true, color: { argb: `FF${INK}` } };
   sheet.getCell("C6").fill = { type: "pattern", pattern: "solid", fgColor: { argb: `FF${LIGHT}` } };
+  sheet.getCell("C6").protection = { locked: false };
+
+  let noteRow: number;
+  let disclaimerRow: number;
   if (kind === "pnl") {
-    styleInputRow(sheet, 8, "Covered months", 12, "0");
-    styleInputRow(sheet, 9, "Gross revenue", 0, "$#,##0.00");
-    styleInputRow(sheet, 10, "Total expenses", 0, "$#,##0.00");
-    styleInputRow(sheet, 11, "Net business income", { formula: "C9-C10" }, "$#,##0.00");
-    styleInputRow(sheet, 12, "Ownership percentage", 100, "0.00%");
-    sheet.getCell("C12").value = 1;
-    styleInputRow(sheet, 13, "Preparer", "CPA");
-    styleInputRow(sheet, 15, "Monthly qualifying income", { formula: "IF(C8=0,0,C11*C12/C8)" }, "$#,##0.00");
-    sheet.mergeCells("B18:G19");
-    sheet.getCell("B18").value = PNL_RULE;
+    sheet.views = [{ state: "frozen", ySplit: 13 }];
+    sheet.pageSetup.fitToHeight = 2;
+    styleInputRow(sheet, 8, "Business name", "");
+    styleInputRow(sheet, 9, "Reporting period", "");
+    styleInputRow(sheet, 10, "Covered months", 12, "0");
+    sheet.getCell("C10").dataValidation = { type: "whole", operator: "between", allowBlank: false, formulae: [1, 24], showErrorMessage: true, errorTitle: "Enter 1–24 months", error: "Covered months must be between 1 and 24." };
+    styleInputRow(sheet, 11, "Gross revenue", 0, "$#,##0.00");
+
+    sheet.mergeCells("B13:G13");
+    sheet.getCell("B13").value = "BUSINESS EXPENSES — ENTER DOLLAR AMOUNTS IN THE GOLD CELLS";
+    sheet.getCell("B13").font = { name: "Aptos Display", size: 11, bold: true, color: { argb: "FFFFFFFF" } };
+    sheet.getCell("B13").fill = { type: "pattern", pattern: "solid", fgColor: { argb: `FF${NAVY}` } };
+    sheet.getCell("B13").alignment = { vertical: "middle" };
+
+    const expenseCategories = [
+      "Cost of Goods Sold", "Payroll / Labor", "Contractor Labor", "Rent / Lease", "Utilities",
+      "Business Insurance", "Taxes", "Licenses & Registration", "Online Services / Software",
+      "Advertising / Marketing", "Supplies", "Equipment", "Travel", "Gas / Fuel", "Vehicle Expenses",
+      "Repairs / Maintenance", "Professional Fees", "Accounting / Bookkeeping", "Legal Fees",
+      "Acquisition Costs", "Shipping / Delivery", "Telephone / Internet", "Office Expenses", "Other Business Expenses",
+    ];
+    expenseCategories.forEach((category, index) => styleInputRow(sheet, 14 + index, category, 0, "$#,##0.00"));
+    const customStart = 14 + expenseCategories.length;
+    for (let index = 0; index < 4; index += 1) {
+      const row = customStart + index;
+      styleInputRow(sheet, row, `Custom expense ${index + 1}`, 0, "$#,##0.00");
+      sheet.getCell(row, 2).protection = { locked: false };
+      sheet.getCell(row, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: `FF${LIGHT}` } };
+    }
+    const expenseEnd = customStart + 3;
+    const summaryHeader = expenseEnd + 2;
+    sheet.mergeCells(summaryHeader, 2, summaryHeader, 7);
+    sheet.getCell(summaryHeader, 2).value = "AUTOMATED SUMMARY";
+    sheet.getCell(summaryHeader, 2).font = { name: "Aptos Display", size: 11, bold: true, color: { argb: "FFFFFFFF" } };
+    sheet.getCell(summaryHeader, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: `FF${NAVY}` } };
+    styleInputRow(sheet, summaryHeader + 1, "Total Gross Revenue", { formula: "C11" }, "$#,##0.00");
+    styleInputRow(sheet, summaryHeader + 2, "Total Expenses", { formula: `SUM(C14:C${expenseEnd})` }, "$#,##0.00");
+    styleInputRow(sheet, summaryHeader + 3, "Expense Ratio", { formula: `IF(C${summaryHeader + 1}=0,0,C${summaryHeader + 2}/C${summaryHeader + 1})` }, "0.00%");
+    styleInputRow(sheet, summaryHeader + 4, "Net Income", { formula: `C${summaryHeader + 1}-C${summaryHeader + 2}` }, "$#,##0.00");
+    styleInputRow(sheet, summaryHeader + 5, "Monthly Qualifying Income", { formula: `IF(C10=0,0,C${summaryHeader + 4}/C10)` }, "$#,##0.00");
+    noteRow = summaryHeader + 8;
+    disclaimerRow = noteRow + 4;
+    sheet.mergeCells(noteRow, 2, noteRow + 1, 7);
+    sheet.getCell(noteRow, 2).value = PNL_RULE;
   } else {
     styleInputRow(sheet, 8, "Monthly lease", 0, "$#,##0.00");
     styleInputRow(sheet, 9, "Market rent (1007)", 0, "$#,##0.00");
@@ -244,30 +284,33 @@ export async function createTemplateWorkbook(kind: ToolkitTemplateId): Promise<B
     styleInputRow(sheet, 16, "Qualifying rent", { formula: "IF(AND(C8>0,C9>0),MIN(C8,C9),MAX(C8,C9))" }, "$#,##0.00");
     styleInputRow(sheet, 17, "Qualifying housing expense", { formula: "C14+C10/12+C11/12+C12/12+C13" }, "$#,##0.00");
     styleInputRow(sheet, 18, "DSCR", { formula: "IF(C17=0,0,C16/C17)" }, "0.000");
+    noteRow = 21;
+    disclaimerRow = 25;
     sheet.mergeCells("B21:G22");
     sheet.getCell("B21").value = "Rent basis and PITIA / ITIA treatment vary by program. Verify the current lender guideline.";
   }
-  const noteCell = kind === "pnl" ? sheet.getCell("B18") : sheet.getCell("B21");
+
+  const noteCell = sheet.getCell(noteRow, 2);
   noteCell.alignment = { wrapText: true, vertical: "middle" };
   noteCell.font = { italic: true, color: { argb: `FF${INK}` } };
   noteCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: `FF${PALE_GOLD}` } };
-  const disclaimerRow = kind === "pnl" ? 22 : 25;
   sheet.mergeCells(disclaimerRow, 2, disclaimerRow + 1, 7);
   const disclaimerCell = sheet.getCell(disclaimerRow, 2);
   disclaimerCell.value = `${DISCLAIMER} General-purpose format; not a lender-required form. Do not enter real borrower PII.`;
   disclaimerCell.alignment = { wrapText: true, vertical: "middle" };
   disclaimerCell.font = { size: 8, color: { argb: "FF596273" } };
   sheet.pageSetup.printArea = `A1:H${disclaimerRow + 1}`;
+  await sheet.protect("", { selectLockedCells: true, selectUnlockedCells: true, formatCells: false, insertRows: false, deleteRows: false });
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
 
 const dscrSchema = z.object({ lease: z.number().nonnegative(), market: z.number().nonnegative(), taxes: z.number().nonnegative(), hazard: z.number().nonnegative(), flood: z.number().nonnegative(), hoa: z.number().nonnegative(), loan: z.number().nonnegative(), rate: z.number().nonnegative(), term: z.number().positive(), basis: z.enum(["lower_of_lease_or_market", "higher_of_lease_or_market", "market_only", "lease_only"]), interestOnly: z.boolean() }).strict();
 const bankSchema = z.object({ deposits: z.number().nonnegative(), ownership: z.number().min(0).max(100), expense: z.number().min(0).max(100), months: z.union([z.literal(12), z.literal(24)]), statementType: z.enum(["personal", "business"]) }).strict();
-const pnlSchema = z.object({ gross: z.number().nonnegative(), expenses: z.number().nonnegative(), ownership: z.number().min(0).max(100), months: z.number().positive().max(24), preparer: z.enum(["cpa", "ea", "tax_professional", "borrower"]) }).strict();
+const pnlSchema = z.object({ gross: z.number().nonnegative(), expenses: z.number().nonnegative(), expenseRatio: z.number().min(0).max(100).optional(), ownership: z.number().min(0).max(100), months: z.number().positive().max(24), preparer: z.enum(["cpa", "ea", "tax_professional", "borrower"]) }).strict();
 const assetSchema = z.object({ checking: z.number().nonnegative(), stocks: z.number().nonnegative(), bonds: z.number().nonnegative(), bondsInvestmentGrade: z.boolean(), mutualFunds: z.number().nonnegative(), cryptocurrency: z.number().nonnegative().default(0), retirement: z.number().nonnegative(), down: z.number().nonnegative(), costs: z.number().nonnegative(), reserves: z.number().nonnegative(), divisor: z.number().positive() }).strict();
 const income1099Schema = z.object({ yearOne: z.number().nonnegative(), yearTwo: z.number().nonnegative(), months: z.union([z.literal(12), z.literal(24)]), expense: z.number().min(0).max(100) }).strict();
 const ltvSchema = z.object({ price: z.number().nonnegative(), value: z.number().nonnegative(), loan: z.number().nonnegative(), liens: z.number().nonnegative(), payoff: z.number().nonnegative(), costs: z.number().nonnegative(), doc: z.enum(["non_qm", "bank_statement", "other"]), condo: z.enum(["not_condo", "warrantable", "non_warrantable"]) }).strict();
-const reverseSchema = z.object({ cash: z.number().nonnegative(), closing: z.number().min(0).max(20), reserves: z.number().nonnegative(), income: z.number().nonnegative(), liabilities: z.number().nonnegative(), dti: z.number().min(0).max(100), rent: z.number().nonnegative(), dscr: z.number().positive(), paymentFactor: z.number().positive(), doc: z.enum(["non_qm", "bank_statement", "other"]), condo: z.enum(["not_condo", "warrantable", "non_warrantable"]) }).strict();
+const reverseSchema = z.object({ cash: z.number().nonnegative(), closing: z.number().min(0).max(20), reserves: z.number().nonnegative(), income: z.number().nonnegative(), liabilities: z.number().nonnegative(), dti: z.number().min(0).max(100), rent: z.number().nonnegative(), dscr: z.number().positive(), paymentFactor: z.number().positive(), interestRate: z.number().nonnegative().default(0), termYears: z.number().positive().default(30), monthlyTaxes: z.number().nonnegative().default(0), monthlyInsurance: z.number().nonnegative().default(0), monthlyHoa: z.number().nonnegative().default(0), doc: z.enum(["non_qm", "bank_statement", "other"]), condo: z.enum(["not_condo", "warrantable", "non_warrantable"]) }).strict();
 
 export async function createCalculatorReportPdf(calculator: ToolkitCalculatorId, rawInputs: Record<string, unknown>, borrowerReference?: string): Promise<Uint8Array> {
   let report: Report;
@@ -289,7 +332,7 @@ export async function createCalculatorReportPdf(calculator: ToolkitCalculatorId,
   } else if (calculator === "asset-depletion") {
     const i = assetSchema.parse(rawInputs);
     const r = calcAssetDepletion({ checkingSavings: i.checking, publiclyTradedStocks: i.stocks, bonds: i.bonds, bondsInvestmentGrade: i.bondsInvestmentGrade, mutualFunds: i.mutualFunds, cryptocurrency: i.cryptocurrency, retirement: i.retirement, requiredDownPayment: i.down, closingCosts: i.costs, requiredReserves: i.reserves, assetDivisorMonths: i.divisor }, { deductDownPayment: true, deductClosingCosts: true, deductReserves: true });
-    report = { title: "Asset Depletion", subtitle: "Eligible assets after category haircuts and funds-to-close deductions", borrowerReference, headline: money(Number(r.value ?? 0)), rows: [["Checking / savings / money market (100%)", money(Number(r.inputs?.checkingSavingsEligible ?? 0))], ["Publicly traded stocks (80%)", money(Number(r.inputs?.publiclyTradedStocksEligible ?? 0))], [i.bondsInvestmentGrade ? "Eligible investment-grade bonds (80%)" : "Below-investment-grade bonds (0%)", money(Number(r.inputs?.bondsEligible ?? 0))], ["Mutual funds (80%)", money(Number(r.inputs?.mutualFundsEligible ?? 0))], ["Cryptocurrency (60%)", money(Number(r.inputs?.cryptocurrencyEligible ?? 0))], ["Retirement accounts (70%)", money(Number(r.inputs?.retirementAdjusted ?? 0))], ["Eligible assets", money(Number(r.inputs?.eligibleAssets ?? 0))], ["Down payment", money(i.down)], ["Closing costs", money(i.costs)], ["Reserves", money(i.reserves)], ["Net depletable assets", money(Number(r.inputs?.netEligible ?? 0))], ["Divisor", `${i.divisor} months`]], math: [r.formula, `${money(Number(r.inputs?.netEligible ?? 0))} ÷ ${i.divisor} = ${money(Number(r.value ?? 0))}`], notes: r.notes ?? [] };
+    report = { title: "Asset Depletion", subtitle: "Eligible assets after category haircuts and funds-to-close deductions", borrowerReference, headline: money(Number(r.value ?? 0)), rows: [["Checking / savings / money market (100%)", money(Number(r.inputs?.checkingSavingsEligible ?? 0))], ["Publicly traded stocks (80%)", money(Number(r.inputs?.publiclyTradedStocksEligible ?? 0))], [i.bondsInvestmentGrade ? "Eligible investment-grade bonds (80%)" : "Below-investment-grade bonds (0%)", money(Number(r.inputs?.bondsEligible ?? 0))], ["Mutual funds (80%)", money(Number(r.inputs?.mutualFundsEligible ?? 0))], ["Cryptocurrency (60%)", money(Number(r.inputs?.cryptocurrencyEligible ?? 0))], ["Retirement accounts (70%)", money(Number(r.inputs?.retirementAdjusted ?? 0))], ["Eligible assets", money(Number(r.inputs?.eligibleAssets ?? 0))], ["Down payment", money(i.down)], ["Closing costs", money(i.costs)], ["Reserves", money(i.reserves)], ["Net depletable assets", money(Number(r.inputs?.netEligible ?? 0))], ["Divide by how many months?", `${i.divisor} months`]], math: [r.formula, `${money(Number(r.inputs?.netEligible ?? 0))} ÷ ${i.divisor} = ${money(Number(r.value ?? 0))}`], notes: r.notes ?? [] };
   } else if (calculator === "1099") {
     const i = income1099Schema.parse(rawInputs);
     const r = calc1099Income({ yearOneTotal: i.yearOne, yearTwoTotal: i.yearTwo, months: i.months, expenseFactorPercent: i.expense });
@@ -300,8 +343,9 @@ export async function createCalculatorReportPdf(calculator: ToolkitCalculatorId,
     report = { title: "LTV / CLTV / Cash-Out", subtitle: "Value basis and catalog-wide cap analysis", borrowerReference, headline: `LTV ${percent(r.ltv)} | CLTV ${percent(r.cltv)}`, rows: [["Value basis", money(r.valueBasis)], ["Loan amount", money(i.loan)], ["Maximum permitted LTV", `${r.cap.maximumLtv}%`], ["Minimum down", `${r.cap.minimumDownPercent}% / ${money(r.requiredDownPayment)}`], ["Maximum loan", money(r.maximumLoanAmount)], ["Binding cap", r.cap.bindingReason], ["Net cash out", money(r.netCashOut)]], math: ["LTV = loan ÷ lower of purchase price or appraised value × 100", ...r.cap.evaluatedCaps.map((cap) => `${cap.label}: ${cap.maximumLtv}% maximum`)], notes: ["The strictest applicable catalog, documentation, and property-type cap controls."] };
   } else {
     const i = reverseSchema.parse(rawInputs);
-    const r = solveMaximumPurchasePrice({ availableCash: i.cash, closingCostPercent: i.closing, reserveAmount: i.reserves, documentationType: i.doc as DocumentationType, condoClassification: i.condo as CondoClassification, qualifyingMonthlyIncome: i.income, monthlyLiabilities: i.liabilities, maximumDtiPercent: i.dti, qualifyingMonthlyRent: i.rent, minimumDscr: i.dscr, proposedMonthlyPaymentPer100k: i.paymentFactor });
-    report = { title: "Reverse Solver", subtitle: "Maximum purchase price from independently evaluated constraints", borrowerReference, headline: money(r.maximumPurchasePrice), rows: [["Binding constraint", r.bindingConstraint.toUpperCase()], ["Maximum loan", money(r.maximumLoanAmount)], ["Required down payment", `${money(r.requiredDownPayment)} / ${r.minimumDownPercent}%`], ["Cash ceiling", money(r.constraintLimits.cash)], ["Income ceiling", r.constraintLimits.income == null ? "Not evaluated" : money(r.constraintLimits.income)], ["DSCR ceiling", r.constraintLimits.dscr == null ? "Not evaluated" : money(r.constraintLimits.dscr)], ["Applied maximum LTV", `${r.appliedMaximumLtv}%`]], math: ["Maximum purchase price = minimum of cash, income/DTI, and DSCR ceilings", ...r.assumptions], notes: ["The AI layer may explain this result but never changes a number. All figures originate in deterministic domain functions."] };
+    const fixedHousing = i.monthlyTaxes + i.monthlyInsurance + i.monthlyHoa;
+    const r = solveMaximumPurchasePrice({ availableCash: i.cash, closingCostPercent: i.closing, reserveAmount: i.reserves, documentationType: i.doc as DocumentationType, condoClassification: i.condo as CondoClassification, qualifyingMonthlyIncome: i.income, monthlyLiabilities: i.liabilities, maximumDtiPercent: i.dti, qualifyingMonthlyRent: i.rent, minimumDscr: i.dscr, proposedMonthlyPaymentPer100k: i.paymentFactor, monthlyHousingExpenses: fixedHousing });
+    report = { title: "Reverse Solver", subtitle: "Maximum purchase price from independently evaluated constraints", borrowerReference, headline: money(r.maximumPurchasePrice), rows: [["Binding constraint", r.bindingConstraint.toUpperCase()], ["Maximum loan", money(r.maximumLoanAmount)], ["Required down payment", `${money(r.requiredDownPayment)} / ${r.minimumDownPercent}%`], ["Interest rate / term", `${i.interestRate}% / ${i.termYears} years`], ["Monthly taxes / insurance / HOA", money(fixedHousing)], ["Cash ceiling", money(r.constraintLimits.cash)], ["Income ceiling", r.constraintLimits.income == null ? "Not evaluated" : money(r.constraintLimits.income)], ["DSCR ceiling", r.constraintLimits.dscr == null ? "Not evaluated" : money(r.constraintLimits.dscr)], ["Applied maximum LTV", `${r.appliedMaximumLtv}%`]], math: ["Maximum purchase price = minimum of cash, income/DTI, and DSCR ceilings", ...r.assumptions], notes: ["Voice intake populates these Reverse Solver inputs; deterministic domain functions calculate every figure."] };
   }
   return createBrandedReportPdf(report);
 }

@@ -873,6 +873,7 @@ html[data-theme="light"] .nexus-toolkit-page .toolkit-borrower,
 html[data-theme="light"] .nexus-toolkit-page .toolkit-card,
 html[data-theme="light"] .nexus-toolkit-page .toolkit-result,
 html[data-theme="light"] .nexus-toolkit-page .toolkit-math,
+html[data-theme="light"] .nexus-toolkit-page .reverse-voice,
 html[data-theme="light"] .nexus-toolkit-page .toolkit-disclaimer {
   background: var(--section-card) !important;
   border-color: var(--section-border) !important;
@@ -909,6 +910,23 @@ html[data-theme="light"] .nexus-toolkit-page .toolkit-download-secondary {
 }
 html[data-theme="light"] .nexus-toolkit-page .toolkit-asset-table th {
   color: var(--section-secondary) !important;
+}
+html[data-theme="light"] .nexus-toolkit-page .reverse-voice-transcript,
+html[data-theme="light"] .nexus-toolkit-page .toolkit-months-field {
+  background: #fff8e8 !important;
+  border-color: var(--section-border) !important;
+}
+html[data-theme="light"] .nexus-toolkit-page .reverse-voice textarea {
+  background: #ffffff !important;
+  border-color: var(--section-border) !important;
+  color: var(--section-text) !important;
+}
+html[data-theme="light"] .nexus-toolkit-page .reverse-voice-apply {
+  color: var(--section-gold-text) !important;
+  border-color: var(--section-border) !important;
+}
+html[data-theme="light"] .nexus-toolkit-page .toolkit-months-field .toolkit-field-label {
+  color: var(--section-gold-text) !important;
 }
 
 /* Homepage feature cards — taller, show data tags / mini-lists. */

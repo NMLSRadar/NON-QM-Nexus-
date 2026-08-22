@@ -87,6 +87,13 @@ describe("Loan Officer Toolkit domain invariants", () => {
     expect(result.maximumLoanAmount).toBe(722_500);
   });
 
+  it("subtracts fixed monthly property expenses from Reverse Solver capacity", () => {
+    const withoutHousingExpenses = solveMaximumPurchasePrice({ availableCash: 1_000_000, closingCostPercent: 3, reserveAmount: 0, documentationType: "non_qm", condoClassification: "not_condo", qualifyingMonthlyIncome: 14_000, monthlyLiabilities: 2_500, maximumDtiPercent: 50, proposedMonthlyPaymentPer100k: 682.18 });
+    const withHousingExpenses = solveMaximumPurchasePrice({ availableCash: 1_000_000, closingCostPercent: 3, reserveAmount: 0, documentationType: "non_qm", condoClassification: "not_condo", qualifyingMonthlyIncome: 14_000, monthlyLiabilities: 2_500, maximumDtiPercent: 50, proposedMonthlyPaymentPer100k: 682.18, monthlyHousingExpenses: 1_150 });
+    expect(withHousingExpenses.constraintLimits.income).toBeLessThan(withoutHousingExpenses.constraintLimits.income!);
+    expect(withHousingExpenses.assumptions.join(" ")).toContain("$1150");
+  });
+
   it("selects the lowest independently evaluated Reverse Solver constraint", () => {
     const result = solveMaximumPurchasePrice({
       availableCash: 120_000,

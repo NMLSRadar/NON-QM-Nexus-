@@ -149,6 +149,8 @@ export interface ReverseSolverInput {
   qualifyingMonthlyRent?: number;
   minimumDscr?: number;
   proposedMonthlyPaymentPer100k?: number;
+  /** Fixed monthly property carrying costs, such as taxes, insurance and HOA. */
+  monthlyHousingExpenses?: number;
 }
 
 export interface ReverseSolverResult {
@@ -178,13 +180,15 @@ export function solveMaximumPurchasePrice(input: ReverseSolverInput): ReverseSol
   const cashLimit = round2(cashLimitDecimal.isNegative() ? 0 : cashLimitDecimal);
 
   const paymentPer100k = money(input.proposedMonthlyPaymentPer100k ?? 750);
+  const monthlyHousingExpenses = money(input.monthlyHousingExpenses ?? 0);
   const ltvFraction = money(cap.maximumLtv).dividedBy(100);
 
   let incomeLimit: number | null = null;
   if (input.qualifyingMonthlyIncome != null && input.maximumDtiPercent != null) {
     const maxHousing = money(input.qualifyingMonthlyIncome)
       .times(money(input.maximumDtiPercent).dividedBy(100))
-      .minus(input.monthlyLiabilities ?? 0);
+      .minus(input.monthlyLiabilities ?? 0)
+      .minus(monthlyHousingExpenses);
     const loan = maxHousing.lte(0) ? money(0) : maxHousing.dividedBy(paymentPer100k).times(100_000);
     const purchase = safeDivide(loan, ltvFraction);
     incomeLimit = purchase == null ? null : round2(purchase);
@@ -192,8 +196,8 @@ export function solveMaximumPurchasePrice(input: ReverseSolverInput): ReverseSol
 
   let dscrLimit: number | null = null;
   if (input.qualifyingMonthlyRent != null && input.minimumDscr != null && input.minimumDscr > 0) {
-    const maxPayment = money(input.qualifyingMonthlyRent).dividedBy(input.minimumDscr);
-    const loan = maxPayment.dividedBy(paymentPer100k).times(100_000);
+    const maxPayment = money(input.qualifyingMonthlyRent).dividedBy(input.minimumDscr).minus(monthlyHousingExpenses);
+    const loan = maxPayment.lte(0) ? money(0) : maxPayment.dividedBy(paymentPer100k).times(100_000);
     const purchase = safeDivide(loan, ltvFraction);
     dscrLimit = purchase == null ? null : round2(purchase);
   }
@@ -219,6 +223,7 @@ export function solveMaximumPurchasePrice(input: ReverseSolverInput): ReverseSol
     assumptions: [
       `Closing costs assumed at ${roundTo(input.closingCostPercent, 2)}%.`,
       `Payment factor assumed at $${round2(paymentPer100k)} per $100,000 of loan amount.`,
+      `Fixed monthly taxes, insurance, and HOA assumed at $${round2(monthlyHousingExpenses)}.`,
       `${cap.bindingReason} is the binding LTV overlay.`,
     ],
   };
