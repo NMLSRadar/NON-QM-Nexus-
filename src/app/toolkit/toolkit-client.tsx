@@ -54,15 +54,43 @@ type NumericFieldProps = {
   step?: number;
   prefix?: string;
   suffix?: string;
+  friendlyEntry?: boolean;
 };
 
-function NumericField({ label, value, onChange, min = 0, max, step = 1, prefix, suffix }: NumericFieldProps) {
+function NumericField({ label, value, onChange, min = 0, max, step = 1, prefix, suffix, friendlyEntry = false }: NumericFieldProps) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const formattedValue = prefix === "$" ? value.toLocaleString("en-US", { maximumFractionDigits: 2 }) : String(value);
+  const displayValue = friendlyEntry ? (draft ?? formattedValue) : value;
   return (
     <label className="toolkit-field">
       <span className="toolkit-field-label">{label}</span>
       <span className="toolkit-input-wrap flex items-center">
         {prefix ? <span className="pl-3 text-slate-500">{prefix}</span> : null}
-        <input className="w-full min-w-0 bg-transparent px-3 py-2.5 text-sm text-white outline-none tabular-nums" type="number" value={Number.isFinite(value) ? value : 0} onChange={(event) => onChange(Number(event.target.value))} min={min} max={max} step={step} inputMode="decimal" />
+        <input
+          className="w-full min-w-0 bg-transparent px-3 py-2.5 text-sm text-white outline-none tabular-nums"
+          type={friendlyEntry ? "text" : "number"}
+          value={displayValue}
+          onFocus={() => { if (friendlyEntry) setDraft(formattedValue); }}
+          onBlur={() => { if (friendlyEntry) setDraft(null); }}
+          onChange={(event) => {
+            if (!friendlyEntry) {
+              onChange(Number(event.target.value));
+              return;
+            }
+            const raw = event.target.value;
+            if (!/^[\d,]*\.?\d*$/.test(raw)) return;
+            setDraft(raw);
+            const normalized = raw.replace(/,/g, "");
+            if (normalized !== "" && normalized !== ".") {
+              const parsed = Number(normalized);
+              if (Number.isFinite(parsed)) onChange(parsed);
+            }
+          }}
+          min={friendlyEntry ? undefined : min}
+          max={friendlyEntry ? undefined : max}
+          step={friendlyEntry ? undefined : step}
+          inputMode="decimal"
+        />
         {suffix ? <span className="pr-3 text-xs text-slate-500">{suffix}</span> : null}
       </span>
     </label>
@@ -237,7 +265,7 @@ function PnlCalculator({ borrowerReference, setBorrowerReference }: { borrowerRe
     <CalculatorShell title="P&L Income Worksheet" description="Translate the P&L’s net business income into monthly qualifying income and expose the implied expense ratio." borrowerReference={borrowerReference} setBorrowerReference={setBorrowerReference} exportButton={<><ExportPdfButton calculator="pnl" inputs={inputs} borrowerReference={borrowerReference} /><ExcelTemplateButton document="pnl" /></>}>
       <div className="toolkit-banner flex gap-3 p-4 text-sm leading-relaxed text-amber-50"><Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden /><p><strong className="mr-1 uppercase tracking-wide text-amber-300">P&L Only rule:</strong> Tax returns are never required. The P&L is the income document. CPA attestation, when applicable, confirms tax filing only—it does not validate the income amount.</p></div>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(280px,.75fr)]">
-        <SectionCard title="P&L summary" icon={ReceiptText}><div className="grid gap-4 sm:grid-cols-2"><NumericField label="Gross revenue" value={gross} onChange={setGross} prefix="$" /><NumericField label="Total expenses" value={expenses} onChange={setExpenses} prefix="$" /><NumericField label="Ownership" value={ownership} onChange={setOwnership} max={100} suffix="%" /><NumericField label="Covered period" value={months} onChange={setMonths} min={1} max={24} suffix="months" /><SelectField label="P&L preparer" value={preparer} onChange={(v) => setPreparer(v as typeof preparer)} options={[{ value: "cpa", label: "CPA" }, { value: "ea", label: "EA" }, { value: "tax_professional", label: "Tax preparer" }, { value: "borrower", label: "Borrower" }]} /></div></SectionCard>
+        <SectionCard title="P&L summary" icon={ReceiptText}><div className="grid gap-4 sm:grid-cols-2"><NumericField label="Gross revenue" value={gross} onChange={setGross} prefix="$" friendlyEntry /><NumericField label="Total expenses" value={expenses} onChange={setExpenses} prefix="$" friendlyEntry /><NumericField label="Ownership" value={ownership} onChange={setOwnership} max={100} suffix="%" /><NumericField label="Covered period" value={months} onChange={setMonths} min={1} max={24} suffix="months" friendlyEntry /><SelectField label="P&L preparer" value={preparer} onChange={(v) => setPreparer(v as typeof preparer)} options={[{ value: "cpa", label: "CPA" }, { value: "ea", label: "EA" }, { value: "tax_professional", label: "Tax preparer" }, { value: "borrower", label: "Borrower" }]} /></div></SectionCard>
         <div className="space-y-4"><ResultCard title="Qualifying monthly income" graphic="bars" value={MONEY2.format(Number(result.value ?? 0))}><p>Net income: {MONEY2.format(net)}</p><p>Implied expense ratio: {ratio.toFixed(1)}%</p></ResultCard><MathPanel formula={result.formula} lines={[`${MONEY2.format(net)} × ${ownership}% ÷ ${months} months`, `= ${MONEY2.format(Number(result.value ?? 0))} per month`]} /></div>
       </div>
     </CalculatorShell>
