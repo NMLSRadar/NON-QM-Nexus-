@@ -757,6 +757,160 @@ html[data-theme="light"] .nexus-stat-value { color: var(--ink-navy); }
 }
 html[data-theme="light"] .nexus-stat-label { color: #5f6c85; }
 
+/* ---------------------------------------------------------------------------
+   Accessible light surfaces for the Loan Officer Toolkit and AE Directory.
+   These overrides are deliberately opt-in so the rest of the site keeps its
+   existing theme treatment. Normal-size text meets WCAG AA on white cards.
+--------------------------------------------------------------------------- */
+html[data-theme="light"] .nexus-light-mode-section {
+  --section-page: #f4f1e8;
+  --section-card: #ffffff;
+  --section-card-subtle: #fbfaf7;
+  --section-text: #171a1f;
+  --section-label: #30343b;
+  --section-secondary: #4b5563;
+  --section-muted: #667085;
+  --section-gold-text: #73510b;
+  --section-gold-action: #8a6515;
+  --section-border: #8c816d;
+  background: var(--section-page) !important;
+  color: var(--section-text) !important;
+  color-scheme: light;
+  font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Remove only the dark utility surfaces used inside these two sections. */
+html[data-theme="light"] .nexus-light-mode-section [class*="bg-black/"],
+html[data-theme="light"] .nexus-light-mode-section [class*="bg-[#"],
+html[data-theme="light"] .nexus-light-mode-section [class*="via-black"],
+html[data-theme="light"] .nexus-light-mode-section [class*="to-black"] {
+  background-color: var(--section-card) !important;
+  background-image: none !important;
+}
+
+html[data-theme="light"] .nexus-light-mode-section main,
+html[data-theme="light"] .nexus-light-mode-section section,
+html[data-theme="light"] .nexus-light-mode-section article,
+html[data-theme="light"] .nexus-light-mode-section details,
+html[data-theme="light"] .nexus-light-mode-section .nexus-lender-card,
+html[data-theme="light"] .nexus-light-mode-section .nexus-directory-panel {
+  background-color: var(--section-card) !important;
+}
+
+html[data-theme="light"] .nexus-light-mode-section [class*="bg-amber-500/"],
+html[data-theme="light"] .nexus-light-mode-section [class*="bg-amber-400/"] {
+  background-color: #fff8e8 !important;
+  background-image: none !important;
+}
+
+/* Manrope text hierarchy: 17.44:1, 12.50:1, 7.56:1 and 4.97:1 on white. */
+html[data-theme="light"] .nexus-light-mode-section .text-white,
+html[data-theme="light"] .nexus-light-mode-section .text-slate-100 {
+  color: var(--section-text) !important;
+}
+html[data-theme="light"] .nexus-light-mode-section .text-slate-200 {
+  color: var(--section-label) !important;
+}
+html[data-theme="light"] .nexus-light-mode-section .text-slate-300,
+html[data-theme="light"] .nexus-light-mode-section .text-slate-400 {
+  color: var(--section-secondary) !important;
+}
+html[data-theme="light"] .nexus-light-mode-section .text-slate-500,
+html[data-theme="light"] .nexus-light-mode-section .text-slate-600 {
+  color: var(--section-muted) !important;
+}
+html[data-theme="light"] .nexus-light-mode-section .text-amber-100,
+html[data-theme="light"] .nexus-light-mode-section .text-amber-200,
+html[data-theme="light"] .nexus-light-mode-section .text-amber-300,
+html[data-theme="light"] .nexus-light-mode-section .text-amber-400 {
+  color: var(--section-gold-text) !important;
+}
+html[data-theme="light"] .nexus-ae-directory-page .text-sky-200 {
+  color: #075985 !important;
+}
+html[data-theme="light"] .nexus-ae-directory-page .text-emerald-200 {
+  color: #166534 !important;
+}
+html[data-theme="light"] .nexus-ae-directory-page .text-violet-200 {
+  color: #5b21b6 !important;
+}
+html[data-theme="light"] .nexus-ae-directory-page .text-rose-200 {
+  color: #9f1239 !important;
+}
+
+html[data-theme="light"] .nexus-light-mode-section input,
+html[data-theme="light"] .nexus-light-mode-section select,
+html[data-theme="light"] .nexus-light-mode-section textarea {
+  background: #ffffff !important;
+  border-color: var(--section-border) !important;
+  color: var(--section-text) !important;
+}
+html[data-theme="light"] .nexus-light-mode-section ::placeholder {
+  color: var(--section-muted) !important;
+  opacity: 1;
+}
+html[data-theme="light"] .nexus-light-mode-section [class*="border-amber-"] {
+  border-color: var(--section-border) !important;
+}
+html[data-theme="light"] .nexus-light-mode-section :focus-visible {
+  outline-color: var(--section-gold-action);
+}
+
+/* The Toolkit has dedicated dark-mode component surfaces. Keep those premium
+   structures, but remap their paint only when this scoped section is light. */
+html[data-theme="light"] .nexus-toolkit-page.toolkit-page {
+  background: var(--section-page) !important;
+}
+html[data-theme="light"] .nexus-toolkit-page.toolkit-page::before {
+  opacity: 0.08;
+}
+html[data-theme="light"] .nexus-toolkit-page main {
+  background: transparent !important;
+}
+html[data-theme="light"] .nexus-toolkit-page .toolkit-shell,
+html[data-theme="light"] .nexus-toolkit-page .toolkit-borrower,
+html[data-theme="light"] .nexus-toolkit-page .toolkit-card,
+html[data-theme="light"] .nexus-toolkit-page .toolkit-result,
+html[data-theme="light"] .nexus-toolkit-page .toolkit-math,
+html[data-theme="light"] .nexus-toolkit-page .toolkit-disclaimer {
+  background: var(--section-card) !important;
+  border-color: var(--section-border) !important;
+  box-shadow: 0 12px 30px -22px rgba(23, 26, 31, 0.32) !important;
+}
+html[data-theme="light"] .nexus-toolkit-page .toolkit-banner {
+  background: #fff8e8 !important;
+  border-color: var(--section-border) !important;
+}
+html[data-theme="light"] .nexus-toolkit-page .toolkit-input-wrap,
+html[data-theme="light"] .nexus-toolkit-page .toolkit-select {
+  background: #ffffff !important;
+  border-color: var(--section-border) !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] .nexus-toolkit-page .toolkit-field-label {
+  color: var(--section-label) !important;
+}
+html[data-theme="light"] .nexus-toolkit-page .toolkit-eyebrow,
+html[data-theme="light"] .nexus-toolkit-page .toolkit-section-label {
+  color: var(--section-gold-text) !important;
+  text-shadow: none !important;
+}
+html[data-theme="light"] .nexus-toolkit-page .toolkit-icon-box {
+  background: #fff8e8 !important;
+  border-color: var(--section-border) !important;
+  color: var(--section-gold-text) !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"] .nexus-toolkit-page .toolkit-download-secondary {
+  background: #ffffff !important;
+  border-color: var(--section-border) !important;
+  color: var(--section-text) !important;
+}
+html[data-theme="light"] .nexus-toolkit-page .toolkit-asset-table th {
+  color: var(--section-secondary) !important;
+}
+
 /* Homepage feature cards — taller, show data tags / mini-lists. */
 .nexus-feature-home { min-height: 300px; }
 .nexus-feature-home .nexus-icon-orbit { margin-top: 60px; }

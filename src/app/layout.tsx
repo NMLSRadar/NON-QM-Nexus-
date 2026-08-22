@@ -77,6 +77,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
           rel="stylesheet"
         />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
         {/* No-flash theme script: applies the persisted theme to <html> before
             first paint so a light-mode user never sees a dark flash. Reads
             localStorage directly (the authoritative client store). */}
