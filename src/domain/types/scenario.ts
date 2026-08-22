@@ -81,6 +81,7 @@ export interface AssetDepletionDetails {
   checkingSavings?: number;
   brokerage?: number;
   stocksBonds?: number;
+  cryptocurrency?: number;
   retirement?: number;
   borrowerAge?: number;
   retirementVestedPercent?: number; // 0-100

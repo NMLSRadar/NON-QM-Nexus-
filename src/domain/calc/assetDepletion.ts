@@ -16,6 +16,7 @@ export interface AssetDepletionConfig {
  * Asset-depletion qualifying income.
  *
  *   eligible assets = (liquid + brokerage + stocks/bonds) × eligible%
+ *                     + cryptocurrency × 60%
  *                     + retirement × (1 − retirement haircut) [age-dependent]
  *                     + real-estate equity (if configured)
  *   net eligible    = eligible assets − down payment − closing costs − reserves (as configured)
@@ -38,9 +39,10 @@ export function calcAssetDepletion(
   const vested = money(details.retirementVestedPercent ?? 100).dividedBy(100);
   const retirementBase = money(details.retirement ?? 0).times(vested).times(money(1).minus(retirementHaircut));
 
+  const cryptocurrencyEligible = money(details.cryptocurrency ?? 0).times(0.6);
   const realEstate = config.includeRealEstateEquity ? money(details.realEstateEquity ?? 0) : ZERO;
 
-  const eligibleAssets = nonRetirement.plus(retirementBase).plus(realEstate);
+  const eligibleAssets = nonRetirement.plus(cryptocurrencyEligible).plus(retirementBase).plus(realEstate);
 
   let netEligible = eligibleAssets;
   const deductions: Record<string, number> = {};
@@ -75,9 +77,10 @@ export function calcAssetDepletion(
     label: "Asset-Depletion Qualifying Income",
     value,
     unit: "usd",
-    formula: "income = (eligible non-retirement + adjusted retirement + optional RE equity − deductions) ÷ divisor months",
+    formula: "income = (eligible non-retirement + cryptocurrency at 60% + adjusted retirement + optional RE equity − deductions) ÷ divisor months",
     inputs: {
       nonRetirementEligible: round2(nonRetirement),
+      cryptocurrencyEligible: round2(cryptocurrencyEligible),
       retirementAdjusted: round2(retirementBase),
       realEstateEquityIncluded: config.includeRealEstateEquity ? (details.realEstateEquity ?? 0) : 0,
       eligibleAssets: round2(eligibleAssets),

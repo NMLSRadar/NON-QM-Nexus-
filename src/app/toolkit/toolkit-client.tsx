@@ -248,18 +248,20 @@ function AssetCalculator({ borrowerReference, setBorrowerReference }: { borrower
   const [checking, setChecking] = useState(250000);
   const [brokerage, setBrokerage] = useState(500000);
   const [stocks, setStocks] = useState(200000);
+  const [cryptocurrency, setCryptocurrency] = useState(0);
   const [retirement, setRetirement] = useState(350000);
   const [vested, setVested] = useState(100);
   const [down, setDown] = useState(200000);
   const [costs, setCosts] = useState(30000);
   const [reserves, setReserves] = useState(50000);
   const [divisor, setDivisor] = useState(120);
-  const inputs = { checking, brokerage, stocks, retirement, vested, down, costs, reserves, divisor };
-  const result = calcAssetDepletion({ checkingSavings: checking, brokerage, stocksBonds: stocks, retirement, retirementVestedPercent: vested, requiredDownPayment: down, closingCosts: costs, requiredReserves: reserves, assetDivisorMonths: divisor, assetsAlsoUsedToClose: true }, { deductDownPayment: true, deductClosingCosts: true, deductReserves: true });
+  const inputs = { checking, brokerage, stocks, cryptocurrency, retirement, vested, down, costs, reserves, divisor };
+  const result = calcAssetDepletion({ checkingSavings: checking, brokerage, stocksBonds: stocks, cryptocurrency, retirement, retirementVestedPercent: vested, requiredDownPayment: down, closingCosts: costs, requiredReserves: reserves, assetDivisorMonths: divisor, assetsAlsoUsedToClose: true }, { deductDownPayment: true, deductClosingCosts: true, deductReserves: true });
   const assetRows = [
     { label: "Checking & savings", amount: checking, eligibility: 100, setAmount: setChecking },
     { label: "Brokerage", amount: brokerage, eligibility: 100, setAmount: setBrokerage },
     { label: "Stocks & bonds", amount: stocks, eligibility: 100, setAmount: setStocks },
+    { label: "Cryptocurrency", amount: cryptocurrency, eligibility: 60, setAmount: setCryptocurrency },
     { label: "Retirement assets", amount: retirement, eligibility: vested, setAmount: setRetirement },
   ];
   return (

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   calc1099Income,
+  calcAssetDepletion,
   calcMonthlyPrincipalAndInterest,
   calcPnlIncome,
   calcToolkitLtv,
@@ -38,6 +39,13 @@ describe("Loan Officer Toolkit domain invariants", () => {
     expect(result.value).toBe(30_000);
     expect(result.notes?.join(" ")).toContain("tax returns are never required");
     expect(result.notes?.join(" ")).toContain("CPA attestation");
+  });
+
+  it("credits cryptocurrency at exactly 60% in asset depletion", () => {
+    const result = calcAssetDepletion({ cryptocurrency: 100_000, assetDivisorMonths: 120 });
+    expect(result.inputs?.cryptocurrencyEligible).toBe(60_000);
+    expect(result.inputs?.eligibleAssets).toBe(60_000);
+    expect(result.value).toBe(500);
   });
 
   it("calculates LTV, CLTV and the strictest applicable cap", () => {
