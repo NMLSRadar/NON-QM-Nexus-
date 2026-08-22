@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import masterContacts from "@/data/ae-master-contacts.json";
 
 export type AeContactTier = "direct" | "team";
 
@@ -16,6 +17,8 @@ export interface DirectoryContact {
   states: string[];
   tier: AeContactTier;
   isPrimary: boolean;
+  territoryNotes?: string | null;
+  verificationStatus?: string | null;
 }
 
 export interface AeDirectoryEntry {
@@ -24,40 +27,37 @@ export interface AeDirectoryEntry {
   contacts: DirectoryContact[];
 }
 
-interface BuiltInContact {
-  lenderNamePattern: RegExp;
-  id: string;
-  name: string;
-  title: string;
-  email: string | null;
-  phone: string | null;
+type MasterContact = (typeof masterContacts)[number];
+
+function normalizeLenderName(value: string): string {
+  return value
+    .toLocaleLowerCase("en-US")
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
 }
 
-// Production-safe bridge for contacts supplied directly by the platform owner.
-// All member surfaces resolve through this one module, so the directory,
-// lender detail, and scenario cards cannot drift while the existing
-// ae_profiles table remains the canonical editable admin store.
-const BUILT_IN_CONTACTS: BuiltInContact[] = [
-  {
-    lenderNamePattern: /\borion\b/i,
-    id: "owner-seed-orion-bobby-caldera",
-    name: "Bobby Caldera",
-    title: "Account Executive",
-    email: "bcaldera@orionlending.com",
-    phone: "(661) 219-1114",
-  },
-  {
-    lenderNamePattern: /\bcarrington\b/i,
-    id: "owner-seed-carrington-william-clark",
-    name: "William Clark",
-    title: "Account Executive",
-    email: null,
-    phone: "(949) 231-7294",
-  },
-];
+function syntheticLenderId(lenderName: string): string {
+  return `master-${normalizeLenderName(lenderName).replace(/\s+/g, "-")}`;
+}
 
 function profileTier(name: unknown): AeContactTier {
   return typeof name === "string" && name.trim().length > 0 ? "direct" : "team";
+}
+
+function masterTier(contact: MasterContact): AeContactTier {
+  return contact.verificationStatus?.toLocaleLowerCase("en-US").startsWith("direct") || contact.verificationStatus === "Owner supplied"
+    ? "direct"
+    : "team";
+}
+
+function sameContact(left: DirectoryContact, right: DirectoryContact): boolean {
+  if (left.id === right.id) return true;
+  if (left.email && right.email && left.email.toLocaleLowerCase("en-US") === right.email.toLocaleLowerCase("en-US")) return true;
+  const leftPhone = left.phone?.replace(/\D/g, "");
+  const rightPhone = right.phone?.replace(/\D/g, "");
+  return left.name.toLocaleLowerCase("en-US") === right.name.toLocaleLowerCase("en-US") && Boolean(leftPhone && rightPhone && leftPhone === rightPhone);
 }
 
 export async function getAeDirectoryEntries(lenderIds?: string[]): Promise<AeDirectoryEntry[]> {
@@ -72,33 +72,31 @@ export async function getAeDirectoryEntries(lenderIds?: string[]): Promise<AeDir
 
   const { data: lenders, error: lenderError } = await lenderQuery;
   if (lenderError) throw new Error(`Failed to load lenders for AE directory: ${lenderError.message}`);
-  if (!lenders?.length) return [];
 
-  const ids = lenders.map((lender) => lender.id as string);
-  const { data: profiles, error: profileError } = await supabase
-    .from("ae_profiles")
-    .select("id, lender_id, name, title, email, phone, photo_url, states, status, created_at")
-    .in("lender_id", ids)
-    .neq("status", "hidden")
-    .order("created_at", { ascending: true });
-  if (profileError) throw new Error(`Failed to load AE directory contacts: ${profileError.message}`);
+  const activeLenders = (lenders ?? []).map((lender) => ({ id: lender.id as string, name: lender.name as string }));
+  const activeByNormalizedName = new Map(activeLenders.map((lender) => [normalizeLenderName(lender.name), lender]));
+  const entriesById = new Map<string, AeDirectoryEntry>();
 
-  const profilesByLender = new Map<string, Array<Record<string, unknown>>>();
-  for (const profile of profiles ?? []) {
-    const lenderId = profile.lender_id as string;
-    const current = profilesByLender.get(lenderId) ?? [];
-    current.push(profile as Record<string, unknown>);
-    profilesByLender.set(lenderId, current);
-  }
+  for (const lender of activeLenders) entriesById.set(lender.id, { lenderId: lender.id, lenderName: lender.name, contacts: [] });
 
-  return lenders
-    .map((lender) => {
-      const lenderId = lender.id as string;
-      const lenderName = lender.name as string;
-      const contacts: DirectoryContact[] = (profilesByLender.get(lenderId) ?? []).map((profile, index) => ({
+  const ids = activeLenders.map((lender) => lender.id);
+  if (ids.length) {
+    const { data: profiles, error: profileError } = await supabase
+      .from("ae_profiles")
+      .select("id, lender_id, name, title, email, phone, photo_url, states, status, created_at")
+      .in("lender_id", ids)
+      .neq("status", "hidden")
+      .order("created_at", { ascending: true });
+    if (profileError) throw new Error(`Failed to load AE directory contacts: ${profileError.message}`);
+
+    for (const profile of profiles ?? []) {
+      const lenderId = profile.lender_id as string;
+      const entry = entriesById.get(lenderId);
+      if (!entry) continue;
+      entry.contacts.push({
         id: profile.id as string,
         lenderId,
-        lenderName,
+        lenderName: entry.lenderName,
         name: profile.name as string,
         title: (profile.title as string | null) ?? null,
         email: (profile.email as string | null) ?? null,
@@ -106,36 +104,46 @@ export async function getAeDirectoryEntries(lenderIds?: string[]): Promise<AeDir
         photoUrl: (profile.photo_url as string | null) ?? null,
         states: (profile.states as string[]) ?? [],
         tier: profileTier(profile.name),
-        isPrimary: index === 0,
-      }));
+        isPrimary: false,
+      });
+    }
+  }
 
-      for (const seed of BUILT_IN_CONTACTS.filter((candidate) => candidate.lenderNamePattern.test(lenderName))) {
-        const duplicate = contacts.some(
-          (contact) =>
-            (seed.email && contact.email?.toLowerCase() === seed.email.toLowerCase()) ||
-            contact.name.toLowerCase() === seed.name.toLowerCase(),
-        );
-        if (!duplicate) {
-          contacts.unshift({
-            id: seed.id,
-            lenderId,
-            lenderName,
-            name: seed.name,
-            title: seed.title,
-            email: seed.email,
-            phone: seed.phone,
-            photoUrl: null,
-            states: [],
-            tier: "direct",
-            isPrimary: true,
-          });
-          for (let index = 1; index < contacts.length; index += 1) contacts[index]!.isPrimary = false;
-        }
-      }
+  for (const source of masterContacts) {
+    const activeLender = activeByNormalizedName.get(normalizeLenderName(source.lenderName));
+    if (lenderIds?.length && !activeLender) continue;
 
-      return { lenderId, lenderName, contacts } satisfies AeDirectoryEntry;
-    })
-    .filter((entry) => entry.contacts.some((contact) => contact.email || contact.phone));
+    const lenderId = activeLender?.id ?? syntheticLenderId(source.lenderName);
+    const lenderName = activeLender?.name ?? source.lenderName;
+    const entry = entriesById.get(lenderId) ?? { lenderId, lenderName, contacts: [] };
+    const contact: DirectoryContact = {
+      id: source.id,
+      lenderId,
+      lenderName,
+      name: source.name,
+      title: source.title,
+      email: source.email,
+      phone: source.phone,
+      photoUrl: null,
+      states: [],
+      tier: masterTier(source),
+      isPrimary: false,
+      territoryNotes: source.territoryNotes,
+      verificationStatus: source.verificationStatus,
+    };
+    if (!entry.contacts.some((existing) => sameContact(existing, contact))) entry.contacts.push(contact);
+    entriesById.set(lenderId, entry);
+  }
+
+  return [...entriesById.values()]
+    .filter((entry) => entry.contacts.length > 0)
+    .map((entry) => ({
+      ...entry,
+      contacts: entry.contacts
+        .sort((a, b) => a.name.localeCompare(b.name, "en-US", { sensitivity: "base" }))
+        .map((contact, index) => ({ ...contact, isPrimary: index === 0 })),
+    }))
+    .sort((a, b) => a.lenderName.localeCompare(b.lenderName, "en-US", { sensitivity: "base" }));
 }
 
 export async function getAeContactsByLenderIds(lenderIds: string[]): Promise<Record<string, DirectoryContact[]>> {

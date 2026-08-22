@@ -92,6 +92,7 @@ function ContactCard({ contact, favorite, onFavorite }: { contact: DirectoryCont
             <Mail className="h-4 w-4" aria-hidden /> Email
           </a>
         ) : null}
+        {!contact.phone && !contact.email ? <span className="text-xs text-slate-500">Contact details pending verification</span> : null}
       </div>
     </article>
   );
@@ -117,7 +118,6 @@ export function AeDirectoryClient({ entries }: { entries: AeDirectoryEntry[] }) 
     () =>
       entries
         .flatMap((entry) => entry.contacts)
-        .filter((contact) => contact.email || contact.phone)
         .sort((a, b) => a.name.localeCompare(b.name, "en-US", { sensitivity: "base" })),
     [entries],
   );
