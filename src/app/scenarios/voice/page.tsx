@@ -19,9 +19,9 @@ export default function VoiceScenarioPage() {
               <p className="mt-1 max-w-2xl text-sm sm:text-base text-slate-400">
                 Speak (or type) the full scenario. Once all nine vitals are captured — purchase/refi, occupancy, property
                 type, value, loan amount, LTV, credit score, income documentation, and citizenship —{" "}
-                <span className="font-semibold text-amber-300">the analysis runs automatically</span> and shows matching
-                lender programs, best option first. Give fewer details and the assistant will ask for exactly what&apos;s
-                missing.
+                <span className="font-semibold text-amber-300">a lender-matches button appears</span>. You can keep speaking
+                to add optional details before viewing the ranked programs. Give fewer details and the assistant will ask
+                for exactly what&apos;s missing.
               </p>
             </div>
           </div>

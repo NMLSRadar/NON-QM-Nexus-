@@ -79,7 +79,7 @@ export const EXTRA_VITAL_QUESTIONS: Record<ExtraVitalKey, string> = {
 
 /** Refinance-only conditional vital — captured and used for current-lien
  * LTV / equity / cash-out calculations whenever mentioned, but (like the
- * EXTRA vitals above) never counted toward the 8-vital gate: on a purchase
+ * EXTRA vitals above) never counted toward the 9-vital gate: on a purchase
  * it's simply irrelevant and hidden; on a refinance it's genuinely useful
  * but the new requested loan amount + property value alone are already
  * enough to run matching, so it must not block the first results. */

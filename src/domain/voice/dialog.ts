@@ -9,13 +9,13 @@ import { VITAL_KEYS, VITAL_LABELS, VITAL_QUESTIONS, VitalKey, VoiceExtraction } 
  * derived (any one of {property value, loan amount, LTV} from the other two),
  * detects contradictions, and produces the assistant's next prompt: an
  * acknowledgment of what it heard plus targeted questions for exactly the
- * vitals still missing. When all eight vitals resolve and there are no
- * conflicts, `readyToAnalyze` is true and the UI runs the analysis
- * automatically.
+ * vitals still missing. When all nine vitals resolve and there are no
+ * conflicts, `readyToAnalyze` is true and the UI exposes the lender-matches
+ * action.
  */
 
 export interface Assessment {
-  /** All eight vitals resolved (stated or derived). */
+  /** All nine vitals resolved (stated or derived). */
   complete: boolean;
   /** Complete AND no unresolved conflicts — safe to auto-run analysis. */
   readyToAnalyze: boolean;
@@ -270,7 +270,7 @@ export function assess(x: VoiceExtraction): Assessment {
   } else if (complete) {
     prompt = `All set — ${vitalsFilled} of ${VITAL_KEYS.length} required vitals captured: ${filledSummary.join(", ")}.${
       citizenshipConfidenceNote ? ` ${citizenshipConfidenceNote}` : ""
-    }${visaClassificationNote ? ` ${visaClassificationNote}` : ""}${noFicoNote ? ` ${noFicoNote}` : ""}${assumedDownPaymentNote ? ` ${assumedDownPaymentNote}` : ""} Have more details? Keep speaking. Otherwise, say “Proceed” to view matching lenders.`;
+    }${visaClassificationNote ? ` ${visaClassificationNote}` : ""}${noFicoNote ? ` ${noFicoNote}` : ""}${assumedDownPaymentNote ? ` ${assumedDownPaymentNote}` : ""} You can keep speaking to add optional details.`;
   } else if (filledSummary.length === 0) {
     prompt = `Tell me the full scenario in one go — I need ${listNaturally(askable.map((k) => VITAL_LABELS[k].toLowerCase()))}.`;
   } else {

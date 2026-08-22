@@ -201,32 +201,6 @@ html[data-theme="light"] .pricing-guidance--guidelines .pricing-guidance__detail
   border-left-color: #ae3c3c;
   background: rgba(190, 52, 52, 0.07);
 }
-html[data-theme="light"] .proceed-prompt-card {
-  border-color: rgba(169, 132, 44, 0.52) !important;
-  background: radial-gradient(circle at 88% 0%, rgba(196, 154, 58, 0.16), transparent 34%), linear-gradient(145deg, #ffffff, #f7f0e2) !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8), 0 18px 38px -26px rgba(11, 31, 58, 0.55);
-}
-html[data-theme="light"] .proceed-prompt-card__header { color: #7a5c1d; }
-html[data-theme="light"] .proceed-prompt-card__icon {
-  border-color: rgba(169, 132, 44, 0.48);
-  background: rgba(169, 132, 44, 0.09);
-  box-shadow: 0 7px 16px -10px rgba(11, 31, 58, 0.5);
-}
-html[data-theme="light"] .proceed-prompt-card__message {
-  border-left-color: #a9842c;
-  background: linear-gradient(90deg, rgba(169, 132, 44, 0.12), rgba(255, 255, 255, 0.55));
-  color: #0b1f3a;
-}
-html[data-theme="light"] .proceed-prompt-card__instruction strong {
-  border-color: rgba(122, 92, 29, 0.48);
-  background: linear-gradient(180deg, #f6dc84, #c49a3a 64%, #9b7728);
-  color: #07182d;
-  box-shadow: 0 7px 16px -9px rgba(11, 31, 58, 0.45);
-}
-html[data-theme="light"] .proceed-prompt-card__chevron {
-  color: #8a681f;
-  filter: drop-shadow(0 2px 3px rgba(11, 31, 58, 0.2));
-}
 
 /* Gold glass / panels become translucent champagne glass on light. */
 html[data-theme="light"] .gold-glass {
@@ -2130,8 +2104,7 @@ html[data-theme="light"] .nexus-gold-copy {
 }
 
 /* High-value scenario surfaces receive stronger tonal separation. */
-html[data-theme="light"] .pricing-guidance,
-html[data-theme="light"] .proceed-prompt-card {
+html[data-theme="light"] .pricing-guidance {
   background: radial-gradient(circle at 100% 0%, rgba(185, 139, 41, 0.2), transparent 40%), linear-gradient(150deg, #f3eadc, #e4d6c2 74%) !important;
   border-color: var(--nexus-border-strong) !important;
   box-shadow: 0 22px 48px -30px rgba(58, 40, 20, 0.6), inset 0 1px 0 rgba(255, 250, 239, 0.72) !important;

@@ -56,8 +56,8 @@ afterEach(() => {
   cleanup();
 });
 
-describe("Voice retry after a correction (no canAnalyze toggle required)", () => {
-  it("automatically retries and clears the stale error once a manual correction fixes the failing field", async () => {
+describe("Voice resubmission after a correction", () => {
+  it("submits the corrected extraction and clears the stale error on the next click", async () => {
     // First attempt: the server rejects with a specific validation message
     // (simulating, e.g., an out-of-range credit score slipping through).
     createScenarioFromVoice.mockResolvedValueOnce({ message: "The credit score must be between 300 and 850." });
@@ -68,10 +68,9 @@ describe("Voice retry after a correction (no canAnalyze toggle required)", () =>
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Vitals — 9 of 9 captured/)).toBeInTheDocument();
+      expect(screen.getByText(/9 of 9 Required Vitals Complete/)).toBeInTheDocument();
     });
-    await waitFor(() => screen.getByRole("button", { name: "Skip" }));
-    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(screen.getByRole("button", { name: "See lender matches" }));
 
     await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
     await waitFor(() => {
@@ -86,9 +85,11 @@ describe("Voice retry after a correction (no canAnalyze toggle required)", () =>
     createScenarioFromVoice.mockResolvedValueOnce({ redirectTo: "/scenarios/mock-id" });
 
     const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Review or correct required vitals" }));
     await user.click(screen.getByText("Correct a field manually"));
     const loanAmountInput = screen.getByLabelText("Loan amount ($)");
     fireEvent.change(loanAmountInput, { target: { value: "410000" } });
+    fireEvent.click(screen.getByRole("button", { name: "See lender matches" }));
 
     await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(2));
     // The stale error message from the first attempt must be gone.
@@ -96,7 +97,7 @@ describe("Voice retry after a correction (no canAnalyze toggle required)", () =>
     await waitFor(() => expect(push).toHaveBeenCalledWith("/scenarios/mock-id"));
   }, 15000);
 
-  it("retries again when a correction arrives while a previous submission is still in flight", async () => {
+  it("re-enables the action after an in-flight failure and submits the correction on the next click", async () => {
     let resolveFirst!: (value: { message: string }) => void;
     createScenarioFromVoice.mockImplementationOnce(
       () => new Promise((resolve) => { resolveFirst = resolve; })
@@ -106,13 +107,13 @@ describe("Voice retry after a correction (no canAnalyze toggle required)", () =>
     setTranscript(
       "Purchase of a single family primary residence worth $500,000, loan amount 400k, credit score 720, full doc income. Borrower is a U.S. citizen."
     );
-    await waitFor(() => screen.getByRole("button", { name: "Skip" }));
-    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(screen.getByRole("button", { name: "See lender matches" }));
     await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
 
     // A correction arrives WHILE the first request is still pending.
     createScenarioFromVoice.mockResolvedValueOnce({ redirectTo: "/scenarios/mock-id" });
     const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Review or correct required vitals" }));
     await user.click(screen.getByText("Correct a field manually"));
     const ficoInput = screen.getByLabelText("FICO");
     fireEvent.change(ficoInput, { target: { value: "740" } });
@@ -120,9 +121,8 @@ describe("Voice retry after a correction (no canAnalyze toggle required)", () =>
     // Now the first (stale) request resolves with a failure.
     resolveFirst({ message: "Please provide the requested loan amount." });
 
-    // The effect must retry using the freshest state once the in-flight
-    // request settles, even though nothing "new" changed at that exact
-    // moment beyond isPending flipping back to false.
+    await waitFor(() => expect(screen.getByRole("button", { name: "See lender matches" })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "See lender matches" }));
     await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/scenarios/mock-id"));
   }, 15000);

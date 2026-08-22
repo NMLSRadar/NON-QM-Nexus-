@@ -40,22 +40,22 @@ afterEach(() => {
 });
 
 describe("Test 1 & 3 (spec): the 9 required vitals alone are enough — investor experience and vesting are optional", () => {
-  it("submits automatically with only the 9 core vitals, no investor experience or vesting mentioned", async () => {
+  it("submits from the lender-matches button with only the 9 core vitals", async () => {
     render(<VoiceClient />);
     setTranscript(
       "Purchase of a single family investment property worth $500,000, loan amount 400k, credit score 720, DSCR to qualify. Borrower is a U.S. citizen."
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Vitals — 9 of 9 captured/)).toBeInTheDocument();
+      expect(screen.getByText(/9 of 9 Required Vitals Complete/)).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByRole("button", { name: "Review or correct required vitals" }));
 
     // Both optional fields show "Not mentioned" — never an error state.
     expect(screen.getAllByText("Not mentioned").length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText(/investor experience/i, { selector: ".text-rose-700, .text-amber-800" })).not.toBeInTheDocument();
 
-    await waitFor(() => screen.getByRole("button", { name: "Skip" }));
-    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(screen.getByRole("button", { name: "See lender matches" }));
 
     await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/scenarios/mock-id"));
@@ -88,8 +88,9 @@ describe("Test 6 (spec): purchase scenario hides the Current Loan Balance tab", 
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Vitals — 9 of 9 captured/)).toBeInTheDocument();
+      expect(screen.getByText(/9 of 9 Required Vitals Complete/)).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByRole("button", { name: "Review or correct required vitals" }));
 
     expect(screen.queryByText("Current loan balance")).not.toBeInTheDocument();
     fireEvent.click(screen.getByText("Correct a field manually"));

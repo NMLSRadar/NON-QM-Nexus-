@@ -75,6 +75,7 @@ describe("Voice intake session: Purchase", () => {
   it("tile fills green, assistant confirms purchase, and the saved payload carries loanPurpose=purchase", async () => {
     render(<VoiceClient />);
     await typeTranscript(`Purchase of a ${BASE}`);
+    await userEvent.click(screen.getByRole("button", { name: "Review or correct required vitals" }));
 
     await waitFor(() => {
       const tile = purposeTile();
@@ -83,10 +84,9 @@ describe("Voice intake session: Purchase", () => {
       expect(tile.className).toContain("bg-emerald-500/10");
     });
 
-    expect(screen.getByText(/All set — 9 of 9 vitals captured/)).toHaveTextContent("purchase");
+    expect(screen.getByText(/All set — 9 of 9 required vitals captured/)).toHaveTextContent("purchase");
 
-    await waitFor(() => screen.getByRole("button", { name: "Skip" }));
-    await userEvent.click(screen.getByRole("button", { name: "Skip" }));
+    await userEvent.click(screen.getByRole("button", { name: "See lender matches" }));
 
     await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
     const sentExtraction = createScenarioFromVoice.mock.calls[0]![0];
@@ -127,6 +127,7 @@ describe("Voice intake session: Cash-Out Refinance", () => {
   it("tile fills green as Cash-out refi, assistant summary says cash-out, and the saved payload carries loanPurpose=cash_out_refinance", async () => {
     render(<VoiceClient />);
     await typeTranscript(`The borrower wants to refinance and pull cash out of a ${BASE}`);
+    await userEvent.click(screen.getByRole("button", { name: "Review or correct required vitals" }));
 
     await waitFor(() => {
       const tile = purposeTile();
@@ -134,10 +135,9 @@ describe("Voice intake session: Cash-Out Refinance", () => {
       expect(tile.className).toContain("border-emerald-400/40");
     });
 
-    expect(screen.getByText(/All set — 9 of 9 vitals captured/)).toHaveTextContent("cash-out refinance");
+    expect(screen.getByText(/All set — 9 of 9 required vitals captured/)).toHaveTextContent("cash-out refinance");
 
-    await waitFor(() => screen.getByRole("button", { name: "Skip" }));
-    await userEvent.click(screen.getByRole("button", { name: "Skip" }));
+    await userEvent.click(screen.getByRole("button", { name: "See lender matches" }));
 
     await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
     const sentExtraction = createScenarioFromVoice.mock.calls[0]![0];
@@ -150,6 +150,7 @@ describe("Voice intake session: Rate-and-Term Refinance", () => {
   it("tile fills green as Rate/term refi, assistant summary says rate-and-term, and the saved payload carries loanPurpose=rate_term_refinance", async () => {
     render(<VoiceClient />);
     await typeTranscript(`They just want to lower their rate on a ${BASE}, not taking cash back`);
+    await userEvent.click(screen.getByRole("button", { name: "Review or correct required vitals" }));
 
     await waitFor(() => {
       const tile = purposeTile();
@@ -157,10 +158,9 @@ describe("Voice intake session: Rate-and-Term Refinance", () => {
       expect(tile.className).toContain("border-emerald-400/40");
     });
 
-    expect(screen.getByText(/All set — 9 of 9 vitals captured/)).toHaveTextContent("rate-and-term refinance");
+    expect(screen.getByText(/All set — 9 of 9 required vitals captured/)).toHaveTextContent("rate-and-term refinance");
 
-    await waitFor(() => screen.getByRole("button", { name: "Skip" }));
-    await userEvent.click(screen.getByRole("button", { name: "Skip" }));
+    await userEvent.click(screen.getByRole("button", { name: "See lender matches" }));
 
     await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(1));
     const sentExtraction = createScenarioFromVoice.mock.calls[0]![0];

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Home, User, DollarSign, Wallet, Percent, Gauge, FolderOpen, IdCard, TrendingUp, MapPin, Mic, ChevronDown, Sparkles } from "lucide-react";
+import { Home, User, DollarSign, Wallet, Percent, Gauge, FolderOpen, IdCard, TrendingUp, MapPin, Mic } from "lucide-react";
 import { Card } from "@/components/ui";
 import { AiProcessingSequence } from "@/components/ai-processing-sequence";
 import { LiveLenderRankings } from "@/components/live-lender-rankings";
@@ -12,7 +12,7 @@ import { extractFromTranscript } from "@/domain/voice/extract";
 import { assess } from "@/domain/voice/dialog";
 import { VITAL_KEYS, VITAL_LABELS, EXTRA_VITAL_KEYS, EXTRA_VITAL_LABELS, REFI_VITAL_LABEL, type Captured, type VitalKey, type ExtraVitalKey, type VoiceExtraction } from "@/domain/voice/slots";
 import type { Citizenship, CreditProfileType, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
-import { CREDIT_PROFILE_TYPE_LABELS, MORTGAGE_LATES_CATEGORY_LABELS } from "@/domain/types/enums";
+import { CREDIT_PROFILE_TYPE_LABELS } from "@/domain/types/enums";
 import { createScenarioFromVoice, getVoiceCatalog } from "./actions";
 
 /** Per-vital icon, matching the mockup's gold-ringed icon badges. */
@@ -127,13 +127,6 @@ interface Overrides {
 
 function manual<T>(value: T): Captured<T> {
   return { value, source: "manual edit" };
-}
-
-/** Final-clause command detector. Anchoring at the end prevents ordinary
- * scenario prose containing words such as "continue" from being consumed as
- * a navigation command. */
-export function hasProceedCommand(text: string): boolean {
-  return /(?:^|[.!?]\s*|\s)(?:proceed|let'?s proceed|go ahead|continue|show me (?:the )?lenders|show lenders|find lenders|show my matches|run the scenario)[.!?]?\s*$/i.test(text.trim());
 }
 
 function applyOverrides(base: VoiceExtraction, o: Overrides): VoiceExtraction {
@@ -274,17 +267,9 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recorderChunksRef = useRef<Blob[]>([]);
   const recorderStreamRef = useRef<MediaStream | null>(null);
-  const lastAttemptedRef = useRef<string | null>(null);
   const inFlightRef = useRef(false);
-  const hasFailedRef = useRef(false);
   const spokenRef = useRef("");
   const autoStartedRef = useRef(false);
-  /** At 9/9 the required vitals collapse and Additional Information opens
-   * automatically. With no optional facts, a spoken Proceed command submits.
-   * Once any optional fact exists, only the prominent button submits so the
-   * user can keep speaking multiple optional details without interruption. */
-  const [additionalInfoPromptShown, setAdditionalInfoPromptShown] = useState(false);
-  const [additionalInfoResolved, setAdditionalInfoResolved] = useState(false);
   const [requiredVitalsExpanded, setRequiredVitalsExpanded] = useState(true);
 
   useEffect(() => {
@@ -306,22 +291,11 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
 
   const effective = useMemo(() => applyOverrides(extractFromTranscript(transcript), overrides), [transcript, overrides]);
   const assessment = useMemo(() => assess(effective), [effective]);
-  const optionalInfoCount = [
-    effective.mortgageLatesCategory,
-    effective.giftFundsUsed?.value !== "unknown" ? effective.giftFundsUsed : undefined,
-    effective.strIncomeUsed?.value !== "unknown" ? effective.strIncomeUsed : undefined,
-    effective.oneYearSelfEmployed?.value !== "unknown" ? effective.oneYearSelfEmployed : undefined,
-  ].filter(Boolean).length;
-  const proceedCommandHeard = hasProceedCommand(transcript);
-
   useEffect(() => {
     if (assessment.complete) {
       setRequiredVitalsExpanded(false);
-      setAdditionalInfoPromptShown(true);
     } else {
       setRequiredVitalsExpanded(true);
-      setAdditionalInfoPromptShown(false);
-      setAdditionalInfoResolved(false);
     }
   }, [assessment.complete]);
 
@@ -639,38 +613,9 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
     window.speechSynthesis.speak(new SpeechSynthesisUtterance(assessment.prompt));
   }, [assessment.prompt, speakBack, listening]);
 
-  /* -------- auto-analyze the moment all 9 vitals resolve -------- */
-  useEffect(() => {
+  function handleSeeLenderMatches() {
     if (!canAnalyze || isPending || inFlightRef.current) return;
-    const signature = JSON.stringify(effective);
-    // Fire exactly once when the scenario first becomes ready (the normal,
-    // happy-path behavior — never retriggers on every subsequent keystroke
-    // while still typing/dictating). The ONLY other case that (re-)fires is
-    // when the previous attempt was actually declined by the server AND
-    // something has genuinely changed since then — this is what lets a
-    // correction (voice or manual) automatically retry even though
-    // canAnalyze itself never changes value. Fixes a real freeze: this
-    // effect used to depend only on the `canAnalyze` boolean, so a
-    // correction made AFTER a failed attempt — while canAnalyze stayed true
-    // the whole time (e.g. fixing an out-of-range value via manual
-    // override) — never re-triggered a retry, permanently stranding the UI
-    // on the stale "Please correct the highlighted fields" message even
-    // once the data was fully valid.
-    const neverAttempted = lastAttemptedRef.current === null;
-    const changedSinceFailure = hasFailedRef.current && signature !== lastAttemptedRef.current;
-    if (!neverAttempted && !changedSinceFailure) return;
-
-    if (!additionalInfoResolved) {
-      if (!additionalInfoPromptShown) setAdditionalInfoPromptShown(true);
-      if (additionalInfoPromptShown && optionalInfoCount === 0 && proceedCommandHeard) {
-        setAdditionalInfoResolved(true);
-      }
-      return;
-    }
-
     inFlightRef.current = true;
-    lastAttemptedRef.current = signature;
-    hasFailedRef.current = false;
     setServerMessage(null);
     stopListening();
     startTransition(async () => {
@@ -684,16 +629,8 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
       // arm the retry-on-next-genuine-change path above.
       if (result?.message) {
         setServerMessage(result.message);
-        hasFailedRef.current = true;
       }
     });
-    // stopListening is intentionally not a dependency: it's a stable,
-    // unmount-safe helper used to stop capture right before submission.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effective, canAnalyze, isPending, router, additionalInfoResolved, additionalInfoPromptShown, optionalInfoCount, proceedCommandHeard]);
-
-  function handleFindMatchingLenders() {
-    setAdditionalInfoResolved(true);
   }
 
   function setOv<K extends keyof Overrides>(key: K, value: Overrides[K]) {
@@ -989,49 +926,21 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         </>}
       </Card>
 
-      {additionalInfoPromptShown && !additionalInfoResolved && (
-        <Card dark className="proceed-prompt-card">
-          <div className="proceed-prompt-card__header">
-            <span className="proceed-prompt-card__icon" aria-hidden="true"><Sparkles /></span>
-            <span>Additional Information</span>
-          </div>
-          <div className="proceed-prompt-card__message" role="status" aria-live="polite">
-            <p>Have more details? Keep speaking.</p>
-            <p className="proceed-prompt-card__instruction">
-              Otherwise, say <strong>&ldquo;Proceed&rdquo;</strong> to view matching lenders.
-            </p>
-            <ChevronDown className="proceed-prompt-card__chevron" aria-hidden="true" />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {(
-              [
-                { key: "mortgageLatesCategory" as const, label: "Mortgage lates", value: effective.mortgageLatesCategory ? MORTGAGE_LATES_CATEGORY_LABELS[effective.mortgageLatesCategory.value] : undefined, source: effective.mortgageLatesCategory?.source },
-                { key: "giftFundsUsed" as const, label: "Gift funds", value: effective.giftFundsUsed && effective.giftFundsUsed.value !== "unknown" ? (effective.giftFundsUsed.value === "yes" ? "Yes" : "No") : undefined, source: effective.giftFundsUsed?.source },
-                ...(effective.incomeDocType?.value === "dscr"
-                  ? [{ key: "strIncomeUsed" as const, label: "DSCR short-term-rental income", value: effective.strIncomeUsed && effective.strIncomeUsed.value !== "unknown" ? (effective.strIncomeUsed.value === "yes" ? "Yes" : "No") : undefined, source: effective.strIncomeUsed?.source }]
-                  : []),
-                { key: "oneYearSelfEmployed" as const, label: "One-year self-employed", value: effective.oneYearSelfEmployed && effective.oneYearSelfEmployed.value !== "unknown" ? (effective.oneYearSelfEmployed.value === "yes" ? "Yes" : "No") : undefined, source: effective.oneYearSelfEmployed?.source },
-              ] as Array<{ key: string; label: string; value?: string; source?: string }>
-            ).map((v) => (
-              <div key={v.key} className={`flex items-start gap-2.5 rounded-lg border p-2.5 ${v.value ? "border-emerald-400/40 bg-emerald-500/10" : "border-white/10 bg-black/20"}`}>
-                <div className="min-w-0">
-                  <p className="text-[11px] text-slate-400">{v.label}</p>
-                  <p className={`text-sm font-semibold ${v.value ? "text-white" : "text-slate-500"}`}>{v.value ?? "Not mentioned yet"}</p>
-                  {v.value && v.source && (
-                    <p className="text-[10px] text-slate-500 truncate" title={v.source}>
-                      “{v.source}”
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-          {optionalInfoCount > 0 && (
-            <button type="button" onClick={handleFindMatchingLenders} className="gold-button gold-cta-glow mt-5 w-full rounded-lg px-5 py-3.5 text-lg font-black tracking-[0.12em]">
-              PROCEED
-            </button>
-          )}
-        </Card>
+      {canAnalyze && (
+        <div className="lender-match-cta">
+          <span className="sr-only" role="status" aria-live="polite">
+            All nine required vitals are captured. Lender matches are ready to view.
+          </span>
+          <button
+            type="button"
+            onClick={handleSeeLenderMatches}
+            disabled={isPending}
+            aria-label="See lender matches"
+            className="gold-button gold-cta-glow lender-match-cta__button"
+          >
+            SEE LENDER MATCHES?
+          </button>
+        </div>
       )}
 
       <Card dark title="Live Lender Rankings">
