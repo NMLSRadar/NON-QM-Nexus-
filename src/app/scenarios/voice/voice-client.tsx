@@ -292,11 +292,12 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   const effective = useMemo(() => applyOverrides(extractFromTranscript(transcript), overrides), [transcript, overrides]);
   const assessment = useMemo(() => assess(effective), [effective]);
   useEffect(() => {
-    if (assessment.complete) {
-      setRequiredVitalsExpanded(false);
-    } else {
-      setRequiredVitalsExpanded(true);
-    }
+    // Never collapse the intake automatically when derived values complete the
+    // nine-vital gate. A 5–8-unit scenario can reach 9/9 after only six spoken
+    // details because occupancy, DSCR, and LTV are derived; collapsing at that
+    // moment looks like voice intake has ejected the user. Keep it open unless
+    // the user explicitly collapses it, and reopen it if completeness regresses.
+    if (!assessment.complete) setRequiredVitalsExpanded(true);
   }, [assessment.complete]);
 
   /* -------- live lender rankings (3-panel real-time experience) --------

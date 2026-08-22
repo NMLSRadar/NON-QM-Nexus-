@@ -49,7 +49,6 @@ describe("Test 1 & 3 (spec): the 9 required vitals alone are enough — investor
     await waitFor(() => {
       expect(screen.getByText(/9 of 9 Required Vitals Complete/)).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByRole("button", { name: "Review or correct required vitals" }));
 
     // Both optional fields show "Not mentioned" — never an error state.
     expect(screen.getAllByText("Not mentioned").length).toBeGreaterThanOrEqual(2);
@@ -90,7 +89,6 @@ describe("Test 6 (spec): purchase scenario hides the Current Loan Balance tab", 
     await waitFor(() => {
       expect(screen.getByText(/9 of 9 Required Vitals Complete/)).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByRole("button", { name: "Review or correct required vitals" }));
 
     expect(screen.queryByText("Current loan balance")).not.toBeInTheDocument();
     fireEvent.click(screen.getByText("Correct a field manually"));

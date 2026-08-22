@@ -63,6 +63,23 @@ describe("nine-vital lender-match gate", () => {
     expect(createScenarioFromVoice).not.toHaveBeenCalled();
   });
 
+  it("keeps the intake open when six spoken vitals derive the remaining three", () => {
+    render(<VoiceClient />);
+    act(() => setTranscript(
+      "Purchase of a six-unit property worth $500,000 with a $400,000 loan, 720 FICO, U.S. citizen.",
+    ));
+
+    // 5–8 units deterministically supplies investment occupancy and DSCR;
+    // property value plus loan amount supplies LTV. Completion must expose
+    // the CTA without collapsing the vitals or navigating automatically.
+    expect(screen.getByText("✓ 9 of 9 Required Vitals Complete")).toBeInTheDocument();
+    expect(screen.getByText("Purchase, refinance, HELOC, or second lien")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Collapse required vitals" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "See lender matches" })).toBeInTheDocument();
+    expect(createScenarioFromVoice).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it("submits the same complete extraction, including optional vitals, and follows the returned route", async () => {
     render(<VoiceClient />);
     act(() => setTranscript(`${COMPLETE_SCENARIO} Borrower has one mortgage late, is using gift funds from his parents, and has only been self-employed for one year.`));

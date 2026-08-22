@@ -85,7 +85,6 @@ describe("Voice resubmission after a correction", () => {
     createScenarioFromVoice.mockResolvedValueOnce({ redirectTo: "/scenarios/mock-id" });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Review or correct required vitals" }));
     await user.click(screen.getByText("Correct a field manually"));
     const loanAmountInput = screen.getByLabelText("Loan amount ($)");
     fireEvent.change(loanAmountInput, { target: { value: "410000" } });
@@ -113,7 +112,6 @@ describe("Voice resubmission after a correction", () => {
     // A correction arrives WHILE the first request is still pending.
     createScenarioFromVoice.mockResolvedValueOnce({ redirectTo: "/scenarios/mock-id" });
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Review or correct required vitals" }));
     await user.click(screen.getByText("Correct a field manually"));
     const ficoInput = screen.getByLabelText("FICO");
     fireEvent.change(ficoInput, { target: { value: "740" } });

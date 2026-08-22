@@ -38,7 +38,7 @@ vi.mock("@/app/scenarios/voice/actions", () => ({
 // A transcript covering the 8 non-purpose vitals (including citizenship,
 // now a required core vital), so only loan-purpose classification differs
 // between cases and every case but the ambiguous one reaches "9 of 9
-// captured" and auto-submits.
+// captured" and exposes the explicit lender-matches action.
 const BASE =
   "single family primary residence worth $500,000, loan amount 350k, credit score 720, full doc income, U.S. citizen";
 
@@ -75,7 +75,6 @@ describe("Voice intake session: Purchase", () => {
   it("tile fills green, assistant confirms purchase, and the saved payload carries loanPurpose=purchase", async () => {
     render(<VoiceClient />);
     await typeTranscript(`Purchase of a ${BASE}`);
-    await userEvent.click(screen.getByRole("button", { name: "Review or correct required vitals" }));
 
     await waitFor(() => {
       const tile = purposeTile();
@@ -127,7 +126,6 @@ describe("Voice intake session: Cash-Out Refinance", () => {
   it("tile fills green as Cash-out refi, assistant summary says cash-out, and the saved payload carries loanPurpose=cash_out_refinance", async () => {
     render(<VoiceClient />);
     await typeTranscript(`The borrower wants to refinance and pull cash out of a ${BASE}`);
-    await userEvent.click(screen.getByRole("button", { name: "Review or correct required vitals" }));
 
     await waitFor(() => {
       const tile = purposeTile();
@@ -150,7 +148,6 @@ describe("Voice intake session: Rate-and-Term Refinance", () => {
   it("tile fills green as Rate/term refi, assistant summary says rate-and-term, and the saved payload carries loanPurpose=rate_term_refinance", async () => {
     render(<VoiceClient />);
     await typeTranscript(`They just want to lower their rate on a ${BASE}, not taking cash back`);
-    await userEvent.click(screen.getByRole("button", { name: "Review or correct required vitals" }));
 
     await waitFor(() => {
       const tile = purposeTile();
