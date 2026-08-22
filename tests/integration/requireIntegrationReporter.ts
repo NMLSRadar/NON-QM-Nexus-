@@ -13,34 +13,25 @@
 // was skipped, this reporter fails the process with a clear, unmissable
 // reason instead of a quiet green.
 import type { Reporter } from "vitest/reporters";
-import type { File, Task } from "vitest";
+import type { TestModule } from "vitest/node";
 
-function countTasks(tasks: Task[]): { total: number; skipped: number } {
+function countTests(testModules: ReadonlyArray<TestModule>): { total: number; skipped: number } {
   let total = 0;
   let skipped = 0;
-  for (const task of tasks) {
-    if (task.type === "test" || task.type === "custom") {
+  for (const testModule of testModules) {
+    for (const test of testModule.children.allTests()) {
       total += 1;
-      const state = task.result?.state;
-      if (state === "skip" || state === "todo" || task.mode === "skip" || task.mode === "todo") {
-        skipped += 1;
-      }
-    }
-    const children = (task as unknown as { tasks?: Task[] }).tasks;
-    if (Array.isArray(children) && children.length > 0) {
-      const nested = countTasks(children);
-      total += nested.total;
-      skipped += nested.skipped;
+      if (test.result().state === "skipped") skipped += 1;
     }
   }
   return { total, skipped };
 }
 
 export default class RequireIntegrationReporter implements Reporter {
-  onFinished(files: File[] = []): void {
+  onTestRunEnd(testModules: ReadonlyArray<TestModule>): void {
     if (process.env.REQUIRE_INTEGRATION !== "1") return;
 
-    const { total, skipped } = countTasks(files as unknown as Task[]);
+    const { total, skipped } = countTests(testModules);
 
     if (total > 0 && skipped === total) {
       console.error(
