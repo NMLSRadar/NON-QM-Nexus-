@@ -99,7 +99,7 @@ export function calcAssetDepletion(
     label: "Asset-Depletion Qualifying Income",
     value,
     unit: "usd",
-    formula: "income = (cash at 100% + publicly traded stocks at 80% + eligible investment-grade bonds at 80% + mutual funds at 80% + cryptocurrency at 60% + vested retirement at 70% + optional eligible assets − deductions) ÷ divisor months",
+    formula: "income = (cash at 100% + publicly traded stocks at 80% + eligible investment-grade bonds at 80% + mutual funds at 80% + cryptocurrency at 60% + vested retirement at 70% + optional eligible assets − deductions) ÷ number of months",
     inputs: {
       checkingSavingsEligible: round2(checkingEligible),
       legacyBrokerageEligible: round2(legacyBrokerageEligible),
