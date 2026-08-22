@@ -307,14 +307,21 @@ export class SupabaseRepository implements Repository {
     const programIds = (programs as Array<{ id: string; lender_id: string }>).map((p) => p.id);
     if (programIds.length === 0) return new Set();
 
-    const { data: guidelineVersions, error: gvError } = await this.supabase
-      .from("guideline_versions")
-      .select("program_id, verification_status")
-      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
-      .in("program_id", programIds)
-      .eq("verification_status", "human_verified");
-    if (gvError) throw new Error(`Failed to list guideline versions for verification check: ${gvError.message}`);
-    const verifiedProgramIds = new Set((guidelineVersions as Array<{ program_id: string }>).map((g) => g.program_id));
+    // PostgREST encodes `.in()` values into the request URL. Chunk this query
+    // so a large catalog cannot exceed the gateway's URL limit.
+    const verifiedProgramIds = new Set<string>();
+    for (let offset = 0; offset < programIds.length; offset += 100) {
+      const { data: guidelineVersions, error: gvError } = await this.supabase
+        .from("guideline_versions")
+        .select("program_id")
+        .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+        .in("program_id", programIds.slice(offset, offset + 100))
+        .eq("verification_status", "human_verified");
+      if (gvError) throw new Error(`Failed to list guideline versions for verification check: ${gvError.message}`);
+      for (const guideline of guidelineVersions as Array<{ program_id: string }>) {
+        verifiedProgramIds.add(guideline.program_id);
+      }
+    }
 
     const verifiedLenderIds = new Set<string>();
     for (const p of programs as Array<{ id: string; lender_id: string }>) {
@@ -414,17 +421,20 @@ export class SupabaseRepository implements Repository {
     // listLenders — a program must not evaluate in matching for customer
     // accounts unless it has a human_verified guideline_version. Pending
     // (AI-extracted or otherwise unreviewed) programs are admin-only.
-    const { data: guidelineVersions, error: gvError } = await this.supabase
-      .from("guideline_versions")
-      .select("program_id")
-      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
-      .in(
-        "program_id",
-        programs.map((p) => p.id),
-      )
-      .eq("verification_status", "human_verified");
-    if (gvError) throw new Error(`Failed to list guideline versions for verification check: ${gvError.message}`);
-    const verifiedProgramIds = new Set((guidelineVersions as Array<{ program_id: string }>).map((g) => g.program_id));
+    const verifiedProgramIds = new Set<string>();
+    const programIds = programs.map((program) => program.id);
+    for (let offset = 0; offset < programIds.length; offset += 100) {
+      const { data: guidelineVersions, error: gvError } = await this.supabase
+        .from("guideline_versions")
+        .select("program_id")
+        .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+        .in("program_id", programIds.slice(offset, offset + 100))
+        .eq("verification_status", "human_verified");
+      if (gvError) throw new Error(`Failed to list guideline versions for verification check: ${gvError.message}`);
+      for (const guideline of guidelineVersions as Array<{ program_id: string }>) {
+        verifiedProgramIds.add(guideline.program_id);
+      }
+    }
     return programs.filter((p) => verifiedProgramIds.has(p.id));
   }
 
@@ -455,8 +465,15 @@ export class SupabaseRepository implements Repository {
  * getCatalogForMatching already relies on, so there is exactly one
  * definition of "verified" anywhere in the app, never two that can drift.
  */
-export async function getVerifiedLenderCount(supabase: SupabaseClient): Promise<number> {
-  const repo = new SupabaseRepository(supabase);
+export async function getVerifiedLenderCount(_supabase: SupabaseClient): Promise<number> {
+  // Anonymous homepage clients are RLS-scoped. Use the service role for the
+  // public aggregate so the total matches the verified platform catalog.
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
+  const repo = new SupabaseRepository(admin);
   const lenders = await repo.listLenders(PLATFORM_CATALOG_ORGANIZATION_ID, MAX_TIER_LEVEL);
   return lenders.length;
 }
@@ -471,7 +488,7 @@ export async function getVerifiedLenderCount(supabase: SupabaseClient): Promise<
  * sees the exact same total a signed-in member sees — never an RLS-truncated
  * subset. One definition of "program total", everywhere.
  */
-export async function getVerifiedProgramCount(supabase: SupabaseClient): Promise<number> {
+export async function getVerifiedProgramCount(_supabase: SupabaseClient): Promise<number> {
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
