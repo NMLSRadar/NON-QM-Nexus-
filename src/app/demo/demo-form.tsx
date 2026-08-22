@@ -1,14 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { CalendarDays, CheckCircle2, ShieldCheck, ArrowRight } from "lucide-react";
 import { submitDemoRequest, type DemoFormState } from "./actions";
-
-export interface PublicDemoHost {
-  id: string;
-  name: string;
-  bookingUrl: string;
-}
 
 const initialState: DemoFormState = null;
 
@@ -16,12 +10,11 @@ const inputClass =
   "w-full rounded-lg border border-amber-500/25 bg-black/40 px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 transition-colors focus:border-amber-400/60 focus:outline-none focus:ring-2 focus:ring-amber-400/30";
 const labelClass = "mb-1.5 block text-sm font-semibold text-amber-100/90";
 
-export function DemoForm({ hosts }: { hosts: PublicDemoHost[] }) {
+export function DemoForm() {
   const [state, formAction, pending] = useActionState<DemoFormState, FormData>(
     submitDemoRequest,
     initialState
   );
-  const [selectedHostId, setSelectedHostId] = useState(hosts[0]?.id ?? "");
 
   if (state?.success) {
     return (
@@ -67,41 +60,6 @@ export function DemoForm({ hosts }: { hosts: PublicDemoHost[] }) {
         </p>
       ) : null}
 
-      <fieldset>
-        <legend className="mb-1.5 block text-sm font-semibold text-amber-100/90">
-          Who would you like to meet with?
-        </legend>
-        <div className="grid gap-2">
-          {hosts.map((host) => {
-            const disabled = !host.bookingUrl;
-            const selected = selectedHostId === host.id;
-            return (
-              <label
-                key={host.id}
-                className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3.5 py-2.5 text-sm transition-colors ${
-                  selected
-                    ? "border-amber-400/60 bg-amber-500/10"
-                    : "border-amber-500/20 bg-black/30 hover:border-amber-400/40"
-                } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
-              >
-                <input
-                  type="radio"
-                  name="host"
-                  value={host.id}
-                  checked={selected}
-                  disabled={disabled}
-                  onChange={() => setSelectedHostId(host.id)}
-                  className="h-4 w-4 accent-amber-400"
-                />
-                <span className="font-medium text-white">{host.name}</span>
-                {disabled ? (
-                  <span className="ml-auto text-xs text-slate-500">Coming soon</span>
-                ) : null}
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
 
       <div>
         <label htmlFor="name" className={labelClass}>
