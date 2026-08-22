@@ -6,24 +6,22 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const NAV = [
-  { href: "/scenarios/new", label: "New Scenario" },
   { href: "/scenarios/voice", label: "Voice Scenario" },
-  { href: "/toolkit", label: "Toolkit" },
-  { href: "/scenarios", label: "Scenarios" },
-  { href: "/document-checklists", label: "Doc Checklists" },
+  { href: "/scenarios/new", label: "New Scenario" },
   { href: "/unique-products", label: "Unique Non-QM Products" },
   { href: "/lenders", label: "Lenders" },
   { href: "/programs", label: "Programs" },
+  { href: "/document-checklists", label: "Doc Checklists" },
+  { href: "/toolkit", label: "Toolkit" },
   { href: "/tutorial", label: "Tutorial" },
   { href: "/pricing", label: "Pricing" },
   { href: "/account", label: "Account" },
 ] as const;
 
 function isActive(pathname: string, href: string) {
-  const isScenarioDetail = href === "/scenarios" && pathname.startsWith("/scenarios/") && !pathname.startsWith("/scenarios/new") && !pathname.startsWith("/scenarios/voice");
   const isLenderDetail = href === "/lenders" && pathname.startsWith("/lenders/");
   const isUniqueProductDetail = href === "/unique-products" && pathname.startsWith("/unique-products/");
-  return pathname === href || isScenarioDetail || isLenderDetail || isUniqueProductDetail;
+  return pathname === href || isLenderDetail || isUniqueProductDetail;
 }
 
 export function PrimaryNav() {
