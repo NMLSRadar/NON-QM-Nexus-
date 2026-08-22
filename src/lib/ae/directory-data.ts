@@ -12,6 +12,7 @@ export interface DirectoryContact {
   title: string | null;
   email: string | null;
   phone: string | null;
+  photoUrl: string | null;
   states: string[];
   tier: AeContactTier;
   isPrimary: boolean;
@@ -76,7 +77,7 @@ export async function getAeDirectoryEntries(lenderIds?: string[]): Promise<AeDir
   const ids = lenders.map((lender) => lender.id as string);
   const { data: profiles, error: profileError } = await supabase
     .from("ae_profiles")
-    .select("id, lender_id, name, title, email, phone, states, status, created_at")
+    .select("id, lender_id, name, title, email, phone, photo_url, states, status, created_at")
     .in("lender_id", ids)
     .neq("status", "hidden")
     .order("created_at", { ascending: true });
@@ -102,6 +103,7 @@ export async function getAeDirectoryEntries(lenderIds?: string[]): Promise<AeDir
         title: (profile.title as string | null) ?? null,
         email: (profile.email as string | null) ?? null,
         phone: (profile.phone as string | null) ?? null,
+        photoUrl: (profile.photo_url as string | null) ?? null,
         states: (profile.states as string[]) ?? [],
         tier: profileTier(profile.name),
         isPrimary: index === 0,
@@ -122,6 +124,7 @@ export async function getAeDirectoryEntries(lenderIds?: string[]): Promise<AeDir
             title: seed.title,
             email: seed.email,
             phone: seed.phone,
+            photoUrl: null,
             states: [],
             tier: "direct",
             isPrimary: true,
