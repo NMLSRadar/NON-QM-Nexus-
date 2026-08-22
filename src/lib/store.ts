@@ -32,8 +32,8 @@ export interface Repository {
    * gated by plan (only actual guideline/program data is — see
    * listPrograms, which remains tier-filtered). */
   listAllLenders(organizationId: string): Promise<Lender[]>;
-  listPrograms(organizationId: string): Promise<Program[]>;
-  listRules(organizationId: string): Promise<Rule[]>;
+  listPrograms(organizationId: string, tierOverride?: number): Promise<Program[]>;
+  listRules(organizationId: string, tierOverride?: number): Promise<Rule[]>;
   /** Tier-gated (but NOT verification-gated) list of lenders that are
    * visible-but-pending-review — i.e. active, tier-eligible for the
    * caller, but not yet promoted to human_verified. Returns ONLY the
@@ -90,12 +90,12 @@ class InMemoryRepository implements Repository {
     return sampleLenders;
   }
 
-  async listPrograms(organizationId: string): Promise<Program[]> {
+  async listPrograms(organizationId: string, _tierOverride?: number): Promise<Program[]> {
     this.assertOrg(organizationId);
     return samplePrograms;
   }
 
-  async listRules(organizationId: string): Promise<Rule[]> {
+  async listRules(organizationId: string, _tierOverride?: number): Promise<Rule[]> {
     this.assertOrg(organizationId);
     return sampleRules;
   }

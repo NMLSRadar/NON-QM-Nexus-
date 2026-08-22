@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, FileEdit, RotateCw, Layers, Clock } from "lucide-react";
-import { analyzeScenario } from "@/domain/analyze";
-import { getCurrentOrganizationId, getLenderAccessInfo, getRepository } from "@/lib/session";
+import { getCurrentOrganizationId, getRepository } from "@/lib/session";
 import { Card, StatusBadge, SectionHeading, LinkButton, Pill } from "@/components/ui";
 import type { MatchStatus } from "@/domain/types/enums";
 import { BestLenderMatches, ScenarioPricingGuidance } from "./best-lender-matches";
@@ -15,6 +14,7 @@ import { classifyScenarioComplexity } from "@/domain/complexity";
 import { getAeContactsByLenderIds } from "@/lib/ae/directory-data";
 import { ClearVoiceDraftAfterResultsReady, ScenarioResultsRuntimeGuard } from "./results-runtime-guard";
 import * as Sentry from "@sentry/nextjs";
+import { loadScenarioResults } from "./result-loader";
 
 export const dynamic = "force-dynamic";
 
@@ -24,14 +24,7 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
   const org = await getCurrentOrganizationId();
   const scenario = await repo.getScenario(org, id);
   if (!scenario) notFound();
-  const access = await getLenderAccessInfo();
-  // Scenario matching always sees the FULL catalog (every tier) so an
-  // eligible lender above the viewer's own plan still counts toward the
-  // eligible-lender threshold and is shown locked, not silently dropped —
-  // except for a genuinely tier-0 (no active plan) account, which keeps
-  // its existing "no active subscription" empty state below.
-  const catalog = access.tierLevel === 0 ? await repo.getCatalog(org) : await repo.getCatalogForMatching(org);
-  const analysis = analyzeScenario(scenario, catalog);
+  const { access, analysis, degraded } = await loadScenarioResults(repo, org, scenario);
   const best = analysis.evaluations[0];
   let contactsByLender = {};
   if (access.tierLevel > 0) {
@@ -48,6 +41,11 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
   return (
     <ScenarioResultsRuntimeGuard>
       <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
+      {degraded ? (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          Core lender recommendations are shown. Some supplemental guideline or account-enrichment data is temporarily unavailable.
+        </div>
+      ) : null}
       {/* Header */}
       <div className="space-y-3">
         <Link href="/scenarios" className="inline-flex items-center gap-1 text-sm text-ink-secondary hover:text-brand-700 transition-colors">
