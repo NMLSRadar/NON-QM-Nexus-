@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { SUBSCRIBER_ONLY_ROUTE_PREFIXES } from "@/lib/access-control";
 
 const NAV = [
   { href: "/scenarios/voice", label: "Voice Scenario" },
@@ -24,10 +25,13 @@ function isActive(pathname: string, href: string) {
   return pathname === href || isLenderDetail || isUniqueProductDetail;
 }
 
-export function PrimaryNav() {
+export function PrimaryNav({ hasSubscriberAccess = false }: { hasSubscriberAccess?: boolean }) {
   const pathname = usePathname() ?? "/";
   const [open, setOpen] = useState(false);
   const detailsRef = useRef<HTMLDetailsElement>(null);
+  const visibleNav = NAV.filter(
+    (item) => hasSubscriberAccess || !SUBSCRIBER_ONLY_ROUTE_PREFIXES.some((prefix) => item.href === prefix)
+  );
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -49,7 +53,7 @@ export function PrimaryNav() {
   return (
     <>
       <nav aria-label="Primary" className="hidden items-center justify-center gap-x-3 whitespace-nowrap text-[12px] xl:flex 2xl:gap-x-5 2xl:text-[13px]">
-        {NAV.map((item) => {
+        {visibleNav.map((item) => {
           const active = isActive(pathname, item.href);
           return (
             <Link
@@ -78,7 +82,7 @@ export function PrimaryNav() {
           Menu
         </summary>
         <nav aria-label="Mobile primary" className="premium-mobile-nav-panel">
-          {NAV.map((item) => {
+          {visibleNav.map((item) => {
             const active = isActive(pathname, item.href);
             return (
               <Link

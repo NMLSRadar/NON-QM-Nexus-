@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({
 
 describe("PrimaryNav ordering", () => {
   it("shows the requested desktop categories from left to right without the old Scenarios link", () => {
-    render(<PrimaryNav />);
+    render(<PrimaryNav hasSubscriberAccess />);
 
     const desktopNav = screen.getByRole("navigation", { name: "Primary" });
     const links = within(desktopNav).getAllByRole("link");
@@ -41,5 +41,18 @@ describe("PrimaryNav ordering", () => {
       "/account",
     ]);
     expect(within(desktopNav).queryByRole("link", { name: "Scenarios" })).not.toBeInTheDocument();
+  });
+
+  it("hides subscriber-only categories from both logged-out and unpaid navigation", () => {
+    render(<PrimaryNav hasSubscriberAccess={false} />);
+
+    const desktopNav = screen.getByRole("navigation", { name: "Primary" });
+    const mobileNav = screen.getByRole("navigation", { name: "Mobile primary" });
+
+    for (const nav of [desktopNav, mobileNav]) {
+      expect(within(nav).queryByRole("link", { name: "Unique Non-QM Products" })).not.toBeInTheDocument();
+      expect(within(nav).queryByRole("link", { name: "Doc Checklists" })).not.toBeInTheDocument();
+      expect(within(nav).getByRole("link", { name: "Pricing" })).toBeInTheDocument();
+    }
   });
 });

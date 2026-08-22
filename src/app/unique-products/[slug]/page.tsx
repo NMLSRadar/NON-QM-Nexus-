@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
-import { getCurrentOrganizationId, getRepository } from "@/lib/session";
+import { getCurrentOrganizationId, getRepository, requireSubscriberAccess } from "@/lib/session";
 import { getUniqueProductCategory, UNIQUE_PRODUCT_CATEGORIES } from "@/domain/uniqueProducts";
 import { SpecialtyProgramDirectory } from "./specialty-program-directory";
 
@@ -18,6 +18,7 @@ export default async function UniqueProductCategoryPage({ params }: { params: Pr
 
   const repo = await getRepository();
   const org = await getCurrentOrganizationId();
+  await requireSubscriberAccess();
   const lenders = (await repo.listAllLenders(org)).filter((lender) => lender.active && !lender.isSampleData);
   const lenderLinks: Record<string, string> = {};
 

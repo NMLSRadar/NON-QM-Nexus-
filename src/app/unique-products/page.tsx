@@ -3,6 +3,7 @@ import { ArrowRight, BadgeCheck, BriefcaseBusiness, Building2, GraduationCap, He
 import { UNIQUE_PRODUCT_CATEGORIES } from "@/domain/uniqueProducts";
 import { recordPageView } from "@/lib/activity";
 import { PremiumPageHero } from "@/components/premium-ui";
+import { getCurrentOrganizationId, requireSubscriberAccess } from "@/lib/session";
 
 const icons = {
   JUMBO_AUS: Landmark,
@@ -14,6 +15,8 @@ const icons = {
 } as const;
 
 export default async function UniqueProductsPage() {
+  await getCurrentOrganizationId();
+  await requireSubscriberAccess();
   await recordPageView("products");
   return (
     <div className="nexus-workspace nexus-products-page gold-theme gold-page -mx-4 -my-6 min-h-full space-y-8 rounded-b-3xl bg-[#050505] px-4 py-6 sm:px-6 sm:py-8">

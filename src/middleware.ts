@@ -1,9 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isAuthProtectedPath } from "@/lib/access-control";
 
 // Protected app routes — everything else (marketing pages, /login, /signup,
 // static assets, API routes that handle their own auth) passes through.
-const PROTECTED_PREFIXES = ["/scenarios", "/toolkit", "/lenders", "/programs", "/admin", "/account"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -70,7 +70,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const isProtected = PROTECTED_PREFIXES.some((p) => request.nextUrl.pathname.startsWith(p));
+  const isProtected = isAuthProtectedPath(request.nextUrl.pathname);
 
   if (isProtected && !user) {
     const redirectUrl = new URL("/login", request.url);

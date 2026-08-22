@@ -5,6 +5,7 @@ import { DocumentChecklistCard } from "./checklist-card";
 import { pageMetadata } from "@/lib/seo";
 import { recordPageView } from "@/lib/activity";
 import { PremiumPageHero } from "@/components/premium-ui";
+import { getCurrentOrganizationId, requireSubscriberAccess } from "@/lib/session";
 
 // Matches every other page in this app: force-dynamic, never force-static.
 // The root layout renders auth-aware nav (Supabase-backed) on every page,
@@ -25,6 +26,8 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default async function DocumentChecklistsPage() {
+  await getCurrentOrganizationId();
+  await requireSubscriberAccess();
   await recordPageView("doc_needs");
   const sections = buildDocumentChecklistSections();
   return (

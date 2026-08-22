@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Repository } from "@/lib/store";
 import { SupabaseRepository } from "@/lib/repository/supabaseRepository";
 import { getEffectivePlan } from "@/lib/repository/membership";
+import { hasSubscriberAccess } from "@/lib/access-control";
 
 export async function getRepository(): Promise<Repository> {
   const supabase = await createClient();
@@ -168,4 +169,15 @@ export async function getLenderAccessInfo(): Promise<LenderAccessInfo> {
   ]);
   const isPlatformAdmin = Boolean(userRow?.platform_admin);
   return { tierLevel: isPlatformAdmin ? 3 : plan.tierLevel, isPlatformAdmin, isTrial: plan.isTrial, trialExpiresAt: plan.trialExpiresAt };
+}
+
+/**
+ * Server-side subscription boundary for pages that must never expose their
+ * contents to a signed-in account without active access. Active all-access
+ * trials and platform administrators already resolve to a positive tier.
+ */
+export async function requireSubscriberAccess(): Promise<LenderAccessInfo> {
+  const access = await getLenderAccessInfo();
+  if (!hasSubscriberAccess(access.tierLevel)) redirect("/pricing?required=subscription");
+  return access;
 }

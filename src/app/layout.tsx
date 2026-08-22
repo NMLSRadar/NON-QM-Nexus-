@@ -20,6 +20,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getLenderAccessInfo } from "@/lib/session";
 import { SITE_URL, SITE_NAME, OG_IMAGE_PATH } from "@/lib/seo";
 import { SUPPORT_EMAIL } from "@/lib/support";
+import { hasSubscriberAccess } from "@/lib/access-control";
 
 const DEPLOY_SHA = (process.env.NEXT_PUBLIC_BUILD_SHA ?? "").slice(0, 8) || "local";
 
@@ -99,7 +100,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </span>
             </Link>
             <div className="order-3 col-span-2 flex w-full justify-start xl:order-none xl:w-auto xl:flex-1 xl:justify-center">
-              <PrimaryNav />
+              <PrimaryNav hasSubscriberAccess={hasSubscriberAccess(access?.tierLevel)} />
             </div>
             <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
               <ThemeToggle />
