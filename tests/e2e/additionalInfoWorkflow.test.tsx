@@ -63,8 +63,8 @@ describe("nine-vital lender-match gate", () => {
     expect(createScenarioFromVoice).not.toHaveBeenCalled();
   });
 
-  it("keeps the intake open when six spoken vitals derive the remaining three", () => {
-    render(<VoiceClient />);
+  it("keeps the intake open and blocks deployment reloads when six spoken vitals derive the remaining three", () => {
+    const { container } = render(<VoiceClient />);
     act(() => setTranscript(
       "Purchase of a six-unit property worth $500,000 with a $400,000 loan, 720 FICO, U.S. citizen.",
     ));
@@ -76,6 +76,7 @@ describe("nine-vital lender-match gate", () => {
     expect(screen.getByText("Purchase, refinance, HELOC, or second lien")).toBeVisible();
     expect(screen.getByRole("button", { name: "Collapse required vitals" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: "See lender matches" })).toBeInTheDocument();
+    expect(container.querySelector(".nexus-voice-client")).toHaveAttribute("data-block-build-reload", "true");
     expect(createScenarioFromVoice).not.toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
   });

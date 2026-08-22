@@ -702,9 +702,13 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   };
 
   const lienDisplay = cell(effective.existingLienBalance ? { ...effective.existingLienBalance, value: usd(effective.existingLienBalance.value) } : undefined);
+  const hasActiveVoiceWork = listening || interim.trim().length > 0 || transcript.trim().length > 0 || Object.keys(overrides).length > 0;
 
   return (
-    <div className="nexus-voice-client space-y-5">
+    <div
+      className="nexus-voice-client space-y-5"
+      data-block-build-reload={hasActiveVoiceWork ? "true" : undefined}
+    >
       {supported === false && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-200 text-sm p-3">
           Voice capture isn’t supported in this browser. You can type or paste the scenario below — everything else works

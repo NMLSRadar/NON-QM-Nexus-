@@ -4,6 +4,10 @@ import { useEffect } from "react";
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes while the tab/app is visible
 
+export function hasActiveBuildReloadBlocker(root: ParentNode = document): boolean {
+  return root.querySelector('[data-block-build-reload="true"]') !== null;
+}
+
 /**
  * Self-heals an installed PWA session that's been left running across a
  * new deploy. History: this app's pages are all `force-dynamic` and rely on
@@ -27,12 +31,15 @@ export function BuildVersionGuard() {
 
     let reloaded = false;
     async function check() {
-      if (reloaded || document.visibilityState !== "visible") return;
+      if (reloaded || document.visibilityState !== "visible" || hasActiveBuildReloadBlocker()) return;
       try {
         const res = await fetch("/api/version", { cache: "no-store" });
         if (!res.ok) return;
         const data = (await res.json()) as { sha: string | null };
-        if (data.sha && data.sha !== builtSha) {
+        // Re-check after the request: the user may have started dictating or
+        // typing while the version request was in flight. Active work must
+        // never be destroyed by a background deployment refresh.
+        if (data.sha && data.sha !== builtSha && !hasActiveBuildReloadBlocker()) {
           reloaded = true;
           window.location.reload();
         }
