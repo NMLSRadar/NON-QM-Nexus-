@@ -1,4 +1,4 @@
-export const SUBSCRIBER_ONLY_ROUTE_PREFIXES = ["/document-checklists", "/unique-products"] as const;
+export const SUBSCRIBER_ONLY_ROUTE_PREFIXES = ["/document-checklists", "/unique-products", "/ae-directory"] as const;
 
 const AUTH_PROTECTED_ROUTE_PREFIXES = [
   "/scenarios",

@@ -10,6 +10,8 @@ import { whyThisLender, potentialIssues, aiNarrative } from "@/domain/matching/n
 import { isPrivateGuidelinesLender } from "@/domain/privateGuidelines";
 import { useCountUp } from "@/hooks/use-count-up";
 import { PrivateGuidelinesMatchNote } from "@/components/private-guidelines-notice";
+import { AeContactBlock } from "@/components/ae-contact-block";
+import type { DirectoryContact } from "@/lib/ae/directory-data";
 
 const MAX_COMPARE = 4;
 /** Never show more than this many near-match/ineligible lenders — product
@@ -223,6 +225,7 @@ function LenderCard({
   onToggle,
   disabled,
   runnerUpName,
+  contacts,
 }: {
   rank: number;
   e: ProgramEvaluation;
@@ -230,6 +233,7 @@ function LenderCard({
   onToggle: () => void;
   disabled: boolean;
   runnerUpName?: string;
+  contacts: DirectoryContact[];
 }) {
   const [expanded, setExpanded] = useState(false);
   const tone = TONE_BY_STATUS[e.status];
@@ -451,6 +455,7 @@ function LenderCard({
           </p>
         </div>
       ) : null}
+      <AeContactBlock contacts={contacts} variant="card-footer" maxVisible={2} />
     </div>
   );
 }
@@ -559,8 +564,10 @@ function CompareTable({ items }: { items: ProgramEvaluation[] }) {
 export function BestLenderMatches({
   evaluations,
   tierLevel,
+  contactsByLender = {},
 }: {
   evaluations: ProgramEvaluation[];
+  contactsByLender?: Record<string, DirectoryContact[]>;
   /** The viewer's subscription tier (0 = no active plan). When there are
    * zero evaluations AND tierLevel is 0, the empty state isn't "no lenders
    * matched this scenario" — it's "there's nothing to match against yet
@@ -638,6 +645,7 @@ export function BestLenderMatches({
               onToggle={() => toggle(e.programId)}
               disabled={selectedIds.length >= MAX_COMPARE}
               runnerUpName={i === 0 ? eligible[1]?.lenderName : undefined}
+              contacts={contactsByLender[e.lenderId] ?? []}
             />
           );
         })}

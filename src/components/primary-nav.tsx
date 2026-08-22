@@ -12,6 +12,7 @@ const NAV = [
   { href: "/unique-products", label: "Unique Non-QM Products" },
   { href: "/lenders", label: "Lenders" },
   { href: "/programs", label: "Programs" },
+  { href: "/ae-directory", label: "AE Directory" },
   { href: "/document-checklists", label: "Doc Checklists" },
   { href: "/toolkit", label: "Toolkit" },
   { href: "/tutorial", label: "Tutorial" },

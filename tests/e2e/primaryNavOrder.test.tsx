@@ -21,6 +21,7 @@ describe("PrimaryNav ordering", () => {
       "Unique Non-QM Products",
       "Lenders",
       "Programs",
+      "AE Directory",
       "Doc Checklists",
       "Toolkit",
       "Tutorial",
@@ -34,6 +35,7 @@ describe("PrimaryNav ordering", () => {
       "/unique-products",
       "/lenders",
       "/programs",
+      "/ae-directory",
       "/document-checklists",
       "/toolkit",
       "/tutorial",
@@ -52,6 +54,7 @@ describe("PrimaryNav ordering", () => {
     for (const nav of [desktopNav, mobileNav]) {
       expect(within(nav).queryByRole("link", { name: "Unique Non-QM Products" })).not.toBeInTheDocument();
       expect(within(nav).queryByRole("link", { name: "Doc Checklists" })).not.toBeInTheDocument();
+      expect(within(nav).queryByRole("link", { name: "AE Directory" })).not.toBeInTheDocument();
       expect(within(nav).getByRole("link", { name: "Pricing" })).toBeInTheDocument();
     }
   });

@@ -12,6 +12,7 @@ import { SponsoredAeContacts } from "./sponsored-ae-contacts";
 import { FileClassificationCard } from "@/components/file-classification-card";
 import { ScenarioComplexity } from "@/components/scenario-complexity";
 import { classifyScenarioComplexity } from "@/domain/complexity";
+import { getAeContactsByLenderIds } from "@/lib/ae/directory-data";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,9 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
   const catalog = access.tierLevel === 0 ? await repo.getCatalog(org) : await repo.getCatalogForMatching(org);
   const analysis = analyzeScenario(scenario, catalog);
   const best = analysis.evaluations[0];
+  const contactsByLender = access.tierLevel > 0
+    ? await getAeContactsByLenderIds([...new Set(analysis.evaluations.map((evaluation) => evaluation.lenderId))])
+    : {};
 
   return (
     <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
@@ -111,7 +115,7 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
               description="Every applicable lender program, ranked by real match score — sorted automatically."
             />
             <div className="mt-4">
-              <BestLenderMatches evaluations={analysis.evaluations} tierLevel={access.tierLevel} />
+              <BestLenderMatches evaluations={analysis.evaluations} tierLevel={access.tierLevel} contactsByLender={contactsByLender} />
             </div>
           </Card>
 
