@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Mic, MessageSquareText, Sparkles, Zap, PenSquare } from "lucide-react";
 import Link from "next/link";
-import VoiceClient from "@/app/scenarios/voice/voice-client";
+import VoiceClient, { VOICE_DRAFT_STORAGE_KEY } from "@/app/scenarios/voice/voice-client";
 import { GoldWaveform } from "@/components/gold-waveform";
 
 const FEATURES = [
@@ -30,6 +30,17 @@ const FEATURES = [
  * logic (see docs on parity between voice/manual scenario paths). */
 export function HomeVoiceHero() {
   const [voiceActive, setVoiceActive] = useState(false);
+  const [autoStart, setAutoStart] = useState(false);
+
+  // If the homepage remounts after an error, immediately reopen the saved
+  // intake instead of making the user hunt for it or dictate it again.
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem(VOICE_DRAFT_STORAGE_KEY)) setVoiceActive(true);
+    } catch {
+      // Storage may be unavailable in privacy-restricted contexts.
+    }
+  }, []);
 
   return (
     <section className="gold-theme gold-sheen relative overflow-hidden rounded-3xl border border-amber-500/25 bg-[#080808] p-6 sm:p-10 shadow-[0_0_60px_-20px_rgba(212,175,55,0.35)]">
@@ -65,7 +76,10 @@ export function HomeVoiceHero() {
       <div className="relative z-10 mt-6 flex flex-col sm:flex-row gap-3">
         <button
           type="button"
-          onClick={() => setVoiceActive(true)}
+          onClick={() => {
+            setAutoStart(true);
+            setVoiceActive(true);
+          }}
           aria-pressed={voiceActive}
           className="gold-button gold-cta-glow inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold whitespace-nowrap"
         >
@@ -108,7 +122,7 @@ export function HomeVoiceHero() {
             Voice Scenario is live — speak or type below. Applicable lenders will appear automatically once enough
             details are captured.
           </div>
-          <VoiceClient autoStart />
+          <VoiceClient autoStart={autoStart} />
         </div>
       ) : null}
     </section>

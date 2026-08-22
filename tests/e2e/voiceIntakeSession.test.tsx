@@ -60,6 +60,7 @@ function purposeTile() {
 }
 
 beforeEach(() => {
+  window.sessionStorage.clear();
   push.mockReset();
   createScenarioFromVoice.mockReset();
   createScenarioFromVoice.mockResolvedValue({ redirectTo: "/scenarios/mock-id" });

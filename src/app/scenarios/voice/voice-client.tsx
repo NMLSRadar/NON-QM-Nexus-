@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Component, useEffect, useMemo, useRef, useState, useTransition, type ErrorInfo, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { Home, User, DollarSign, Wallet, Percent, Gauge, FolderOpen, IdCard, TrendingUp, MapPin, Mic } from "lucide-react";
 import { Card } from "@/components/ui";
 import { AiProcessingSequence } from "@/components/ai-processing-sequence";
@@ -14,6 +15,28 @@ import { VITAL_KEYS, VITAL_LABELS, EXTRA_VITAL_KEYS, EXTRA_VITAL_LABELS, REFI_VI
 import type { Citizenship, CreditProfileType, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
 import { CREDIT_PROFILE_TYPE_LABELS } from "@/domain/types/enums";
 import { createScenarioFromVoice, getVoiceCatalog } from "./actions";
+
+export const VOICE_DRAFT_STORAGE_KEY = "nonqm:voice-scenario-draft:v1";
+
+class VoicePreviewBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  override state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  override componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("Live lender ranking panel failed:", error, info);
+    Sentry.captureException(error, { tags: { surface: "voice-live-ranking-render" } });
+  }
+
+  override render() {
+    if (this.state.failed) {
+      return <p className="text-xs text-slate-400">Live preview is temporarily unavailable. Your voice intake and lender-match submission are unaffected.</p>;
+    }
+    return this.props.children;
+  }
+}
 
 /** Per-vital icon, matching the mockup's gold-ringed icon badges. */
 const VITAL_ICONS: Record<VitalKey, typeof Home> = {
@@ -260,6 +283,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   const [speakBack, setSpeakBack] = useState(false);
   const [conflictConfirmed, setConflictConfirmed] = useState(false);
   const [serverMessage, setServerMessage] = useState<string | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
   const [isPending, startTransition] = useTransition();
   const recognitionRef = useRef<RecognitionLike | null>(null);
   const nativeListenerRef = useRef<NativeListenerHandle | null>(null);
@@ -271,6 +295,39 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
   const spokenRef = useRef("");
   const autoStartedRef = useRef(false);
   const [requiredVitalsExpanded, setRequiredVitalsExpanded] = useState(true);
+
+  // A completed voice intake is the primary work product of this page. Keep a
+  // tab-scoped recovery copy so a browser/process failure or an unrelated
+  // React exception can never force the user to dictate the scenario again.
+  useEffect(() => {
+    try {
+      const stored = window.sessionStorage.getItem(VOICE_DRAFT_STORAGE_KEY);
+      if (stored) {
+        const draft = JSON.parse(stored) as { transcript?: unknown; overrides?: unknown };
+        if (typeof draft.transcript === "string") setTranscript(draft.transcript);
+        if (draft.overrides && typeof draft.overrides === "object" && !Array.isArray(draft.overrides)) {
+          setOverrides(draft.overrides as Overrides);
+        }
+      }
+    } catch (error) {
+      Sentry.captureException(error);
+    } finally {
+      setDraftRestored(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!draftRestored) return;
+    try {
+      if (transcript.trim() || Object.keys(overrides).length > 0) {
+        window.sessionStorage.setItem(VOICE_DRAFT_STORAGE_KEY, JSON.stringify({ transcript, overrides }));
+      } else {
+        window.sessionStorage.removeItem(VOICE_DRAFT_STORAGE_KEY);
+      }
+    } catch (error) {
+      Sentry.captureException(error);
+    }
+  }, [draftRestored, transcript, overrides]);
 
   useEffect(() => {
     setSupported(getNativeSpeechPlugin() !== undefined || getRecognitionCtor() !== undefined || canUseMediaRecorder());
@@ -368,7 +425,16 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
 
   const liveEvaluations = useMemo(() => {
     if (!liveCatalog || !liveScenario) return [];
-    return analyzeScenario(liveScenario, liveCatalog).evaluations;
+    try {
+      return analyzeScenario(liveScenario, liveCatalog).evaluations;
+    } catch (error) {
+      // Live rankings are a non-critical preview. A malformed catalog row or
+      // an unhandled matcher edge case must never take down the primary voice
+      // intake or its submit button.
+      console.error("Live lender preview failed:", error);
+      Sentry.captureException(error, { tags: { surface: "voice-live-preview" } });
+      return [];
+    }
   }, [liveCatalog, liveScenario]);
 
   const canAnalyze = assessment.readyToAnalyze || (assessment.complete && conflictConfirmed);
@@ -620,16 +686,31 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
     setServerMessage(null);
     stopListening();
     startTransition(async () => {
-      const result = await createScenarioFromVoice(effective);
-      inFlightRef.current = false;
-      if (result?.redirectTo) {
-        router.push(result.redirectTo);
-        return;
-      }
-      // Reaching here (no redirectTo) means it declined — show why, and
-      // arm the retry-on-next-genuine-change path above.
-      if (result?.message) {
-        setServerMessage(result.message);
+      try {
+        const result = await createScenarioFromVoice(effective);
+        if (result?.redirectTo) {
+          try {
+            window.sessionStorage.removeItem(VOICE_DRAFT_STORAGE_KEY);
+          } catch {
+            // Navigation succeeded; inability to clear recovery storage is non-fatal.
+          }
+          router.push(result.redirectTo);
+          return;
+        }
+        // Reaching here (no redirectTo) means it declined — show why while
+        // preserving every captured vital for correction and retry.
+        if (result?.message) {
+          setServerMessage(result.message);
+        }
+      } catch (error) {
+        // React treats an uncaught rejection inside a transition as a route
+        // error and replaces the entire intake with error.tsx. Contain it here:
+        // the draft remains mounted, persisted, and immediately retryable.
+        console.error("Voice scenario submission failed:", error);
+        Sentry.captureException(error, { tags: { surface: "voice-submit" } });
+        setServerMessage("We couldn’t save the scenario because of a temporary system error. All nine vitals are still here — tap SEE LENDER MATCHES? to try again.");
+      } finally {
+        inFlightRef.current = false;
       }
     });
   }
@@ -952,7 +1033,9 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         <p className="text-xs text-slate-400 -mt-2 mb-3">
           Reorders in real time as the scenario resolves — the same ranking engine used on the final results page.
         </p>
-        <LiveLenderRankings evaluations={liveEvaluations} loading={catalogLoading} enoughData={liveScenario !== null} />
+        <VoicePreviewBoundary>
+          <LiveLenderRankings evaluations={liveEvaluations} loading={catalogLoading} enoughData={liveScenario !== null} />
+        </VoicePreviewBoundary>
       </Card>
 
       <section className="rounded-r-lg border-l-4 border-amber-500 bg-amber-500/10 p-3" aria-live="polite">

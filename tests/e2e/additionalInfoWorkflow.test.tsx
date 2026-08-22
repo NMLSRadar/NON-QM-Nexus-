@@ -24,6 +24,7 @@ function setTranscript(text: string) {
 }
 
 beforeEach(() => {
+  window.sessionStorage.clear();
   push.mockReset();
   createScenarioFromVoice.mockReset();
   createScenarioFromVoice.mockResolvedValue({ redirectTo: "/scenarios/mock-id" });
@@ -93,5 +94,21 @@ describe("nine-vital lender-match gate", () => {
     expect(submitted.giftFundsUsed?.value).toBe("yes");
     expect(submitted.oneYearSelfEmployed?.value).toBe("yes");
     await waitFor(() => expect(push).toHaveBeenCalledWith("/scenarios/mock-id"));
+  });
+
+  it("restores all nine completed vitals after the voice component remounts", async () => {
+    const first = render(<VoiceClient />);
+    act(() => setTranscript(COMPLETE_SCENARIO));
+    await waitFor(() => expect(window.sessionStorage.length).toBeGreaterThan(0));
+
+    first.unmount();
+    render(<VoiceClient />);
+
+    await waitFor(() => {
+      expect(screen.getByText("✓ 9 of 9 Required Vitals Complete")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "See lender matches" })).toBeInTheDocument();
+    });
+    expect(screen.getByLabelText("Transcript (editable)")).toHaveValue(COMPLETE_SCENARIO);
+    expect(push).not.toHaveBeenCalled();
   });
 });

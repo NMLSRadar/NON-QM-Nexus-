@@ -46,6 +46,7 @@ function setTranscript(text: string) {
 }
 
 beforeEach(() => {
+  window.sessionStorage.clear();
   push.mockReset();
   createScenarioFromVoice.mockReset();
   getVoiceCatalog.mockReset();
@@ -120,6 +121,32 @@ describe("Voice resubmission after a correction", () => {
     resolveFirst({ message: "Please provide the requested loan amount." });
 
     await waitFor(() => expect(screen.getByRole("button", { name: "See lender matches" })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "See lender matches" }));
+    await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/scenarios/mock-id"));
+  }, 15000);
+
+  it("contains a thrown server exception, preserves 9/9, and allows an immediate retry", async () => {
+    createScenarioFromVoice
+      .mockRejectedValueOnce(new Error("temporary server failure"))
+      .mockResolvedValueOnce({ redirectTo: "/scenarios/mock-id" });
+
+    render(<VoiceClient />);
+    setTranscript(
+      "Purchase of a single family primary residence worth $500,000, loan amount 400k, credit score 720, full doc income. Borrower is a U.S. citizen."
+    );
+
+    const submit = await screen.findByRole("button", { name: "See lender matches" });
+    fireEvent.click(submit);
+
+    await waitFor(() => {
+      expect(screen.getByText(/temporary system error/)).toBeInTheDocument();
+      expect(screen.getByText(/9 of 9 Required Vitals Complete/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "See lender matches" })).not.toBeDisabled();
+    });
+    expect(push).not.toHaveBeenCalled();
+    expect(window.sessionStorage.length).toBeGreaterThan(0);
+
     fireEvent.click(screen.getByRole("button", { name: "See lender matches" }));
     await waitFor(() => expect(createScenarioFromVoice).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/scenarios/mock-id"));
