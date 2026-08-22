@@ -51,6 +51,59 @@ function isEligibleStatus(status: MatchStatus): boolean {
   return status !== "ineligible";
 }
 
+const CLEAN_FILE_LENDER_PRIORITY = [
+  ["United Wholesale Mortgage", ["united wholesale mortgage", "uwm"]],
+  ["Logan Finance", ["logan finance corporation", "logan finance"]],
+  ["Angel Oak", ["angel oak mortgage solutions", "angel oak"]],
+  ["First National Bank of America", ["first national bank of america"]],
+  ["PennyMac", ["pennymac"]],
+] as const;
+
+function normalizedLenderName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function cleanFilePriorityIndex(name: string): number {
+  const normalized = normalizedLenderName(name);
+  return CLEAN_FILE_LENDER_PRIORITY.findIndex(([, aliases]) => aliases.some((alias) => normalized === alias || normalized.includes(alias)));
+}
+
+function isCleanFilePriorityMatch(evaluation: ProgramEvaluation): boolean {
+  return !evaluation.guidelineVerificationRequired &&
+    isEligibleStatus(evaluation.status) &&
+    evaluation.matchScore >= 85 &&
+    cleanFilePriorityIndex(evaluation.lenderName) >= 0;
+}
+
+/**
+ * The recommendation list is lender-level, not program-level. The upstream
+ * analysis is already ordered best program first, so retain only that first
+ * representative for each lender name. For clean files (85+ confidence),
+ * apply the requested historical pricing order without ever promoting a hard
+ * fail or an unverified program.
+ */
+export function selectRecommendedLenders(evaluations: ProgramEvaluation[]): ProgramEvaluation[] {
+  const seen = new Set<string>();
+  const onePerLender = evaluations.filter((evaluation) => {
+    const key = normalizedLenderName(evaluation.lenderName);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return onePerLender
+    .map((evaluation, originalIndex) => ({ evaluation, originalIndex }))
+    .sort((a, b) => {
+      const aPriority = isCleanFilePriorityMatch(a.evaluation) ? cleanFilePriorityIndex(a.evaluation.lenderName) : -1;
+      const bPriority = isCleanFilePriorityMatch(b.evaluation) ? cleanFilePriorityIndex(b.evaluation.lenderName) : -1;
+      if (aPriority >= 0 && bPriority >= 0) return aPriority - bPriority;
+      if (aPriority >= 0) return -1;
+      if (bPriority >= 0) return 1;
+      return a.originalIndex - b.originalIndex;
+    })
+    .map(({ evaluation }) => evaluation);
+}
+
 function requiresCurrentMatrix(e: ProgramEvaluation): boolean {
   return e.ruleResults.some((r) => r.ruleName === "Current lender matrix confirmation");
 }
@@ -134,7 +187,7 @@ function getPricingGuidance(evaluations: ProgramEvaluation[]): {
 }
 
 export function ScenarioPricingGuidance({ evaluations, className = "" }: { evaluations: ProgramEvaluation[]; className?: string }) {
-  const guidance = getPricingGuidance(evaluations);
+  const guidance = getPricingGuidance(selectRecommendedLenders(evaluations));
   if (!guidance) return null;
   const Icon = guidance.tier === "strong" ? Sparkles : guidance.tier === "layered" ? AlertTriangle : XCircle;
 
@@ -585,8 +638,10 @@ export function BestLenderMatches({
   // band first, then score, then name) — that ordering must never be
   // discarded in favor of a pure match-score sort, or an ineligible program
   // could visually outrank an eligible one.
-  const eligible = useMemo(() => evaluations.filter((e) => !e.guidelineVerificationRequired && isEligibleStatus(e.status)), [evaluations]);
-  const ineligible = useMemo(() => evaluations.filter((e) => e.guidelineVerificationRequired || !isEligibleStatus(e.status)), [evaluations]);
+  const lenderEvaluations = useMemo(() => selectRecommendedLenders(evaluations), [evaluations]);
+  const eligible = useMemo(() => lenderEvaluations.filter((e) => !e.guidelineVerificationRequired && isEligibleStatus(e.status)), [lenderEvaluations]);
+  const ineligible = useMemo(() => lenderEvaluations.filter((e) => e.guidelineVerificationRequired || !isEligibleStatus(e.status)), [lenderEvaluations]);
+  const cleanFilePricingLenders = useMemo(() => eligible.filter(isCleanFilePriorityMatch), [eligible]);
   const displayedIneligible = useMemo(
     () => (eligible.length >= ELIGIBLE_SUPPRESSION_THRESHOLD ? [] : ineligible.slice(0, MAX_DISPLAYED_INELIGIBLE)),
     [eligible.length, ineligible],
@@ -623,6 +678,16 @@ export function BestLenderMatches({
 
   return (
     <div className="space-y-4">
+      {cleanFilePricingLenders.length > 0 && (
+        <aside className="rounded-control border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950" aria-label="Clean-file lender pricing note">
+          <p className="font-semibold">Clean-file pricing note</p>
+          <p className="mt-1 text-amber-900">
+            UWM, Logan Finance, Angel Oak, First National Bank of America, and PennyMac are historically known for handling
+            cleaner files and may apply more rigid guidelines. When a file fits, they may offer the best pricing. Confirm
+            current pricing and guidelines with the lender before submission.
+          </p>
+        </aside>
+      )}
       {selected.length >= 2 && (
         <div>
           <p className="text-xs font-semibold text-ink-secondary uppercase tracking-wide mb-2">

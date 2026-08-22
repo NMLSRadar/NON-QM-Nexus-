@@ -121,7 +121,7 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
             <SectionHeading
               icon={<Layers className="h-5 w-5" />}
               title="Best Lender Matches"
-              description="Every applicable lender program, ranked by real match score — sorted automatically."
+              description="Each applicable lender appears once, represented by its strongest matching program."
             />
             <div className="mt-4">
               <BestLenderMatches evaluations={analysis.evaluations} tierLevel={access.tierLevel} contactsByLender={contactsByLender} />

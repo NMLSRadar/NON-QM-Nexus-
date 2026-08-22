@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import * as Sentry from "@sentry/nextjs";
 import { Home, User, DollarSign, Wallet, Percent, Gauge, FolderOpen, IdCard, TrendingUp, MapPin, Mic } from "lucide-react";
 import { Card } from "@/components/ui";
+import { GoldWaveform } from "@/components/gold-waveform";
 import { AiProcessingSequence } from "@/components/ai-processing-sequence";
 import { LiveLenderRankings } from "@/components/live-lender-rankings";
 import { analyzeScenario, type ProgramCatalog } from "@/domain/analyze";
@@ -271,7 +272,7 @@ const STATE_OPTIONS: Array<[string, string]> = [
   ["DC", "District of Columbia"],
 ];
 
-export default function VoiceClient({ autoStart = false }: { autoStart?: boolean }) {
+export default function VoiceClient({ autoStart = false, showIntro = false }: { autoStart?: boolean; showIntro?: boolean }) {
   const router = useRouter();
   const [supported, setSupported] = useState<boolean | null>(null);
   const [listening, setListening] = useState(false);
@@ -781,12 +782,39 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
 
   const lienDisplay = cell(effective.existingLienBalance ? { ...effective.existingLienBalance, value: usd(effective.existingLienBalance.value) } : undefined);
   const hasActiveVoiceWork = listening || interim.trim().length > 0 || transcript.trim().length > 0 || Object.keys(overrides).length > 0;
+  const hasStartedSpeaking = interim.trim().length > 0 || transcript.trim().length > 0;
 
   return (
     <div
       className="nexus-voice-client space-y-5"
       data-block-build-reload={hasActiveVoiceWork ? "true" : undefined}
     >
+      {showIntro && (
+        <div hidden={hasStartedSpeaking} className="nexus-premium-hero gold-scenarios-panel relative overflow-hidden p-6 sm:p-8">
+          <div className="gold-ambient" />
+          <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <span className="gold-header-icon relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full">
+                <Mic className="h-6 w-6 text-amber-300" />
+              </span>
+              <div>
+                <h1 className="text-[32px] font-bold leading-tight tracking-tight text-white">Voice scenario intake</h1>
+                <p className="mt-1 max-w-2xl text-sm sm:text-base text-slate-400">
+                  Speak (or type) the full scenario. Once all nine vitals are captured — purchase/refi, occupancy, property
+                  type, value, loan amount, LTV, credit score, income documentation, and citizenship —{" "}
+                  <span className="font-semibold text-amber-300">a lender-matches button appears</span>. You can keep speaking
+                  to add optional details before viewing the ranked programs. Give fewer details and the assistant will ask
+                  for exactly what&apos;s missing.
+                </p>
+              </div>
+            </div>
+            <div className="hidden xl:block w-64">
+              <GoldWaveform active={false} />
+            </div>
+          </div>
+        </div>
+      )}
+
       {supported === false && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-200 text-sm p-3">
           Voice capture isn’t supported in this browser. You can type or paste the scenario below — everything else works
@@ -800,6 +828,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         </div>
       )}
 
+      <div hidden={canAnalyze}>
       <Card dark title="Speak or type the full scenario">
         <div className="flex flex-col items-center gap-2">
           <div className="relative">
@@ -840,7 +869,9 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         />
         {interim && <p className="text-sm italic text-slate-400 mt-1">{interim}…</p>}
       </Card>
+      </div>
 
+      <div hidden={canAnalyze}>
       <Card dark title={assessment.complete ? `✓ ${assessment.vitalsFilled} of ${assessment.vitalsTotal} Required Vitals Complete` : `Vitals — ${assessment.vitalsFilled} of ${assessment.vitalsTotal} captured`}>
         {assessment.complete && (
           <button
@@ -1008,6 +1039,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         </details>
         </>}
       </Card>
+      </div>
 
       {canAnalyze && (
         <div className="lender-match-cta">
@@ -1026,6 +1058,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
         </div>
       )}
 
+      <div hidden={canAnalyze} className="space-y-5">
       <Card dark title="Live Lender Rankings">
         <p className="text-xs text-slate-400 -mt-2 mb-3">
           Reorders in real time as the scenario resolves — the same ranking engine used on the final results page.
@@ -1056,6 +1089,7 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
           </button>
         </div>
       )}
+      </div>
 
       {isPending && <AiProcessingSequence active={isPending} />}
       {serverMessage && !isPending && <p className="text-sm text-rose-400">{serverMessage}</p>}

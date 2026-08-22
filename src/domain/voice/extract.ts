@@ -1111,11 +1111,19 @@ export function classifyMortgageAmounts(t: string): AmountClassification {
   // restates a number in natural speech, the later figure is the one that
   // was meant to stick.
   let ltv: { value: number; source: string } | undefined;
-  const percentRe = /\$?(\d{1,3}(?:\.\d+)?)\s*(?:%|percent)?\b/g;
+  const percentRe = /(?<![\d.])\$?(\d{1,3}(?:\.\d+)?)(?!\d)\s*(%|percent\b)?/g;
   let pm: RegExpExecArray | null;
   while ((pm = percentRe.exec(t)) !== null) {
     const n = parseFloat(pm[1] ?? "");
     if (!Number.isFinite(n) || n < 1 || n > 100) continue;
+    // A duration is never leverage. Without this boundary, a sentence such as
+    // "putting 20% down and using 12 months bank statements" let the later,
+    // bare 12 inherit the earlier word "down" from the shared sentence. Since
+    // percent candidates intentionally use last-stated-value semantics, that
+    // overwrote 80% LTV with 88% LTV. Duration units now quarantine that number
+    // before any LTV/down-payment context is considered.
+    const followingText = t.slice(pm.index + pm[0].length);
+    if (!pm[2] && /^\s*(?:months?|mos?|years?|yrs?|weeks?|days?)\b/.test(followingText)) continue;
     const clauseRange = rangeAround(pm.index, pm[0].length, clauseBoundaries, t.length);
     const sentRange = rangeAround(pm.index, pm[0].length, sentenceBoundaries, t.length);
     const clause = t.slice(clauseRange.start, clauseRange.end);

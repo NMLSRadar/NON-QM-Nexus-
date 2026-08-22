@@ -35,6 +35,15 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("nine-vital lender-match gate", () => {
+  it("collapses the explanatory intro as soon as speech or typed intake begins", () => {
+    render(<VoiceClient showIntro />);
+    const intro = screen.getByText("Voice scenario intake").closest(".nexus-premium-hero");
+    expect(intro).toBeVisible();
+
+    act(() => setTranscript(INCOMPLETE_SCENARIO));
+    expect(intro).not.toBeVisible();
+  });
+
   it("is hidden below 9/9, appears immediately at 9/9, hides on regression, and returns when restored", () => {
     render(<VoiceClient />);
 
@@ -42,7 +51,9 @@ describe("nine-vital lender-match gate", () => {
     expect(screen.queryByRole("button", { name: "See lender matches" })).not.toBeInTheDocument();
 
     act(() => setTranscript(COMPLETE_SCENARIO));
-    expect(screen.getByText("✓ 9 of 9 Required Vitals Complete")).toBeInTheDocument();
+    expect(screen.getByText("✓ 9 of 9 Required Vitals Complete")).not.toBeVisible();
+    expect(screen.getByText("Speak or type the full scenario")).not.toBeVisible();
+    expect(screen.getByText("Live Lender Rankings")).not.toBeVisible();
     expect(screen.getByRole("button", { name: "See lender matches" })).toBeInTheDocument();
     expect(createScenarioFromVoice).not.toHaveBeenCalled();
 
@@ -64,7 +75,7 @@ describe("nine-vital lender-match gate", () => {
     expect(createScenarioFromVoice).not.toHaveBeenCalled();
   });
 
-  it("keeps the intake open and blocks deployment reloads when six spoken vitals derive the remaining three", () => {
+  it("collapses intake details but blocks deployment reloads when six spoken vitals derive the remaining three", () => {
     const { container } = render(<VoiceClient />);
     act(() => setTranscript(
       "Purchase of a six-unit property worth $500,000 with a $400,000 loan, 720 FICO, U.S. citizen.",
@@ -72,10 +83,9 @@ describe("nine-vital lender-match gate", () => {
 
     // 5–8 units deterministically supplies investment occupancy and DSCR;
     // property value plus loan amount supplies LTV. Completion must expose
-    // the CTA without collapsing the vitals or navigating automatically.
-    expect(screen.getByText("✓ 9 of 9 Required Vitals Complete")).toBeInTheDocument();
-    expect(screen.getByText("Purchase, refinance, HELOC, or second lien")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Collapse required vitals" })).toHaveAttribute("aria-expanded", "true");
+    // the CTA while automatically collapsing the now-complete intake details.
+    expect(screen.getByText("✓ 9 of 9 Required Vitals Complete")).not.toBeVisible();
+    expect(screen.getByText("Purchase, refinance, HELOC, or second lien")).not.toBeVisible();
     expect(screen.getByRole("button", { name: "See lender matches" })).toBeInTheDocument();
     expect(container.querySelector(".nexus-voice-client")).toHaveAttribute("data-block-build-reload", "true");
     expect(createScenarioFromVoice).not.toHaveBeenCalled();
@@ -105,7 +115,7 @@ describe("nine-vital lender-match gate", () => {
     render(<VoiceClient />);
 
     await waitFor(() => {
-      expect(screen.getByText("✓ 9 of 9 Required Vitals Complete")).toBeInTheDocument();
+      expect(screen.getByText("✓ 9 of 9 Required Vitals Complete")).not.toBeVisible();
       expect(screen.getByRole("button", { name: "See lender matches" })).toBeInTheDocument();
     });
     expect(screen.getByLabelText("Transcript (editable)")).toHaveValue(COMPLETE_SCENARIO);

@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { BestLenderMatches, ScenarioPricingGuidance } from "@/app/scenarios/[id]/best-lender-matches";
+import { BestLenderMatches, ScenarioPricingGuidance, selectRecommendedLenders } from "@/app/scenarios/[id]/best-lender-matches";
 import type { ProgramEvaluation } from "@/domain/types/results";
 import { MatchStatus } from "@/domain/types/enums";
 
@@ -148,7 +148,7 @@ describe("Scenario results — eligible-lender suppression rule", () => {
 
 describe("Scenario results — score-based pricing guidance", () => {
   it("shows the strong-scenario message when five or more lenders score at least 83", () => {
-    const evals = [83, 84, 86, 88, 90].map((matchScore, i) => makeEvaluation({ programId: `s${i}`, matchScore }));
+    const evals = [83, 84, 86, 88, 90].map((matchScore, i) => makeEvaluation({ programId: `s${i}`, lenderName: `Lender ${i}`, matchScore }));
     render(<ScenarioPricingGuidance evaluations={evals} />);
     expect(screen.getByText("Strong Non-QM Scenario")).toBeInTheDocument();
     expect(screen.getByText(/rate and pricing should carry more weight/i)).toBeInTheDocument();
@@ -171,6 +171,45 @@ describe("Scenario results — score-based pricing guidance", () => {
   it("shows no special disclaimer for the unspecified 46 through 59 average range", () => {
     render(<ScenarioPricingGuidance evaluations={[makeEvaluation({ matchScore: 52 })]} />);
     expect(screen.queryByLabelText("Scenario pricing guidance")).not.toBeInTheDocument();
+  });
+});
+
+describe("Scenario results — lender-level recommendations", () => {
+  it("shows every lender once using its strongest-ranked program", () => {
+    const evaluations = [
+      makeEvaluation({ programId: "acc-best", lenderName: "ACC Mortgage", matchScore: 96 }),
+      makeEvaluation({ programId: "acc-2", lenderName: "ACC Mortgage", matchScore: 94 }),
+      makeEvaluation({ programId: "acc-3", lenderName: "ACC Mortgage", matchScore: 91 }),
+      makeEvaluation({ programId: "other", lenderName: "Other Lender", matchScore: 89 }),
+    ];
+
+    expect(selectRecommendedLenders(evaluations).map((evaluation) => evaluation.programId)).toEqual(["acc-best", "other"]);
+    render(<BestLenderMatches evaluations={evaluations} tierLevel={3} />);
+    expect(screen.getAllByText("ACC Mortgage")).toHaveLength(1);
+  });
+
+  it("uses the clean-file 85+ historical pricing order and shows its disclosure", () => {
+    const evaluations = [
+      makeEvaluation({ programId: "other", lenderName: "Other Lender", matchScore: 99 }),
+      makeEvaluation({ programId: "penny", lenderName: "PennyMac", matchScore: 90 }),
+      makeEvaluation({ programId: "fnba", lenderName: "First National Bank of America", matchScore: 91 }),
+      makeEvaluation({ programId: "angel", lenderName: "Angel Oak Mortgage Solutions", matchScore: 92 }),
+      makeEvaluation({ programId: "logan", lenderName: "Logan Finance Corporation", matchScore: 93 }),
+      makeEvaluation({ programId: "uwm", lenderName: "United Wholesale Mortgage", matchScore: 94 }),
+    ];
+
+    expect(selectRecommendedLenders(evaluations).map((evaluation) => evaluation.lenderName)).toEqual([
+      "United Wholesale Mortgage",
+      "Logan Finance Corporation",
+      "Angel Oak Mortgage Solutions",
+      "First National Bank of America",
+      "PennyMac",
+      "Other Lender",
+    ]);
+
+    render(<BestLenderMatches evaluations={evaluations} tierLevel={3} />);
+    expect(screen.getByLabelText("Clean-file lender pricing note")).toHaveTextContent(/more rigid guidelines/i);
+    expect(screen.getByLabelText("Clean-file lender pricing note")).toHaveTextContent(/best pricing/i);
   });
 });
 
