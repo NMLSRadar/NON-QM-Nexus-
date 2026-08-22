@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import VoiceClient from "@/app/scenarios/voice/voice-client";
+import { VOICE_DRAFT_STORAGE_KEY } from "@/domain/voice/draft";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -95,6 +96,7 @@ describe("Voice resubmission after a correction", () => {
     // The stale error message from the first attempt must be gone.
     expect(screen.queryByText("The credit score must be between 300 and 850.")).not.toBeInTheDocument();
     await waitFor(() => expect(push).toHaveBeenCalledWith("/scenarios/mock-id"));
+    expect(window.sessionStorage.getItem(VOICE_DRAFT_STORAGE_KEY)).not.toBeNull();
   }, 15000);
 
   it("re-enables the action after an in-flight failure and submits the correction on the next click", async () => {

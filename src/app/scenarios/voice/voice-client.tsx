@@ -15,8 +15,7 @@ import { VITAL_KEYS, VITAL_LABELS, EXTRA_VITAL_KEYS, EXTRA_VITAL_LABELS, REFI_VI
 import type { Citizenship, CreditProfileType, IncomeDocType, InvestorExperience, LoanPurpose, Occupancy, PropertyType, Vesting } from "@/domain/types/enums";
 import { CREDIT_PROFILE_TYPE_LABELS } from "@/domain/types/enums";
 import { createScenarioFromVoice, getVoiceCatalog } from "./actions";
-
-export const VOICE_DRAFT_STORAGE_KEY = "nonqm:voice-scenario-draft:v1";
+import { VOICE_DRAFT_STORAGE_KEY } from "@/domain/voice/draft";
 
 class VoicePreviewBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   override state = { failed: false };
@@ -689,11 +688,9 @@ export default function VoiceClient({ autoStart = false }: { autoStart?: boolean
       try {
         const result = await createScenarioFromVoice(effective);
         if (result?.redirectTo) {
-          try {
-            window.sessionStorage.removeItem(VOICE_DRAFT_STORAGE_KEY);
-          } catch {
-            // Navigation succeeded; inability to clear recovery storage is non-fatal.
-          }
+          // Do not clear the recovery draft here. A successful save does not
+          // guarantee that the destination can render. The results page owns
+          // clearing only after its full client tree commits successfully.
           router.push(result.redirectTo);
           return;
         }

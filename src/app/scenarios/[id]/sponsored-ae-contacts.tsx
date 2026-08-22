@@ -10,6 +10,17 @@ import { createClient } from "@/lib/supabase/server";
 export async function SponsoredAeContacts({ evaluatedLenderIds }: { evaluatedLenderIds: string[] }) {
   if (evaluatedLenderIds.length === 0) return null;
 
+  try {
+    return await renderSponsoredAeContacts(evaluatedLenderIds);
+  } catch (error) {
+    // Sponsorship is optional presentation data. Never let it replace a
+    // successfully calculated lender-results page with the route error UI.
+    console.error("Sponsored AE contacts failed to load:", error);
+    return null;
+  }
+}
+
+async function renderSponsoredAeContacts(evaluatedLenderIds: string[]) {
   const supabase = await createClient();
   const { data: activePlacements } = await supabase.from("ae_placements").select("ae_profile_id").eq("status", "active");
   if (!activePlacements || activePlacements.length === 0) return null;

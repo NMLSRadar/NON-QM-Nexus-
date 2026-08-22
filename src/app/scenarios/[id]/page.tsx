@@ -13,6 +13,8 @@ import { FileClassificationCard } from "@/components/file-classification-card";
 import { ScenarioComplexity } from "@/components/scenario-complexity";
 import { classifyScenarioComplexity } from "@/domain/complexity";
 import { getAeContactsByLenderIds } from "@/lib/ae/directory-data";
+import { ClearVoiceDraftAfterResultsReady, ScenarioResultsRuntimeGuard } from "./results-runtime-guard";
+import * as Sentry from "@sentry/nextjs";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +33,21 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
   const catalog = access.tierLevel === 0 ? await repo.getCatalog(org) : await repo.getCatalogForMatching(org);
   const analysis = analyzeScenario(scenario, catalog);
   const best = analysis.evaluations[0];
-  const contactsByLender = access.tierLevel > 0
-    ? await getAeContactsByLenderIds([...new Set(analysis.evaluations.map((evaluation) => evaluation.lenderId))])
-    : {};
+  let contactsByLender = {};
+  if (access.tierLevel > 0) {
+    try {
+      contactsByLender = await getAeContactsByLenderIds([...new Set(analysis.evaluations.map((evaluation) => evaluation.lenderId))]);
+    } catch (error) {
+      // AE contact enrichment is optional. A directory/table/network failure
+      // must never suppress the actual lender matches the user came for.
+      console.error("Scenario result AE contact enrichment failed:", error);
+      Sentry.captureException(error, { tags: { surface: "scenario-results-ae-enrichment" } });
+    }
+  }
 
   return (
-    <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
+    <ScenarioResultsRuntimeGuard>
+      <div className="gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
       {/* Header */}
       <div className="space-y-3">
         <Link href="/scenarios" className="inline-flex items-center gap-1 text-sm text-ink-secondary hover:text-brand-700 transition-colors">
@@ -181,6 +192,8 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
           ) : null}
         </div>
       </div>
-    </div>
+        <ClearVoiceDraftAfterResultsReady />
+      </div>
+    </ScenarioResultsRuntimeGuard>
   );
 }

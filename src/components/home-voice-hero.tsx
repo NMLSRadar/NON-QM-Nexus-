@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { Mic, MessageSquareText, Sparkles, Zap, PenSquare } from "lucide-react";
 import Link from "next/link";
-import VoiceClient, { VOICE_DRAFT_STORAGE_KEY } from "@/app/scenarios/voice/voice-client";
+import VoiceClient from "@/app/scenarios/voice/voice-client";
+import { VOICE_DRAFT_STORAGE_KEY } from "@/domain/voice/draft";
 import { GoldWaveform } from "@/components/gold-waveform";
 
 const FEATURES = [

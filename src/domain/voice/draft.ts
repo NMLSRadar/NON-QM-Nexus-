@@ -1,0 +1,1 @@
+export const VOICE_DRAFT_STORAGE_KEY = "nonqm:voice-scenario-draft:v1";
