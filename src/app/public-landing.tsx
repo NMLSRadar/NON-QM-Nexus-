@@ -68,8 +68,15 @@ function SignInCta() {
   );
 }
 
-export function PublicLanding({ programCount: _programCount = null }: { programCount?: number | null }) {
-  const programLine = "HUNDREDS OF NON-QM PROGRAMS AT YOUR FINGERTIPS!";
+export function PublicLanding({
+  lenderCount = null,
+  programCount = null,
+}: {
+  lenderCount?: number | null;
+  programCount?: number | null;
+}) {
+  const lenderLabel = lenderCount === null ? "Verified lender access" : lenderCount.toLocaleString();
+  const programLabel = programCount === null ? "Hundreds" : programCount.toLocaleString();
   return (
     <div className="nexus-landing gold-theme gold-page -mx-4 -my-6 overflow-hidden bg-[#050505] px-4 pb-10 pt-6 sm:px-6 sm:pb-14">
       <section className="nexus-hero relative mx-auto max-w-7xl pt-8 text-center sm:pt-10 lg:pt-12">
@@ -94,7 +101,22 @@ export function PublicLanding({ programCount: _programCount = null }: { programC
             <span className="nexus-bolt-wrap" aria-hidden="true">
               <Bolt className="h-5 w-5" fill="currentColor" />
             </span>
-            <span>{programLine}</span>
+            <span>LIVE NON-QM CATALOG ACCESS</span>
+          </div>
+
+          <div className="mt-4 grid w-full max-w-xl grid-cols-2 gap-3" aria-label="Live NON-QM catalog totals">
+            <div className="rounded-2xl border border-amber-400/25 bg-black/45 px-4 py-4 shadow-[0_0_28px_rgba(245,158,11,0.08)] backdrop-blur-sm">
+              <strong className="block text-2xl font-black tabular-nums text-amber-300 sm:text-3xl">{lenderLabel}</strong>
+              <span className="mt-1 block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-300 sm:text-xs">
+                {lenderCount === null ? "" : "Verified lenders"}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-amber-400/25 bg-black/45 px-4 py-4 shadow-[0_0_28px_rgba(245,158,11,0.08)] backdrop-blur-sm">
+              <strong className="block text-2xl font-black tabular-nums text-amber-300 sm:text-3xl">{programLabel}</strong>
+              <span className="mt-1 block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-300 sm:text-xs">
+                Programs available
+              </span>
+            </div>
           </div>
 
           <p className="nexus-description">

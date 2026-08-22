@@ -28,6 +28,7 @@ const scripts = [
   "ingest_amwest_pennymac_clearedge_fundloans_2026_08_08.mjs",
   "ingest_ten_lender_nonqm_2026_08_08.mjs",
   "ingest_thelender_complete_2026_08_17.mjs",
+  "ingest_mtg_broker_pending_2026_08_22.mjs",
 ];
 
 for (const script of scripts) {

@@ -41,9 +41,12 @@ describe("landing page copy — pricing is not a ranking factor", () => {
     expect(source).toMatch(/pricing is never a factor/i);
   });
 
-  it("uses the permanent program-availability headline instead of a numeric count", () => {
+  it("shows live lender and program totals instead of a hand-maintained marketing number", () => {
     const source = readSource(join(__dirname, "../../src/app/public-landing.tsx"));
-    expect(source).toContain("HUNDREDS OF NON-QM PROGRAMS AT YOUR FINGERTIPS!");
-    expect(source).not.toMatch(/toLocaleString\([^)]*\).*non-QM programs at your fingertips/i);
+    expect(source).toContain("Verified lenders");
+    expect(source).toContain("Programs available");
+    expect(source).toContain("lenderCount.toLocaleString()");
+    expect(source).toContain("programCount.toLocaleString()");
+    expect(source).not.toContain("HUNDREDS OF NON-QM PROGRAMS AT YOUR FINGERTIPS!");
   });
 });

@@ -8,7 +8,7 @@ import { ScenarioTable, type ScenarioRowData } from "@/components/scenario-table
 import { HomeVoiceHero } from "@/components/home-voice-hero";
 import { PublicLanding } from "./public-landing";
 import { pageMetadata } from "@/lib/seo";
-import { getVerifiedProgramCount } from "@/lib/repository/supabaseRepository";
+import { getVerifiedLenderCount, getVerifiedProgramCount } from "@/lib/repository/supabaseRepository";
 
 export const dynamic = "force-dynamic";
 
@@ -34,13 +34,18 @@ export default async function DashboardPage() {
     // The public homepage shows the REAL live catalog program count (not a
     // hand-maintained "Hundreds" claim) — same verified-only query the
     // /programs directory and pricing page use, so it can never drift.
+    let lenderCount: number | null = null;
     let programCount: number | null = null;
     try {
-      programCount = await getVerifiedProgramCount(supabase);
+      [lenderCount, programCount] = await Promise.all([
+        getVerifiedLenderCount(supabase),
+        getVerifiedProgramCount(supabase),
+      ]);
     } catch {
+      lenderCount = null;
       programCount = null; // marketing copy degrades gracefully if DB is unreachable
     }
-    return <PublicLanding programCount={programCount} />;
+    return <PublicLanding lenderCount={lenderCount} programCount={programCount} />;
   }
 
   const repo = await getRepository();
