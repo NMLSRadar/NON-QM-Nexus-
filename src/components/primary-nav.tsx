@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 const NAV = [
   { href: "/scenarios/new", label: "New Scenario" },
   { href: "/scenarios/voice", label: "Voice Scenario" },
+  { href: "/toolkit", label: "Toolkit" },
   { href: "/scenarios", label: "Scenarios" },
   { href: "/document-checklists", label: "Doc Checklists" },
   { href: "/unique-products", label: "Unique Non-QM Products" },

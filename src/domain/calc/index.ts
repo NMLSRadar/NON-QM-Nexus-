@@ -15,6 +15,7 @@ export * from "./pnl";
 export * from "./assetDepletion";
 export * from "./income";
 export * from "./reserves";
+export * from "./toolkit";
 
 /**
  * Run the full deterministic calculation suite for a scenario. Order matters:

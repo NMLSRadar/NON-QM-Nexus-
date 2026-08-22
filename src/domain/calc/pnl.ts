@@ -25,6 +25,7 @@ export function calcPnlIncome(details: PnlDetails): CalcResult {
   const value = monthly ? round2(monthly) : null;
 
   const notes: string[] = [];
+  notes.push("P&L Only: tax returns are never required; the P&L is the income document. CPA attestation, when applicable, confirms tax filing only.");
   if (details.bankDepositVariancePercent != null && Math.abs(details.bankDepositVariancePercent) > 10) {
     notes.push(
       `P&L revenue vs. bank deposits vary by ${details.bankDepositVariancePercent}% — reconcile before qualifying.`,
