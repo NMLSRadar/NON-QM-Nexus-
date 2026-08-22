@@ -26,7 +26,7 @@ export interface Repository {
   listScenarios(organizationId: string): Promise<Scenario[]>;
   getScenario(organizationId: string, id: string): Promise<Scenario | null>;
   saveScenario(scenario: Scenario): Promise<Scenario>;
-  listLenders(organizationId: string): Promise<Lender[]>;
+  listLenders(organizationId: string, tierOverride?: number): Promise<Lender[]>;
   /** Every lender in the org, regardless of the caller's subscription tier
    * — used by the Lenders directory page so lender VISIBILITY is never
    * gated by plan (only actual guideline/program data is — see
@@ -80,7 +80,7 @@ class InMemoryRepository implements Repository {
     return scenario;
   }
 
-  async listLenders(organizationId: string): Promise<Lender[]> {
+  async listLenders(organizationId: string, _tierOverride?: number): Promise<Lender[]> {
     this.assertOrg(organizationId);
     return sampleLenders;
   }

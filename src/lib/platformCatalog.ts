@@ -15,3 +15,4 @@
  * platform-admin-only, unchanged).
  */
 export const PLATFORM_CATALOG_ORGANIZATION_ID = "bfe87b1c-86e7-4186-b1c4-ecc25d0e4420";
+export const MAX_TIER_LEVEL = 3;

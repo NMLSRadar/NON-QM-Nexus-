@@ -5,13 +5,10 @@ import type { Lender, Program, Rule } from "@/domain/types/program";
 import type { Scenario } from "@/domain/types/scenario";
 import type { ProgramCatalog } from "@/domain/analyze";
 import { getEffectivePlan } from "./membership";
-import { PLATFORM_CATALOG_ORGANIZATION_ID } from "@/lib/platformCatalog";
+import { MAX_TIER_LEVEL, PLATFORM_CATALOG_ORGANIZATION_ID } from "@/lib/platformCatalog";
 
-/** The top subscription tier (Enterprise) — passing this as a tier
- * override effectively lifts the `.lte("tier_level", tier)` gate so every
- * active, verified lender/program is returned regardless of the caller's
- * real plan. Used only by getCatalogForMatching. */
-const MAX_TIER_LEVEL = 3;
+/** MAX_TIER_LEVEL lifts the tier gate only where the caller explicitly needs
+ * the full verified catalog, such as matching and the lender directory. */
 
 // ---------------------------------------------------------------------------
 // Row <-> domain object mapping.
@@ -295,16 +292,22 @@ export class SupabaseRepository implements Repository {
    * stays excluded until that happens. */
   private async getVerifiedLenderIds(candidateLenderIds: string[]): Promise<Set<string>> {
     if (candidateLenderIds.length === 0) return new Set();
-    const { data: programs, error: programsError } = await this.supabase
-      .from("programs")
-      .select("id, lender_id")
-      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
-      .eq("is_sample_data", false)
-      .eq("active", true)
-      .in("lender_id", candidateLenderIds)
-      .is("deleted_at", null);
-    if (programsError) throw new Error(`Failed to list programs for verification check: ${programsError.message}`);
-    const programIds = (programs as Array<{ id: string; lender_id: string }>).map((p) => p.id);
+    const programs: Array<{ id: string; lender_id: string }> = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data: page, error: programsError } = await this.supabase
+        .from("programs")
+        .select("id, lender_id")
+        .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+        .eq("is_sample_data", false)
+        .eq("active", true)
+        .in("lender_id", candidateLenderIds)
+        .is("deleted_at", null)
+        .range(offset, offset + 999);
+      if (programsError) throw new Error(`Failed to list programs for verification check: ${programsError.message}`);
+      programs.push(...(page as Array<{ id: string; lender_id: string }>));
+      if ((page ?? []).length < 1000) break;
+    }
+    const programIds = programs.map((p) => p.id);
     if (programIds.length === 0) return new Set();
 
     // PostgREST encodes `.in()` values into the request URL. Chunk this query
@@ -324,7 +327,7 @@ export class SupabaseRepository implements Repository {
     }
 
     const verifiedLenderIds = new Set<string>();
-    for (const p of programs as Array<{ id: string; lender_id: string }>) {
+    for (const p of programs) {
       if (verifiedProgramIds.has(p.id)) verifiedLenderIds.add(p.lender_id);
     }
     return verifiedLenderIds;
@@ -393,15 +396,21 @@ export class SupabaseRepository implements Repository {
   async listPrograms(organizationId: string, tierOverride?: number): Promise<Program[]> {
     void organizationId;
     const tier = tierOverride ?? (await this.getEffectiveTier());
-    const { data, error } = await this.supabase
-      .from("programs")
-      .select("id, organization_id, lender_id, name, is_sample_data, active, config, lenders!inner(tier_level)")
-      .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
-      .eq("is_sample_data", false)
-      .lte("lenders.tier_level", tier)
-      .is("deleted_at", null);
-    if (error) throw new Error(`Failed to list programs: ${error.message}`);
-    const programRows = data as unknown as ProgramRow[];
+    const programRows: ProgramRow[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data: page, error } = await this.supabase
+        .from("programs")
+        .select("id, organization_id, lender_id, name, is_sample_data, active, config, lenders!inner(tier_level)")
+        .eq("organization_id", PLATFORM_CATALOG_ORGANIZATION_ID)
+        .eq("is_sample_data", false)
+        .eq("active", true)
+        .lte("lenders.tier_level", tier)
+        .is("deleted_at", null)
+        .range(offset, offset + 999);
+      if (error) throw new Error(`Failed to list programs: ${error.message}`);
+      programRows.push(...(page as unknown as ProgramRow[]));
+      if ((page ?? []).length < 1000) break;
+    }
     const invalidRows = programRows
       .map((row) => ({ row, issues: getProgramConfigRuntimeIssues(row.config) }))
       .filter(({ issues }) => issues.length > 0);

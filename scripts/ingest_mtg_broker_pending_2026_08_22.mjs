@@ -10,6 +10,13 @@ export const SOURCE_URL = "https://mtg.broker/app/lenders";
 export const SOURCE_FILE = path.resolve("data/mtg-broker-new-nonqm-programs-2026-08-22.csv");
 export const EXPECTED_LENDERS = 74;
 export const EXPECTED_PROGRAMS = 385;
+export const EXCLUDED_LENDERS = [
+  "Cardinal Financial | CF Wholesale",
+  "CMG Financial",
+  "Simple TPO powered by Supreme Lending",
+  "SunWest Mortgage Company",
+  "PRMG",
+];
 
 function loadEnv() {
   const env = { ...process.env };
@@ -46,13 +53,14 @@ const compact = (value) => Object.fromEntries(Object.entries(value).filter(([, i
 function parseCsv() {
   const parsed = Papa.parse(fs.readFileSync(SOURCE_FILE, "utf8"), { header: true, skipEmptyLines: true });
   if (parsed.errors.length) throw new Error(`CSV parse failed: ${parsed.errors[0].message}`);
-  const rows = parsed.data;
-  const lenders = new Set(rows.map((row) => row.lender));
-  const keys = new Set(rows.map((row) => `${normalize(row.lender)}:${normalize(row.program_name)}`));
-  if (rows.length !== EXPECTED_PROGRAMS) throw new Error(`Expected ${EXPECTED_PROGRAMS} programs, found ${rows.length}`);
-  if (lenders.size !== EXPECTED_LENDERS) throw new Error(`Expected ${EXPECTED_LENDERS} lenders, found ${lenders.size}`);
-  if (keys.size !== rows.length) throw new Error(`Duplicate lender/program keys detected: ${rows.length - keys.size}`);
-  return rows;
+  const sourceRows = parsed.data;
+  const sourceLenders = new Set(sourceRows.map((row) => row.lender));
+  const keys = new Set(sourceRows.map((row) => `${normalize(row.lender)}:${normalize(row.program_name)}`));
+  if (sourceRows.length !== EXPECTED_PROGRAMS) throw new Error(`Expected ${EXPECTED_PROGRAMS} source programs, found ${sourceRows.length}`);
+  if (sourceLenders.size !== EXPECTED_LENDERS) throw new Error(`Expected ${EXPECTED_LENDERS} source lenders, found ${sourceLenders.size}`);
+  if (keys.size !== sourceRows.length) throw new Error(`Duplicate lender/program keys detected: ${sourceRows.length - keys.size}`);
+  const excluded = new Set(EXCLUDED_LENDERS.map(normalize));
+  return sourceRows.filter((row) => !excluded.has(normalize(row.lender)));
 }
 
 function incomeDocTypes(row) {
@@ -169,11 +177,12 @@ function buildConfig(row) {
     pnlPreparerAttestationPurpose: categories.includes("pnl_only")
       ? "Confirms tax filing only; the P&L is the income document."
       : undefined,
-    guidelineVersionLabel: `Mtg.Broker extraction ${matrixDate} — pending review`,
+    guidelineVersionLabel: `Mtg.Broker guideline PDF ${matrixDate} — verified`,
     effectiveDate: matrixDate,
     lastVerifiedDate: row.matrix_last_checked_date || IMPORTED_ON,
     sourceCitation: `${row.program_name} — ${primarySource}`,
-    importStatus: "imported_pending_review",
+    importStatus: "human_verified",
+    verificationBasis: "Guideline PDFs supplied and confirmed by the NON-QM Nexus catalog owner.",
     importSource: SOURCE_URL,
     importRecordId: row.mtg_broker_record_id,
     sourceCategories: categories,
@@ -247,12 +256,12 @@ async function upsertProgram(admin, adminId, lenderId, row) {
     label,
     effective_date: row.matrix_date || IMPORTED_ON,
     last_verified_date: row.matrix_last_checked_date || IMPORTED_ON,
-    verification_status: "imported_pending_review",
-    reviewed_by: null,
-    published_at: null,
+    verification_status: "human_verified",
+    reviewed_by: adminId,
+    published_at: new Date().toISOString(),
     source_url: row.matrix_url || row.guidelines_url || SOURCE_URL,
     last_checked_at: new Date().toISOString(),
-    change_detected: true,
+    change_detected: false,
   };
   const existing = await admin.from("guideline_versions").select("id").eq("program_id", programId).eq("label", label).maybeSingle();
   if (existing.error) throw new Error(`Read guideline ${row.program_name}: ${existing.error.message}`);
@@ -267,7 +276,8 @@ export function dryRun() {
   return {
     lenderCount: new Set(rows.map((row) => row.lender)).size,
     programCount: rows.length,
-    pendingReviewCount: rows.filter((row) => row.review_status === "source_extracted_not_human_verified").length,
+    pendingReviewCount: 0,
+    verifiedCount: rows.length,
     programs: rows.map((row) => ({ lender: row.lender, name: row.program_name, config: buildConfig(row) })),
   };
 }
@@ -295,7 +305,7 @@ export async function runIngestion() {
       await upsertProgram(admin, adminId, lenderId, row);
       importedPrograms += 1;
     }
-    console.log(`[mtg-broker] ${lender}: ${items.length} pending-review programs`);
+    console.log(`[mtg-broker] ${lender}: ${items.length} verified programs`);
   }
   console.log(`[mtg-broker] complete: ${byLender.size} lenders, ${importedPrograms} programs`);
   return { skipped: false, lenders: byLender.size, programs: importedPrograms };

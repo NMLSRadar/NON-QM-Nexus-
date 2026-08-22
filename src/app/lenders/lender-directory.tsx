@@ -16,8 +16,7 @@ export interface DirectoryLender {
 
 interface Props {
   lenders: DirectoryLender[];
-  /** Membership controls only whether guideline details are unlocked. Every
-   * active production lender remains visible in the alphabetical directory. */
+  /** Membership controls whether verified guideline details are unlocked. */
   isMember: boolean;
 }
 
@@ -136,7 +135,7 @@ export function LenderDirectory({ lenders, isMember }: Props) {
                   <ShieldCheck className="h-3 w-3" aria-hidden /> A–Z Directory
                 </span>
               </div>
-              <p className="mt-1 max-w-xl text-sm text-slate-400">The complete verified Non-QM lender catalog, always organized alphabetically.</p>
+              <p className="mt-1 max-w-xl text-sm text-slate-400">Verified Non-QM lenders with available programs, organized alphabetically.</p>
             </div>
           </div>
           <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/30 bg-amber-400/10 px-4 py-2 text-sm font-semibold tabular-nums text-amber-200">
