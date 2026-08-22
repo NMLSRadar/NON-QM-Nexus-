@@ -142,6 +142,10 @@ function ExportPdfButton({ calculator, inputs, borrowerReference }: { calculator
   );
 }
 
+function ExcelTemplateButton({ document }: { document: "dscr" | "pnl" }) {
+  return <a className="toolkit-download-secondary inline-flex items-center gap-3 rounded-xl px-5 py-3 text-sm font-extrabold uppercase tracking-wide text-slate-100" href={`/api/toolkit/templates/${document}/xlsx`}><FileSpreadsheet className="h-5 w-5 text-emerald-400" aria-hidden /><span><span className="block">Download Excel template</span><span className="mt-0.5 block text-[10px] font-medium normal-case tracking-normal text-slate-400">Editable calculator with formulas</span></span></a>;
+}
+
 function CalculatorShell({ title, description, borrowerReference, setBorrowerReference, children, exportButton }: { title: string; description: string; borrowerReference: string; setBorrowerReference: (value: string) => void; children: React.ReactNode; exportButton: React.ReactNode }) {
   return (
     <section className="toolkit-shell space-y-5 p-4 sm:p-6 lg:p-7">
@@ -183,7 +187,7 @@ function DscrCalculator({ borrowerReference, setBorrowerReference }: { borrowerR
   const payment = Number(result.inputs?.housingExpense ?? 0);
   const rentUsed = Number(result.inputs?.qualifyingRent ?? 0);
   return (
-    <CalculatorShell title="DSCR Calculator" description="See the exact rent and housing-payment denominator used, then compare the property’s cash-flow ratio." borrowerReference={borrowerReference} setBorrowerReference={setBorrowerReference} exportButton={<ExportPdfButton calculator="dscr" inputs={inputs} borrowerReference={borrowerReference} />}>
+    <CalculatorShell title="DSCR Calculator" description="See the exact rent and housing-payment denominator used, then compare the property’s cash-flow ratio." borrowerReference={borrowerReference} setBorrowerReference={setBorrowerReference} exportButton={<><ExportPdfButton calculator="dscr" inputs={inputs} borrowerReference={borrowerReference} /><ExcelTemplateButton document="dscr" /></>}>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(280px,.75fr)]">
         <div className="grid gap-4 xl:grid-cols-2">
           <SectionCard title="Property & income" icon={House}><div className="grid gap-4 sm:grid-cols-2"><NumericField label="Monthly lease" value={lease} onChange={setLease} prefix="$" /><NumericField label="Market rent (1007)" value={market} onChange={setMarket} prefix="$" /><NumericField label="Annual property taxes" value={taxes} onChange={setTaxes} prefix="$" /><NumericField label="Annual hazard insurance" value={hazard} onChange={setHazard} prefix="$" /><NumericField label="Annual flood insurance" value={flood} onChange={setFlood} prefix="$" /><NumericField label="Monthly HOA" value={hoa} onChange={setHoa} prefix="$" /></div></SectionCard>
@@ -230,7 +234,7 @@ function PnlCalculator({ borrowerReference, setBorrowerReference }: { borrowerRe
   const result = calcPnlIncome({ periodMonths: months, grossRevenue: gross, expenseAmount: expenses, netIncome: net, ownershipPercent: ownership, preparer, supportingBankStatements: true });
   const ratio = gross > 0 ? expenses / gross * 100 : 0;
   return (
-    <CalculatorShell title="P&L Income Worksheet" description="Translate the P&L’s net business income into monthly qualifying income and expose the implied expense ratio." borrowerReference={borrowerReference} setBorrowerReference={setBorrowerReference} exportButton={<ExportPdfButton calculator="pnl" inputs={inputs} borrowerReference={borrowerReference} />}>
+    <CalculatorShell title="P&L Income Worksheet" description="Translate the P&L’s net business income into monthly qualifying income and expose the implied expense ratio." borrowerReference={borrowerReference} setBorrowerReference={setBorrowerReference} exportButton={<><ExportPdfButton calculator="pnl" inputs={inputs} borrowerReference={borrowerReference} /><ExcelTemplateButton document="pnl" /></>}>
       <div className="toolkit-banner flex gap-3 p-4 text-sm leading-relaxed text-amber-50"><Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden /><p><strong className="mr-1 uppercase tracking-wide text-amber-300">P&L Only rule:</strong> Tax returns are never required. The P&L is the income document. CPA attestation, when applicable, confirms tax filing only—it does not validate the income amount.</p></div>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(280px,.75fr)]">
         <SectionCard title="P&L summary" icon={ReceiptText}><div className="grid gap-4 sm:grid-cols-2"><NumericField label="Gross revenue" value={gross} onChange={setGross} prefix="$" /><NumericField label="Total expenses" value={expenses} onChange={setExpenses} prefix="$" /><NumericField label="Ownership" value={ownership} onChange={setOwnership} max={100} suffix="%" /><NumericField label="Covered period" value={months} onChange={setMonths} min={1} max={24} suffix="months" /><SelectField label="P&L preparer" value={preparer} onChange={(v) => setPreparer(v as typeof preparer)} options={[{ value: "cpa", label: "CPA" }, { value: "ea", label: "EA" }, { value: "tax_professional", label: "Tax preparer" }, { value: "borrower", label: "Borrower" }]} /></div></SectionCard>
