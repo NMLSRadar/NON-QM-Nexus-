@@ -213,6 +213,80 @@ describe("Scenario results — lender-level recommendations", () => {
   });
 });
 
+describe("Scenario results — ITIN expert routing override", () => {
+  const itinExperts = [
+    ["acc", "ACC Mortgage"],
+    ["acra", "Acra Lending"],
+    ["greenbox", "Greenbox Loans"],
+    ["champions", "Champions Funding"],
+  ] as const;
+
+  it("prioritizes the four industry-recognized ITIN lenders with ACC first", () => {
+    const evaluations = [
+      makeEvaluation({ programId: "angel", lenderName: "Angel Oak", matchScore: 99 }),
+      ...[...itinExperts].reverse().map(([programId, lenderName], index) => makeEvaluation({
+        programId,
+        lenderId: programId,
+        lenderName,
+        matchScore: 70 + index,
+        citizenshipEligible: ["itin"],
+      })),
+    ];
+
+    expect(selectRecommendedLenders(evaluations, true).map((evaluation) => evaluation.lenderName)).toEqual([
+      "ACC Mortgage",
+      "Acra Lending",
+      "Greenbox Loans",
+      "Champions Funding",
+      "Angel Oak",
+    ]);
+  });
+
+  it("keeps every ITIN expert visible as a labeled near match when its guidelines do not fit, even with 3+ eligible lenders", () => {
+    const eligibleEvaluations = [eligible("1"), eligible("2"), eligible("3")];
+    const expertNearMatches = itinExperts.map(([programId, lenderName]) => makeEvaluation({
+      programId,
+      lenderId: programId,
+      lenderName,
+      status: MatchStatus.Ineligible,
+      matchScore: 20,
+      minFico: undefined,
+      citizenshipEligible: ["itin"],
+      failedRules: [{
+        ruleId: `${programId}-fit`,
+        ruleName: "Current ITIN program fit",
+        category: "guidelines",
+        outcome: "fail" as never,
+        severity: "hard" as never,
+        userExplanation: `${lenderName} current program guidelines do not fit this no-FICO scenario.`,
+      }],
+    }));
+
+    render(<BestLenderMatches evaluations={[...eligibleEvaluations, ...expertNearMatches]} tierLevel={3} itinScenario />);
+
+    for (const [, lenderName] of itinExperts) {
+      expect(screen.getByText(lenderName)).toBeInTheDocument();
+      expect(screen.getByText(`${lenderName} current program guidelines do not fit this no-FICO scenario.`)).toBeInTheDocument();
+    }
+    expect(screen.getAllByText("ITIN Expert")).toHaveLength(4);
+    expect(screen.getAllByText("Near Match — Guideline Conflict")).toHaveLength(4);
+  });
+
+  it("does not apply the manual ITIN override to a non-ITIN scenario", () => {
+    const accNearMatch = makeEvaluation({
+      programId: "acc",
+      lenderId: "acc",
+      lenderName: "ACC Mortgage",
+      status: MatchStatus.Ineligible,
+      matchScore: 20,
+    });
+
+    render(<BestLenderMatches evaluations={[eligible("1"), eligible("2"), eligible("3"), accNearMatch]} tierLevel={3} />);
+    expect(screen.queryByText("ACC Mortgage")).not.toBeInTheDocument();
+    expect(screen.queryByText("ITIN Expert")).not.toBeInTheDocument();
+  });
+});
+
 describe("Scenario results — membership-tier protection (locked eligible lenders)", () => {
   it("Test Case F: a locked higher-tier eligible lender still counts toward the 3-eligible threshold and suppresses ineligible lenders", () => {
     const evals = [

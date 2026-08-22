@@ -97,8 +97,9 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
                   ITIN borrower detected. Searching active ITIN loan programs and ranking the strongest lender matches.
                 </p>
                 <p className="mt-1 text-xs text-brand-800/80">
-                  Only programs whose current, verified guidelines list ITIN as an eligible citizenship classification are
-                  ranked below — a lender is never shown just because it&apos;s generally known for ITIN lending.
+                  ACC Mortgage, Acra Lending, Greenbox Loans, and Champions Funding are treated as industry-recognized ITIN
+                  experts. A lender whose current program fits is recommended; when its published guidelines do not fit this
+                  file, it remains visible as an ITIN Expert near match with the specific conflict disclosed.
                 </p>
               </div>
             ) : null}
@@ -124,7 +125,12 @@ export default async function ScenarioResultPage({ params }: { params: Promise<{
               description="Each applicable lender appears once, represented by its strongest matching program."
             />
             <div className="mt-4">
-              <BestLenderMatches evaluations={analysis.evaluations} tierLevel={access.tierLevel} contactsByLender={contactsByLender} />
+              <BestLenderMatches
+                evaluations={analysis.evaluations}
+                tierLevel={access.tierLevel}
+                contactsByLender={contactsByLender}
+                itinScenario={scenario.citizenship === "itin"}
+              />
             </div>
           </Card>
 

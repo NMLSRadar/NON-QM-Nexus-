@@ -59,6 +59,13 @@ const CLEAN_FILE_LENDER_PRIORITY = [
   ["PennyMac", ["pennymac"]],
 ] as const;
 
+const ITIN_EXPERT_LENDER_PRIORITY = [
+  ["ACC Mortgage", ["acc mortgage"]],
+  ["Acra Lending", ["acra lending"]],
+  ["Greenbox Loans", ["greenbox loans", "greenbox"]],
+  ["Champions Funding", ["champions funding", "champions"]],
+] as const;
+
 function normalizedLenderName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -66,6 +73,15 @@ function normalizedLenderName(name: string): string {
 function cleanFilePriorityIndex(name: string): number {
   const normalized = normalizedLenderName(name);
   return CLEAN_FILE_LENDER_PRIORITY.findIndex(([, aliases]) => aliases.some((alias) => normalized === alias || normalized.includes(alias)));
+}
+
+function itinExpertPriorityIndex(name: string): number {
+  const normalized = normalizedLenderName(name);
+  return ITIN_EXPERT_LENDER_PRIORITY.findIndex(([, aliases]) => aliases.some((alias) => normalized === alias || normalized.includes(alias)));
+}
+
+export function isItinExpertLender(name: string): boolean {
+  return itinExpertPriorityIndex(name) >= 0;
 }
 
 function isCleanFilePriorityMatch(evaluation: ProgramEvaluation): boolean {
@@ -82,7 +98,7 @@ function isCleanFilePriorityMatch(evaluation: ProgramEvaluation): boolean {
  * apply the requested historical pricing order without ever promoting a hard
  * fail or an unverified program.
  */
-export function selectRecommendedLenders(evaluations: ProgramEvaluation[]): ProgramEvaluation[] {
+export function selectRecommendedLenders(evaluations: ProgramEvaluation[], itinScenario = false): ProgramEvaluation[] {
   const seen = new Set<string>();
   const onePerLender = evaluations.filter((evaluation) => {
     const key = normalizedLenderName(evaluation.lenderName);
@@ -94,6 +110,13 @@ export function selectRecommendedLenders(evaluations: ProgramEvaluation[]): Prog
   return onePerLender
     .map((evaluation, originalIndex) => ({ evaluation, originalIndex }))
     .sort((a, b) => {
+      if (itinScenario) {
+        const aItinPriority = itinExpertPriorityIndex(a.evaluation.lenderName);
+        const bItinPriority = itinExpertPriorityIndex(b.evaluation.lenderName);
+        if (aItinPriority >= 0 && bItinPriority >= 0) return aItinPriority - bItinPriority;
+        if (aItinPriority >= 0) return -1;
+        if (bItinPriority >= 0) return 1;
+      }
       const aPriority = isCleanFilePriorityMatch(a.evaluation) ? cleanFilePriorityIndex(a.evaluation.lenderName) : -1;
       const bPriority = isCleanFilePriorityMatch(b.evaluation) ? cleanFilePriorityIndex(b.evaluation.lenderName) : -1;
       if (aPriority >= 0 && bPriority >= 0) return aPriority - bPriority;
@@ -223,7 +246,7 @@ function StarRating({ score }: { score: number }) {
  * spec's membership-tier protection rule: the card stays visible and still
  * counts as an eligible match, but every guideline detail (stats, why-this-
  * lender, AI analysis, restrictions) is hidden behind an upgrade prompt. */
-function LockedLenderCard({ e, rank }: { e: ProgramEvaluation; rank: number }) {
+function LockedLenderCard({ e, rank, itinExpert = false }: { e: ProgramEvaluation; rank: number; itinExpert?: boolean }) {
   const isBestMatch = rank === 0 && (e.status === "strong_match" || e.status === "eligible");
   return (
     <div
@@ -246,6 +269,7 @@ function LockedLenderCard({ e, rank }: { e: ProgramEvaluation; rank: number }) {
             <p className="text-sm text-ink-secondary">{e.programName}</p>
             <div className="mt-1.5 flex items-center gap-2 flex-wrap">
               <StatusBadge status={e.status} />
+              {itinExpert ? <Pill tone="gold">ITIN Expert</Pill> : null}
               <Pill tone="gold">Tier {e.lenderTierLevel} required</Pill>
             </div>
           </div>
@@ -279,6 +303,7 @@ function LenderCard({
   disabled,
   runnerUpName,
   contacts,
+  itinExpert = false,
 }: {
   rank: number;
   e: ProgramEvaluation;
@@ -287,6 +312,7 @@ function LenderCard({
   disabled: boolean;
   runnerUpName?: string;
   contacts: DirectoryContact[];
+  itinExpert?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const tone = TONE_BY_STATUS[e.status];
@@ -372,6 +398,7 @@ function LenderCard({
       {!verificationPending && <div className="mt-3 flex flex-wrap gap-1.5">
         {e.lienPosition === "standalone_second" && <Pill tone="gold">Standalone Second Lien</Pill>}
         {e.citizenshipEligible.includes("itin") && <Pill tone="gold">ITIN Eligible</Pill>}
+        {itinExpert && <Pill tone="gold">ITIN Expert</Pill>}
         {e.itinSpecialist && <Pill tone="gold">ITIN Specialist</Pill>}
         {e.itinDscrConfirmed && <Pill tone="gold">ITIN DSCR Eligible</Pill>}
         {e.citizenshipEligible.includes("foreign_national") && <Pill tone="sky">Foreign National</Pill>}
@@ -518,7 +545,7 @@ function LenderCard({
  * spec section 3-4). Always clearly labeled and always explains the exact
  * disqualifying reason(s), drawn from this program's own real failed
  * rules — never invented. */
-function IneligibleLenderCard({ e }: { e: ProgramEvaluation }) {
+function IneligibleLenderCard({ e, itinExpert = false }: { e: ProgramEvaluation; itinExpert?: boolean }) {
   const reasons = e.failedRules.length > 0 ? e.failedRules.map((r) => r.userExplanation) : potentialIssues(e);
   return (
     <div className="rounded-card border border-rose-100 bg-rose-50/30 p-5">
@@ -526,12 +553,13 @@ function IneligibleLenderCard({ e }: { e: ProgramEvaluation }) {
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-bold text-ink-primary">{e.lenderName}</p>
+            {itinExpert ? <Pill tone="gold">ITIN Expert</Pill> : null}
             {e.isSampleData ? <SampleDataBadge /> : null}
           </div>
           <p className="text-sm text-ink-secondary">{e.programName}</p>
         </div>
         <Pill tone="rose">
-          <XCircle className="h-3 w-3 mr-1 inline" /> Currently Ineligible
+          <XCircle className="h-3 w-3 mr-1 inline" /> {itinExpert ? "Near Match — Guideline Conflict" : "Currently Ineligible"}
         </Pill>
       </div>
 
@@ -618,6 +646,7 @@ export function BestLenderMatches({
   evaluations,
   tierLevel,
   contactsByLender = {},
+  itinScenario = false,
 }: {
   evaluations: ProgramEvaluation[];
   contactsByLender?: Record<string, DirectoryContact[]>;
@@ -631,6 +660,10 @@ export function BestLenderMatches({
    * engine to a brand-new, not-yet-subscribed account. Also controls which
    * eligible lender cards render locked (lenderTierLevel > tierLevel). */
   tierLevel?: number;
+  /** Industry-routing override: the designated ITIN leaders always remain
+   * visible on ITIN scenarios. Eligibility and guideline conflicts remain
+   * unchanged; a hard-fail expert is displayed as a near match. */
+  itinScenario?: boolean;
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   // Evaluations arrive from analyzeScenario already ranked with guideline
@@ -638,14 +671,21 @@ export function BestLenderMatches({
   // band first, then score, then name) — that ordering must never be
   // discarded in favor of a pure match-score sort, or an ineligible program
   // could visually outrank an eligible one.
-  const lenderEvaluations = useMemo(() => selectRecommendedLenders(evaluations), [evaluations]);
+  const lenderEvaluations = useMemo(() => selectRecommendedLenders(evaluations, itinScenario), [evaluations, itinScenario]);
   const eligible = useMemo(() => lenderEvaluations.filter((e) => !e.guidelineVerificationRequired && isEligibleStatus(e.status)), [lenderEvaluations]);
   const ineligible = useMemo(() => lenderEvaluations.filter((e) => e.guidelineVerificationRequired || !isEligibleStatus(e.status)), [lenderEvaluations]);
   const cleanFilePricingLenders = useMemo(() => eligible.filter(isCleanFilePriorityMatch), [eligible]);
-  const displayedIneligible = useMemo(
-    () => (eligible.length >= ELIGIBLE_SUPPRESSION_THRESHOLD ? [] : ineligible.slice(0, MAX_DISPLAYED_INELIGIBLE)),
-    [eligible.length, ineligible],
-  );
+  const displayedIneligible = useMemo(() => {
+    if (!itinScenario) {
+      return eligible.length >= ELIGIBLE_SUPPRESSION_THRESHOLD ? [] : ineligible.slice(0, MAX_DISPLAYED_INELIGIBLE);
+    }
+    const itinExperts = ineligible.filter((evaluation) => isItinExpertLender(evaluation.lenderName));
+    const remainingSlots = Math.max(0, MAX_DISPLAYED_INELIGIBLE - itinExperts.length);
+    const otherNearMatches = eligible.length >= ELIGIBLE_SUPPRESSION_THRESHOLD
+      ? []
+      : ineligible.filter((evaluation) => !isItinExpertLender(evaluation.lenderName)).slice(0, remainingSlots);
+    return [...itinExperts, ...otherNearMatches].slice(0, MAX_DISPLAYED_INELIGIBLE);
+  }, [eligible.length, ineligible, itinScenario]);
 
   const effectiveTier = tierLevel ?? Number.POSITIVE_INFINITY;
   const selectableEligible = eligible.filter((e) => e.lenderTierLevel <= effectiveTier);
@@ -700,7 +740,16 @@ export function BestLenderMatches({
       <div className="space-y-4">
         {eligible.map((e, i) => {
           const locked = e.lenderTierLevel > effectiveTier;
-          if (locked) return <LockedLenderCard key={e.programId} e={e} rank={i} />;
+          if (locked) {
+            return (
+              <LockedLenderCard
+                key={e.programId}
+                e={e}
+                rank={i}
+                itinExpert={itinScenario && isItinExpertLender(e.lenderName)}
+              />
+            );
+          }
           return (
             <LenderCard
               key={e.programId}
@@ -711,6 +760,7 @@ export function BestLenderMatches({
               disabled={selectedIds.length >= MAX_COMPARE}
               runnerUpName={i === 0 ? eligible[1]?.lenderName : undefined}
               contacts={contactsByLender[e.lenderId] ?? []}
+              itinExpert={itinScenario && isItinExpertLender(e.lenderName)}
             />
           );
         })}
@@ -729,7 +779,11 @@ export function BestLenderMatches({
           </div>
           <div className="space-y-3">
             {displayedIneligible.map((e) => (
-              <IneligibleLenderCard key={e.programId} e={e} />
+              <IneligibleLenderCard
+                key={e.programId}
+                e={e}
+                itinExpert={itinScenario && isItinExpertLender(e.lenderName)}
+              />
             ))}
           </div>
         </div>
