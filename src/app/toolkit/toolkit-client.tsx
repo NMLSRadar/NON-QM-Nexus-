@@ -274,30 +274,32 @@ function PnlCalculator({ borrowerReference, setBorrowerReference }: { borrowerRe
 
 function AssetCalculator({ borrowerReference, setBorrowerReference }: { borrowerReference: string; setBorrowerReference: (v: string) => void }) {
   const [checking, setChecking] = useState(250000);
-  const [brokerage, setBrokerage] = useState(500000);
   const [stocks, setStocks] = useState(200000);
+  const [bonds, setBonds] = useState(0);
+  const [bondsInvestmentGrade, setBondsInvestmentGrade] = useState(true);
+  const [mutualFunds, setMutualFunds] = useState(500000);
   const [cryptocurrency, setCryptocurrency] = useState(0);
   const [retirement, setRetirement] = useState(350000);
-  const [vested, setVested] = useState(100);
   const [down, setDown] = useState(200000);
   const [costs, setCosts] = useState(30000);
   const [reserves, setReserves] = useState(50000);
   const [divisor, setDivisor] = useState(120);
-  const inputs = { checking, brokerage, stocks, cryptocurrency, retirement, vested, down, costs, reserves, divisor };
-  const result = calcAssetDepletion({ checkingSavings: checking, brokerage, stocksBonds: stocks, cryptocurrency, retirement, retirementVestedPercent: vested, requiredDownPayment: down, closingCosts: costs, requiredReserves: reserves, assetDivisorMonths: divisor, assetsAlsoUsedToClose: true }, { deductDownPayment: true, deductClosingCosts: true, deductReserves: true });
+  const inputs = { checking, stocks, bonds, bondsInvestmentGrade, mutualFunds, cryptocurrency, retirement, down, costs, reserves, divisor };
+  const result = calcAssetDepletion({ checkingSavings: checking, publiclyTradedStocks: stocks, bonds, bondsInvestmentGrade, mutualFunds, cryptocurrency, retirement, requiredDownPayment: down, closingCosts: costs, requiredReserves: reserves, assetDivisorMonths: divisor, assetsAlsoUsedToClose: true }, { deductDownPayment: true, deductClosingCosts: true, deductReserves: true });
   const assetRows = [
-    { label: "Checking & savings", amount: checking, eligibility: 100, setAmount: setChecking },
-    { label: "Brokerage", amount: brokerage, eligibility: 100, setAmount: setBrokerage },
-    { label: "Stocks & bonds", amount: stocks, eligibility: 100, setAmount: setStocks },
+    { label: "Checking / savings / money market", amount: checking, eligibility: 100, setAmount: setChecking },
+    { label: "Publicly traded stocks", amount: stocks, eligibility: 80, setAmount: setStocks },
+    { label: "Bonds", amount: bonds, eligibility: bondsInvestmentGrade ? 80 : 0, setAmount: setBonds },
+    { label: "Mutual funds", amount: mutualFunds, eligibility: 80, setAmount: setMutualFunds },
     { label: "Cryptocurrency", amount: cryptocurrency, eligibility: 60, setAmount: setCryptocurrency },
-    { label: "Retirement assets", amount: retirement, eligibility: vested, setAmount: setRetirement },
+    { label: "Retirement (401(k), IRA, SEP, KEOGH)", amount: retirement, eligibility: 70, setAmount: setRetirement },
   ];
   return (
     <CalculatorShell title="Asset Depletion" description="See eligible assets, every funds-to-close deduction, and the divisor that turns remaining assets into monthly income." borrowerReference={borrowerReference} setBorrowerReference={setBorrowerReference} exportButton={<ExportPdfButton calculator="asset-depletion" inputs={inputs} borrowerReference={borrowerReference} />}>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(280px,.7fr)]">
         <div className="space-y-4">
-          <SectionCard title="Assets & eligibility" icon={WalletCards}><table className="toolkit-asset-table"><thead><tr><th>Asset type</th><th>Asset amount</th><th>Eligibility</th><th>Eligible amount</th></tr></thead><tbody>{assetRows.map((row) => <tr key={row.label}><td data-label="Asset type" className="text-sm font-medium text-slate-200">{row.label}</td><td data-label="Asset amount"><NumericField label="" value={row.amount} onChange={row.setAmount} prefix="$" /></td><td data-label="Eligibility"><span className="block rounded-lg border border-slate-700/50 bg-black/25 px-3 py-2 text-sm tabular-nums text-slate-300">{row.eligibility.toFixed(row.label === "Retirement assets" ? 1 : 0)}%</span></td><td data-label="Eligible amount" className="text-sm font-semibold tabular-nums text-amber-200">{MONEY2.format(row.amount * row.eligibility / 100)}</td></tr>)}</tbody></table><div className="mt-3 max-w-xs"><NumericField label="Retirement vested" value={vested} onChange={setVested} max={100} suffix="%" /></div></SectionCard>
-          <SectionCard title="Funds to close & divisor" icon={BadgeDollarSign}><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><NumericField label="Required down payment" value={down} onChange={setDown} prefix="$" /><NumericField label="Closing costs" value={costs} onChange={setCosts} prefix="$" /><NumericField label="Required reserves" value={reserves} onChange={setReserves} prefix="$" /><NumericField label="Divisor" value={divisor} onChange={setDivisor} min={1} suffix="months" /></div></SectionCard>
+          <SectionCard title="Assets & eligibility" icon={WalletCards}><table className="toolkit-asset-table"><thead><tr><th>Asset type</th><th>Asset amount</th><th>Eligibility</th><th>Eligible amount</th></tr></thead><tbody>{assetRows.map((row) => <tr key={row.label}><td data-label="Asset type" className="text-sm font-medium text-slate-200">{row.label}</td><td data-label="Asset amount"><NumericField label="" value={row.amount} onChange={row.setAmount} prefix="$" friendlyEntry /></td><td data-label="Eligibility"><span className="block rounded-lg border border-slate-700/50 bg-black/25 px-3 py-2 text-sm tabular-nums text-slate-300">{row.eligibility}%</span></td><td data-label="Eligible amount" className="text-sm font-semibold tabular-nums text-amber-200">{MONEY2.format(row.amount * row.eligibility / 100)}</td></tr>)}</tbody></table><div className="mt-3 max-w-md"><SelectField label="Bond eligibility" value={bondsInvestmentGrade ? "eligible" : "ineligible"} onChange={(value) => setBondsInvestmentGrade(value === "eligible")} options={[{ value: "eligible", label: "Eligible / investment-grade — 80%" }, { value: "ineligible", label: "Below investment grade — ineligible (0%)" }]} /></div><p className="mt-3 text-xs leading-relaxed text-slate-400">Below-investment-grade corporate and municipal bonds are ineligible.</p></SectionCard>
+          <SectionCard title="Funds to close & divisor" icon={BadgeDollarSign}><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><NumericField label="Required down payment" value={down} onChange={setDown} prefix="$" friendlyEntry /><NumericField label="Closing costs" value={costs} onChange={setCosts} prefix="$" friendlyEntry /><NumericField label="Required reserves" value={reserves} onChange={setReserves} prefix="$" friendlyEntry /><NumericField label="Divisor" value={divisor} onChange={setDivisor} min={1} suffix="months" friendlyEntry /></div></SectionCard>
         </div>
         <div className="space-y-4"><ResultCard title="Monthly qualifying income" graphic="assets" value={MONEY2.format(Number(result.value ?? 0))}><p>Eligible assets: {MONEY2.format(Number(result.inputs?.eligibleAssets ?? 0))}</p><p>Net depletable assets: {MONEY2.format(Number(result.inputs?.netEligible ?? 0))}</p></ResultCard><MathPanel formula={result.formula} lines={[`Eligible assets − ${MONEY2.format(down + costs + reserves)} funds-to-close deductions`, `÷ ${divisor} months = ${MONEY2.format(Number(result.value ?? 0))}`]} /></div>
       </div>

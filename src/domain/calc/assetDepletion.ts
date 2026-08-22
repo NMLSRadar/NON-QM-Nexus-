@@ -15,9 +15,13 @@ export interface AssetDepletionConfig {
 /**
  * Asset-depletion qualifying income.
  *
- *   eligible assets = (liquid + brokerage + stocks/bonds) × eligible%
+ *   eligible assets = checking/savings/money market × 100%
+ *                     + publicly traded stocks × 80%
+ *                     + eligible investment-grade bonds × 80%
+ *                     + mutual funds × 80%
  *                     + cryptocurrency × 60%
- *                     + retirement × (1 − retirement haircut) [age-dependent]
+ *                     + vested retirement accounts × 70%
+ *                     + legacy unclassified brokerage assets
  *                     + real-estate equity (if configured)
  *   net eligible    = eligible assets − down payment − closing costs − reserves (as configured)
  *   monthly income  = net eligible ÷ divisor months
@@ -26,23 +30,38 @@ export function calcAssetDepletion(
   details: AssetDepletionDetails,
   config: AssetDepletionConfig = {},
 ): CalcResult {
-  const eligiblePct = money(config.eligibleAssetPercentOverride ?? details.eligibleAssetPercent ?? 100).dividedBy(100);
-  const retirementHaircut = money(config.retirementHaircutPercent ?? 0).dividedBy(100);
+  const legacyEligiblePct = money(config.eligibleAssetPercentOverride ?? details.eligibleAssetPercent ?? 100).dividedBy(100);
+  const retirementAdditionalHaircut = money(config.retirementHaircutPercent ?? 0).dividedBy(100);
 
-  const nonRetirement = sum([
-    details.checkingSavings ?? 0,
-    details.brokerage ?? 0,
-    details.stocksBonds ?? 0,
-  ]).times(eligiblePct);
+  const checkingEligible = money(details.checkingSavings ?? 0);
+  const legacyBrokerageEligible = money(details.brokerage ?? 0).times(legacyEligiblePct);
+  const stockAmount = details.publiclyTradedStocks ?? details.stocksBonds ?? 0;
+  const stocksEligible = money(stockAmount).times(0.8);
+  const bondsEligible = details.bondsInvestmentGrade === true
+    ? money(details.bonds ?? 0).times(0.8)
+    : ZERO;
+  const mutualFundsEligible = money(details.mutualFunds ?? 0).times(0.8);
 
-  // Retirement assets: apply vested %, then any age-based haircut.
+  // Retirement accounts (401(k), IRA, SEP and KEOGH): 70% of the vested balance.
   const vested = money(details.retirementVestedPercent ?? 100).dividedBy(100);
-  const retirementBase = money(details.retirement ?? 0).times(vested).times(money(1).minus(retirementHaircut));
+  const retirementBase = money(details.retirement ?? 0)
+    .times(vested)
+    .times(0.7)
+    .times(money(1).minus(retirementAdditionalHaircut));
 
   const cryptocurrencyEligible = money(details.cryptocurrency ?? 0).times(0.6);
   const realEstate = config.includeRealEstateEquity ? money(details.realEstateEquity ?? 0) : ZERO;
 
-  const eligibleAssets = nonRetirement.plus(cryptocurrencyEligible).plus(retirementBase).plus(realEstate);
+  const eligibleAssets = sum([
+    checkingEligible,
+    legacyBrokerageEligible,
+    stocksEligible,
+    bondsEligible,
+    mutualFundsEligible,
+    cryptocurrencyEligible,
+    retirementBase,
+    realEstate,
+  ]);
 
   let netEligible = eligibleAssets;
   const deductions: Record<string, number> = {};
@@ -65,6 +84,9 @@ export function calcAssetDepletion(
   const value = monthly ? round2(monthly) : null;
 
   const notes: string[] = [];
+  if ((details.bonds ?? 0) > 0 && details.bondsInvestmentGrade !== true) {
+    notes.push("Bonds excluded: only eligible investment-grade bonds receive 80% credit; below-investment-grade corporate and municipal bonds are ineligible.");
+  }
   if (details.assetsAlsoUsedToClose) {
     notes.push("Assets are also being used to close — down payment/closing costs/reserves must be netted out to avoid double-counting.");
   }
@@ -77,9 +99,13 @@ export function calcAssetDepletion(
     label: "Asset-Depletion Qualifying Income",
     value,
     unit: "usd",
-    formula: "income = (eligible non-retirement + cryptocurrency at 60% + adjusted retirement + optional RE equity − deductions) ÷ divisor months",
+    formula: "income = (cash at 100% + publicly traded stocks at 80% + eligible investment-grade bonds at 80% + mutual funds at 80% + cryptocurrency at 60% + vested retirement at 70% + optional eligible assets − deductions) ÷ divisor months",
     inputs: {
-      nonRetirementEligible: round2(nonRetirement),
+      checkingSavingsEligible: round2(checkingEligible),
+      legacyBrokerageEligible: round2(legacyBrokerageEligible),
+      publiclyTradedStocksEligible: round2(stocksEligible),
+      bondsEligible: round2(bondsEligible),
+      mutualFundsEligible: round2(mutualFundsEligible),
       cryptocurrencyEligible: round2(cryptocurrencyEligible),
       retirementAdjusted: round2(retirementBase),
       realEstateEquityIncluded: config.includeRealEstateEquity ? (details.realEstateEquity ?? 0) : 0,

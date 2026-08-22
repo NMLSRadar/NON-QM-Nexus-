@@ -199,8 +199,8 @@ describe("Asset depletion", () => {
       },
       { deductClosingCosts: true, deductDownPayment: true, deductReserves: true },
     );
-    // (500000 + 900000 - 215400) / 120 = 9871.666.. → 9871.67
-    expect(r.value).toBe(9_871.67);
+    // 300000 cash + 200000 legacy brokerage + (900000 × 70%) - 215400 = 914600; / 120 = 7621.666.. → 7621.67
+    expect(r.value).toBe(7_621.67);
   });
 
   it("applies retirement haircut and vesting", () => {
@@ -208,8 +208,8 @@ describe("Asset depletion", () => {
       { retirement: 100_000, retirementVestedPercent: 80, assetDivisorMonths: 100 },
       { retirementHaircutPercent: 25 },
     );
-    // 100000 × 0.8 × 0.75 / 100 = 600
-    expect(r.value).toBe(600);
+    // 100000 × 0.8 vested × 0.7 retirement eligibility × 0.75 additional haircut / 100 = 420
+    expect(r.value).toBe(420);
   });
 
   it("floors net eligible assets at zero", () => {
@@ -220,9 +220,9 @@ describe("Asset depletion", () => {
     expect(r.value).toBe(0);
   });
 
-  it("applies eligible-asset percentage haircut to non-retirement assets", () => {
+  it("keeps checking, savings and money market assets at 100%", () => {
     const r = calcAssetDepletion({ checkingSavings: 120_000, eligibleAssetPercent: 50, assetDivisorMonths: 60 });
-    expect(r.value).toBe(1_000);
+    expect(r.value).toBe(2_000);
   });
 });
 

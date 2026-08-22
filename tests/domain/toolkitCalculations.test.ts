@@ -48,6 +48,36 @@ describe("Loan Officer Toolkit domain invariants", () => {
     expect(result.value).toBe(500);
   });
 
+  it("applies the required asset-depletion eligibility percentages", () => {
+    const result = calcAssetDepletion({
+      checkingSavings: 100_000,
+      publiclyTradedStocks: 100_000,
+      bonds: 100_000,
+      bondsInvestmentGrade: true,
+      mutualFunds: 100_000,
+      cryptocurrency: 100_000,
+      retirement: 100_000,
+      assetDivisorMonths: 100,
+    });
+
+    expect(result.inputs?.checkingSavingsEligible).toBe(100_000);
+    expect(result.inputs?.publiclyTradedStocksEligible).toBe(80_000);
+    expect(result.inputs?.bondsEligible).toBe(80_000);
+    expect(result.inputs?.mutualFundsEligible).toBe(80_000);
+    expect(result.inputs?.cryptocurrencyEligible).toBe(60_000);
+    expect(result.inputs?.retirementAdjusted).toBe(70_000);
+    expect(result.inputs?.eligibleAssets).toBe(470_000);
+    expect(result.value).toBe(4_700);
+  });
+
+  it("excludes below-investment-grade bonds", () => {
+    const result = calcAssetDepletion({ bonds: 100_000, bondsInvestmentGrade: false, assetDivisorMonths: 120 });
+    expect(result.inputs?.bondsEligible).toBe(0);
+    expect(result.inputs?.eligibleAssets).toBe(0);
+    expect(result.value).toBe(0);
+    expect(result.notes?.join(" ")).toContain("below-investment-grade");
+  });
+
   it("calculates LTV, CLTV and the strictest applicable cap", () => {
     const result = calcToolkitLtv({ purchasePrice: 850_000, appraisedValue: 875_000, loanAmount: 680_000, subordinateLiens: 20_000, documentationType: "non_qm", condoClassification: "warrantable" });
     expect(result.valueBasis).toBe(850_000);

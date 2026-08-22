@@ -79,8 +79,12 @@ export interface DscrDetails {
 
 export interface AssetDepletionDetails {
   checkingSavings?: number;
-  brokerage?: number;
-  stocksBonds?: number;
+  brokerage?: number; // legacy unclassified brokerage balance
+  stocksBonds?: number; // legacy combined field; treated as publicly traded stocks
+  publiclyTradedStocks?: number;
+  bonds?: number;
+  bondsInvestmentGrade?: boolean;
+  mutualFunds?: number;
   cryptocurrency?: number;
   retirement?: number;
   borrowerAge?: number;
