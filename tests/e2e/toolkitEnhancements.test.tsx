@@ -5,9 +5,9 @@ import { describe, expect, it } from "vitest";
 import { ToolkitClient } from "@/app/toolkit/toolkit-client";
 
 describe("Loan Officer Toolkit enhancements", () => {
-  it("applies an independent Reverse Solver transcript directly to its fields", async () => {
+  it("applies an independent VIQI transcript directly to its fields", async () => {
     render(<ToolkitClient />);
-    expect(screen.getByText("Reverse Solver Voice Intake")).toBeInTheDocument();
+    expect(screen.getByText("VIQI Voice Intake")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Scenario transcript"), { target: { value: "Borrower makes $14,000 per month, liabilities $2,500, DTI 50%, taxes $900, insurance $250, rate 7.25%." } });
     fireEvent.click(screen.getByRole("button", { name: "Populate fields" }));
     await waitFor(() => expect(screen.getByLabelText("Qualifying monthly income")).toHaveValue("14,000"));

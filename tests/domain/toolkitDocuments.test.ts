@@ -39,7 +39,7 @@ describe("NON-QM Nexus branded toolkit documents", () => {
     expect((sheet.views[0] as { ySplit?: number } | undefined)?.ySplit).toBe(13);
   });
 
-  it("creates a server-recomputed PDF for every calculator and the Reverse Solver", async () => {
+  it("creates a server-recomputed PDF for every calculator and VIQI", async () => {
     const samples: Record<ToolkitCalculatorId, Record<string, unknown>> = {
       dscr: { lease: 5200, market: 5000, taxes: 12000, hazard: 2400, flood: 0, hoa: 0, loan: 600000, rate: 7.25, term: 30, basis: "lower_of_lease_or_market", interestOnly: false },
       "bank-statement": { deposits: 45000, ownership: 100, expense: 50, months: 12, statementType: "business" },

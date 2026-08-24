@@ -16,8 +16,8 @@ describe("Toolkit numeric input formatting", () => {
   });
 });
 
-describe("Reverse Solver independent voice parser", () => {
-  it("maps a natural borrower scenario to Reverse Solver fields", () => {
+describe("VIQI independent voice parser", () => {
+  it("maps a natural borrower scenario to VIQI fields", () => {
     const result = parseReverseSolverTranscript("My borrower makes $14,000 per month, has $2,500 in monthly liabilities, we're using a 50% DTI, taxes are about $900 a month, insurance is $250, and the rate is 7.25%.");
     expect(result.fields).toMatchObject({
       income: 14000,

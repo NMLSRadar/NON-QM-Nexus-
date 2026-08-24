@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMetadata({
   title: "Loan Officer Toolkit — NON-QM Nexus",
-  description: "Teaching-first Non-QM calculators, a deterministic Reverse Solver, and branded loan officer worksheets.",
+  description: "Teaching-first Non-QM calculators, VIQI — Voice Instant Qualifier Interface, and branded loan officer worksheets.",
   path: "/toolkit",
   noindex: true,
 });

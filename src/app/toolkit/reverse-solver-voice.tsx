@@ -89,7 +89,7 @@ export function ReverseSolverVoice({ onFields }: { onFields: (fields: ReverseSol
       recorder.onstop = async () => {
         stream.getTracks().forEach((track) => track.stop());
         setStatus("processing");
-        setMessage("Transcribing and mapping the scenario to Reverse Solver fields…");
+        setMessage("Transcribing and mapping the scenario to VIQI fields…");
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
         const form = new FormData();
         form.append("file", blob, "reverse-solver-voice.webm");
@@ -168,14 +168,14 @@ export function ReverseSolverVoice({ onFields }: { onFields: (fields: ReverseSol
   const StatusIcon = status === "listening" ? MicOff : status === "processing" ? LoaderCircle : status === "populated" ? CheckCircle2 : Mic2;
 
   return (
-    <section className={`reverse-voice reverse-voice-${status}`} aria-label="Reverse Solver voice intake">
+    <section className={`reverse-voice reverse-voice-${status}`} aria-label="VIQI voice intake">
       <div className="reverse-voice-main">
-        <button type="button" className="reverse-voice-button" onClick={startCapture} disabled={!supported || status === "processing"} aria-label={status === "listening" ? "Stop listening" : "Start Reverse Solver voice intake"}>
+        <button type="button" className="reverse-voice-button" onClick={startCapture} disabled={!supported || status === "processing"} aria-label={status === "listening" ? "Stop listening" : "Start VIQI voice intake"}>
           <StatusIcon className={`h-7 w-7 ${status === "processing" ? "animate-spin" : ""}`} aria-hidden />
           {status === "listening" ? <span className="reverse-voice-pulse" aria-hidden /> : null}
         </button>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2"><strong className="text-base text-white">Reverse Solver Voice Intake</strong><span className="reverse-voice-badge">Independent</span></div>
+          <div className="flex flex-wrap items-center gap-2"><strong className="text-base text-white">VIQI Voice Intake</strong><span className="reverse-voice-badge">Independent</span></div>
           <p className="mt-1 text-sm leading-relaxed text-slate-300" aria-live="polite">{message}</p>
           {status === "listening" ? <div className="reverse-wave mt-3" aria-hidden>{[1,2,3,4,5,6,7].map((bar) => <span key={bar} style={{ animationDelay: `${bar * 70}ms` }} />)}</div> : null}
         </div>
