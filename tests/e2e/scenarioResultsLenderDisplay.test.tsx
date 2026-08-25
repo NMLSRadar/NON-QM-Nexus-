@@ -285,6 +285,31 @@ describe("Scenario results — ITIN expert routing override", () => {
     expect(screen.queryByText("ACC Mortgage")).not.toBeInTheDocument();
     expect(screen.queryByText("ITIN Expert")).not.toBeInTheDocument();
   });
+
+  it("surfaces an ITIN expert's ELIGIBLE program over an earlier ineligible one so it shows with its match score", () => {
+    const evaluations = [
+      makeEvaluation({ programId: "greenbox-dscr", lenderName: "Greenbox Loans", status: MatchStatus.Ineligible, matchScore: 40, citizenshipEligible: ["itin"] }),
+      makeEvaluation({ programId: "greenbox-full", lenderName: "Greenbox Loans", status: MatchStatus.Eligible, matchScore: 88, citizenshipEligible: ["itin"] }),
+    ];
+
+    const out = selectRecommendedLenders(evaluations, true);
+    expect(out.map((evaluation) => evaluation.programId)).toEqual(["greenbox-full"]);
+    expect(out[0].status).toBe(MatchStatus.Eligible);
+    expect(out[0].matchScore).toBe(88);
+
+    render(<BestLenderMatches evaluations={evaluations} tierLevel={3} itinScenario />);
+    expect(screen.queryByText(/near match/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/confidence score/i)).toBeInTheDocument();
+  });
+
+  it("keeps strict first-seen representatives for non-ITIN scenarios (no expert preference)", () => {
+    const evaluations = [
+      makeEvaluation({ programId: "other-inelig", lenderName: "Other Lender", status: MatchStatus.Ineligible, matchScore: 40 }),
+      makeEvaluation({ programId: "other-elig", lenderName: "Other Lender", status: MatchStatus.Eligible, matchScore: 95 }),
+    ];
+
+    expect(selectRecommendedLenders(evaluations, false).map((evaluation) => evaluation.programId)).toEqual(["other-inelig"]);
+  });
 });
 
 describe("Scenario results — membership-tier protection (locked eligible lenders)", () => {

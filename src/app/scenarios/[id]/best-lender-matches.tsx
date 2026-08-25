@@ -99,13 +99,33 @@ function isCleanFilePriorityMatch(evaluation: ProgramEvaluation): boolean {
  * fail or an unverified program.
  */
 export function selectRecommendedLenders(evaluations: ProgramEvaluation[], itinScenario = false): ProgramEvaluation[] {
-  const seen = new Set<string>();
-  const onePerLender = evaluations.filter((evaluation) => {
+  const onePerLender: ProgramEvaluation[] = [];
+  const indexByKey = new Map<string, number>();
+  for (const evaluation of evaluations) {
     const key = normalizedLenderName(evaluation.lenderName);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+    const existing = indexByKey.get(key);
+    if (existing === undefined) {
+      indexByKey.set(key, onePerLender.length);
+      onePerLender.push(evaluation);
+      continue;
+    }
+    // In an ITIN scenario, keep the ITIN experts' representative pointing at
+    // an ELIGIBLE program whenever any of their programs fits, so Greenbox
+    // Loans / Champions Funding / ACC / Acra surface WITH their match score
+    // instead of being locked to an earlier, ineligible program. Never
+    // promotes a hard fail — it only swaps within the eligible set (or
+    // favours a higher-scoring eligible program). The regular non-expert
+    // path keeps strict first-seen semantics.
+    if (itinScenario && isItinExpertLender(evaluation.lenderName)) {
+      const current = onePerLender[existing];
+      if (current === undefined) continue; // existing is always a real index; guard satisfies the checker
+      const currentEligible = isEligibleStatus(current.status) && !current.guidelineVerificationRequired;
+      const nextEligible = isEligibleStatus(evaluation.status) && !evaluation.guidelineVerificationRequired;
+      if ((!currentEligible && nextEligible) || (currentEligible && nextEligible && evaluation.matchScore > current.matchScore)) {
+        onePerLender[existing] = evaluation;
+      }
+    }
+  }
 
   return onePerLender
     .map((evaluation, originalIndex) => ({ evaluation, originalIndex }))

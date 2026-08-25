@@ -86,6 +86,18 @@ describe("ITIN Borrower recognition — including phonetic/speech-to-text varian
     "eyten",
     "ay tin",
     "ayatin",
+    // Spoken "I-tend"/"eye-tend"/"ay-tend" renderings (added 2026-08-25): STT
+    // frequently writes ITIN spoken aloud as "I tend", "eye tend", "ay tend".
+    // Treated as unconditional high-confidence ITIN (same precedent as the
+    // name-like "Eitan"/"Aitan" above).
+    "i tend",
+    "I tend",
+    "eye tend",
+    "aye tend",
+    "ay tend",
+    "ey tend",
+    "i-tend",
+    "I tend to income tax",
     // NOTE: bare "I-10"/"I 10" with NO surrounding context moved out of this
     // unconditional-recognition list on 2026-07-28 — per the ITIN
     // contextual-disambiguation spec, that surface form is genuinely
@@ -118,6 +130,23 @@ describe("ITIN spoken 'aye-tin' renderings (ayten / Eitan / aytin …) resolve t
       // left the citizenship vital UNRESOLVED (stayed in `missing`); now the
       // vital is captured. Other unrelated vitals may still be absent in a
       // given transcript, so we assert on citizenship specifically.
+      expect(a.missing).not.toContain("citizenship");
+    });
+  }
+});
+
+describe("ITIN spoken 'I-tend' renderings resolve the citizenship vital", () => {
+  const scenarios = [
+    "Purchase of a single-family primary residence worth $500,000, loan amount $400,000, 720 credit, 12 months of business bank statements. The borrower is an i tend borrower.",
+    "Cash-out refinance on a condo worth $400,000, 700 FICO, DSCR loan. They're on an I tend.",
+    "Purchase, single-family, $500,000 value, 740 credit, full doc — the borrower has an eye tend.",
+  ];
+  for (const s of scenarios) {
+    it(`classifies "${s.slice(0, 60)}…" as ITIN and reaches readyToAnalyze`, () => {
+      const x = extractFromTranscript(s);
+      expect(x.citizenship?.value).toBe("itin");
+      expect(x.citizenship?.confidence).toBe("high");
+      const a = assess(x);
       expect(a.missing).not.toContain("citizenship");
     });
   }
