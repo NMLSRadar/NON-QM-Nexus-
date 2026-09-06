@@ -31,7 +31,7 @@ export interface ViqiTurn {
 }
 
 export interface ViqiSession {
-  version: 1;
+  version: 2;
   path: ViqiPath;
   pathDetected: boolean;
   mode: ViqiMode;
@@ -86,16 +86,16 @@ export const VIQI_LABELS: Record<ViqiVitalKey, string> = {
 
 export const PATH_VITALS: Record<ViqiPath, { required: ViqiVitalKey[]; soft: ViqiVitalKey[] }> = {
   consumer: {
-    required: ["occupancy", "monthly_income", "liquid_funds", "monthly_liabilities", "fico"],
+    required: ["occupancy", "monthly_income", "liquid_funds", "monthly_liabilities"],
     soft: ["state", "property_type"],
   },
   investor: {
-    required: ["occupancy", "liquid_funds", "fico"],
+    required: ["occupancy", "liquid_funds"],
     soft: ["coverage", "monthly_hoa", "annual_flood", "rental_type", "state", "property_type", "units", "first_time_investor"],
   },
   foreign: {
     required: ["occupancy", "citizenship_status", "monthly_income", "liquid_funds", "monthly_liabilities"],
-    soft: ["fico", "state", "property_type"],
+    soft: ["state", "property_type"],
   },
 };
 
@@ -137,7 +137,10 @@ function includesAny(text: string, phrases: readonly string[]): boolean {
 export function detectPath(text: string, current: ViqiPath = "consumer"): { path: ViqiPath; detected: boolean } {
   const normalized = clean(text);
   if (includesAny(normalized, lexicon.foreignPath)) return { path: "foreign", detected: true };
-  if (includesAny(normalized, lexicon.investorPath)) return { path: "investor", detected: true };
+  // Explicit occupancy wins over generic documentation/rental language. A
+  // primary or second-home statement can never remain on the investor path.
+  if (/\b(?:primary(?: residence)?|owner[ -]occupied|lives? there|second home|vacation home)\b/i.test(normalized)) return { path: "consumer", detected: true };
+  if (/\b(?:investment(?: property)?|dscr|non[ -]owner(?: occupied)?|noo|rental property|airbnb|short[ -]term rental)\b/i.test(normalized)) return { path: "investor", detected: true };
   if (includesAny(normalized, lexicon.consumerPath)) return { path: "consumer", detected: true };
   return { path: current, detected: false };
 }
@@ -257,8 +260,8 @@ function extractDscr(text: string): ViqiVital | undefined {
 function occupancy(text: string, path: ViqiPath): ViqiVital | undefined {
   let value: string | undefined;
   if (/\b(?:second home|vacation home)\b/.test(text)) value = "Second home";
-  else if (/\b(?:investment|rental|investor|dscr|non-owner|noo|airbnb)\b/.test(text)) value = "Investment";
-  else if (/\b(?:primary|owner occupied|owner-occupied|lives there)\b/.test(text)) value = "Primary";
+  else if (/\b(?:primary(?: residence)?|owner occupied|owner-occupied|lives there)\b/.test(text)) value = "Primary";
+  else if (/\b(?:investment(?: property)?|rental property|investor|dscr|non-owner|noo|airbnb)\b/.test(text)) value = "Investment";
   else if (path === "foreign" && /\b(?:foreign national|itin)\b/.test(text)) return undefined;
   return value ? { key: "occupancy", state: "captured", value, displayValue: value, confidence: 0.97, provenance: "spoken", source: value } : undefined;
 }
@@ -304,7 +307,6 @@ export function extractViqiVitals(transcript: string, currentPath: ViqiPath = "c
   push(extractAmount(text, "liquid_funds", lexicon.funds));
   push(extractAmount(text, "monthly_income", lexicon.income));
   push(extractAmount(text, "monthly_liabilities", lexicon.liabilities));
-  push(extractFico(text));
   push(extractAmount(text, "monthly_rent", lexicon.rent));
   push(extractDscr(text));
   push(extractAmount(text, "annual_taxes", lexicon.taxes));
@@ -326,7 +328,7 @@ export function extractViqiVitals(transcript: string, currentPath: ViqiPath = "c
 }
 
 export function createViqiSession(now = new Date()): ViqiSession {
-  return { version: 1, path: "consumer", pathDetected: false, mode: "express", status: "idle", vitals: {}, turns: [], promptAttempts: {}, softPrompted: [], noSpeechCount: 0, startedAt: now.toISOString(), message: "Tell me the scenario in one go, or I’ll guide you one vital at a time." };
+  return { version: 2, path: "consumer", pathDetected: false, mode: "express", status: "idle", vitals: {}, turns: [], promptAttempts: {}, softPrompted: [], noSpeechCount: 0, startedAt: now.toISOString(), message: "Tell me the scenario in one go, or I’ll guide you one vital at a time." };
 }
 
 export function requiredKeys(session: Pick<ViqiSession, "path">): ViqiVitalKey[] {
@@ -376,6 +378,7 @@ export function processViqiTurn(session: ViqiSession, transcript: string, now = 
     ...session,
     path: extracted.path,
     pathDetected: session.pathDetected || extracted.pathDetected,
+    pathChangeMessage: undefined,
     status: "thinking",
     noSpeechCount: 0,
     vitals: { ...session.vitals },
@@ -469,7 +472,7 @@ function spoken(vital?: ViqiVital): string | undefined {
 }
 
 export function buildReadback(session: ViqiSession): string {
-  const keys = session.path === "investor" ? ["monthly_rent", "coverage", "liquid_funds", "fico", "occupancy", "state"] as ViqiVitalKey[] : ["monthly_income", "monthly_liabilities", "liquid_funds", "fico", "occupancy", "state"] as ViqiVitalKey[];
+  const keys = session.path === "investor" ? ["monthly_rent", "coverage", "liquid_funds", "occupancy", "state"] as ViqiVitalKey[] : ["monthly_income", "monthly_liabilities", "liquid_funds", "occupancy", "state"] as ViqiVitalKey[];
   const values = keys.map((key) => spoken(session.vitals[key])).filter(Boolean);
   return `${values.join(", ")}. Running it.`;
 }

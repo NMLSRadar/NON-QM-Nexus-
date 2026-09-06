@@ -38,7 +38,7 @@ Investor coverage is an optional compound vital. It never blocks completion, but
 1. A stated DSCR, including a valid no-ratio answer.
 2. Monthly rent plus annual taxes and annual insurance, with HOA and flood defaulting to zero for the coverage calculation.
 
-The calculation records its source and never overwrites a stated number silently. An investor session may complete with occupancy, funds, and FICO even when no coverage value is supplied.
+The calculation records its source and never overwrites a stated number silently. An investor session may complete with occupancy and funds even when no coverage value is supplied. Credit score is not a VIQI vital because this module is a mathematical reverse solver; it does not gate or appear in the checklist for any path.
 
 ## Extraction and trust boundary
 

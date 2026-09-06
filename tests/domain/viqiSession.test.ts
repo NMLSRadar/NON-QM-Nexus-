@@ -36,10 +36,11 @@ describe("VIQI turn/session separation", () => {
   });
 
   it("resumes with captured state intact", () => {
-    const stopped = endSession(processViqiTurn(createViqiSession(), "Primary residence, 720 FICO"));
+    const stopped = endSession(processViqiTurn(createViqiSession(), "Primary residence, 180k in the bank"));
     const resumed = resumeSession(stopped);
     expect(resumed.status).toBe("listening");
-    expect(resumed.vitals.fico?.value).toBe(720);
+    expect(resumed.vitals.liquid_funds?.value).toBe(180000);
+    expect(resumed.vitals.fico).toBeUndefined();
   });
 });
 
@@ -68,7 +69,7 @@ describe("VIQI extraction and normalization", () => {
     expect(map.monthly_income).toBe(12000);
     expect(map.monthly_liabilities).toBe(900);
     expect(map.liquid_funds).toBe(180000);
-    expect(map.fico).toBe(720);
+    expect(map.fico).toBeUndefined();
   });
 
   it("converts annual income and discloses the conversion", () => {
@@ -93,19 +94,29 @@ describe("VIQI extraction and normalization", () => {
 
 describe("VIQI path switching and DSCR coverage", () => {
   it("keeps DSCR available but does not require it to complete an investor session", () => {
-    const session = processViqiTurn(createViqiSession(), "Investment property, 180k in the bank, 720 FICO");
+    const session = processViqiTurn(createViqiSession(), "Investment property, 180k in the bank");
     expect(session.path).toBe("investor");
     expect(session.vitals.coverage).toBeUndefined();
     expect(missingRequired(session)).not.toContain("coverage");
+    expect(missingRequired(session)).not.toContain("fico");
     expect(isComplete(session)).toBe(true);
     expect(session.endedReason).toBe("complete");
+  });
+
+  it("an explicit primary residence overrides a previous investor path", () => {
+    const prior = { ...createViqiSession(), path: "investor" as const };
+    const session = processViqiTurn(prior, "Good afternoon. I have someone looking to purchase a primary residence. They currently have a monthly income of $25,000 a month. They have 182,000 in the bank.");
+    expect(session.path).toBe("consumer");
+    expect(session.vitals.occupancy?.value).toBe("Primary");
+    expect(session.pathChangeMessage).toContain("borrower-income path");
+    expect(missingRequired(session)).not.toContain("fico");
   });
 
   it("switches to investor mid-session and preserves applicable values", () => {
     const first = processViqiTurn(createViqiSession(), "Primary, 720 score, 180k in the bank");
     const investor = processViqiTurn(first, "Actually it is an investment property and the DSCR is one point two");
     expect(investor.path).toBe("investor");
-    expect(investor.vitals.fico?.value).toBe(720);
+    expect(investor.vitals.fico).toBeUndefined();
     expect(investor.vitals.liquid_funds?.value).toBe(180000);
     expect(investor.vitals.coverage?.value).toBe(1.2);
     expect(investor.pathChangeMessage).toContain("investment property");

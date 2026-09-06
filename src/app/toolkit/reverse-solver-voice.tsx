@@ -28,7 +28,7 @@ interface RecognitionLike {
 }
 type RecognitionCtor = new () => RecognitionLike;
 
-const STORAGE_KEY = "nonqm.viqi.session.v1";
+const STORAGE_KEY = "nonqm.viqi.session.v2";
 const COACHING_KEY = "nonqm.viqi.coaching.dismissed";
 
 function recognitionConstructor(): RecognitionCtor | undefined {
@@ -109,7 +109,7 @@ export function ReverseSolverVoice({ onFields }: { onFields: (fields: ReverseSol
       const stored = window.localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as ViqiSession;
-        if (parsed.version === 1) setSession(parsed.status === "ended" && parsed.endedReason !== "complete" ? resumeSession(parsed) : parsed);
+        if (parsed.version === 2) setSession(parsed.status === "ended" && parsed.endedReason !== "complete" ? resumeSession(parsed) : parsed);
       }
       setShowCoaching(window.localStorage.getItem(COACHING_KEY) !== "true");
     } catch { /* manual intake remains available */ }
@@ -329,7 +329,7 @@ export function ReverseSolverVoice({ onFields }: { onFields: (fields: ReverseSol
     <section className={`reverse-voice reverse-voice-${session.status}`} aria-label="VIQI voice intake">
       {showCoaching ? (
         <div className="viqi-coaching">
-          <div><strong>Start in Express mode</strong><p>Try: “Borrower makes twelve thousand a month, twenty-four hundred in debts, one-eighty in the bank, 720 score, buying a primary in Texas.”</p></div>
+          <div><strong>Start in Express mode</strong><p>Try: “Borrower makes twelve thousand a month, twenty-four hundred in debts, and has one-eighty in the bank for a primary in Texas.”</p></div>
           <button type="button" onClick={() => { setShowCoaching(false); window.localStorage.setItem(COACHING_KEY, "true"); }}>Dismiss</button>
         </div>
       ) : null}
