@@ -294,8 +294,8 @@ describe("Scenario results — ITIN expert routing override", () => {
 
     const out = selectRecommendedLenders(evaluations, true);
     expect(out.map((evaluation) => evaluation.programId)).toEqual(["greenbox-full"]);
-    expect(out[0].status).toBe(MatchStatus.Eligible);
-    expect(out[0].matchScore).toBe(88);
+    expect(out[0]!.status).toBe(MatchStatus.Eligible);
+    expect(out[0]!.matchScore).toBe(88);
 
     render(<BestLenderMatches evaluations={evaluations} tierLevel={3} itinScenario />);
     expect(screen.queryByText(/near match/i)).not.toBeInTheDocument();
