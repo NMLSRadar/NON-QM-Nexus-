@@ -62,7 +62,47 @@ describe("VIQI extraction and normalization", () => {
     expect(normalizeNumber(raw, key).value).toBe(expected);
   });
 
-  it("maps real LO phrasing to funds, income, liabilities, FICO and occupancy", () => {
+  it("captures the exact screenshot wording for funds available", () => {
+    const text = "I have someone purchasing a primary residence. Monthly qualifying income is $25,000 a month. They currently have $385,000 in funds available and there are monthly liabilities are $8600 a month.";
+    const x = extractViqiVitals(text);
+    const map = Object.fromEntries(x.vitals.map((v) => [v.key, v.value]));
+    expect(x.path).toBe("consumer");
+    expect(map.occupancy).toBe("Primary");
+    expect(map.monthly_income).toBe(25000);
+    expect(map.liquid_funds).toBe(385000);
+    expect(map.monthly_liabilities).toBe(8600);
+  });
+
+  it.each([
+    "They have $385,000 in funds available",
+    "$385,000 available funds",
+    "The bank balance is $385,000",
+    "They have $385,000 in liquid assets",
+    "$385,000 available for the transaction",
+    "They can bring $385,000",
+    "Cash for closing is $385,000",
+    "There is $385,000 in the bank",
+    "Their account balance is $385,000",
+    "$385,000 cash available",
+  ])("recognizes funds wording: %s", (text) => {
+    const funds = extractViqiVitals(text).vitals.find((v) => v.key === "liquid_funds");
+    expect(funds?.value).toBe(385000);
+    expect(funds?.state).toBe("captured");
+  });
+
+  it.each([
+    ["Qualifying monthly income is $25,000", "monthly_income", 25000],
+    ["Gross monthly income of $25,000", "monthly_income", 25000],
+    ["They earn $25,000 per month", "monthly_income", 25000],
+    ["Total monthly liabilities are $8,600", "monthly_liabilities", 8600],
+    ["Monthly obligations of $8,600", "monthly_liabilities", 8600],
+    ["Their monthly debt payments are $8,600", "monthly_liabilities", 8600],
+  ] as const)("recognizes mathematical-vital wording: %s", (text, key, expected) => {
+    const vital = extractViqiVitals(text).vitals.find((candidate) => candidate.key === key);
+    expect(vital?.value).toBe(expected);
+  });
+
+  it("maps real LO phrasing to funds, income, liabilities and occupancy", () => {
     const x = extractViqiVitals("Owner occupied. He pulls in 12k a month, car payment 900, has 180k in checking, mid score 720.");
     const map = Object.fromEntries(x.vitals.map((v) => [v.key, v.value]));
     expect(map.occupancy).toBe("Primary");

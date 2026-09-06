@@ -206,7 +206,7 @@ export function normalizeNumber(raw: string, key: ViqiVitalKey): { value?: numbe
   return { value, ambiguous: band ? value < band[0] || value > band[1] : false, approximate };
 }
 
-const NUMBER_SOURCE = "(?:\\$?[0-9][0-9,]*(?:\\.[0-9]+)?\\s*(?:k|grand|million)?|(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|point|and|half|a)(?:[ -]+(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|point|and|half|a))*)";
+const NUMBER_SOURCE = "(?:\\$?[0-9][0-9,]*(?:\\.[0-9]+)?\\s*(?:k|grand|million)?|\\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|point|and|half|a)(?:[ -]+(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|point|and|half|a))*\\b)";
 
 function amountNear(text: string, phrases: readonly string[], valueFirst = false): string | undefined {
   const labels = [...phrases].sort((a, b) => b.length - a.length).map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
@@ -217,21 +217,23 @@ function amountNear(text: string, phrases: readonly string[], valueFirst = false
 }
 
 function extractAmount(text: string, key: ViqiVitalKey, phrases: readonly string[]): ViqiVital | undefined {
-  const raw = amountNear(text, phrases) ?? amountNear(text, phrases, true);
-  if (!raw) return undefined;
-  const normalized = normalizeNumber(raw, key);
-  if (normalized.value === undefined) return undefined;
-  let value = normalized.value;
-  let convertedFrom: string | undefined;
-  if (key === "monthly_income" && /\b(?:per year|a year|annually|annual|on (?:his|her|the) (?:w2|taxes|returns))\b/i.test(text)) {
-    convertedFrom = `${MONEY.format(value)} annually`;
-    value /= 12;
+  const candidates = [amountNear(text, phrases), amountNear(text, phrases, true)].filter((candidate): candidate is string => Boolean(candidate));
+  for (const raw of candidates) {
+    const normalized = normalizeNumber(raw, key);
+    if (normalized.value === undefined) continue;
+    let value = normalized.value;
+    let convertedFrom: string | undefined;
+    if (key === "monthly_income" && /\b(?:per year|a year|annually|annual|on (?:his|her|the) (?:w2|taxes|returns))\b/i.test(text)) {
+      convertedFrom = `${MONEY.format(value)} annually`;
+      value /= 12;
+    }
+    if (key === "monthly_income" && /\b(?:an hour|hourly|per hour)\b/i.test(text) && !/\b\d+\s*hours?\b/i.test(text)) {
+      return { key, state: "heard_ambiguous", value, displayValue: `${MONEY.format(value)}/hour`, confidence: 0.6, provenance: "spoken", source: raw };
+    }
+    const state: ViqiVitalState = normalized.ambiguous ? "heard_ambiguous" : "captured";
+    return { key, state, value, displayValue: MONEY.format(value), confidence: state === "captured" ? 0.9 : 0.55, provenance: "spoken", approximate: normalized.approximate, convertedFrom, source: raw };
   }
-  if (key === "monthly_income" && /\b(?:an hour|hourly|per hour)\b/i.test(text) && !/\b\d+\s*hours?\b/i.test(text)) {
-    return { key, state: "heard_ambiguous", value, displayValue: `${MONEY.format(value)}/hour`, confidence: 0.6, provenance: "spoken", source: raw };
-  }
-  const state: ViqiVitalState = normalized.ambiguous ? "heard_ambiguous" : "captured";
-  return { key, state, value, displayValue: MONEY.format(value), confidence: state === "captured" ? 0.9 : 0.55, provenance: "spoken", approximate: normalized.approximate, convertedFrom, source: raw };
+  return undefined;
 }
 
 function extractFico(text: string): ViqiVital | undefined {
