@@ -2,9 +2,13 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AeDirectoryClient } from "@/app/ae-directory/ae-directory-client";
 import type { AeDirectoryEntry } from "@/lib/ae/directory-data";
+
+vi.mock("@/app/ae-directory/actions", () => ({
+  saveAeDirectoryContact: vi.fn().mockResolvedValue({ ok: true }),
+}));
 
 const entries: AeDirectoryEntry[] = [
   {
@@ -88,5 +92,21 @@ describe("AE Directory", () => {
     expect(screen.getByRole("heading", { name: "Bobby Caldera" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "William Clark" })).not.toBeInTheDocument();
     expect(localStorage.getItem("non-qm-nexus:ae-directory-favorites")).toContain("bobby");
+  });
+
+  it("shows the editor only to admins and saves contact changes", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<AeDirectoryClient entries={entries} />);
+    expect(screen.queryByRole("button", { name: "Edit Bobby Caldera" })).not.toBeInTheDocument();
+
+    rerender(<AeDirectoryClient entries={entries} canEdit />);
+    await user.click(screen.getByRole("button", { name: "Edit Bobby Caldera" }));
+    expect(screen.getByRole("dialog", { name: "Edit Bobby Caldera" })).toBeInTheDocument();
+    const phone = screen.getByLabelText("Phone");
+    await user.clear(phone);
+    await user.type(phone, "661-555-1212");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Edit Bobby Caldera" })).not.toBeInTheDocument());
+    expect(screen.getByRole("link", { name: "Call Bobby Caldera at Orion Lending" })).toHaveAttribute("href", "tel:+16615551212");
   });
 });

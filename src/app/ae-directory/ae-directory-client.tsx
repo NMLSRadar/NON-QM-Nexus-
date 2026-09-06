@@ -1,8 +1,9 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
-import { Copy, Heart, Mail, Phone, Search, Users } from "lucide-react";
+import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
+import { Copy, Heart, Mail, Pencil, Phone, Search, Users, X } from "lucide-react";
 import type { DirectoryContact, AeDirectoryEntry } from "@/lib/ae/directory-data";
+import { saveAeDirectoryContact } from "./actions";
 
 const FAVORITES_KEY = "non-qm-nexus:ae-directory-favorites";
 const AVATAR_COLORS = [
@@ -47,7 +48,7 @@ async function copy(value: string) {
   }
 }
 
-function ContactCard({ contact, favorite, onFavorite }: { contact: DirectoryContact; favorite: boolean; onFavorite: () => void }) {
+function ContactCard({ contact, favorite, onFavorite, canEdit, onEdit }: { contact: DirectoryContact; favorite: boolean; onFavorite: () => void; canEdit: boolean; onEdit: () => void }) {
   return (
     <article className="group relative flex min-h-64 flex-col rounded-2xl border border-amber-500/15 bg-black/40 p-5 text-center shadow-[0_12px_35px_rgba(0,0,0,0.24)] transition hover:-translate-y-0.5 hover:border-amber-400/35 hover:bg-black/55">
       <button
@@ -71,7 +72,14 @@ function ContactCard({ contact, favorite, onFavorite }: { contact: DirectoryCont
         )}
       </div>
 
-      <h2 className="text-base font-bold text-white">{contact.name}</h2>
+      <div className="flex items-center justify-center gap-2">
+        <h2 className="text-base font-bold text-white">{contact.name}</h2>
+        {canEdit ? (
+          <button type="button" onClick={onEdit} aria-label={`Edit ${contact.name}`} className="inline-flex items-center gap-1 rounded-full border border-amber-400/35 px-2 py-1 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/10 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <Pencil className="h-3 w-3" aria-hidden /> Edit
+          </button>
+        ) : null}
+      </div>
       <p className="mt-1 min-h-5 text-sm text-slate-400">{contact.title || (contact.tier === "team" ? "Broker Support" : "Account Executive")}</p>
       <p className="mt-1 text-xs font-medium uppercase tracking-wide text-amber-300/80">{contact.lenderName}</p>
       {contact.states.length ? <p className="mt-1 text-xs text-slate-500">Territory: {contact.states.join(", ")}</p> : null}
@@ -98,7 +106,9 @@ function ContactCard({ contact, favorite, onFavorite }: { contact: DirectoryCont
   );
 }
 
-export function AeDirectoryClient({ entries }: { entries: AeDirectoryEntry[] }) {
+export function AeDirectoryClient({ entries, canEdit = false }: { entries: AeDirectoryEntry[]; canEdit?: boolean }) {
+  const [directoryEntries, setDirectoryEntries] = useState(entries);
+  const [editing, setEditing] = useState<DirectoryContact | null>(null);
   const [query, setQuery] = useState("");
   const [company, setCompany] = useState("all");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
@@ -116,10 +126,10 @@ export function AeDirectoryClient({ entries }: { entries: AeDirectoryEntry[] }) 
 
   const contacts = useMemo(
     () =>
-      entries
+      directoryEntries
         .flatMap((entry) => entry.contacts)
         .sort((a, b) => a.name.localeCompare(b.name, "en-US", { sensitivity: "base" })),
-    [entries],
+    [directoryEntries],
   );
 
   const companies = useMemo(
@@ -156,6 +166,14 @@ export function AeDirectoryClient({ entries }: { entries: AeDirectoryEntry[] }) 
     });
   }
 
+  function saveEditedContact(updated: DirectoryContact) {
+    setDirectoryEntries((current) => current.map((entry) => ({
+      ...entry,
+      contacts: entry.contacts.map((contact) => contact.id === updated.id ? updated : contact),
+    })));
+    setEditing(null);
+  }
+
   return (
     <div className="space-y-5">
       <section className="gold-panel rounded-2xl p-4 sm:p-5" aria-label="Contact directory controls">
@@ -190,7 +208,7 @@ export function AeDirectoryClient({ entries }: { entries: AeDirectoryEntry[] }) 
       {filtered.length ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {filtered.map((contact) => (
-            <ContactCard key={contact.id} contact={contact} favorite={favorites.has(contact.id)} onFavorite={() => toggleFavorite(contact.id)} />
+            <ContactCard key={contact.id} contact={contact} favorite={favorites.has(contact.id)} onFavorite={() => toggleFavorite(contact.id)} canEdit={canEdit} onEdit={() => setEditing(contact)} />
           ))}
         </div>
       ) : (
@@ -203,6 +221,53 @@ export function AeDirectoryClient({ entries }: { entries: AeDirectoryEntry[] }) 
       <p className="rounded-xl border border-amber-500/20 bg-black/35 p-4 text-xs leading-relaxed text-slate-400">
         Contacts are provided for legitimate loan-scenario inquiries. Bulk solicitation or use as a marketing list is prohibited.
       </p>
+      {editing ? <EditContactDialog contact={editing} onClose={() => setEditing(null)} onSaved={saveEditedContact} /> : null}
     </div>
   );
+}
+
+const STATE_CODES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC"];
+
+function EditContactDialog({ contact, onClose, onSaved }: { contact: DirectoryContact; onClose: () => void; onSaved: (contact: DirectoryContact) => void }) {
+  const [draft, setDraft] = useState(contact);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      const result = await saveAeDirectoryContact({
+        id: draft.id,
+        source: draft.editSource ?? "database",
+        lenderId: draft.lenderId,
+        name: draft.name,
+        title: draft.title,
+        email: draft.email,
+        phone: draft.phone,
+        states: draft.states,
+      });
+      if (!result.ok) setError(result.error ?? "The contact could not be saved.");
+      else onSaved(draft);
+    });
+  }
+
+  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4" onMouseDown={(event) => { if (event.currentTarget === event.target && !pending) onClose(); }}>
+    <form onSubmit={submit} role="dialog" aria-modal="true" aria-label={`Edit ${contact.name}`} className="gold-theme w-full max-w-lg rounded-3xl border border-amber-400/30 bg-[#0a0a0a] p-5 text-left shadow-2xl">
+      <div className="mb-5 flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">Admin edit</p><h2 className="mt-1 text-xl font-bold text-white">Edit AE contact</h2><p className="text-sm text-slate-400">{contact.lenderName}</p></div><button type="button" onClick={onClose} disabled={pending} aria-label="Close editor" className="rounded-full border border-white/10 p-2 text-slate-300"><X className="h-4 w-4" /></button></div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <EditField label="Name" required value={draft.name} onChange={(value) => setDraft((item) => ({ ...item, name: value }))} />
+        <EditField label="Title" value={draft.title ?? ""} onChange={(value) => setDraft((item) => ({ ...item, title: value || null }))} />
+        <EditField label="Email" type="email" value={draft.email ?? ""} onChange={(value) => setDraft((item) => ({ ...item, email: value || null }))} />
+        <EditField label="Phone" type="tel" value={draft.phone ?? ""} onChange={(value) => setDraft((item) => ({ ...item, phone: value || null }))} />
+        <label className="sm:col-span-2 text-xs font-medium uppercase tracking-wide text-slate-400">Coverage states<input value={draft.states.join(", ")} onChange={(event) => setDraft((item) => ({ ...item, states: event.target.value.split(/[,\s]+/).map((state) => state.trim().toUpperCase()).filter((state) => STATE_CODES.includes(state)) }))} placeholder="CA, AZ, NV" className="mt-1.5 w-full rounded-xl border border-amber-500/25 bg-black/60 px-3 py-2.5 text-sm normal-case tracking-normal text-white focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/20" /><span className="mt-1 block text-[11px] normal-case tracking-normal text-slate-500">Separate two-letter state codes with commas.</span></label>
+      </div>
+      {error ? <p role="alert" className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</p> : null}
+      <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={onClose} disabled={pending} className="rounded-full border border-white/10 px-4 py-2 text-sm text-slate-300">Cancel</button><button type="submit" disabled={pending} className="gold-button rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-50">{pending ? "Saving…" : "Save changes"}</button></div>
+    </form>
+  </div>;
+}
+
+function EditField({ label, value, onChange, type = "text", required = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) {
+  return <label className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}<input type={type} required={required} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1.5 w-full rounded-xl border border-amber-500/25 bg-black/60 px-3 py-2.5 text-sm normal-case tracking-normal text-white focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/20" /></label>;
 }

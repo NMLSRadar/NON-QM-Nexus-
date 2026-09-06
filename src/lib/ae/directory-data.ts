@@ -19,6 +19,7 @@ export interface DirectoryContact {
   isPrimary: boolean;
   territoryNotes?: string | null;
   verificationStatus?: string | null;
+  editSource?: "database" | "research";
 }
 
 export interface AeDirectoryEntry {
@@ -80,10 +81,11 @@ export async function getAeDirectoryEntries(lenderIds?: string[]): Promise<AeDir
   for (const lender of activeLenders) entriesById.set(lender.id, { lenderId: lender.id, lenderName: lender.name, contacts: [] });
 
   const ids = activeLenders.map((lender) => lender.id);
+  const overriddenResearchIds = new Set<string>();
   if (ids.length) {
     const { data: profiles, error: profileError } = await supabase
       .from("ae_profiles")
-      .select("id, lender_id, name, title, email, phone, photo_url, states, status, created_at")
+      .select("id, lender_id, name, title, email, phone, nmls_id, photo_url, states, status, created_at")
       .in("lender_id", ids)
       .neq("status", "hidden")
       .order("created_at", { ascending: true });
@@ -93,6 +95,8 @@ export async function getAeDirectoryEntries(lenderIds?: string[]): Promise<AeDir
       const lenderId = profile.lender_id as string;
       const entry = entriesById.get(lenderId);
       if (!entry) continue;
+      const researchId = typeof profile.nmls_id === "string" && profile.nmls_id.startsWith("research:") ? profile.nmls_id.slice("research:".length) : null;
+      if (researchId) overriddenResearchIds.add(researchId);
       entry.contacts.push({
         id: profile.id as string,
         lenderId,
@@ -105,11 +109,13 @@ export async function getAeDirectoryEntries(lenderIds?: string[]): Promise<AeDir
         states: (profile.states as string[]) ?? [],
         tier: profileTier(profile.name),
         isPrimary: false,
+        editSource: "database",
       });
     }
   }
 
   for (const source of masterContacts) {
+    if (overriddenResearchIds.has(source.id)) continue;
     const activeLender = activeByNormalizedName.get(normalizeLenderName(source.lenderName));
     if (lenderIds?.length && !activeLender) continue;
 
@@ -130,6 +136,7 @@ export async function getAeDirectoryEntries(lenderIds?: string[]): Promise<AeDir
       isPrimary: false,
       territoryNotes: source.territoryNotes,
       verificationStatus: source.verificationStatus,
+      editSource: "research",
     };
     if (!entry.contacts.some((existing) => sameContact(existing, contact))) entry.contacts.push(contact);
     entriesById.set(lenderId, entry);

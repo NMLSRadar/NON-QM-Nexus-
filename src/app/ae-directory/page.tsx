@@ -7,8 +7,9 @@ import { AeDirectoryClient } from "./ae-directory-client";
 export const dynamic = "force-dynamic";
 
 export default async function AeDirectoryPage() {
-  await requireSubscriberAccess();
+  const access = await requireSubscriberAccess();
   const entries = await getAeDirectoryEntries();
+  const canEdit = access.isPlatformAdmin;
 
   return (
     <div className="nexus-light-mode-section nexus-ae-directory-page gold-theme gold-page -mx-4 -my-6 space-y-6 rounded-b-3xl bg-[#050505] px-4 py-6 sm:px-6 sm:py-8">
@@ -17,7 +18,7 @@ export default async function AeDirectoryPage() {
         title={<>AE <span className="nexus-title-gold">Directory</span></>}
         description={<>Connect directly with Account Executives from the lenders inside Non-QM Nexus.</>}
       />
-      <AeDirectoryClient entries={entries} />
+      <AeDirectoryClient entries={entries} canEdit={canEdit} />
     </div>
   );
 }
