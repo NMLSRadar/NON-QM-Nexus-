@@ -33,12 +33,12 @@ The extended threshold protects filler tails, dangling conjunctions, and partial
 
 The active path is consumer, investor/DSCR, or foreign-national/ITIN. A path signal can arrive in any turn. Applicable captured values survive a path change. The required checklist changes in place, and VIQI announces the interpretation change.
 
-Investor coverage is one compound vital with two independent satisfaction routes:
+Investor coverage is an optional compound vital. It never blocks completion, but VIQI captures and uses it whenever the loan officer supplies either route:
 
 1. A stated DSCR, including a valid no-ratio answer.
 2. Monthly rent plus annual taxes and annual insurance, with HOA and flood defaulting to zero for the coverage calculation.
 
-The calculation records its source and never overwrites a stated number silently.
+The calculation records its source and never overwrites a stated number silently. An investor session may complete with occupancy, funds, and FICO even when no coverage value is supplied.
 
 ## Extraction and trust boundary
 

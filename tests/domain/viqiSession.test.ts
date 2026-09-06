@@ -92,6 +92,15 @@ describe("VIQI extraction and normalization", () => {
 });
 
 describe("VIQI path switching and DSCR coverage", () => {
+  it("keeps DSCR available but does not require it to complete an investor session", () => {
+    const session = processViqiTurn(createViqiSession(), "Investment property, 180k in the bank, 720 FICO");
+    expect(session.path).toBe("investor");
+    expect(session.vitals.coverage).toBeUndefined();
+    expect(missingRequired(session)).not.toContain("coverage");
+    expect(isComplete(session)).toBe(true);
+    expect(session.endedReason).toBe("complete");
+  });
+
   it("switches to investor mid-session and preserves applicable values", () => {
     const first = processViqiTurn(createViqiSession(), "Primary, 720 score, 180k in the bank");
     const investor = processViqiTurn(first, "Actually it is an investment property and the DSCR is one point two");

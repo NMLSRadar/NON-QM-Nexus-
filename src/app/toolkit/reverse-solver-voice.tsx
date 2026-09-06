@@ -41,6 +41,20 @@ function canRecordAudio(): boolean {
   return typeof window !== "undefined" && typeof MediaRecorder !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
 }
 
+function selectWelcomingVoice(): SpeechSynthesisVoice | undefined {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return undefined;
+  const voices = window.speechSynthesis.getVoices();
+  const preferredNames = [
+    "Ava", "Samantha", "Jenny", "Aria", "Victoria", "Karen", "Moira", "Zira",
+    "Google US English", "Microsoft Jenny", "Microsoft Aria",
+  ];
+  for (const name of preferredNames) {
+    const voice = voices.find((candidate) => candidate.lang.toLowerCase().startsWith("en") && candidate.name.toLowerCase().includes(name.toLowerCase()));
+    if (voice) return voice;
+  }
+  return voices.find((voice) => voice.lang.toLowerCase().startsWith("en-us")) ?? voices.find((voice) => voice.lang.toLowerCase().startsWith("en"));
+}
+
 function mapSessionToSolver(session: ViqiSession): ReverseSolverVoiceFields {
   const value = (key: ViqiVitalKey) => typeof session.vitals[key]?.value === "number" ? session.vitals[key]!.value as number : undefined;
   const dscrValue = session.vitals.dscr?.value;
@@ -138,6 +152,12 @@ export function ReverseSolverVoice({ onFields }: { onFields: (fields: ReverseSol
     if (!("speechSynthesis" in window) || !text.trim()) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
+    const welcomingVoice = selectWelcomingVoice();
+    if (welcomingVoice) utterance.voice = welcomingVoice;
+    utterance.lang = welcomingVoice?.lang ?? "en-US";
+    utterance.rate = 0.94;
+    utterance.pitch = 1.08;
+    utterance.volume = 0.9;
     utterance.onstart = () => setSession((current) => current.status === "ended" ? current : { ...current, status: "speaking" });
     utterance.onend = () => {
       if (resumeAfter && activeRef.current && sessionRef.current.status !== "ended") startBrowserRecognition();

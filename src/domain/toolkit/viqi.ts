@@ -90,8 +90,8 @@ export const PATH_VITALS: Record<ViqiPath, { required: ViqiVitalKey[]; soft: Viq
     soft: ["state", "property_type"],
   },
   investor: {
-    required: ["occupancy", "coverage", "liquid_funds", "fico"],
-    soft: ["monthly_hoa", "annual_flood", "rental_type", "state", "property_type", "units", "first_time_investor"],
+    required: ["occupancy", "liquid_funds", "fico"],
+    soft: ["coverage", "monthly_hoa", "annual_flood", "rental_type", "state", "property_type", "units", "first_time_investor"],
   },
   foreign: {
     required: ["occupancy", "citizenship_status", "monthly_income", "liquid_funds", "monthly_liabilities"],
