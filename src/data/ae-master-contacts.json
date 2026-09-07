@@ -1178,11 +1178,77 @@
   },
   {
     "id": "owner-seed-carrington-william-clark",
-    "lenderName": "Carrington Mortgage",
+    "lenderName": "Carrington Mortgage Services",
     "name": "William Clark",
     "title": "Account Executive",
     "email": null,
     "phone": "(949) 231-7294",
+    "territoryNotes": null,
+    "verificationStatus": "Owner supplied",
+    "sourceUrl": null
+  },
+  {
+    "id": "owner-seed-logan-finance-stephen-light",
+    "lenderName": "Logan Finance Corporation",
+    "name": "Stephen Light",
+    "title": "Account Executive",
+    "email": null,
+    "phone": "(858) 500-6480",
+    "territoryNotes": null,
+    "verificationStatus": "Owner supplied",
+    "sourceUrl": null
+  },
+  {
+    "id": "owner-seed-greenbox-loans-alrick-morales",
+    "lenderName": "GreenBox Loans",
+    "name": "Alrick Morales",
+    "title": "Account Executive",
+    "email": "amorales@greenboxloans.com",
+    "phone": "(949) 822-1090",
+    "territoryNotes": null,
+    "verificationStatus": "Owner supplied",
+    "sourceUrl": null
+  },
+  {
+    "id": "owner-seed-5th-street-capital-damian-fischer",
+    "lenderName": "5th Street Capital",
+    "name": "Damian Fischer",
+    "title": "Account Executive",
+    "email": "damian@5thstcap.com",
+    "phone": null,
+    "territoryNotes": null,
+    "verificationStatus": "Owner supplied",
+    "sourceUrl": null
+  },
+  {
+    "id": "owner-seed-deephaven-sonia-eckard",
+    "lenderName": "Deephaven Mortgage",
+    "name": "Sonia Eckard",
+    "title": "Account Executive",
+    "email": null,
+    "phone": "(949) 751-8424",
+    "territoryNotes": null,
+    "verificationStatus": "Owner supplied",
+    "sourceUrl": null
+  },
+  {
+    "id": "owner-seed-giant-lending-john-han",
+    "lenderName": "GIANT Lending",
+    "name": "John Han",
+    "title": "Account Executive",
+    "email": "jhahn@thegiantlending.com",
+    "phone": "(405) 863-2411",
+    "territoryNotes": null,
+    "verificationStatus": "Owner supplied",
+    "sourceUrl": null
+  },
+  {
+    "id": "owner-seed-champions-funding-aaron-golden",
+    "lenderName": "Champions Funding",
+    "name": "Aaron Golden",
+    "title": "Account Executive",
+    "email": "agolden@championsfunding.com",
+    "phone": "(626) 298-4849",
     "territoryNotes": null,
     "verificationStatus": "Owner supplied",
     "sourceUrl": null
