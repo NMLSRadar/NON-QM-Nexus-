@@ -76,7 +76,8 @@ export async function auditAeCoverage() {
     noContactAtAllCount: noContactAtAll.length,
     noContactAtAll,
   };
-  console.log(`[ae-coverage-audit] ${JSON.stringify(report)}`);
+  console.log(`[ae-coverage-audit] total=${report.totalActiveLenders} appointed=${report.lendersWithAppointedProfile} research_only=${report.researchOnlyCount} no_contact=${report.noContactAtAllCount}`);
+  console.log(`[ae-coverage-audit:no-contact] ${JSON.stringify(report.noContactAtAll)}`);
   return report;
 }
 
