@@ -31,7 +31,7 @@ describe("AE master contact dataset", () => {
       { lenderName: "Deephaven Mortgage", name: "Sonia Eckard", email: null, phone: "(949) 751-8424" },
       { lenderName: "Carrington Mortgage Services", name: "William Clark", email: null, phone: "(949) 231-7294" },
       { lenderName: "GIANT Lending", name: "John Han", email: "jhahn@thegiantlending.com", phone: "(405) 863-2411" },
-      { lenderName: "Champions Funding", name: "Aaron Golden", email: "agolden@championsfunding.com", phone: "(626) 298-4849" },
+      { lenderName: "Champions Funding", name: "Aaron Golden", email: "aaron.golden@champstpo.com", phone: "(626) 298-4849" },
     ];
 
     for (const contact of expected) {
