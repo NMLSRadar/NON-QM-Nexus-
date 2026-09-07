@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import fs from "node:fs";
+import { pathToFileURL } from "node:url";
 
 function normalize(value) {
   return String(value ?? "")
@@ -79,7 +80,7 @@ export async function auditAeCoverage() {
   return report;
 }
 
-if (import.meta.url === new URL(process.argv[1] ?? "", "file:").href) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   auditAeCoverage().catch((error) => {
     console.error("[ae-coverage-audit] fatal", error);
     process.exit(1);
