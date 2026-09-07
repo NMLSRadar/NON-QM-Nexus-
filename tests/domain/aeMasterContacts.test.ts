@@ -3,9 +3,9 @@ import contacts from "@/data/ae-master-contacts.json";
 
 describe("AE master contact dataset", () => {
   it("keeps unique contact records while allowing more than one AE per lender", () => {
-    expect(contacts).toHaveLength(114);
-    expect(new Set(contacts.map((contact) => contact.id)).size).toBe(114);
-    expect(new Set(contacts.map((contact) => contact.lenderName.toLowerCase())).size).toBe(113);
+    expect(contacts).toHaveLength(131);
+    expect(new Set(contacts.map((contact) => contact.id)).size).toBe(131);
+    expect(new Set(contacts.map((contact) => contact.lenderName.toLowerCase())).size).toBe(130);
   });
 
   it("includes the required Orion and Carrington contacts", () => {
@@ -36,6 +36,39 @@ describe("AE master contact dataset", () => {
 
     for (const contact of expected) {
       expect(contacts).toContainEqual(expect.objectContaining({ ...contact, verificationStatus: "Owner supplied" }));
+    }
+  });
+
+  it("covers every real lender from the September missing-contact research list", () => {
+    const expectedLenders = [
+      "American Pride Bank (APB)",
+      "Dominion Financial",
+      "Equity Prime Mortage (EPM)",
+      "Equity Wave Lending",
+      "eRESI Capital",
+      "Everstream Mortgage",
+      "Figure",
+      "Financial Lynx",
+      "First Colony Wholesale",
+      "First Colony Wholesale | FCM TPO",
+      "First Tech Federal Credit Union",
+      "Forward Lending",
+      "GMFS Partners",
+      "Golchis Capital",
+      "Homebridge Wholesale",
+      "HomeXpress Mortgage",
+      "Jet Advantage Mortgage",
+      "LendSure Mortgage Corp.",
+      "NewPoint Mortgage",
+      "Nextres",
+      "NFTYDoor",
+      "RISE TPO",
+    ];
+    for (const lenderName of expectedLenders) {
+      const matches = contacts.filter((contact) => contact.lenderName === lenderName);
+      expect(matches.length, lenderName).toBeGreaterThan(0);
+      expect(matches.some((contact) => Boolean(contact.email || contact.phone)), lenderName).toBe(true);
+      expect(matches.some((contact) => Boolean(contact.sourceUrl)), lenderName).toBe(true);
     }
   });
 

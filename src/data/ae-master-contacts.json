@@ -78,7 +78,7 @@
   },
   {
     "id": "master-american-pride-bank-apb-wholesale-wholesale-team-5d65d6306f",
-    "lenderName": "American Pride Bank (APB Wholesale)",
+    "lenderName": "American Pride Bank (APB)",
     "name": "Wholesale team",
     "title": "Wholesale team",
     "email": "TPOsupport@apbwholesale.com",
@@ -342,7 +342,7 @@
   },
   {
     "id": "master-dominion-financial-services-blake-cunningham-ca1b99492d",
-    "lenderName": "Dominion Financial Services",
+    "lenderName": "Dominion Financial",
     "name": "Blake Cunningham",
     "title": "Account Executive",
     "email": "blakec@thedominiongroup.com",
@@ -407,15 +407,15 @@
     "sourceUrl": null
   },
   {
-    "id": "master-epm-wholesale-tony-walker-3111cdfdec",
-    "lenderName": "EPM Wholesale",
-    "name": "Tony Walker",
-    "title": "Account Executive",
-    "email": "awalker@epm.net",
-    "phone": "469-288-4472",
-    "territoryNotes": "Wholesale",
-    "verificationStatus": "Direct AE found",
-    "sourceUrl": "https://johncrossmortgage.wixsite.com/jcm2/about-3-2"
+    "id": "master-epm-wholesale-team-3111cdfdec",
+    "lenderName": "Equity Prime Mortage (EPM)",
+    "name": "EPM Wholesale AE Team",
+    "title": "Wholesale Account Executive Team",
+    "email": "aewholesale@epm.net",
+    "phone": "(877) 446-0004",
+    "territoryNotes": "Official wholesale team contact; EPM routes brokers to an assigned Account Executive.",
+    "verificationStatus": "Shared wholesale contact",
+    "sourceUrl": "https://www.epmwholesale.com/partner/"
   },
   {
     "id": "master-epro-mortgage-wholesale-sales-5545fafca4",
@@ -507,7 +507,7 @@
   },
   {
     "id": "master-homexpress-matthew-brogdon-41d815cf48",
-    "lenderName": "HomeXpress",
+    "lenderName": "HomeXpress Mortgage",
     "name": "Matthew Brogdon",
     "title": "Account Executive",
     "email": "mbrogdon@homexmortgage.com",
@@ -551,7 +551,7 @@
   },
   {
     "id": "master-lendsure-liv-barton-24eea89d06",
-    "lenderName": "LendSure",
+    "lenderName": "LendSure Mortgage Corp.",
     "name": "Liv Barton",
     "title": "Account Executive",
     "email": "obarton@lendsure.com",
@@ -1252,5 +1252,192 @@
     "territoryNotes": null,
     "verificationStatus": "Owner supplied",
     "sourceUrl": null
+  },
+  {
+    "id": "research-20260907-equity-wave-broker-team",
+    "lenderName": "Equity Wave Lending",
+    "name": "Broker Relations Team",
+    "title": "Wholesale Broker Relations",
+    "email": null,
+    "phone": "(949) 252-0025 ext. 103",
+    "territoryNotes": "Official broker-portal contact; call routes brokers to the appropriate wholesale representative.",
+    "verificationStatus": "Shared wholesale contact",
+    "sourceUrl": "https://equitywavelending.com/broker/"
+  },
+  {
+    "id": "research-20260907-eresi-michael-genzoli",
+    "lenderName": "eRESI Capital",
+    "name": "Michael Genzoli",
+    "title": "VP, Business Development — West",
+    "email": "mike.genzoli@eresimortgage.com",
+    "phone": null,
+    "territoryNotes": "West-region business development contact listed by eRESI Mortgage.",
+    "verificationStatus": "Direct business development contact",
+    "sourceUrl": "https://www.eresimortgage.com/contact-us"
+  },
+  {
+    "id": "research-20260907-everstream-broker-team",
+    "lenderName": "Everstream Mortgage",
+    "name": "Everstream Broker Team",
+    "title": "Wholesale Broker Support",
+    "email": "brokers@everstreammortgage.com",
+    "phone": "(312) 890-5502",
+    "territoryNotes": "Official broker sign-up and wholesale contact.",
+    "verificationStatus": "Shared wholesale contact",
+    "sourceUrl": "https://www.everstreammortgage.com/contact/"
+  },
+  {
+    "id": "research-20260907-figure-partner-team",
+    "lenderName": "Figure",
+    "name": "Figure Partner Team",
+    "title": "Lending Partnerships",
+    "email": "partners@figure.com",
+    "phone": null,
+    "territoryNotes": "Official contact for new lending and platform partners; existing partners may use partner-help@figure.com.",
+    "verificationStatus": "Shared partner contact",
+    "sourceUrl": "https://docs.figure.com/contact"
+  },
+  {
+    "id": "research-20260907-financial-lynx-team",
+    "lenderName": "Financial Lynx",
+    "name": "Financial Lynx Team",
+    "title": "Loan Origination Support",
+    "email": "info@financiallynx.com",
+    "phone": "(212) 439-4732",
+    "territoryNotes": "Official business and real-estate lending contact.",
+    "verificationStatus": "Shared company contact",
+    "sourceUrl": "https://www.financiallynx.com/contact-us"
+  },
+  {
+    "id": "research-20260907-first-colony-robb-fordham",
+    "lenderName": "First Colony Wholesale",
+    "name": "Robb Fordham",
+    "title": "Senior Account Executive",
+    "email": "Robb.Fordham@fcmtpo.com",
+    "phone": "(818) 568-6505",
+    "territoryNotes": "Listed on First Colony's official AE team page; direct details from a public mortgage contact directory.",
+    "verificationStatus": "Direct AE found",
+    "sourceUrl": "https://fcmwholesale.com/about/"
+  },
+  {
+    "id": "research-20260907-fcm-tpo-robb-fordham",
+    "lenderName": "First Colony Wholesale | FCM TPO",
+    "name": "Robb Fordham",
+    "title": "Senior Account Executive",
+    "email": "Robb.Fordham@fcmtpo.com",
+    "phone": "(818) 568-6505",
+    "territoryNotes": "FCM TPO rebranded as First Colony Wholesale; retained against this duplicate catalog name until lender records are merged.",
+    "verificationStatus": "Direct AE found",
+    "sourceUrl": "https://fcmtpo.com/document/48-11202025-fcm-tpo-is-now-first-colony-wholesale/"
+  },
+  {
+    "id": "research-20260907-first-tech-partner-support",
+    "lenderName": "First Tech Federal Credit Union",
+    "name": "First Tech Partner Sales Support",
+    "title": "TPO Partner Sales Support",
+    "email": "PartnerSupport@firsttechfed.com",
+    "phone": null,
+    "territoryNotes": "Official sales-support contact for approved and prospective TPO partners.",
+    "verificationStatus": "Shared wholesale contact",
+    "sourceUrl": "https://www.firsttechfed.com/partner/contact"
+  },
+  {
+    "id": "research-20260907-forward-lending-lloyd-hopkins",
+    "lenderName": "Forward Lending",
+    "name": "Lloyd Hopkins",
+    "title": "Senior National Account Executive",
+    "email": "lhopkins@forwardlendingmtg.com",
+    "phone": "(844) 941-5626",
+    "territoryNotes": "Direct AE email publicly listed; phone is Forward Lending's official wholesale routing number.",
+    "verificationStatus": "Direct AE found / company phone",
+    "sourceUrl": "https://forwardlendingmtg.com/contact-us/"
+  },
+  {
+    "id": "research-20260907-gmfs-hugh-edwards",
+    "lenderName": "GMFS Partners",
+    "name": "Hugh Edwards",
+    "title": "SVP — Third Party Originations",
+    "email": null,
+    "phone": "(205) 253-1477",
+    "territoryNotes": "Official correspondent and wholesale contact; listed coverage includes Alabama, Florida, Mississippi, and Tennessee.",
+    "verificationStatus": "Direct TPO contact",
+    "sourceUrl": "https://gmfspartners.com/staff/hugh-edwards/"
+  },
+  {
+    "id": "research-20260907-golchis-dscr-team",
+    "lenderName": "Golchis Capital",
+    "name": "DSCR Correspondent Team",
+    "title": "DSCR Correspondent Partnerships",
+    "email": "dscr@colchiscapital.com",
+    "phone": null,
+    "territoryNotes": "Publicly listed contact for lenders seeking Colchis DSCR correspondent and takeout partnerships; catalog uses the spelling Golchis.",
+    "verificationStatus": "Shared correspondent contact",
+    "sourceUrl": "https://www.linkedin.com/posts/zstrom_if-you-are-at-the-dscrrtl-forum-next-week-activity-7283531413348331520-rg0T"
+  },
+  {
+    "id": "research-20260907-homebridge-dana-gibson",
+    "lenderName": "Homebridge Wholesale",
+    "name": "Dana Gibson",
+    "title": "Regional Sales Manager",
+    "email": null,
+    "phone": "(619) 251-6139",
+    "territoryNotes": "Direct Regional Sales Manager contact from Homebridge Wholesale's official contact page.",
+    "verificationStatus": "Direct sales contact",
+    "sourceUrl": "https://www.homebridgewholesale.com/contact-us/"
+  },
+  {
+    "id": "research-20260907-jet-advantage-clayton-hallford",
+    "lenderName": "Jet Advantage Mortgage",
+    "name": "Clayton Hallford",
+    "title": "Account Executive",
+    "email": "clay@jetadvantagemtg.com",
+    "phone": "(949) 422-7346",
+    "territoryNotes": "Public wholesale mortgage contact directory listing.",
+    "verificationStatus": "Direct AE found",
+    "sourceUrl": "https://clientdirectmortgage.freshdesk.com/support/solutions/articles/151000030473-account-executive-contact-list"
+  },
+  {
+    "id": "research-20260907-newpoint-broker-team",
+    "lenderName": "NewPoint Mortgage",
+    "name": "NewPoint Broker Relations",
+    "title": "Wholesale Account Management",
+    "email": "info@newpointmortgage.com",
+    "phone": "(301) 591-6440",
+    "territoryNotes": "Official general contact; routes brokers to Account Management or their assigned Account Executive.",
+    "verificationStatus": "Shared company contact",
+    "sourceUrl": "https://newpointmortgage.com/contact/"
+  },
+  {
+    "id": "research-20260907-nextres-lending-team",
+    "lenderName": "Nextres",
+    "name": "Nextres Lending Team",
+    "title": "Wholesale Lending Contact",
+    "email": "info@nextres.com",
+    "phone": "(833) 639-4140",
+    "territoryNotes": "Official contact for direct routing to a Nextres loan officer.",
+    "verificationStatus": "Shared company contact",
+    "sourceUrl": "https://www.nextres.com/contact"
+  },
+  {
+    "id": "research-20260907-nftydoor-partnerships",
+    "lenderName": "NFTYDoor",
+    "name": "NFTYDoor Wholesale Partnerships",
+    "title": "Wholesale and Correspondent Partnerships",
+    "email": "hello@nftydoor.com",
+    "phone": null,
+    "territoryNotes": "Official contact for wholesale and correspondent partner inquiries.",
+    "verificationStatus": "Shared partner contact",
+    "sourceUrl": "https://www.nftydoor.com/resources"
+  },
+  {
+    "id": "research-20260907-rise-tpo-sales-team",
+    "lenderName": "RISE TPO",
+    "name": "RISE TPO Sales Team",
+    "title": "Wholesale Account Executive Routing",
+    "email": null,
+    "phone": "(866) 328-8059",
+    "territoryNotes": "Official wholesale contact number; RISE routes inquiries to the appropriate Account Executive.",
+    "verificationStatus": "Shared wholesale contact",
+    "sourceUrl": "https://risetpo.com/contact-us/"
   }
 ]
