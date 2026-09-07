@@ -29,6 +29,7 @@ const scripts = [
   "ingest_ten_lender_nonqm_2026_08_08.mjs",
   "ingest_thelender_complete_2026_08_17.mjs",
   "ingest_mtg_broker_pending_2026_08_22.mjs",
+  "ingest_rise_tpo_2026_09_07.mjs",
 ];
 
 for (const script of scripts) {
