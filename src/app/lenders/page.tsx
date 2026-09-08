@@ -12,10 +12,10 @@ export default async function LendersPage() {
   await recordPageView("lender_list");
   const repo = await getRepository();
   const org = await getCurrentOrganizationId();
-  const [verifiedLenders, programs, access] = await Promise.all([
-    repo.listLenders(org, MAX_TIER_LEVEL),
+  const access = await getLenderAccessInfo();
+  const [verifiedLenders, programs] = await Promise.all([
+    access.isPlatformAdmin ? repo.listAllLenders(org) : repo.listLenders(org, MAX_TIER_LEVEL),
     repo.listPrograms(org),
-    getLenderAccessInfo(),
   ]);
 
   // Customer-facing lender cards are verification-gated. Pending-review
@@ -30,12 +30,12 @@ export default async function LendersPage() {
         .filter((p) => p.lenderId === lender.id && p.active)
         .sort((a, b) => compareAlphabetically(a.name, b.name)),
     }))
-    .filter((item) => access.tierLevel === 0 || item.programs.length > 0);
+    .filter((item) => access.isPlatformAdmin || access.tierLevel === 0 || item.programs.length > 0);
 
   return (
     <div className="nexus-workspace nexus-lenders-page gold-theme gold-page -mx-4 -my-6 px-4 py-6 sm:px-6 sm:py-8 bg-[#050505] rounded-b-3xl space-y-6">
       <PremiumPageHero icon={Building2} title={<>Lender <span className="nexus-title-gold">Directory</span></>} description={<>Compare verified programs and access current guidelines across the NON-QM Nexus lender network.</>} />
-      <LenderDirectory lenders={lenders} isMember={access.tierLevel > 0} />
+      <LenderDirectory lenders={lenders} isMember={access.tierLevel > 0} canManage={access.isPlatformAdmin} />
     </div>
   );
 }

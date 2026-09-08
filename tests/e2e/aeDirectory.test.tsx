@@ -8,6 +8,8 @@ import type { AeDirectoryEntry } from "@/lib/ae/directory-data";
 
 vi.mock("@/app/ae-directory/actions", () => ({
   saveAeDirectoryContact: vi.fn().mockResolvedValue({ ok: true }),
+  createAeDirectoryContact: vi.fn().mockResolvedValue({ ok: true, contact: { id: "00000000-0000-4000-8000-000000000099", lenderId: "orion", name: "New AE", title: "Account Executive", email: "new@example.com", phone: null, states: [] } }),
+  deleteAeDirectoryContact: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
 const entries: AeDirectoryEntry[] = [
@@ -98,8 +100,12 @@ describe("AE Directory", () => {
     const user = userEvent.setup();
     const { rerender } = render(<AeDirectoryClient entries={entries} />);
     expect(screen.queryByRole("button", { name: "Edit Bobby Caldera" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete Bobby Caldera" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add AE contact" })).not.toBeInTheDocument();
 
     rerender(<AeDirectoryClient entries={entries} canEdit />);
+    expect(screen.getByRole("button", { name: "Delete Bobby Caldera" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add AE contact" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Edit Bobby Caldera" }));
     expect(screen.getByRole("dialog", { name: "Edit Bobby Caldera" })).toBeInTheDocument();
     const phone = screen.getByLabelText("Phone");
@@ -108,5 +114,14 @@ describe("AE Directory", () => {
     await user.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Edit Bobby Caldera" })).not.toBeInTheDocument());
     expect(screen.getByRole("link", { name: "Call Bobby Caldera at Orion Lending" })).toHaveAttribute("href", "tel:+16615551212");
+  });
+
+  it("requires confirmation before an admin deletes a contact", async () => {
+    const user = userEvent.setup();
+    render(<AeDirectoryClient entries={entries} lenders={[{ id: "orion", name: "Orion Lending" }]} canEdit />);
+    await user.click(screen.getByRole("button", { name: "Delete Bobby Caldera" }));
+    expect(screen.getByRole("dialog", { name: "Delete Bobby Caldera" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Delete contact" }));
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Bobby Caldera" })).not.toBeInTheDocument());
   });
 });

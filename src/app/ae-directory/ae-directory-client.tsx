@@ -1,9 +1,9 @@
 "use client";
 
 import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
-import { Copy, Heart, Mail, Pencil, Phone, Search, Users, X } from "lucide-react";
-import type { DirectoryContact, AeDirectoryEntry } from "@/lib/ae/directory-data";
-import { saveAeDirectoryContact } from "./actions";
+import { AlertTriangle, Copy, Heart, Mail, Pencil, Phone, Plus, Search, Trash2, Users, X } from "lucide-react";
+import type { DirectoryContact, AeDirectoryEntry, AeDirectoryLender } from "@/lib/ae/directory-data";
+import { createAeDirectoryContact, deleteAeDirectoryContact, saveAeDirectoryContact } from "./actions";
 
 const FAVORITES_KEY = "non-qm-nexus:ae-directory-favorites";
 const AVATAR_COLORS = [
@@ -48,7 +48,7 @@ async function copy(value: string) {
   }
 }
 
-function ContactCard({ contact, favorite, onFavorite, canEdit, onEdit }: { contact: DirectoryContact; favorite: boolean; onFavorite: () => void; canEdit: boolean; onEdit: () => void }) {
+function ContactCard({ contact, favorite, onFavorite, canEdit, onEdit, onDelete }: { contact: DirectoryContact; favorite: boolean; onFavorite: () => void; canEdit: boolean; onEdit: () => void; onDelete: () => void }) {
   return (
     <article className="group relative flex min-h-64 flex-col rounded-2xl border border-amber-500/15 bg-black/40 p-5 text-center shadow-[0_12px_35px_rgba(0,0,0,0.24)] transition hover:-translate-y-0.5 hover:border-amber-400/35 hover:bg-black/55">
       <button
@@ -75,9 +75,14 @@ function ContactCard({ contact, favorite, onFavorite, canEdit, onEdit }: { conta
       <div className="flex items-center justify-center gap-2">
         <h2 className="text-base font-bold text-white">{contact.name}</h2>
         {canEdit ? (
-          <button type="button" onClick={onEdit} aria-label={`Edit ${contact.name}`} className="inline-flex items-center gap-1 rounded-full border border-amber-400/35 px-2 py-1 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/10 focus:outline-none focus:ring-2 focus:ring-amber-400">
-            <Pencil className="h-3 w-3" aria-hidden /> Edit
-          </button>
+          <span className="inline-flex items-center gap-1">
+            <button type="button" onClick={onEdit} aria-label={`Edit ${contact.name}`} className="inline-flex items-center gap-1 rounded-full border border-amber-400/35 px-2 py-1 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/10 focus:outline-none focus:ring-2 focus:ring-amber-400">
+              <Pencil className="h-3 w-3" aria-hidden /> Edit
+            </button>
+            <button type="button" onClick={onDelete} aria-label={`Delete ${contact.name}`} className="inline-flex items-center gap-1 rounded-full border border-rose-400/35 px-2 py-1 text-[11px] font-semibold text-rose-200 hover:bg-rose-500/10 focus:outline-none focus:ring-2 focus:ring-rose-400">
+              <Trash2 className="h-3 w-3" aria-hidden /> Delete
+            </button>
+          </span>
         ) : null}
       </div>
       <p className="mt-1 min-h-5 text-sm text-slate-400">{contact.title || (contact.tier === "team" ? "Broker Support" : "Account Executive")}</p>
@@ -106,9 +111,11 @@ function ContactCard({ contact, favorite, onFavorite, canEdit, onEdit }: { conta
   );
 }
 
-export function AeDirectoryClient({ entries, canEdit = false }: { entries: AeDirectoryEntry[]; canEdit?: boolean }) {
+export function AeDirectoryClient({ entries, lenders = [], canEdit = false }: { entries: AeDirectoryEntry[]; lenders?: AeDirectoryLender[]; canEdit?: boolean }) {
   const [directoryEntries, setDirectoryEntries] = useState(entries);
   const [editing, setEditing] = useState<DirectoryContact | null>(null);
+  const [deleting, setDeleting] = useState<DirectoryContact | null>(null);
+  const [adding, setAdding] = useState(false);
   const [query, setQuery] = useState("");
   const [company, setCompany] = useState("all");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
@@ -174,12 +181,36 @@ export function AeDirectoryClient({ entries, canEdit = false }: { entries: AeDir
     setEditing(null);
   }
 
+  function addContact(contact: DirectoryContact) {
+    setDirectoryEntries((current) => {
+      const existing = current.find((entry) => entry.lenderId === contact.lenderId);
+      if (existing) return current.map((entry) => entry.lenderId === contact.lenderId ? { ...entry, contacts: [...entry.contacts, contact] } : entry);
+      return [...current, { lenderId: contact.lenderId, lenderName: contact.lenderName, contacts: [contact] }];
+    });
+    setAdding(false);
+  }
+
+  function removeContact(contactId: string) {
+    setDirectoryEntries((current) => current
+      .map((entry) => ({ ...entry, contacts: entry.contacts.filter((contact) => contact.id !== contactId) }))
+      .filter((entry) => entry.contacts.length > 0));
+    setFavorites((current) => {
+      const next = new Set(current);
+      next.delete(contactId);
+      return next;
+    });
+    setDeleting(null);
+  }
+
   return (
     <div className="space-y-5">
       <section className="gold-panel rounded-2xl p-4 sm:p-5" aria-label="Contact directory controls">
-        <div className="mb-4 flex items-center gap-3">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-500/10 text-amber-300" aria-hidden><Users className="h-5 w-5" /></span>
-          <h2 className="text-xl font-bold text-white">Contact Directory</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-500/10 text-amber-300" aria-hidden><Users className="h-5 w-5" /></span>
+            <h2 className="text-xl font-bold text-white">Contact Directory</h2>
+          </div>
+          {canEdit ? <button type="button" onClick={() => setAdding(true)} className="gold-button inline-flex min-h-11 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"><Plus className="h-4 w-4" aria-hidden /> Add AE contact</button> : null}
         </div>
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,22rem)_auto]">
           <label className="relative block">
@@ -208,7 +239,7 @@ export function AeDirectoryClient({ entries, canEdit = false }: { entries: AeDir
       {filtered.length ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {filtered.map((contact) => (
-            <ContactCard key={contact.id} contact={contact} favorite={favorites.has(contact.id)} onFavorite={() => toggleFavorite(contact.id)} canEdit={canEdit} onEdit={() => setEditing(contact)} />
+            <ContactCard key={contact.id} contact={contact} favorite={favorites.has(contact.id)} onFavorite={() => toggleFavorite(contact.id)} canEdit={canEdit} onEdit={() => setEditing(contact)} onDelete={() => setDeleting(contact)} />
           ))}
         </div>
       ) : (
@@ -222,11 +253,67 @@ export function AeDirectoryClient({ entries, canEdit = false }: { entries: AeDir
         Contacts are provided for legitimate loan-scenario inquiries. Bulk solicitation or use as a marketing list is prohibited.
       </p>
       {editing ? <EditContactDialog contact={editing} onClose={() => setEditing(null)} onSaved={saveEditedContact} /> : null}
+      {adding ? <AddContactDialog lenders={lenders} onClose={() => setAdding(false)} onAdded={addContact} /> : null}
+      {deleting ? <DeleteContactDialog contact={deleting} onClose={() => setDeleting(null)} onDeleted={() => removeContact(deleting.id)} /> : null}
     </div>
   );
 }
 
 const STATE_CODES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC"];
+
+function AddContactDialog({ lenders, onClose, onAdded }: { lenders: AeDirectoryLender[]; onClose: () => void; onAdded: (contact: DirectoryContact) => void }) {
+  const [draft, setDraft] = useState({ lenderId: lenders[0]?.id ?? "", name: "", title: "Account Executive", email: "", phone: "", states: "" });
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      const states = draft.states.split(/[,\s]+/).map((state) => state.trim().toUpperCase()).filter((state) => STATE_CODES.includes(state));
+      const result = await createAeDirectoryContact({ lenderId: draft.lenderId, name: draft.name, title: draft.title || null, email: draft.email, phone: draft.phone || null, states });
+      if (!result.ok || !result.contact) return setError(result.error ?? "The contact could not be added.");
+      const lenderName = lenders.find((lender) => lender.id === result.contact!.lenderId)?.name ?? "Lender";
+      onAdded({ ...result.contact, lenderName, photoUrl: null, tier: "direct", isPrimary: false, editSource: "database" });
+    });
+  }
+
+  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4" onMouseDown={(event) => { if (event.currentTarget === event.target && !pending) onClose(); }}>
+    <form onSubmit={submit} role="dialog" aria-modal="true" aria-label="Add AE contact" className="gold-theme w-full max-w-lg rounded-3xl border border-amber-400/30 bg-[#0a0a0a] p-5 text-left shadow-2xl">
+      <div className="mb-5 flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">Admin only</p><h2 className="mt-1 text-xl font-bold text-white">Add AE contact</h2><p className="text-sm text-slate-400">Creates a visible directory contact.</p></div><button type="button" onClick={onClose} disabled={pending} aria-label="Close add contact" className="rounded-full border border-white/10 p-2 text-slate-300"><X className="h-4 w-4" /></button></div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="sm:col-span-2 text-xs font-medium uppercase tracking-wide text-slate-400">Lender<select aria-label="Lender" required value={draft.lenderId} onChange={(event) => setDraft((item) => ({ ...item, lenderId: event.target.value }))} className="mt-1.5 w-full rounded-xl border border-amber-500/25 bg-black/60 px-3 py-2.5 text-sm normal-case tracking-normal text-white"><option value="">Select lender…</option>{lenders.map((lender) => <option key={lender.id} value={lender.id}>{lender.name}</option>)}</select></label>
+        <EditField label="Name" required value={draft.name} onChange={(value) => setDraft((item) => ({ ...item, name: value }))} />
+        <EditField label="Title" value={draft.title} onChange={(value) => setDraft((item) => ({ ...item, title: value }))} />
+        <EditField label="Email" type="email" required value={draft.email} onChange={(value) => setDraft((item) => ({ ...item, email: value }))} />
+        <EditField label="Phone" type="tel" value={draft.phone} onChange={(value) => setDraft((item) => ({ ...item, phone: value }))} />
+        <label className="sm:col-span-2 text-xs font-medium uppercase tracking-wide text-slate-400">Coverage states<input aria-label="Coverage states" value={draft.states} onChange={(event) => setDraft((item) => ({ ...item, states: event.target.value }))} placeholder="CA, AZ, NV" className="mt-1.5 w-full rounded-xl border border-amber-500/25 bg-black/60 px-3 py-2.5 text-sm normal-case tracking-normal text-white" /></label>
+      </div>
+      {error ? <p role="alert" className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</p> : null}
+      <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={onClose} disabled={pending} className="rounded-full border border-white/10 px-4 py-2 text-sm text-slate-300">Cancel</button><button type="submit" disabled={pending || lenders.length === 0} className="gold-button rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-50">{pending ? "Adding…" : "Add contact"}</button></div>
+    </form>
+  </div>;
+}
+
+function DeleteContactDialog({ contact, onClose, onDeleted }: { contact: DirectoryContact; onClose: () => void; onDeleted: () => void }) {
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  function confirmDelete() {
+    setError(null);
+    startTransition(async () => {
+      const result = await deleteAeDirectoryContact({ id: contact.id, source: contact.editSource ?? "database", lenderId: contact.lenderId, name: contact.name });
+      if (!result.ok) setError(result.error ?? "The contact could not be deleted.");
+      else onDeleted();
+    });
+  }
+  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4">
+    <div role="dialog" aria-modal="true" aria-label={`Delete ${contact.name}`} className="gold-theme w-full max-w-md rounded-3xl border border-rose-400/30 bg-[#0a0a0a] p-5 text-left shadow-2xl">
+      <div className="flex items-start gap-3"><span className="rounded-full bg-rose-500/10 p-2 text-rose-300"><AlertTriangle className="h-5 w-5" /></span><div><h2 className="text-xl font-bold text-white">Delete AE contact?</h2><p className="mt-2 text-sm text-slate-300"><strong>{contact.name}</strong> will be removed from {contact.lenderName}. This does not delete the lender.</p></div></div>
+      {error ? <p role="alert" className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</p> : null}
+      <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={onClose} disabled={pending} className="rounded-full border border-white/10 px-4 py-2 text-sm text-slate-300">Cancel</button><button type="button" onClick={confirmDelete} disabled={pending} className="rounded-full bg-rose-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50">{pending ? "Deleting…" : "Delete contact"}</button></div>
+    </div>
+  </div>;
+}
 
 function EditContactDialog({ contact, onClose, onSaved }: { contact: DirectoryContact; onClose: () => void; onSaved: (contact: DirectoryContact) => void }) {
   const [draft, setDraft] = useState(contact);

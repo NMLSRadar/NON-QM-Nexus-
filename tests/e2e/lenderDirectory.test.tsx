@@ -6,10 +6,16 @@
 // required" card, and a member sees every lender unlocked (clickable). The
 // old tier filter chips and "Upgrade to Unlock" copy are removed entirely.
 import "@testing-library/jest-dom/vitest";
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { LenderDirectory, type DirectoryLender } from "@/app/lenders/lender-directory";
 import type { Lender, Program } from "@/domain/types/program";
+
+vi.mock("@/app/lenders/actions", () => ({
+  createDirectoryLender: vi.fn().mockResolvedValue({ ok: true, lender: { id: "00000000-0000-4000-8000-000000000099", name: "New Lender", tierLevel: 3 } }),
+  deleteDirectoryLender: vi.fn().mockResolvedValue({ ok: true }),
+}));
 
 function makeLender(overrides: Partial<Lender>): Lender {
   return {
@@ -106,5 +112,19 @@ describe("LenderDirectory: single-membership — every lender visible, access lo
     for (const label of ["All", "Tier 1", "Tier 2", "Tier 3", "Investor", "DSCR", "Bank Statement", "P&L Only", "Foreign National", "Asset Depletion"]) {
       expect(screen.queryByRole("button", { name: label })).not.toBeInTheDocument();
     }
+  });
+
+  it("shows add/delete lender controls only to admins and confirms deletion", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<LenderDirectory lenders={lenders} isMember />);
+    expect(screen.queryByRole("button", { name: "Add lender" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete Alpha Lending" })).not.toBeInTheDocument();
+
+    rerender(<LenderDirectory lenders={lenders} isMember canManage />);
+    expect(screen.getByRole("button", { name: "Add lender" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Delete Alpha Lending" }));
+    expect(screen.getByRole("dialog", { name: "Delete Alpha Lending" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Delete lender" }));
+    await waitFor(() => expect(screen.queryByText("Alpha Lending")).not.toBeInTheDocument());
   });
 });

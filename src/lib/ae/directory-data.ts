@@ -28,6 +28,24 @@ export interface AeDirectoryEntry {
   contacts: DirectoryContact[];
 }
 
+export interface AeDirectoryLender {
+  id: string;
+  name: string;
+}
+
+export async function getAeDirectoryLenders(): Promise<AeDirectoryLender[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lenders")
+    .select("id, name")
+    .eq("active", true)
+    .eq("is_sample_data", false)
+    .is("deleted_at", null)
+    .order("name");
+  if (error) throw new Error(`Failed to load lenders for AE directory: ${error.message}`);
+  return (data ?? []).map((lender) => ({ id: lender.id as string, name: lender.name as string }));
+}
+
 type MasterContact = (typeof masterContacts)[number];
 
 function normalizeLenderName(value: string): string {
@@ -87,7 +105,6 @@ export async function getAeDirectoryEntries(lenderIds?: string[]): Promise<AeDir
       .from("ae_profiles")
       .select("id, lender_id, name, title, email, phone, nmls_id, photo_url, states, status, created_at")
       .in("lender_id", ids)
-      .neq("status", "hidden")
       .order("created_at", { ascending: true });
     if (profileError) throw new Error(`Failed to load AE directory contacts: ${profileError.message}`);
 
@@ -95,8 +112,13 @@ export async function getAeDirectoryEntries(lenderIds?: string[]): Promise<AeDir
       const lenderId = profile.lender_id as string;
       const entry = entriesById.get(lenderId);
       if (!entry) continue;
-      const researchId = typeof profile.nmls_id === "string" && profile.nmls_id.startsWith("research:") ? profile.nmls_id.slice("research:".length) : null;
-      if (researchId) overriddenResearchIds.add(researchId);
+      const nmlsId = typeof profile.nmls_id === "string" ? profile.nmls_id : "";
+      const researchId = nmlsId.startsWith("research:") ? nmlsId.slice("research:".length) : null;
+      const deletedResearchId = nmlsId.startsWith("research_deleted:") ? nmlsId.slice("research_deleted:".length) : null;
+      // Deletion tombstones remain RLS-visible so every subscriber suppresses
+      // the bundled fallback, but they are never rendered as contact cards.
+      if (researchId || deletedResearchId) overriddenResearchIds.add((researchId ?? deletedResearchId)!);
+      if (profile.status === "hidden" || deletedResearchId) continue;
       entry.contacts.push({
         id: profile.id as string,
         lenderId,

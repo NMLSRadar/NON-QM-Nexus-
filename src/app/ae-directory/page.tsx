@@ -1,14 +1,14 @@
 import { Users } from "lucide-react";
 import { PremiumPageHero } from "@/components/premium-ui";
 import { requireSubscriberAccess } from "@/lib/session";
-import { getAeDirectoryEntries } from "@/lib/ae/directory-data";
+import { getAeDirectoryEntries, getAeDirectoryLenders } from "@/lib/ae/directory-data";
 import { AeDirectoryClient } from "./ae-directory-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function AeDirectoryPage() {
   const access = await requireSubscriberAccess();
-  const entries = await getAeDirectoryEntries();
+  const [entries, lenders] = await Promise.all([getAeDirectoryEntries(), getAeDirectoryLenders()]);
   const canEdit = access.isPlatformAdmin;
 
   return (
@@ -18,7 +18,7 @@ export default async function AeDirectoryPage() {
         title={<>AE <span className="nexus-title-gold">Directory</span></>}
         description={<>Connect directly with Account Executives from the lenders inside Non-QM Nexus.</>}
       />
-      <AeDirectoryClient entries={entries} canEdit={canEdit} />
+      <AeDirectoryClient entries={entries} lenders={lenders} canEdit={canEdit} />
     </div>
   );
 }
